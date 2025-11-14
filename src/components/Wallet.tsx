@@ -34,12 +34,13 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
 
   // Update state and notify parent
   const updateState = (newState: Partial<WalletState>) => {
-    setWalletState((prev) => {
-      const updated = { ...prev, ...newState };
-      onStatusChangeRef.current?.(updated);
-      return updated;
-    });
+    setWalletState((prev) => ({ ...prev, ...newState }));
   };
+
+  // Notify parent when state changes (useEffect prevents setState-during-render)
+  useEffect(() => {
+    onStatusChangeRef.current?.(walletState);
+  }, [walletState]);
 
   useEffect(() => {
     let mounted = true;

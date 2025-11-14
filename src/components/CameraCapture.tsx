@@ -19,6 +19,38 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
   const [isLoading, setIsLoading] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  // Assign stream to video element when both are ready
+  useEffect(() => {
+    if (!stream || !videoRef.current) return;
+
+    const video = videoRef.current;
+    video.srcObject = stream;
+
+    console.log('Stream assigned to video element:', {
+      streamId: stream.id,
+      videoElement: !!video,
+    });
+
+    // Ensure video plays
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          console.log('Video playing successfully');
+        })
+        .catch((err) => {
+          console.error('Video play error:', err);
+          // Retry after a short delay
+          setTimeout(() => {
+            video.play().catch((retryErr) => {
+              console.error('Video play retry failed:', retryErr);
+            });
+          }, 100);
+        });
+    }
+  }, [stream]);
 
   // Initialize camera
   useEffect(() => {
@@ -64,37 +96,15 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
 
         streamRef.current = stream;
 
-        if (videoRef.current) {
-          const video = videoRef.current;
-          video.srcObject = stream;
+        console.log('Camera stream obtained:', {
+          streamId: stream.id,
+          tracks: stream.getTracks().length,
+          videoTracks: stream.getVideoTracks().length,
+          active: stream.active,
+        });
 
-          console.log('Stream assigned to video element:', {
-            streamId: stream.id,
-            tracks: stream.getTracks().length,
-            videoTracks: stream.getVideoTracks().length,
-            active: stream.active,
-          });
-
-          // Ensure video plays - important for some browsers
-          try {
-            await video.play();
-            console.log('Video playing successfully');
-          } catch (playError) {
-            console.error('Video play error:', playError);
-            // Try again after a short delay
-            setTimeout(async () => {
-              if (videoRef.current) {
-                try {
-                  await videoRef.current.play();
-                  console.log('Video playing after retry');
-                } catch (retryError) {
-                  console.error('Video play retry failed:', retryError);
-                }
-              }
-            }, 100);
-          }
-        }
-
+        // Store stream in state - will be assigned to video in useEffect
+        setStream(stream);
         setIsLoading(false);
       } catch (err) {
         if (!mounted) return;
@@ -128,6 +138,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
+      setStream(null);
     };
   }, [facingMode]);
 
