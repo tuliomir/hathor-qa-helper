@@ -3,9 +3,11 @@
  * Allows users to input seed phrase and select network manually
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Wallet from './Wallet';
+import ImagePreview from './ImagePreview';
 import { treatSeedWords } from '../utils/walletUtils';
+import { extractSeedWordsFromImage } from '../utils/ocrService';
 import type { NetworkType } from '../constants/network';
 
 interface ManualWalletProps {
@@ -18,6 +20,11 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [validatedSeed, setValidatedSeed] = useState<string | null>(null);
+
+  // OCR-related state
+  const [pastedImageUrl, setPastedImageUrl] = useState<string | null>(null);
+  const [isProcessingOcr, setIsProcessingOcr] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleConnect = () => {
     // Validate seed input
@@ -47,6 +54,68 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
   const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setNetwork(e.target.value as NetworkType);
   };
+
+  // Handle clipboard paste event
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    // Look for image in clipboard
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault(); // Prevent default paste behavior for images
+
+        const blob = item.getAsFile();
+        if (!blob) continue;
+
+        // Convert blob to data URL
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const imageDataUrl = event.target?.result as string;
+          setPastedImageUrl(imageDataUrl);
+        };
+        reader.readAsDataURL(blob);
+        break;
+      }
+    }
+  };
+
+  // Handle OCR extraction
+  const handleExtractText = async (imageDataUrl: string) => {
+    setIsProcessingOcr(true);
+
+    try {
+      const result = await extractSeedWordsFromImage(imageDataUrl);
+
+      if (result.success) {
+        setSeedInput(result.seedWords);
+        setPastedImageUrl(null);
+        // Clear any previous validation errors
+        setValidationError(null);
+      } else {
+        setValidationError(result.error || 'Failed to extract seed words from image');
+        setPastedImageUrl(null);
+      }
+    } catch (error) {
+      setValidationError('An error occurred while processing the image');
+      setPastedImageUrl(null);
+    } finally {
+      setIsProcessingOcr(false);
+    }
+  };
+
+  // Handle cancel preview
+  const handleCancelPreview = () => {
+    setPastedImageUrl(null);
+  };
+
+  // Focus textarea on mount to enable paste
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, []);
 
   // If connected and validated, show the Wallet component
   if (isConnected && validatedSeed) {
@@ -135,10 +204,12 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
           Seed Phrase (24 words):
         </label>
         <textarea
+          ref={textareaRef}
           id="seed-input"
           value={seedInput}
           onChange={handleSeedChange}
-          placeholder="Enter your 24-word seed phrase separated by spaces..."
+          onPaste={handlePaste}
+          placeholder="Enter your 24-word seed phrase separated by spaces, or paste an image with seed words..."
           rows={4}
           style={{
             width: '100%',
@@ -198,6 +269,16 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
       >
         Connect Wallet
       </button>
+
+      {/* Image preview and OCR processing */}
+      {pastedImageUrl && (
+        <ImagePreview
+          imageDataUrl={pastedImageUrl}
+          onExtractText={handleExtractText}
+          onCancel={handleCancelPreview}
+          isProcessing={isProcessingOcr}
+        />
+      )}
     </div>
   );
 }
