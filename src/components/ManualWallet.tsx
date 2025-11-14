@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Wallet from './Wallet';
 import ImagePreview from './ImagePreview';
+import CameraCapture from './CameraCapture';
 import { treatSeedWords } from '../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../utils/ocrService';
 import type { NetworkType } from '../constants/network';
@@ -24,6 +25,7 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
   // OCR-related state
   const [pastedImageUrl, setPastedImageUrl] = useState<string | null>(null);
   const [isProcessingOcr, setIsProcessingOcr] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleConnect = () => {
@@ -108,6 +110,22 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
   // Handle cancel preview
   const handleCancelPreview = () => {
     setPastedImageUrl(null);
+  };
+
+  // Handle camera open
+  const handleOpenCamera = () => {
+    setShowCamera(true);
+  };
+
+  // Handle camera capture
+  const handleCameraCapture = (imageDataUrl: string) => {
+    setShowCamera(false);
+    setPastedImageUrl(imageDataUrl);
+  };
+
+  // Handle camera cancel
+  const handleCameraCancel = () => {
+    setShowCamera(false);
   };
 
   // Focus textarea on mount to enable paste
@@ -200,9 +218,36 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
       </div>
 
       <div style={{ marginBottom: '15px' }}>
-        <label htmlFor="seed-input" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-          Seed Phrase (24 words):
-        </label>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '5px',
+          }}
+        >
+          <label htmlFor="seed-input" style={{ fontWeight: 'bold', margin: 0 }}>
+            Seed Phrase (24 words):
+          </label>
+          <button
+            onClick={handleOpenCamera}
+            style={{
+              padding: '6px 12px',
+              fontSize: '13px',
+              backgroundColor: '#17a2b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
+          >
+            <span>📷</span>
+            Open Camera
+          </button>
+        </div>
         <textarea
           ref={textareaRef}
           id="seed-input"
@@ -222,6 +267,9 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
             boxSizing: 'border-box',
           }}
         />
+        <p style={{ color: '#6c757d', fontSize: '13px', marginTop: '8px', marginBottom: '0' }}>
+          💡 <strong>Tip:</strong> You can paste an image of your seed words here for automatic extraction using OCR.
+        </p>
         {validationError && (
           <p style={{ color: '#dc3545', fontSize: '14px', marginTop: '5px' }}>⚠️ {validationError}</p>
         )}
@@ -269,6 +317,9 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
       >
         Connect Wallet
       </button>
+
+      {/* Camera capture */}
+      {showCamera && <CameraCapture onCapture={handleCameraCapture} onCancel={handleCameraCancel} />}
 
       {/* Image preview and OCR processing */}
       {pastedImageUrl && (
