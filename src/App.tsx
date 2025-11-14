@@ -1,10 +1,8 @@
-import WalletStoreDemo from './components/WalletStoreDemo';
+import QALayout from './components/QALayout';
 import './App.css';
 
 function App() {
-  // Temporarily using WalletStoreDemo to test the wallet store
-  // Will be replaced with the full layout in later steps
-  return <WalletStoreDemo />;
+  return <QALayout />;
 }
 
 export default App;
