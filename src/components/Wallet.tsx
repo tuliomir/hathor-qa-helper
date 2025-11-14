@@ -3,21 +3,15 @@
  * Initializes and manages a Hathor wallet with the provided seed phrase and network
  */
 
-import { useState, useEffect } from 'react';
-// @ts-ignore - Hathor wallet lib doesn't have TypeScript definitions
+import { useState, useEffect, useCallback } from 'react';
+// @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
-// @ts-ignore - Hathor wallet lib doesn't have TypeScript definitions
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import { NETWORK_CONFIG, WALLET_CONFIG } from '../constants/network';
 import type { WalletProps, WalletState } from '../types/wallet';
 import { validateSeed } from '../utils/walletUtils';
 
-export default function Wallet({
-  seedPhrase,
-  network,
-  onStatusChange,
-  onWalletReady,
-}: WalletProps) {
+export default function Wallet({ seedPhrase, network, onStatusChange, onWalletReady }: WalletProps) {
   const [walletState, setWalletState] = useState<WalletState>({
     status: 'idle',
     seedPhrase,
@@ -25,13 +19,16 @@ export default function Wallet({
   const [wallet, setWallet] = useState<HathorWallet | null>(null);
 
   // Update state and notify parent
-  const updateState = (newState: Partial<WalletState>) => {
-    setWalletState((prev) => {
-      const updated = { ...prev, ...newState };
-      onStatusChange?.(updated);
-      return updated;
-    });
-  };
+  const updateState = useCallback(
+    (newState: Partial<WalletState>) => {
+      setWalletState((prev) => {
+        const updated = { ...prev, ...newState };
+        onStatusChange?.(updated);
+        return updated;
+      });
+    },
+    [onStatusChange]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -68,6 +65,7 @@ export default function Wallet({
           network: networkConfig.name,
           servers: [networkConfig.fullNodeUrl],
           connectionTimeout: WALLET_CONFIG.CONNECTION_TIMEOUT,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
 
         // Create and configure the wallet
@@ -146,7 +144,7 @@ export default function Wallet({
         walletInstance.stop().catch(console.error);
       }
     };
-  }, [seedPhrase, network]);
+  }, [seedPhrase, network, updateState, onWalletReady]);
 
   // Cleanup wallet on unmount
   useEffect(() => {

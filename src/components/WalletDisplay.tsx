@@ -32,8 +32,7 @@ export default function WalletDisplay() {
             marginTop: '20px',
             marginBottom: '20px',
             padding: '15px',
-            backgroundColor:
-              walletState.status === 'ready' ? 'darkgoldenrod' : '#fff3cd',
+            backgroundColor: walletState.status === 'ready' ? 'darkgoldenrod' : '#fff3cd',
             border: '1px solid #ffc107',
             borderRadius: '4px',
           }}
@@ -71,11 +70,7 @@ export default function WalletDisplay() {
       )}
 
       {/* Wallet Component */}
-      <Wallet
-        seedPhrase={seedPhrase}
-        network={network}
-        onStatusChange={handleStatusChange}
-      />
+      <Wallet seedPhrase={seedPhrase} network={network} onStatusChange={handleStatusChange} />
     </div>
   );
 }

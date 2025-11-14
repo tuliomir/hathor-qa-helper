@@ -2,7 +2,7 @@
  * Utility functions for wallet operations
  */
 
-// @ts-ignore - bitcore-mnemonic doesn't have TypeScript definitions
+// @ts-expect-error - bitcore-mnemonic doesn't have TypeScript definitions
 import Mnemonic from 'bitcore-mnemonic';
 
 /**

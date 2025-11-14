@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+.yarn
+.pnp.*
+
+# Build outputs
+dist
+build
+coverage
+
+# Cache and logs
+*.log
+.DS_Store
+
+# IDE
+.vscode
+.idea
+
+# Misc
+*.min.js
+*.min.css
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

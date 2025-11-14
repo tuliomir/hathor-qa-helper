@@ -1,8 +1,8 @@
-import WalletDisplay from './components/WalletDisplay'
-import './App.css'
+import WalletDisplay from './components/WalletDisplay';
+import './App.css';
 
 function App() {
-  return <WalletDisplay />
+  return <WalletDisplay />;
 }
 
-export default App
+export default App;
