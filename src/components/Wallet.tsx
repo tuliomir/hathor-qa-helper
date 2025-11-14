@@ -9,7 +9,7 @@ import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import { NETWORK_CONFIG, WALLET_CONFIG } from '../constants/network';
 import type { WalletProps, WalletState } from '../types/wallet';
-import { validateSeed } from '../utils/walletUtils';
+import { treatSeedWords } from '../utils/walletUtils';
 
 export default function Wallet({ seedPhrase, network, onStatusChange, onWalletReady }: WalletProps) {
   const [walletState, setWalletState] = useState<WalletState>({
@@ -46,13 +46,14 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
     let walletInstance: HathorWallet | null = null;
 
     async function initializeWallet() {
+      const { valid, error, treatedWords } = treatSeedWords(seedPhrase);
       try {
         // Validate seed phrase
-        if (!validateSeed(seedPhrase)) {
+        if (!valid) {
           if (!mounted) return;
           updateState({
             status: 'error',
-            error: 'Invalid seed phrase provided',
+            error: `Invalid seed phrase provided: ${error}`,
           });
           return;
         }
@@ -79,9 +80,9 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
 
-        // Create and configure the wallet
+        // Create and configure the wallet (use treatedWords from validation)
         walletInstance = new HathorWallet({
-          seed: seedPhrase,
+          seed: treatedWords,
           connection,
           password: WALLET_CONFIG.DEFAULT_PASSWORD,
           pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,

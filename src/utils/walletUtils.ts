@@ -4,6 +4,7 @@
 
 // @ts-expect-error - bitcore-mnemonic doesn't have TypeScript definitions
 import Mnemonic from 'bitcore-mnemonic';
+import hathorLib from '@hathor/wallet-lib';
 
 /**
  * Generates a new BIP39 mnemonic seed phrase
@@ -17,21 +18,25 @@ export function generateSeed(): string {
 /**
  * Validates a BIP39 mnemonic seed phrase
  * @param seedPhrase - The seed phrase to validate
- * @returns true if the seed phrase is valid, false otherwise
  */
-export function validateSeed(seedPhrase: string): boolean {
-  try {
-    return Mnemonic.isValid(seedPhrase);
-  } catch {
-    return false;
-  }
-}
+export function treatSeedWords(seedPhrase: string) {
+  const returnObject = { valid: false, treatedWords: '', error: '' };
 
-/**
- * Gets the word count of a seed phrase
- * @param seedPhrase - The seed phrase to count
- * @returns Number of words in the seed phrase
- */
-export function getSeedWordCount(seedPhrase: string): number {
-  return seedPhrase.trim().split(/\s+/).length;
+  try {
+    const { valid, words } = hathorLib.walletUtils.wordsValid(seedPhrase);
+    if (!valid) {
+      returnObject.error = 'Invalid seed phrase';
+      return returnObject;
+    }
+    returnObject.valid = true;
+    returnObject.treatedWords = words;
+    return returnObject;
+  } catch (err) {
+    if (err instanceof Error) {
+      returnObject.error = err.message;
+    } else {
+      returnObject.error = String(err);
+    }
+    return returnObject;
+  }
 }
