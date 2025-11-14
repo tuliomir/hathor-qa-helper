@@ -3,7 +3,7 @@
  * Initializes and manages a Hathor wallet with the provided seed phrase and network
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
@@ -16,19 +16,30 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
     status: 'idle',
     seedPhrase,
   });
-  const [wallet, setWallet] = useState<HathorWallet | null>(null);
+
+  // IMPORTANT: Store wallet instance in a ref, not state!
+  // The wallet object is complex and changes internally (balance updates, tx events, etc.)
+  // Storing it in state would cause unnecessary re-renders or stale closures
+  const walletRef = useRef<HathorWallet | null>(null);
+
+  // Use refs for callbacks to avoid re-renders when they change
+  const onStatusChangeRef = useRef(onStatusChange);
+  const onWalletReadyRef = useRef(onWalletReady);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+    onWalletReadyRef.current = onWalletReady;
+  }, [onStatusChange, onWalletReady]);
 
   // Update state and notify parent
-  const updateState = useCallback(
-    (newState: Partial<WalletState>) => {
-      setWalletState((prev) => {
-        const updated = { ...prev, ...newState };
-        onStatusChange?.(updated);
-        return updated;
-      });
-    },
-    [onStatusChange]
-  );
+  const updateState = (newState: Partial<WalletState>) => {
+    setWalletState((prev) => {
+      const updated = { ...prev, ...newState };
+      onStatusChangeRef.current?.(updated);
+      return updated;
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -81,7 +92,8 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
           return;
         }
 
-        setWallet(walletInstance);
+        // Store wallet instance in ref for cleanup
+        walletRef.current = walletInstance;
 
         // Start the wallet
         await walletInstance.start();
@@ -125,7 +137,7 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
         });
 
         // Notify parent that wallet is ready
-        onWalletReady?.(walletInstance);
+        onWalletReadyRef.current?.(walletInstance);
       } catch (error) {
         if (!mounted) return;
         updateState({
@@ -143,17 +155,12 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
       if (walletInstance) {
         walletInstance.stop().catch(console.error);
       }
-    };
-  }, [seedPhrase, network, updateState, onWalletReady]);
-
-  // Cleanup wallet on unmount
-  useEffect(() => {
-    return () => {
-      if (wallet) {
-        wallet.stop().catch(console.error);
+      // Also cleanup the ref if it exists
+      if (walletRef.current && walletRef.current !== walletInstance) {
+        walletRef.current.stop().catch(console.error);
       }
     };
-  }, [wallet]);
+  }, [seedPhrase, network]);
 
   return (
     <div>
