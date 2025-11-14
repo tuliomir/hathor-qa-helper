@@ -9,5 +9,7 @@
       </inspection_tool>
     </profile>
   </component>
-  <component name="VcsDirectoryMappings" defaultProject="true" />
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+  </component>
 </project>

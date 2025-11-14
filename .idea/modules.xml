@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/hathor-qa-helper.iml" filepath="$PROJECT_DIR$/.idea/hathor-qa-helper.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/qa-helper.iml" filepath="$PROJECT_DIR$/.idea/qa-helper.iml" />
     </modules>
   </component>
 </project>
