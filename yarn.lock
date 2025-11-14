@@ -1969,6 +1969,7 @@ __metadata:
     "@types/react-dom": "npm:^19.1.9"
     "@vitejs/plugin-react": "npm:^5.0.4"
     bitcore-lib: "npm:8.25.10"
+    bitcore-mnemonic: "npm:8.25.10"
     eslint: "npm:^9.36.0"
     eslint-plugin-react-hooks: "npm:^5.2.0"
     eslint-plugin-react-refresh: "npm:^0.4.22"
