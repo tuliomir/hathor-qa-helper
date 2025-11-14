@@ -1,4 +1,4 @@
-import WalletDisplay from './WalletDisplay'
+import WalletDisplay from './components/WalletDisplay'
 import './App.css'
 
 function App() {
