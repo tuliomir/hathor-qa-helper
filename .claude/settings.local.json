@@ -5,7 +5,10 @@
       "Bash(yarn build)",
       "Bash(yarn add:*)",
       "Bash(yarn format:*)",
-      "Bash(yarn lint:*)"
+      "Bash(yarn lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
