@@ -19,6 +19,7 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
   const [seedInput, setSeedInput] = useState('');
   const [network, setNetwork] = useState<NetworkType>('TESTNET');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [invalidWords, setInvalidWords] = useState<string[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [validatedSeed, setValidatedSeed] = useState<string | null>(null);
 
@@ -30,15 +31,17 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
 
   const handleConnect = () => {
     // Validate seed input
-    const { valid: validation, treatedWords, error } = treatSeedWords(seedInput);
+    const { valid: validation, treatedWords, error, invalidWords: invalidWordsList } = treatSeedWords(seedInput);
 
     if (!validation) {
       setValidationError(error || 'Invalid seed phrase');
+      setInvalidWords(invalidWordsList || []);
       return;
     }
 
     // Clear any previous errors
     setValidationError(null);
+    setInvalidWords([]);
 
     // Set the validated seed and mark as connected
     setValidatedSeed(treatedWords);
@@ -50,6 +53,7 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
     // Clear validation error when user starts typing
     if (validationError) {
       setValidationError(null);
+      setInvalidWords([]);
     }
   };
 
@@ -271,7 +275,16 @@ export default function ManualWallet({ onRemove }: ManualWalletProps) {
           💡 <strong>Tip:</strong> You can paste an image of your seed words here for automatic extraction using OCR.
         </p>
         {validationError && (
-          <p style={{ color: '#dc3545', fontSize: '14px', marginTop: '5px' }}>⚠️ {validationError}</p>
+          <div style={{ marginTop: '5px' }}>
+            <p style={{ color: '#dc3545', fontSize: '14px', margin: '0 0 5px 0' }}>
+              ⚠️ {validationError}
+            </p>
+            {invalidWords.length > 0 && (
+              <p style={{ color: '#dc3545', fontSize: '13px', margin: '0' }}>
+                Invalid words: <strong>{invalidWords.join(', ')}</strong>
+              </p>
+            )}
+          </div>
         )}
       </div>
 
