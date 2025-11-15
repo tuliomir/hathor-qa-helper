@@ -10,8 +10,10 @@ import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import { NETWORK_CONFIG, WALLET_CONFIG } from '../constants/network';
 import type { WalletProps, WalletState } from '../types/wallet';
 import { treatSeedWords } from '../utils/walletUtils';
+import { useWalletStore } from '../hooks/useWalletStore';
 
-export default function Wallet({ seedPhrase, network, onStatusChange, onWalletReady }: WalletProps) {
+export default function Wallet({ seedPhrase, network, walletId, onStatusChange, onWalletReady }: WalletProps) {
+  const walletStore = useWalletStore();
   const [walletState, setWalletState] = useState<WalletState>({
     status: 'idle',
     seedPhrase,
@@ -35,6 +37,11 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
   // Update state and notify parent
   const updateState = (newState: Partial<WalletState>) => {
     setWalletState((prev) => ({ ...prev, ...newState }));
+
+    // Also update the global wallet store if walletId is provided
+    if (walletId && newState.status) {
+      walletStore.updateWalletStatus(walletId, newState.status, newState.firstAddress, newState.error);
+    }
   };
 
   // Notify parent when state changes (useEffect prevents setState-during-render)
@@ -96,6 +103,11 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
 
         // Store wallet instance in ref for cleanup
         walletRef.current = walletInstance;
+
+        // Update global wallet store if walletId is provided
+        if (walletId) {
+          walletStore.updateWalletInstance(walletId, walletInstance);
+        }
 
         // Start the wallet
         await walletInstance.start();
@@ -161,8 +173,13 @@ export default function Wallet({ seedPhrase, network, onStatusChange, onWalletRe
       if (walletRef.current && walletRef.current !== walletInstance) {
         walletRef.current.stop().catch(console.error);
       }
+
+      // Clear wallet instance from store if walletId is provided
+      if (walletId) {
+        walletStore.updateWalletInstance(walletId, null);
+      }
     };
-  }, [seedPhrase, network]);
+  }, [seedPhrase, network, walletId, walletStore]);
 
   return (
     <div>

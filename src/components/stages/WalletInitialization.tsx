@@ -453,10 +453,7 @@ export default function WalletInitialization() {
               <Wallet
                 seedPhrase={wallet.metadata.seedWords}
                 network={wallet.metadata.network}
-                onWalletReady={(walletInstance) => {
-                  // This will be handled by the Wallet component integration with the store
-                  console.log('Wallet ready:', wallet.metadata.id, walletInstance);
-                }}
+                walletId={wallet.metadata.id}
               />
             </div>
           ))

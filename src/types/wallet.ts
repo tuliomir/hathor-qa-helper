@@ -26,6 +26,7 @@ export interface WalletConfig {
 export interface WalletProps {
   seedPhrase: string;
   network: NetworkType;
+  walletId?: string; // Optional ID to integrate with global wallet store
   onStatusChange?: (state: WalletState) => void;
   onWalletReady?: (wallet: HathorWallet) => void;
 }
