@@ -3,11 +3,15 @@
  * Manages wallet instances and metadata with LocalStorage persistence
  */
 
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
 import type { WalletMetadata, WalletInfo } from '../../types/walletStore';
 import type { WalletStatus } from '../../types/wallet';
+import type { RootState } from '../index';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
-import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
+import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
+import Connection from '@hathor/wallet-lib/lib/new/connection.js';
+import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
+import { treatSeedWords } from '../../utils/walletUtils';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
@@ -64,6 +68,123 @@ const initialState: WalletStoreState = {
  * Global wallet instances map (stored outside Redux as they are non-serializable)
  */
 export const walletInstancesMap = new Map<string, HathorWallet | null>();
+
+/**
+ * Async Thunk: Start a wallet
+ * Initializes a wallet instance and updates its status through the lifecycle
+ */
+export const startWallet = createAsyncThunk(
+  'walletStore/startWallet',
+  async (walletId: string, { getState, dispatch }) => {
+    const state = getState() as RootState;
+    const walletInfo = state.walletStore.wallets[walletId];
+
+    if (!walletInfo) {
+      throw new Error(`Wallet ${walletId} not found`);
+    }
+
+    const { seedWords, network } = walletInfo.metadata;
+
+    // Validate seed phrase
+    const { valid, error, treatedWords } = treatSeedWords(seedWords);
+    if (!valid) {
+      throw new Error(`Invalid seed phrase: ${error}`);
+    }
+
+    // Update status to connecting
+    dispatch(updateWalletStatus({ id: walletId, status: 'connecting' }));
+
+    try {
+      // Get network configuration
+      const networkConfig = NETWORK_CONFIG[network];
+      if (!networkConfig) {
+        throw new Error(`Invalid network: ${network}`);
+      }
+
+      // Create connection to Hathor network
+      const connection = new Connection({
+        network: networkConfig.name,
+        servers: [networkConfig.fullNodeUrl],
+        connectionTimeout: WALLET_CONFIG.CONNECTION_TIMEOUT,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+
+      // Create and configure the wallet
+      const walletInstance = new HathorWallet({
+        seed: treatedWords,
+        connection,
+        password: WALLET_CONFIG.DEFAULT_PASSWORD,
+        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+      });
+
+      // Store instance in the external map
+      walletInstancesMap.set(walletId, walletInstance);
+      dispatch(updateWalletInstance({ id: walletId, instance: walletInstance }));
+
+      // Start the wallet
+      await walletInstance.start();
+
+      // Update status to syncing
+      dispatch(updateWalletStatus({ id: walletId, status: 'syncing' }));
+
+      // Wait for wallet to be ready
+      await new Promise<void>((resolve) => {
+        const checkReady = () => {
+          if (walletInstance && walletInstance.isReady()) {
+            resolve();
+          } else {
+            setTimeout(checkReady, WALLET_CONFIG.SYNC_CHECK_INTERVAL);
+          }
+        };
+        checkReady();
+      });
+
+      // Get the first address
+      const firstAddress = await walletInstance.getAddressAtIndex(0);
+
+      // Update status to ready
+      dispatch(updateWalletStatus({ id: walletId, status: 'ready', firstAddress }));
+
+      return { walletId, firstAddress };
+    } catch (error) {
+      // Cleanup on error
+      const instance = walletInstancesMap.get(walletId);
+      if (instance) {
+        await instance.stop().catch(console.error);
+        walletInstancesMap.delete(walletId);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      dispatch(updateWalletStatus({ id: walletId, status: 'error', error: errorMessage }));
+      throw error;
+    }
+  }
+);
+
+/**
+ * Async Thunk: Stop a wallet
+ * Stops a running wallet instance and cleans up resources
+ */
+export const stopWallet = createAsyncThunk(
+  'walletStore/stopWallet',
+  async (walletId: string, { dispatch }) => {
+    const instance = walletInstancesMap.get(walletId);
+
+    if (instance) {
+      try {
+        await instance.stop();
+        walletInstancesMap.delete(walletId);
+        dispatch(updateWalletInstance({ id: walletId, instance: null }));
+        dispatch(updateWalletStatus({ id: walletId, status: 'idle' }));
+      } catch (error) {
+        console.error(`Failed to stop wallet ${walletId}:`, error);
+        throw error;
+      }
+    }
+
+    return { walletId };
+  }
+);
 
 const walletStoreSlice = createSlice({
   name: 'walletStore',

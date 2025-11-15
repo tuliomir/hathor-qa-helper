@@ -1,12 +1,13 @@
 /**
  * Wallet Initialization Stage
- * Allows users to initialize wallets by entering seed words
- * Integrates with the global wallet store
+ * Allows users to add wallets and explicitly start/stop them
+ * Wallets persist globally across all stages
  */
 
 import { useState, useRef, useEffect } from 'react';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import Wallet from '../Wallet';
+import { useAppDispatch } from '../../store/hooks';
+import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
 import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
 import { treatSeedWords } from '../../utils/walletUtils';
@@ -14,6 +15,7 @@ import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import type { NetworkType } from '../../constants/network';
 
 export default function WalletInitialization() {
+  const dispatch = useAppDispatch();
   const { addWallet, removeWallet, getAllWallets, updateFriendlyName } = useWalletStore();
 
   const [seedInput, setSeedInput] = useState('');
@@ -166,6 +168,52 @@ export default function WalletInitialization() {
     setEditingName('');
   };
 
+  // Handle start wallet
+  const handleStartWallet = async (walletId: string) => {
+    try {
+      await dispatch(startWallet(walletId)).unwrap();
+    } catch (error) {
+      console.error('Failed to start wallet:', error);
+    }
+  };
+
+  // Handle stop wallet
+  const handleStopWallet = async (walletId: string) => {
+    try {
+      await dispatch(stopWallet(walletId)).unwrap();
+    } catch (error) {
+      console.error('Failed to stop wallet:', error);
+    }
+  };
+
+  // Handle remove wallet
+  const handleRemoveWallet = (walletId: string) => {
+    if (window.confirm('Are you sure you want to remove this wallet?')) {
+      removeWallet(walletId);
+    }
+  };
+
+  // Truncate seed words for display
+  const truncateSeed = (seed: string, maxLength: number = 30) => {
+    if (seed.length <= maxLength) return seed;
+    return seed.substring(0, maxLength) + '...';
+  };
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ready':
+        return '#28a745';
+      case 'error':
+        return '#dc3545';
+      case 'connecting':
+      case 'syncing':
+        return '#ffc107';
+      default:
+        return '#6c757d';
+    }
+  };
+
   // Focus textarea on mount to enable paste
   useEffect(() => {
     if (textareaRef.current) {
@@ -177,8 +225,7 @@ export default function WalletInitialization() {
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <h1 style={{ marginTop: 0 }}>Wallet Initialization</h1>
       <p style={{ color: '#6c757d', marginBottom: '30px' }}>
-        Initialize wallets by entering seed words. All wallets are stored in the global wallet store and can be used
-        across different QA stages.
+        Add wallets and explicitly start them. Wallets persist globally across all QA stages until stopped or removed.
       </p>
 
       {/* Add Wallet Form */}
@@ -336,9 +383,9 @@ export default function WalletInitialization() {
         />
       )}
 
-      {/* Initialized Wallets List */}
+      {/* Wallets Table */}
       <div>
-        <h2>Initialized Wallets ({wallets.length})</h2>
+        <h2>Registered Wallets ({wallets.length})</h2>
         {wallets.length === 0 ? (
           <div
             style={{
@@ -349,114 +396,197 @@ export default function WalletInitialization() {
               color: '#6c757d',
             }}
           >
-            <p style={{ fontSize: '18px', margin: 0 }}>No wallets initialized yet</p>
+            <p style={{ fontSize: '18px', margin: 0 }}>No wallets registered yet</p>
           </div>
         ) : (
-          wallets.map((wallet) => (
-            <div
-              key={wallet.metadata.id}
+          <div style={{ overflowX: 'auto' }}>
+            <table
               style={{
-                padding: '20px',
-                border: '2px solid #17a2b8',
-                borderRadius: '8px',
-                marginBottom: '20px',
-                backgroundColor: '#f8f9fa',
+                width: '100%',
+                borderCollapse: 'collapse',
+                backgroundColor: 'white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
               }}
             >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '15px',
-                }}
-              >
-                {editingId === wallet.metadata.id ? (
-                  <div style={{ flex: 1, display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        border: '2px solid #007bff',
-                        borderRadius: '4px',
-                      }}
-                    />
-                    <button
-                      onClick={handleSaveEdit}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#28a745',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#6c757d',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <h3 style={{ margin: 0 }}>{wallet.metadata.friendlyName}</h3>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)}
+              <thead>
+                <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Name</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Seed (truncated)</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Network</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Status</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>First Address</th>
+                  <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wallets.map((wallet) => (
+                  <tr key={wallet.metadata.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                    <td style={{ padding: '12px' }}>
+                      {editingId === wallet.metadata.id ? (
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          style={{
+                            padding: '6px',
+                            fontSize: '14px',
+                            border: '1px solid #007bff',
+                            borderRadius: '4px',
+                            width: '100%',
+                          }}
+                        />
+                      ) : (
+                        <strong>{wallet.metadata.friendlyName}</strong>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '12px', color: '#6c757d' }}>
+                      {truncateSeed(wallet.metadata.seedWords, 40)}
+                    </td>
+                    <td style={{ padding: '12px' }}>{wallet.metadata.network}</td>
+                    <td style={{ padding: '12px' }}>
+                      <span
                         style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#ffc107',
-                          color: 'black',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
+                          color: getStatusColor(wallet.status),
+                          fontWeight: 'bold',
                           fontSize: '14px',
                         }}
                       >
-                        Rename
-                      </button>
-                      <button
-                        onClick={() => removeWallet(wallet.metadata.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <Wallet
-                seedPhrase={wallet.metadata.seedWords}
-                network={wallet.metadata.network}
-                walletId={wallet.metadata.id}
-              />
-            </div>
-          ))
+                        {wallet.status}
+                      </span>
+                      {wallet.error && (
+                        <div style={{ fontSize: '12px', color: '#dc3545', marginTop: '4px' }}>
+                          {wallet.error}
+                        </div>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        padding: '12px',
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        color: wallet.firstAddress ? '#28a745' : '#6c757d',
+                      }}
+                    >
+                      {wallet.firstAddress || '-'}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        {editingId === wallet.metadata.id ? (
+                          <>
+                            <button
+                              onClick={handleSaveEdit}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '13px',
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '13px',
+                                backgroundColor: '#6c757d',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {wallet.status === 'idle' || wallet.status === 'error' ? (
+                              <button
+                                onClick={() => handleStartWallet(wallet.metadata.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '13px',
+                                  backgroundColor: '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ▶ Start
+                              </button>
+                            ) : wallet.status === 'ready' ? (
+                              <button
+                                onClick={() => handleStopWallet(wallet.metadata.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '13px',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ⏹ Stop
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                style={{
+                                  padding: '6px 12px',
+                                  fontSize: '13px',
+                                  backgroundColor: '#6c757d',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'not-allowed',
+                                }}
+                              >
+                                {wallet.status === 'connecting' ? '⏳ Connecting...' : '⏳ Syncing...'}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '13px',
+                                backgroundColor: '#ffc107',
+                                color: 'black',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              ✏️ Rename
+                            </button>
+                            <button
+                              onClick={() => handleRemoveWallet(wallet.metadata.id)}
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '13px',
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              🗑️ Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
