@@ -11,15 +11,7 @@ export default function StageContent() {
   const { currentStage } = useStage();
 
   return (
-    <div
-      style={{
-        flex: 1,
-        padding: '30px',
-        backgroundColor: 'white',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-      }}
-    >
+    <div className="flex-1 p-7.5 bg-white overflow-y-auto overflow-x-hidden">
       {currentStage === 'wallet-initialization' && <WalletInitialization />}
       {currentStage === 'address-validation' && <AddressValidation />}
     </div>

@@ -38,27 +38,28 @@ export default function AddressValidation() {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'ready': return 'text-success';
+      case 'error': return 'text-danger';
+      case 'connecting':
+      case 'syncing': return 'text-warning';
+      default: return 'text-muted';
+    }
+  };
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ marginTop: 0 }}>Address Validation</h1>
-      <p style={{ color: '#6c757d', marginBottom: '30px' }}>
+    <div className="max-w-300 mx-auto">
+      <h1 className="mt-0 text-3xl font-bold">Address Validation</h1>
+      <p className="text-muted mb-7.5">
         Validate and derive addresses using your initialized wallets. This stage demonstrates how to access wallet
         instances from the global store.
       </p>
 
       {wallets.length === 0 ? (
-        <div
-          style={{
-            padding: '40px',
-            textAlign: 'center',
-            border: '2px dashed #ffc107',
-            borderRadius: '8px',
-            backgroundColor: '#fff3cd',
-            color: '#856404',
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>No Wallets Available</h2>
-          <p style={{ fontSize: '16px' }}>
+        <div className="p-10 text-center border-2 border-dashed border-warning rounded-lg bg-yellow-50 text-yellow-800">
+          <h2 className="mt-0 text-2xl font-bold">No Wallets Available</h2>
+          <p className="text-base">
             Please go to the <strong>Wallet Initialization</strong> stage and add at least one wallet before using this
             feature.
           </p>
@@ -66,19 +67,11 @@ export default function AddressValidation() {
       ) : (
         <>
           {/* Wallet Selection */}
-          <div
-            style={{
-              padding: '20px',
-              border: '2px solid #007bff',
-              borderRadius: '8px',
-              marginBottom: '30px',
-              backgroundColor: '#f8f9fa',
-            }}
-          >
-            <h2>Derive Address</h2>
+          <div className="card-primary mb-7.5">
+            <h2 className="text-xl font-bold mb-4">Derive Address</h2>
 
-            <div style={{ marginBottom: '15px' }}>
-              <label htmlFor="wallet-select" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+            <div className="mb-4">
+              <label htmlFor="wallet-select" className="block mb-1.5 font-bold">
                 Select Wallet:
               </label>
               <select
@@ -89,16 +82,7 @@ export default function AddressValidation() {
                   setDerivedAddress(null);
                   setError(null);
                 }}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  fontSize: '14px',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  backgroundColor: 'white',
-                  cursor: 'pointer',
-                  boxSizing: 'border-box',
-                }}
+                className="input cursor-pointer bg-white"
               >
                 <option value="">-- Select a wallet --</option>
                 {wallets.map((wallet) => (
@@ -110,47 +94,29 @@ export default function AddressValidation() {
             </div>
 
             {selectedWallet && (
-              <div
-                style={{
-                  padding: '15px',
-                  backgroundColor: '#d1ecf1',
-                  border: '1px solid #17a2b8',
-                  borderRadius: '4px',
-                  marginBottom: '15px',
-                }}
-              >
-                <p style={{ margin: '0 0 5px 0', fontSize: '14px' }}>
+              <div className="p-4 bg-cyan-50 border border-info rounded mb-4">
+                <p className="m-0 mb-1.5 text-sm">
                   <strong>Wallet:</strong> {selectedWallet.metadata.friendlyName}
                 </p>
-                <p style={{ margin: '0 0 5px 0', fontSize: '14px' }}>
+                <p className="m-0 mb-1.5 text-sm">
                   <strong>Network:</strong> {selectedWallet.metadata.network}
                 </p>
-                <p style={{ margin: '0 0 5px 0', fontSize: '14px' }}>
+                <p className="m-0 mb-1.5 text-sm">
                   <strong>Status:</strong>{' '}
-                  <span
-                    style={{
-                      color:
-                        selectedWallet.status === 'ready'
-                          ? '#28a745'
-                          : selectedWallet.status === 'error'
-                            ? '#dc3545'
-                            : '#ffc107',
-                      fontWeight: 'bold',
-                    }}
-                  >
+                  <span className={`${getStatusColor(selectedWallet.status)} font-bold`}>
                     {selectedWallet.status}
                   </span>
                 </p>
                 {selectedWallet.firstAddress && (
-                  <p style={{ margin: '5px 0 0 0', fontSize: '13px', fontFamily: 'monospace' }}>
+                  <p className="m-0 mt-1.5 text-xs font-mono">
                     <strong>First Address:</strong> {selectedWallet.firstAddress}
                   </p>
                 )}
               </div>
             )}
 
-            <div style={{ marginBottom: '15px' }}>
-              <label htmlFor="address-index" style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+            <div className="mb-4">
+              <label htmlFor="address-index" className="block mb-1.5 font-bold">
                 Address Index:
               </label>
               <input
@@ -163,16 +129,9 @@ export default function AddressValidation() {
                   setDerivedAddress(null);
                   setError(null);
                 }}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  fontSize: '14px',
-                  border: '1px solid #ced4da',
-                  borderRadius: '4px',
-                  boxSizing: 'border-box',
-                }}
+                className="input"
               />
-              <p style={{ color: '#6c757d', fontSize: '13px', marginTop: '5px', marginBottom: '0' }}>
+              <p className="text-muted text-xs mt-1.5 mb-0">
                 Enter the index of the address to derive (0 = first address, 1 = second address, etc.)
               </p>
             </div>
@@ -180,58 +139,25 @@ export default function AddressValidation() {
             <button
               onClick={handleDeriveAddress}
               disabled={!selectedWalletId || isLoading || selectedWallet?.status !== 'ready'}
-              style={{
-                width: '100%',
-                padding: '12px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                backgroundColor:
-                  selectedWalletId && !isLoading && selectedWallet?.status === 'ready' ? '#007bff' : '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor:
-                  selectedWalletId && !isLoading && selectedWallet?.status === 'ready' ? 'pointer' : 'not-allowed',
-                transition: 'background-color 0.2s',
-              }}
+              className={`w-full btn text-base font-bold ${
+                selectedWalletId && !isLoading && selectedWallet?.status === 'ready'
+                  ? 'btn-primary'
+                  : 'btn-secondary cursor-not-allowed'
+              }`}
             >
               {isLoading ? 'Deriving...' : 'Derive Address'}
             </button>
 
             {error && (
-              <div
-                style={{
-                  marginTop: '15px',
-                  padding: '15px',
-                  backgroundColor: '#f8d7da',
-                  border: '1px solid #dc3545',
-                  borderRadius: '4px',
-                }}
-              >
-                <p style={{ margin: 0, color: '#721c24' }}>❌ {error}</p>
+              <div className="mt-4 p-4 bg-red-50 border border-danger rounded">
+                <p className="m-0 text-red-900">❌ {error}</p>
               </div>
             )}
 
             {derivedAddress && (
-              <div
-                style={{
-                  marginTop: '15px',
-                  padding: '15px',
-                  backgroundColor: '#d4edda',
-                  border: '1px solid #28a745',
-                  borderRadius: '4px',
-                }}
-              >
-                <h3 style={{ marginTop: 0 }}>✅ Derived Address:</h3>
-                <p
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '1.1em',
-                    wordBreak: 'break-all',
-                    fontWeight: 'bold',
-                    margin: 0,
-                  }}
-                >
+              <div className="mt-4 p-4 bg-green-50 border border-success rounded">
+                <h3 className="mt-0 text-lg font-bold">✅ Derived Address:</h3>
+                <p className="font-mono text-lg break-all font-bold m-0">
                   {derivedAddress}
                 </p>
               </div>
@@ -240,49 +166,31 @@ export default function AddressValidation() {
 
           {/* Wallet List */}
           <div>
-            <h2>Available Wallets ({wallets.length})</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <h2 className="text-2xl font-bold mb-4">Available Wallets ({wallets.length})</h2>
+            <div className="flex flex-col gap-4">
               {wallets.map((wallet) => (
                 <div
                   key={wallet.metadata.id}
-                  style={{
-                    padding: '15px',
-                    border: wallet.metadata.id === selectedWalletId ? '2px solid #007bff' : '1px solid #dee2e6',
-                    borderRadius: '8px',
-                    backgroundColor: wallet.metadata.id === selectedWalletId ? '#e7f3ff' : 'white',
-                  }}
+                  className={`p-4 rounded-lg ${
+                    wallet.metadata.id === selectedWalletId
+                      ? 'border-2 border-primary bg-blue-50'
+                      : 'border border-gray-300 bg-white'
+                  }`}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                  <div className="flex justify-between items-start">
                     <div>
-                      <h3 style={{ margin: '0 0 10px 0' }}>{wallet.metadata.friendlyName}</h3>
-                      <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                      <h3 className="m-0 mb-2.5 text-lg font-bold">{wallet.metadata.friendlyName}</h3>
+                      <p className="m-0 my-1.5 text-sm">
                         <strong>Network:</strong> {wallet.metadata.network}
                       </p>
-                      <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                      <p className="m-0 my-1.5 text-sm">
                         <strong>Status:</strong>{' '}
-                        <span
-                          style={{
-                            color:
-                              wallet.status === 'ready'
-                                ? '#28a745'
-                                : wallet.status === 'error'
-                                  ? '#dc3545'
-                                  : '#ffc107',
-                            fontWeight: 'bold',
-                          }}
-                        >
+                        <span className={`${getStatusColor(wallet.status)} font-bold`}>
                           {wallet.status}
                         </span>
                       </p>
                       {wallet.firstAddress && (
-                        <p
-                          style={{
-                            margin: '5px 0',
-                            fontSize: '12px',
-                            fontFamily: 'monospace',
-                            color: '#28a745',
-                          }}
-                        >
+                        <p className="m-0 my-1.5 text-xs font-mono text-success">
                           <strong>First Address:</strong> {wallet.firstAddress}
                         </p>
                       )}
@@ -290,15 +198,7 @@ export default function AddressValidation() {
                     {wallet.metadata.id !== selectedWalletId && (
                       <button
                         onClick={() => setSelectedWalletId(wallet.metadata.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#007bff',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
+                        className="btn-primary text-sm"
                       >
                         Select
                       </button>

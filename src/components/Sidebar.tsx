@@ -15,18 +15,8 @@ export default function Sidebar() {
   };
 
   return (
-    <div
-      style={{
-        width: '280px',
-        backgroundColor: '#f8f9fa',
-        borderRight: '2px solid #dee2e6',
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-      }}
-    >
-      <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#212529' }}>QA Stages</h2>
+    <div className="w-70 bg-light border-r-2 border-border p-5 flex flex-col gap-2.5">
+      <h2 className="m-0 mb-5 text-xl text-dark">QA Stages</h2>
 
       {STAGES.map((stage) => {
         const isActive = currentStage === stage.id;
@@ -34,35 +24,19 @@ export default function Sidebar() {
           <button
             key={stage.id}
             onClick={() => handleStageClick(stage.id)}
-            style={{
-              padding: '15px',
-              backgroundColor: isActive ? '#007bff' : 'white',
-              color: isActive ? 'white' : '#212529',
-              border: isActive ? '2px solid #0056b3' : '2px solid #dee2e6',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.2s',
-              fontWeight: isActive ? 'bold' : 'normal',
-            }}
-            onMouseEnter={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.backgroundColor = '#e9ecef';
-                e.currentTarget.style.borderColor = '#adb5bd';
+            className={`
+              p-4 rounded-lg border-2 cursor-pointer text-left transition-all duration-200
+              ${isActive
+                ? 'bg-primary text-white border-primary-dark font-bold'
+                : 'bg-white text-dark border-border hover:bg-gray-100 hover:border-gray-400'
               }
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.backgroundColor = 'white';
-                e.currentTarget.style.borderColor = '#dee2e6';
-              }
-            }}
+            `}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
-              <span style={{ fontSize: '20px' }}>{stage.icon}</span>
-              <span style={{ fontSize: '16px' }}>{stage.title}</span>
+            <div className="flex items-center gap-2.5 mb-1">
+              <span className="text-xl">{stage.icon}</span>
+              <span className="text-base">{stage.title}</span>
             </div>
-            <div style={{ fontSize: '13px', opacity: isActive ? 0.9 : 0.7, marginLeft: '30px' }}>
+            <div className={`text-xs ml-7.5 ${isActive ? 'opacity-90' : 'opacity-70'}`}>
               {stage.description}
             </div>
           </button>

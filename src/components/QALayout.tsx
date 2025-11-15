@@ -8,11 +8,7 @@ import StageContent from './StageContent';
 
 export default function QALayout() {
   return (
-    <div
-      style={{
-        display: 'flex',
-      }}
-    >
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <StageContent />
     </div>
