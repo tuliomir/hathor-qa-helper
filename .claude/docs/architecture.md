@@ -9,12 +9,26 @@ A React + TypeScript application for testing and QA of Hathor wallet functionali
 ```
 src/
 ├── components/          # React components
+│   ├── stages/         # Stage-specific components
 │   ├── Wallet.tsx      # Reusable wallet component (manages wallet lifecycle)
-│   └── WalletDisplay.tsx # Display component (auto-generates seed)
+│   └── ...             # Other UI components
 ├── constants/          # Application constants
 │   └── network.ts      # Network configs (testnet/mainnet)
+├── hooks/              # Custom React hooks
+│   ├── useWalletStore.ts # Hook to access wallet store
+│   └── useStage.ts     # Hook to access current stage
+├── store/              # Redux store configuration
+│   ├── slices/         # Redux slices
+│   │   ├── walletStoreSlice.ts # Wallet store state
+│   │   └── stageSlice.ts       # Stage state
+│   ├── selectors/      # Redux selectors
+│   │   └── walletStoreSelectors.ts
+│   ├── hooks.ts        # Typed Redux hooks
+│   └── index.ts        # Store configuration
 ├── types/              # TypeScript type definitions
-│   └── wallet.ts       # Wallet-related types
+│   ├── wallet.ts       # Wallet-related types
+│   ├── walletStore.ts  # Wallet store types
+│   └── stage.ts        # Stage types
 ├── utils/              # Utility functions
 │   └── walletUtils.ts  # Seed generation and validation
 └── App.tsx, main.tsx   # Entry points
@@ -23,10 +37,14 @@ src/
 ## Component Hierarchy
 
 ```
-App
-└── WalletDisplay
-    └── Wallet (reusable)
-        └── HathorWallet instance (in ref)
+App (wrapped in Redux Provider)
+└── QALayout
+    ├── Sidebar (stage navigation)
+    └── StageContent
+        ├── WalletInitialization (stage)
+        │   └── Wallet instances
+        └── AddressValidation (stage)
+            └── Wallet instances
 ```
 
 ## Key Design Decisions
@@ -40,13 +58,26 @@ App
 
 ### 2. State Management Pattern
 
+**State Management**: Redux Toolkit for global state
+
+The application uses Redux Toolkit for centralized state management:
+
+- **Wallet Store Slice**: Manages wallet instances and metadata
+  - Persists to LocalStorage
+  - Stores wallet metadata in Redux state
+  - Stores non-serializable wallet instances in external Map
+
+- **Stage Slice**: Manages the current active QA stage
+  - Simple state for navigation
+  - Persists current stage selection
+
 See `wallet-state-management.md` for detailed patterns.
 
-**Core Principle**: Never store complex wallet objects in React state.
+**Core Principle**: Never store complex wallet objects in Redux state.
 
-- Wallet instance → `useRef`
-- Specific properties (status, balance, address) → `useState`
-- Callbacks from parent → `useRef` with sync effect
+- Wallet instance → External `walletInstancesMap` (outside Redux)
+- Specific properties (status, balance, address) → Redux state
+- Access via custom hooks: `useWalletStore()` and `useStage()`
 
 ### 3. Network Configuration
 
@@ -162,17 +193,56 @@ idle → connecting → syncing → ready
 
 **Solution**: Always call `wallet.stop()` in cleanup function
 
+## State Management Details
+
+### Redux Store Structure
+
+```typescript
+{
+  walletStore: {
+    wallets: {
+      [walletId]: {
+        metadata: { id, friendlyName, seedWords, network, createdAt },
+        instance: null, // Always null in Redux state
+        status: 'idle' | 'connecting' | 'syncing' | 'ready' | 'error',
+        firstAddress?: string,
+        error?: string
+      }
+    }
+  },
+  stage: {
+    currentStage: 'wallet-initialization' | 'address-validation'
+  }
+}
+```
+
+### Custom Hooks API
+
+**useWalletStore()**:
+- `wallets: Map<string, WalletInfo>` - All wallets
+- `addWallet(metadata)` - Add new wallet
+- `removeWallet(id)` - Remove wallet
+- `getWallet(id)` - Get specific wallet
+- `updateFriendlyName(id, name)` - Update wallet name
+- `updateWalletInstance(id, instance)` - Update wallet instance
+- `updateWalletStatus(id, status, ...)` - Update wallet status
+- `getAllWallets()` - Get all wallets as array
+
+**useStage()**:
+- `currentStage: StageId` - Current active stage
+- `setCurrentStage(stageId)` - Change active stage
+
 ## Future Enhancements
 
 ### Suggested Improvements
 
-1. **Custom Hook**: `useWallet(seedPhrase, network)`
-   - Encapsulate wallet logic
-   - Reusable across components
+1. **Persist Stage State**: Save current stage to LocalStorage
+   - Resume where user left off
+   - Better UX for returning users
 
-2. **Context API**: Share wallet across component tree
-   - One wallet instance for entire app
-   - Avoid prop drilling
+2. **Redux DevTools Integration**: Already available
+   - Time-travel debugging
+   - State inspection
 
 3. **Transaction History**: Display recent transactions
    - Listen to 'new-tx' event
@@ -214,8 +284,11 @@ idle → connecting → syncing → ready
 ### Core
 
 - `react` + `react-dom`: UI framework
+- `@reduxjs/toolkit`: State management
+- `react-redux`: React bindings for Redux
 - `@hathor/wallet-lib`: Hathor wallet functionality
 - `bitcore-mnemonic`: BIP39 seed generation
+- `tesseract.js`: OCR for wallet seed extraction
 
 ### Dev
 

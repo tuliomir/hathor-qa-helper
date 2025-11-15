@@ -1,6 +1,24 @@
 # Wallet State Management Best Practices
 
-## Critical Rule: Never Store Complex Wallet Objects in React State
+## State Management Architecture
+
+The application uses **Redux Toolkit** for global state management, with special handling for non-serializable wallet instances.
+
+### Redux Store Structure
+
+- **Wallet Store Slice**: Manages wallet metadata and status
+- **Stage Slice**: Manages current active QA stage
+- **External Map**: Stores non-serializable wallet instances
+
+### Why This Hybrid Approach?
+
+Redux requires serializable state, but `HathorWallet` instances are complex, stateful objects that cannot be serialized. The solution:
+
+1. **Redux State**: Stores serializable wallet metadata (ID, name, status, addresses)
+2. **External Map**: Stores non-serializable wallet instances outside Redux
+3. **Custom Hooks**: Provide a unified API that combines both
+
+## Critical Rule: Never Store Complex Wallet Objects in Redux State
 
 ### The Problem
 
@@ -11,217 +29,288 @@ The `HathorWallet` object is a **complex, stateful object** that:
 - Maintains internal state (balance, UTXOs, transaction history)
 - Can trigger frequent internal updates
 
-**Storing it in React state causes:**
+**Storing it in Redux state causes:**
 
-1. **Unnecessary re-renders** - Every internal wallet change could trigger component updates
-2. **Stale closures** - Callbacks may capture old wallet references
-3. **Performance issues** - React will try to diff large complex objects
-4. **Memory leaks** - Old wallet instances may not be properly cleaned up
+1. **Serialization errors** - Redux requires serializable state
+2. **Unnecessary re-renders** - Every internal wallet change could trigger component updates
+3. **Stale references** - Redux state snapshots don't capture live wallet state
+4. **Performance issues** - Redux will try to serialize large complex objects
+5. **Memory leaks** - Old wallet instances may not be properly cleaned up
 
-### The Solution: Use Refs for Complex Objects, State for Specific Properties
+### The Solution: Redux for Metadata, External Map for Instances
 
-## Pattern 1: Store Wallet Instance in a Ref
+## Pattern 1: Store Wallet Instance in External Map (Redux Pattern)
 
 ```tsx
-// ✅ CORRECT - Use ref for the wallet instance
-const walletRef = useRef<HathorWallet | null>(null);
+// ✅ CORRECT - Store wallet instance in external map
+import { walletInstancesMap } from '../store/slices/walletStoreSlice';
 
-// ❌ WRONG - Do not use state
-const [wallet, setWallet] = useState<HathorWallet | null>(null);
+// Inside component or initialization logic
+walletInstancesMap.set(walletId, walletInstance);
+
+// Access via custom hook
+const { getWallet } = useWalletStore();
+const walletInfo = getWallet(walletId);
+const instance = walletInfo?.instance; // Retrieved from map
+
+// ❌ WRONG - Do not store in Redux state
+dispatch(updateWallet({
+  id: walletId,
+  instance: walletInstance // This will cause serialization errors!
+}));
 ```
 
 **Why?**
-- Refs don't trigger re-renders when updated
-- The wallet instance persists across renders
-- Easy cleanup on unmount
+- Redux requires serializable state
+- External map doesn't trigger unnecessary re-renders
+- Wallet instances are accessed on-demand
+- Proper cleanup via Redux actions
 
-## Pattern 2: Extract Specific Properties into State
+## Pattern 2: Store Metadata and Status in Redux
 
-Only track the **specific properties** you need for rendering:
-
-```tsx
-// ✅ CORRECT - Track only what you need to render
-const [walletState, setWalletState] = useState<WalletState>({
-  status: 'idle',           // Connection status
-  firstAddress?: string,    // Specific address to display
-  balance?: number,         // Current balance
-  error?: string,           // Error message
-});
-
-// ❌ WRONG - Don't track the entire wallet
-const [walletData, setWalletData] = useState({
-  wallet: walletInstance,   // This includes everything!
-  transactions: [...],
-  utxos: [...],
-  // etc.
-});
-```
-
-## Pattern 3: Use Refs for Callbacks
-
-Parent component callbacks may change on every render. Use refs to avoid re-initialization:
+Only track **serializable properties** in Redux state:
 
 ```tsx
-// Store callbacks in refs
-const onStatusChangeRef = useRef(onStatusChange);
-const onWalletReadyRef = useRef(onWalletReady);
-
-// Update refs when callbacks change (doesn't trigger effects)
-useEffect(() => {
-  onStatusChangeRef.current = onStatusChange;
-  onWalletReadyRef.current = onWalletReady;
-}, [onStatusChange, onWalletReady]);
-
-// Use refs in your wallet initialization
-useEffect(() => {
-  // ... wallet init code ...
-  onWalletReadyRef.current?.(walletInstance);
-}, [seedPhrase, network]); // No callback dependencies!
-```
-
-## Pattern 4: Event Listeners Should Update Specific State
-
-When listening to wallet events, extract only what you need:
-
-```tsx
-useEffect(() => {
-  const wallet = walletRef.current;
-  if (!wallet) return;
-
-  // ✅ CORRECT - Extract specific data
-  const handleNewTransaction = (tx: Transaction) => {
-    setWalletState((prev) => ({
-      ...prev,
-      balance: wallet.getBalance(), // Get current value
-      lastTxId: tx.id,              // Specific property
-    }));
+// ✅ CORRECT - Redux state stores only serializable data
+interface WalletInfo {
+  metadata: {
+    id: string;
+    friendlyName: string;
+    seedWords: string;
+    network: NetworkType;
+    createdAt: number;
   };
+  instance: null; // Always null in Redux state
+  status: 'idle' | 'connecting' | 'syncing' | 'ready' | 'error';
+  firstAddress?: string;
+  error?: string;
+}
 
-  // ❌ WRONG - Don't store the entire transaction or wallet
+// ❌ WRONG - Don't store complex objects
+interface WalletDataWrong {
+  wallet: HathorWallet;     // Non-serializable!
+  transactions: Transaction[]; // Too much data
+  utxos: UTXO[];           // Too much data
+}
+```
+
+## Pattern 3: Use Custom Hooks for Unified API
+
+Custom hooks provide a clean API that abstracts Redux and the external map:
+
+```tsx
+// ✅ CORRECT - Use custom hooks
+import { useWalletStore } from '../hooks/useWalletStore';
+
+function MyComponent() {
+  const { getWallet, updateWalletStatus } = useWalletStore();
+
+  const walletInfo = getWallet('wallet-123');
+  const instance = walletInfo?.instance; // Seamlessly retrieved
+
+  // Update status via Redux action
+  updateWalletStatus('wallet-123', 'ready', '0x123...');
+}
+
+// ❌ WRONG - Don't access Redux and map directly
+function MyComponentWrong() {
+  const wallets = useSelector(state => state.walletStore.wallets);
+  const instance = walletInstancesMap.get('wallet-123'); // Fragmented access
+}
+```
+
+**Benefits:**
+- Single source of truth via hooks
+- Automatic synchronization between Redux and external map
+- Type-safe API
+- Easy to test and mock
+
+## Pattern 4: Update Wallet Status via Redux Actions
+
+When listening to wallet events, dispatch Redux actions to update state:
+
+```tsx
+import { useWalletStore } from '../hooks/useWalletStore';
+
+function WalletComponent({ walletId }: Props) {
+  const { getWallet, updateWalletStatus } = useWalletStore();
+  const walletInfo = getWallet(walletId);
+
+  useEffect(() => {
+    const instance = walletInfo?.instance;
+    if (!instance) return;
+
+    // ✅ CORRECT - Dispatch Redux action with specific data
+    const handleNewTransaction = (tx: Transaction) => {
+      const balance = instance.getBalance();
+      updateWalletStatus(walletId, 'ready', instance.getAddress(0));
+    };
+
+    instance.on('new-tx', handleNewTransaction);
+    return () => instance.off('new-tx', handleNewTransaction);
+  }, [walletId, walletInfo?.instance, updateWalletStatus]);
+
+  // ❌ WRONG - Don't try to store transactions in Redux
   const handleNewTransactionWrong = (tx: Transaction) => {
-    setWalletState((prev) => ({
-      ...prev,
-      wallet: wallet,           // Never do this!
-      transaction: tx,          // Too much data
-      allTransactions: [...],   // Heavy array
+    dispatch(addTransaction({
+      walletId,
+      transaction: tx,        // Complex object!
+      wallet: instance,       // Even worse!
     }));
   };
-
-  wallet.on('new-tx', handleNewTransaction);
-  return () => wallet.off('new-tx', handleNewTransaction);
-}, []);
+}
 ```
 
-## Complete Example
+## Complete Example with Redux
 
 ```tsx
-export function WalletComponent({ seedPhrase, network }: Props) {
-  // ✅ Store wallet instance in ref
-  const walletRef = useRef<HathorWallet | null>(null);
+import { useWalletStore } from '../hooks/useWalletStore';
+import { walletInstancesMap } from '../store/slices/walletStoreSlice';
+import HathorWallet from '@hathor/wallet-lib';
 
-  // ✅ Track only specific rendering state
-  const [state, setState] = useState({
-    status: 'idle' as WalletStatus,
-    address: '',
-    balance: 0,
-    error: null as string | null,
-  });
+export function WalletComponent({walletId}: Props) {
+	const {getWallet, updateWalletInstance, updateWalletStatus} = useWalletStore();
+	const walletInfo = getWallet(walletId);
 
-  // ✅ Use refs for callbacks
-  const callbacksRef = useRef({ onReady, onError });
-  useEffect(() => {
-    callbacksRef.current = { onReady, onError };
-  }, [onReady, onError]);
+	// Initialize wallet
+	useEffect(() => {
+		if (!walletInfo) return;
 
-  // Initialize wallet
-  useEffect(() => {
-    let mounted = true;
+		let mounted = true;
+		const {seedWords, network} = walletInfo.metadata;
 
-    async function init() {
-      const wallet = new HathorWallet({ seed: seedPhrase });
-      walletRef.current = wallet;
+		async function init() {
+			// Update status to connecting
+			updateWalletStatus(walletId, 'connecting');
 
-      await wallet.start();
+			try {
+				const wallet = new HathorWallet({seed: seedWords, network});
 
-      if (!mounted) {
-        await wallet.stop();
-        return;
-      }
+				// Store instance in external map
+				walletInstancesMap.set(walletId, wallet);
+				updateWalletInstance(walletId, wallet);
 
-      // ✅ Extract specific properties for state
-      setState({
-        status: 'ready',
-        address: await wallet.getAddressAtIndex(0),
-        balance: wallet.getBalance(),
-        error: null,
-      });
+				await wallet.start();
 
-      callbacksRef.current.onReady?.(wallet);
-    }
+				if (!mounted) {
+					console.error(`Wallet ${walletId} could not start!`)
+					await wallet.stop();
+					walletInstancesMap.delete(walletId);
+					return;
+				}
 
-    init();
+				// Extract specific properties and update Redux state
+				const firstAddress = await wallet.getAddressAtIndex(0);
+				updateWalletStatus(walletId, 'ready', firstAddress);
 
-    return () => {
-      mounted = false;
-      walletRef.current?.stop();
-    };
-  }, [seedPhrase, network]); // Only re-init on seed/network change
+			} catch (error) {
+				if (mounted) {
+					updateWalletStatus(walletId, 'error', undefined, error.message);
+				}
+			}
+		}
 
-  // ✅ Listen to specific wallet events
-  useEffect(() => {
-    const wallet = walletRef.current;
-    if (!wallet) return;
+		init();
 
-    const updateBalance = () => {
-      setState((prev) => ({
-        ...prev,
-        balance: wallet.getBalance(), // Extract current value
-      }));
-    };
+		return () => {
+			mounted = false;
+			const instance = walletInstancesMap.get(walletId);
+			if (instance) {
+				instance.stop().catch(console.error);
+				walletInstancesMap.delete(walletId);
+			}
+		};
+	}, [walletId, updateWalletInstance, updateWalletStatus]);
 
-    wallet.on('balance-update', updateBalance);
-    return () => wallet.off('balance-update', updateBalance);
-  }, []); // No dependencies - walletRef is stable
+	// Listen to wallet events
+	useEffect(() => {
+		const instance = walletInfo?.instance;
+		if (!instance) return;
 
-  return (
-    <div>
-      <p>Status: {state.status}</p>
-      <p>Address: {state.address}</p>
-      <p>Balance: {state.balance}</p>
-    </div>
-  );
+		const updateBalance = () => {
+			const balance = instance.getBalance();
+			// Store balance in local state or dispatch to Redux if needed
+			console.log('Balance updated:', balance);
+		};
+
+		instance.on('balance-update', updateBalance);
+		return () => instance.off('balance-update', updateBalance);
+	}, [walletInfo?.instance]);
+
+	if (!walletInfo) return <div>Wallet not found</div>;
+
+	return (
+		<div>
+			<p>Name: {walletInfo.metadata.friendlyName}</p>
+			<p>Status: {walletInfo.status}</p>
+			<p>Address: {walletInfo.firstAddress}</p>
+			{walletInfo.error && <p>Error: {walletInfo.error}</p>}
+		</div>
+	);
 }
 ```
 
 ## Key Takeaways
 
-1. **Never** store `HathorWallet` instances in React state
-2. **Always** use `useRef` for wallet instances
-3. **Only** store specific, primitive values in state (status, balance, addresses)
-4. **Use refs** for callbacks to prevent unnecessary re-initializations
-5. **Extract** specific data when listening to wallet events
-6. **Keep** useEffect dependencies minimal and stable
+1. **Never** store `HathorWallet` instances in Redux state
+2. **Always** use external `walletInstancesMap` for wallet instances
+3. **Only** store serializable data in Redux (metadata, status, addresses)
+4. **Use custom hooks** (`useWalletStore`, `useStage`) for unified API
+5. **Dispatch Redux actions** when wallet state changes
+6. **Keep** wallet lifecycle management in components/effects
 
 ## Anti-Patterns to Avoid
 
 ```tsx
-// ❌ WRONG - All of these are bad!
-const [wallet, setWallet] = useState<HathorWallet>(null);
-const [transactions, setTransactions] = useState(wallet.getTransactions());
-const [walletData, setWalletData] = useState({ ...wallet });
+// ❌ WRONG - Don't store wallet instances in Redux
+dispatch(updateWallet({
+  id: walletId,
+  instance: walletInstance, // Serialization error!
+}));
 
-// Even this is problematic:
-useEffect(() => {
-  // This will re-run if callback changes every render
-  wallet.on('event', onCallback);
-}, [onCallback]);
+// ❌ WRONG - Don't store complex objects
+dispatch(addTransaction({
+  walletId,
+  transaction: complexTxObject, // Too complex!
+}));
+
+// ❌ WRONG - Don't access map directly, use hooks
+const instance = walletInstancesMap.get(walletId); // Fragmented!
+const metadata = useSelector(state => state.walletStore.wallets[walletId]);
+
+// ✅ CORRECT - Use custom hooks
+const { getWallet } = useWalletStore();
+const walletInfo = getWallet(walletId); // Unified access!
 ```
 
-## When to Update This Pattern
+## Redux Toolkit Configuration
 
-As the application grows, consider:
+The store is configured to handle non-serializable values properly:
 
-1. **Context API** - For sharing wallet across components
-2. **Custom Hooks** - `useWallet()` to encapsulate this logic
-3. **State Management** - Redux/Zustand for complex wallet state
-4. **Separation** - Keep wallet instance in context, specific state local to components
+```typescript
+// store/index.ts
+export const store = configureStore({
+  reducer: {
+    walletStore: walletStoreReducer,
+    stage: stageReducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        // Ignore wallet instance actions
+        ignoredActions: ['walletStore/updateWalletInstance'],
+        ignoredPaths: ['walletStore.wallets'],
+      },
+    }),
+});
+```
+
+## Benefits of This Architecture
+
+1. **Serializable State**: Redux DevTools work perfectly
+2. **Performance**: Only serialize what's needed
+3. **Type Safety**: Full TypeScript support
+4. **Testability**: Easy to mock custom hooks
+5. **Scalability**: Can add more slices as needed
+6. **Persistence**: LocalStorage sync built-in
+7. **Developer Experience**: Redux DevTools, time-travel debugging
