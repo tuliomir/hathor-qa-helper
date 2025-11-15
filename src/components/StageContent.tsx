@@ -17,6 +17,7 @@ export default function StageContent() {
         padding: '30px',
         backgroundColor: 'white',
         overflowY: 'auto',
+        overflowX: 'hidden',
       }}
     >
       {currentStage === 'wallet-initialization' && <WalletInitialization />}
