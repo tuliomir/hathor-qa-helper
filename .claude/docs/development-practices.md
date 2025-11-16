@@ -39,3 +39,6 @@
 - No sensitive data in commits
 - Use env vars for config
 - Run `yarn audit` periodically
+
+## Documentation
+- Optimize Claude documentation for token usage, while maintaining clarity
