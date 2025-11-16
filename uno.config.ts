@@ -1,8 +1,10 @@
 import { defineConfig, presetUno, presetIcons } from 'unocss';
+import presetDaisy from '@unscatty/unocss-preset-daisy';
 
 export default defineConfig({
   presets: [
     presetUno(),
+    presetDaisy(),
     presetIcons({
       scale: 1.2,
       cdn: 'https://esm.sh/',

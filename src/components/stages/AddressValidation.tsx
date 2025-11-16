@@ -8,6 +8,7 @@ import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { setSelectedWalletId, setAddressIndex, setAmount } from '../../store/slices/addressValidationSlice';
+import CopyButton from '../common/CopyButton';
 
 export default function AddressValidation() {
   const { getAllWallets } = useWalletStore();
@@ -56,14 +57,6 @@ export default function AddressValidation() {
   useEffect(() => {
     setSelectedWalletIdLocal(selectedWalletIdFromStore || '');
   }, [selectedWalletIdFromStore]);
-
-  const handleCopy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
@@ -185,14 +178,7 @@ export default function AddressValidation() {
                   <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
                     {derivedAddress}
                   </p>
-                  <button
-                    onClick={() => handleCopy(derivedAddress)}
-                    title="Copy address"
-                    className="ml-2 p-0 bg-transparent border-0 inline-flex items-center cursor-pointer"
-                    aria-label="Copy address"
-                  >
-                    <span className="i-mdi-content-copy" />
-                  </button>
+                  <CopyButton text={derivedAddress} label="Copy address" className="ml-2" />
                 </div>
               </div>
 
@@ -209,14 +195,7 @@ export default function AddressValidation() {
                     <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded text-center">
                       {getAddressUri()}
                     </p>
-                    <button
-                      onClick={() => handleCopy(getAddressUri())}
-                      title="Copy address URI"
-                      className="ml-2 p-0 bg-transparent border-0 inline-flex items-center cursor-pointer"
-                      aria-label="Copy address URI"
-                    >
-                      <span className="i-mdi-content-copy" />
-                    </button>
+                    <CopyButton text={getAddressUri()} label="Copy address URI" className="ml-2" />
                   </div>
                 </div>
               </div>
@@ -254,14 +233,7 @@ export default function AddressValidation() {
                     <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
                       {getPaymentRequest()}
                     </p>
-                    <button
-                      onClick={() => handleCopy(getPaymentRequest())}
-                      title="Copy payment request"
-                      className="ml-2 p-0 bg-transparent border-0 inline-flex items-center cursor-pointer"
-                      aria-label="Copy payment request"
-                    >
-                      <span className="i-mdi-content-copy" />
-                    </button>
+                    <CopyButton text={getPaymentRequest()} label="Copy payment request" className="ml-2" />
                   </div>
                 </div>
               </div>

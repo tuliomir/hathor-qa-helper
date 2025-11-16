@@ -6,12 +6,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import walletStoreReducer from './slices/walletStoreSlice';
 import stageReducer from './slices/stageSlice';
 import addressValidationReducer from './slices/addressValidationSlice';
+import toastReducer from './slices/toastSlice';
 
 export const store = configureStore({
   reducer: {
     walletStore: walletStoreReducer,
     stage: stageReducer,
     addressValidation: addressValidationReducer,
+    toast: toastReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -795,6 +795,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tailwindcss/nesting@npm:0.0.0-insiders.565cd3e":
+  version: 0.0.0-insiders.565cd3e
+  resolution: "@tailwindcss/nesting@npm:0.0.0-insiders.565cd3e"
+  dependencies:
+    postcss-nested: "npm:^5.0.5"
+  peerDependencies:
+    postcss: ^8.2.15
+  checksum: 10c0/e5803411019a79e852db60ec41ea7bad992c70840fefd64e0b6161198d66e35bef055048f4603ac35363e732adbeb9569a43de1ad8fbc3a8453c5a4bbe417e30
+  languageName: node
+  linkType: hard
+
 "@tybys/wasm-util@npm:^0.10.1":
   version: 0.10.1
   resolution: "@tybys/wasm-util@npm:0.10.1"
@@ -1086,6 +1097,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@unocss/core@npm:^0.57.7":
+  version: 0.57.7
+  resolution: "@unocss/core@npm:0.57.7"
+  checksum: 10c0/44cb94a693fc7b33ec05f69670d35eddcd9301df368969d3a456ccf0e3983842652cb9a2093cd345af52b8da686de7b8c38e4fdb859daf16b795e7857aa348e3
+  languageName: node
+  linkType: hard
+
 "@unocss/extractor-arbitrary-variants@npm:66.5.6":
   version: 66.5.6
   resolution: "@unocss/extractor-arbitrary-variants@npm:66.5.6"
@@ -1244,6 +1262,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@unocss/rule-utils@npm:^0.57.1":
+  version: 0.57.7
+  resolution: "@unocss/rule-utils@npm:0.57.7"
+  dependencies:
+    "@unocss/core": "npm:^0.57.7"
+    magic-string: "npm:^0.30.5"
+  checksum: 10c0/1020b24aae512a5a14bd95287847a8158ac14ca4d4f1763f6426c2a602930d9f427523b97111e1fd112b25841984bcf7f51d9d365968c54ce504528ba3aeab16
+  languageName: node
+  linkType: hard
+
 "@unocss/transformer-attributify-jsx@npm:66.5.6":
   version: 66.5.6
   resolution: "@unocss/transformer-attributify-jsx@npm:66.5.6"
@@ -1300,6 +1328,23 @@ __metadata:
   peerDependencies:
     vite: ^2.9.0 || ^3.0.0-0 || ^4.0.0 || ^5.0.0-0 || ^6.0.0-0 || ^7.0.0-0
   checksum: 10c0/e4d780f646f27d90bae3fedbd723ce098679359d759d52c2c6a271998042d33e57ae87fb1de658976328eef59fa46316ac8cee1878f541599ead4ccd5d7ada1d
+  languageName: node
+  linkType: hard
+
+"@unscatty/unocss-preset-daisy@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "@unscatty/unocss-preset-daisy@npm:1.0.0"
+  dependencies:
+    "@tailwindcss/nesting": "npm:0.0.0-insiders.565cd3e"
+    "@unocss/rule-utils": "npm:^0.57.1"
+    camelcase: "npm:^8.0.0"
+    daisy-untailwind: "npm:^3.9.4"
+    parsel-js: "npm:^1.1.2"
+    postcss: "npm:^8.4.31"
+    postcss-js: "npm:^4.0.1"
+  peerDependencies:
+    unocss: ^0.56.4
+  checksum: 10c0/7d31fa7467f4979382c7ca8b1918844d8b81af2761316486bd6d7f59407489b52c48fb898a3a3b814f43368f539c5ff2d4594e50d5e448b6c16b6eb99cd0dcc4
   languageName: node
   linkType: hard
 
@@ -1875,6 +1920,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"camelcase-css@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "camelcase-css@npm:2.0.1"
+  checksum: 10c0/1a1a3137e8a781e6cbeaeab75634c60ffd8e27850de410c162cce222ea331cd1ba5364e8fb21c95e5ca76f52ac34b81a090925ca00a87221355746d049c6e273
+  languageName: node
+  linkType: hard
+
+"camelcase@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "camelcase@npm:8.0.0"
+  checksum: 10c0/56c5fe072f0523c9908cdaac21d4a3b3fb0f608fb2e9ba90a60e792b95dd3bb3d1f3523873ab17d86d146e94171305f73ef619e2f538bd759675bc4a14b4bff3
+  languageName: node
+  linkType: hard
+
 "caniuse-lite@npm:^1.0.30001751":
   version: 1.0.30001754
   resolution: "caniuse-lite@npm:1.0.30001754"
@@ -1942,6 +2001,13 @@ __metadata:
   version: 1.1.4
   resolution: "color-name@npm:1.1.4"
   checksum: 10c0/a1a3f914156960902f46f7f56bc62effc6c94e84b2cae157a526b1c1f74b677a47ec602bf68a61abfa2b42d15b7c5651c6dbe72a43af720bc588dff885b10f95
+  languageName: node
+  linkType: hard
+
+"colord@npm:^2.9.3":
+  version: 2.9.3
+  resolution: "colord@npm:2.9.3"
+  checksum: 10c0/9699e956894d8996b28c686afe8988720785f476f59335c80ce852ded76ab3ebe252703aec53d9bef54f6219aea6b960fb3d9a8300058a1d0c0d4026460cd110
   languageName: node
   linkType: hard
 
@@ -2109,10 +2175,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cssesc@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "cssesc@npm:3.0.0"
+  bin:
+    cssesc: bin/cssesc
+  checksum: 10c0/6bcfd898662671be15ae7827120472c5667afb3d7429f1f917737f3bf84c4176003228131b643ae74543f17a394446247df090c597bb9a728cce298606ed0aa7
+  languageName: node
+  linkType: hard
+
 "csstype@npm:^3.0.2":
   version: 3.1.3
   resolution: "csstype@npm:3.1.3"
   checksum: 10c0/80c089d6f7e0c5b2bd83cf0539ab41474198579584fa10d86d0cafe0642202343cbc119e076a0b1aece191989477081415d66c9fefbf3c957fc2fc4b7009f248
+  languageName: node
+  linkType: hard
+
+"daisy-untailwind@npm:^3.9.4":
+  version: 3.9.4
+  resolution: "daisy-untailwind@npm:3.9.4"
+  dependencies:
+    colord: "npm:^2.9.3"
+  checksum: 10c0/ee4a8fd6ccccabf6a889daada2a2526fa3f844e1e10868265f51678c2ecdad8c88952706d5cc63d30c250af3fb2361229768db99fceac56f91ebe1c649980268
   languageName: node
   linkType: hard
 
@@ -2940,6 +3024,7 @@ __metadata:
     "@types/react-dom": "npm:^19.1.9"
     "@unocss/preset-icons": "npm:^66.5.6"
     "@unocss/preset-uno": "npm:^66.5.6"
+    "@unscatty/unocss-preset-daisy": "npm:^1.0.0"
     "@vitejs/plugin-react": "npm:^5.0.4"
     bitcore-lib: "npm:8.25.10"
     bitcore-mnemonic: "npm:8.25.10"
@@ -3542,7 +3627,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^0.30.21, magic-string@npm:^0.30.3":
+"magic-string@npm:^0.30.21, magic-string@npm:^0.30.3, magic-string@npm:^0.30.5":
   version: 0.30.21
   resolution: "magic-string@npm:0.30.21"
   dependencies:
@@ -4052,6 +4137,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"parsel-js@npm:^1.1.2":
+  version: 1.2.2
+  resolution: "parsel-js@npm:1.2.2"
+  checksum: 10c0/80439d2eb81a754a2d02038ed9a2ed49ba73998680f2847647eb7dcb5494358f37d7075feddf784445cc5e192f3383e559c179435dde141fd3ea46d6039d0ca8
+  languageName: node
+  linkType: hard
+
 "path-browserify@npm:^1.0.1":
   version: 1.0.1
   resolution: "path-browserify@npm:1.0.1"
@@ -4177,7 +4269,39 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postcss@npm:^8.5.6":
+"postcss-js@npm:^4.0.1":
+  version: 4.1.0
+  resolution: "postcss-js@npm:4.1.0"
+  dependencies:
+    camelcase-css: "npm:^2.0.1"
+  peerDependencies:
+    postcss: ^8.4.21
+  checksum: 10c0/a3cf6e725f3e9ecd7209732f8844a0063a1380b718ccbcf93832b6ec2cd7e63ff70dd2fed49eb2483c7482296860a0f7badd3115b5d0fa05ea648eb6d9dfc9c6
+  languageName: node
+  linkType: hard
+
+"postcss-nested@npm:^5.0.5":
+  version: 5.0.6
+  resolution: "postcss-nested@npm:5.0.6"
+  dependencies:
+    postcss-selector-parser: "npm:^6.0.6"
+  peerDependencies:
+    postcss: ^8.2.14
+  checksum: 10c0/cff4f05b06ec752a90a36b329b4c1b620352458b3d8e02e2fc7efdfb5073945242573ec42c0dd2b7c4beccba21233e5f089903c3e5e8aea2bbceca09c406fb8f
+  languageName: node
+  linkType: hard
+
+"postcss-selector-parser@npm:^6.0.6":
+  version: 6.1.2
+  resolution: "postcss-selector-parser@npm:6.1.2"
+  dependencies:
+    cssesc: "npm:^3.0.0"
+    util-deprecate: "npm:^1.0.2"
+  checksum: 10c0/523196a6bd8cf660bdf537ad95abd79e546d54180f9afb165a4ab3e651ac705d0f8b8ce6b3164fb9e3279ce482c5f751a69eb2d3a1e8eb0fd5e82294fb3ef13e
+  languageName: node
+  linkType: hard
+
+"postcss@npm:^8.4.31, postcss@npm:^8.5.6":
   version: 8.5.6
   resolution: "postcss@npm:8.5.6"
   dependencies:
@@ -5231,7 +5355,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"util-deprecate@npm:^1.0.1, util-deprecate@npm:~1.0.1":
+"util-deprecate@npm:^1.0.1, util-deprecate@npm:^1.0.2, util-deprecate@npm:~1.0.1":
   version: 1.0.2
   resolution: "util-deprecate@npm:1.0.2"
   checksum: 10c0/41a5bdd214df2f6c3ecf8622745e4a366c4adced864bc3c833739791aeeeb1838119af7daed4ba36428114b5c67dcda034a79c882e97e43c03e66a4dd7389942

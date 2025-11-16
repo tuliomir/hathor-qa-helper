@@ -10,9 +10,16 @@
 - Auto-fix: `yarn lint:fix && yarn format`
 
 ## State Management
+- **Always use Redux** for global state (not Context API)
 - Never store non-serializable objects in Redux
-- Use custom hooks for state access
+- Use custom hooks for state access (e.g., `useToast`, `useWalletStore`)
 - See `wallet-state-management.md`
+
+## UI Components
+- **Reusable components**: Store in `src/components/common/`
+- **Stage-specific**: Store in `src/components/stages/`
+- **Global feedback**: Use `useToast()` hook (success/error/warning/info)
+- Example: `const { success } = useToast(); success('Copied!');`
 
 ## Performance
 - Monitor bundle size
