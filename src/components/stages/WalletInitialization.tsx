@@ -10,7 +10,7 @@ import { useAppDispatch } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
 import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
-import { treatSeedWords } from '../../utils/walletUtils';
+import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import type { NetworkType } from '../../constants/network';
 
@@ -303,9 +303,44 @@ export default function WalletInitialization() {
             <div className="mt-1.5">
               <p className="text-danger text-sm m-0 mb-1.5">⚠️ {validationError}</p>
               {invalidWords.length > 0 && (
-                <p className="text-danger text-xs m-0">
-                  Invalid words: <strong>{invalidWords.join(', ')}</strong>
-                </p>
+                <div className="text-danger text-xs m-0">
+                  <div className="font-bold mb-1">Invalid words:</div>
+                  {invalidWords.map((w, idx) => {
+                    const suggestion = didYouMean(w);
+                    return (
+                      <div key={`${w}-${idx}`} className="mb-1">
+                        <span className="mr-2">{w}</span>
+                        {suggestion ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Replace the invalid word (word-boundary) in the seed input with the suggestion
+                              const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                              const re = new RegExp('\\b' + escapeRegExp(w) + '\\b', 'gi');
+                              const newSeed = seedInput.replace(re, suggestion);
+                              setSeedInput(newSeed);
+                              // Re-validate the updated seed input
+                              const { valid: v, invalidWords: newInvalid } = treatSeedWords(newSeed);
+                              if (v) {
+                                setValidationError(null);
+                                setInvalidWords([]);
+                              } else {
+                                setValidationError('Invalid seed phrase');
+                                setInvalidWords(newInvalid || []);
+                              }
+                              textareaRef.current?.focus();
+                            }}
+                            className="text-info underline cursor-pointer text-xs bg-transparent border-0 p-0"
+                          >
+                            Did you mean: <strong className="ml-1">{suggestion}</strong>?
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted">(no suggestion available)</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
