@@ -12,6 +12,8 @@
 ## State Management
 - **Always use Redux** for global state (not Context API)
 - Never store non-serializable objects in Redux
+- **BigInt values**: Store as strings in Redux, convert to BigInt for operations
+  - See `bigint-handling.md` for detailed patterns
 - Use custom hooks for state access (e.g., `useToast`, `useWalletStore`)
 - See `wallet-state-management.md`
 

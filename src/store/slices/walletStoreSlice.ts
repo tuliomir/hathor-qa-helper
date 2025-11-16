@@ -142,10 +142,24 @@ export const startWallet = createAsyncThunk(
       // Get the first address
       const firstAddress = await walletInstance.getAddressAtIndex(0);
 
+      // Get the selected token UID from state
+      const state = getState() as RootState;
+      const selectedTokenUid = state.tokens.selectedTokenUid;
+
+      // Get the balance for the selected token
+      const balanceData = await walletInstance.getBalance(selectedTokenUid);
+      const balanceBigInt = balanceData && balanceData[0] ? balanceData[0].balance.unlocked : 0n;
+
+      // Convert BigInt to string for Redux storage (maintains serializability)
+      const balanceString = balanceBigInt.toString();
+
       // Update status to ready
       dispatch(updateWalletStatus({ id: walletId, status: 'ready', firstAddress }));
 
-      return { walletId, firstAddress };
+      // Update balance
+      dispatch(updateWalletBalance({ id: walletId, balance: balanceString }));
+
+      return { walletId, firstAddress, balance: balanceString };
     } catch (error) {
       // Cleanup on error
       const instance = walletInstancesMap.get(walletId);
@@ -283,6 +297,21 @@ const walletStoreSlice = createSlice({
         }
       }
     },
+
+    updateWalletBalance: (
+      state,
+      action: PayloadAction<{
+        id: string;
+        balance: string;
+      }>
+    ) => {
+      const { id, balance } = action.payload;
+      const walletInfo = state.wallets[id];
+
+      if (walletInfo) {
+        walletInfo.balance = balance;
+      }
+    },
   },
 });
 
@@ -292,6 +321,7 @@ export const {
   updateFriendlyName,
   updateWalletInstance,
   updateWalletStatus,
+  updateWalletBalance,
 } = walletStoreSlice.actions;
 
 export default walletStoreSlice.reducer;

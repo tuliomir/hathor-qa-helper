@@ -7,6 +7,8 @@ import walletStoreReducer from './slices/walletStoreSlice';
 import stageReducer from './slices/stageSlice';
 import addressValidationReducer from './slices/addressValidationSlice';
 import toastReducer from './slices/toastSlice';
+import walletSelectionReducer from './slices/walletSelectionSlice';
+import tokensReducer from './slices/tokensSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +16,8 @@ export const store = configureStore({
     stage: stageReducer,
     addressValidation: addressValidationReducer,
     toast: toastReducer,
+    walletSelection: walletSelectionReducer,
+    tokens: tokensReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

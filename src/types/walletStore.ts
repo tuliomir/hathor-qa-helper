@@ -26,6 +26,7 @@ export interface WalletInfo {
   instance: HathorWallet | null;
   status: WalletStatus;
   firstAddress?: string;
+  balance?: string; // Balance stored as string (converted from BigInt) for Redux serializability
   error?: string;
 }
 

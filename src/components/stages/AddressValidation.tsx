@@ -7,43 +7,35 @@ import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { setSelectedWalletId, setAddressIndex, setAmount } from '../../store/slices/addressValidationSlice';
+import { setAddressIndex, setAmount } from '../../store/slices/addressValidationSlice';
 import CopyButton from '../common/CopyButton';
+import { formatBalance } from '../../utils/balanceUtils';
+import type { WalletInfo } from '../../types/walletStore';
 
-export default function AddressValidation() {
-  const { getAllWallets } = useWalletStore();
-  const wallets = getAllWallets();
-  const readyWallets = wallets.filter((w) => w.status === 'ready');
+type TabType = 'funding' | 'test';
 
-  const dispatch = useAppDispatch();
-  const selectedWalletIdFromStore = useAppSelector((s) => s.addressValidation.selectedWalletId);
-  const addressIndexFromStore = useAppSelector((s) => s.addressValidation.addressIndex);
-  const amountFromStore = useAppSelector((s) => s.addressValidation.amount);
-
-  const [selectedWalletIdLocal, setSelectedWalletIdLocal] = useState<string>(selectedWalletIdFromStore || '');
+// Component for displaying wallet address information
+function WalletAddressDisplay({
+  wallet,
+  addressIndex,
+  amount,
+  onIndexChange,
+  onAmountChange
+}: {
+  wallet: WalletInfo;
+  addressIndex: number;
+  amount: number;
+  onIndexChange: (index: number) => void;
+  onAmountChange: (amount: number) => void;
+}) {
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedWallet = readyWallets.find((w) => w.metadata.id === (selectedWalletIdFromStore || selectedWalletIdLocal));
-
-  // If there's no selected wallet in the store, use the first "started" wallet as default.
-  // Note: repository uses 'ready' to indicate a started/usable wallet, so we treat 'ready' as "started" here.
-  useEffect(() => {
-    if (!selectedWalletIdFromStore && readyWallets.length > 0) {
-      const firstReady = readyWallets[0];
-      if (firstReady && firstReady.metadata && firstReady.metadata.id) {
-        // update both store and local state so UI and auto-derive behave consistently
-        dispatch(setSelectedWalletId(firstReady.metadata.id));
-        setSelectedWalletIdLocal(firstReady.metadata.id);
-      }
-    }
-  }, [readyWallets, selectedWalletIdFromStore, dispatch]);
-
   // Auto-derive selected address when wallet is selected
   useEffect(() => {
     const deriveAddress = async () => {
-      if (!selectedWallet || !selectedWallet.instance) {
+      if (!wallet || !wallet.instance) {
         setDerivedAddress(null);
         return;
       }
@@ -52,8 +44,7 @@ export default function AddressValidation() {
       setError(null);
 
       try {
-        const index = addressIndexFromStore ?? 0;
-        const address = await selectedWallet.instance.getAddressAtIndex(index);
+        const address = await wallet.instance.getAddressAtIndex(addressIndex);
         setDerivedAddress(address);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to derive address');
@@ -64,32 +55,26 @@ export default function AddressValidation() {
     };
 
     deriveAddress();
-  }, [selectedWallet, addressIndexFromStore]);
-
-  // Keep local selection in sync with store
-  useEffect(() => {
-    setSelectedWalletIdLocal(selectedWalletIdFromStore || '');
-  }, [selectedWalletIdFromStore]);
+  }, [wallet, addressIndex]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
     if (!isNaN(value) && value > 0) {
-      dispatch(setAmount(value));
+      onAmountChange(value);
     } else if (e.target.value === '') {
-      dispatch(setAmount(1));
+      onAmountChange(1);
     }
   };
 
   const handleIndexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    // allow empty input to be typed; only commit numbers >= 0
     if (val === '') {
-      dispatch(setAddressIndex(0));
+      onIndexChange(0);
       return;
     }
     const parsed = parseInt(val, 10);
     if (!isNaN(parsed) && parsed >= 0) {
-      dispatch(setAddressIndex(parsed));
+      onIndexChange(parsed);
     }
   };
 
@@ -99,7 +84,7 @@ export default function AddressValidation() {
     if (!derivedAddress) return '';
     return JSON.stringify({
       address: `hathor:${derivedAddress}`,
-      amount: amountFromStore.toString(),
+      amount: amount.toString(),
       token: {
         uid: '00',
         name: 'Hathor',
@@ -109,148 +94,228 @@ export default function AddressValidation() {
   };
 
   return (
+    <>
+      {/* Wallet Info */}
+      <div className="card-primary mb-7.5">
+        <h2 className="text-xl font-bold mb-4">Wallet Information</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-muted mb-1">Name:</p>
+            <p className="font-bold m-0">{wallet.metadata.friendlyName}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted mb-1">Network:</p>
+            <p className="font-bold m-0">{wallet.metadata.network}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted mb-1">Balance:</p>
+            <p className="font-bold m-0 text-success">
+              {wallet.balance ? `${formatBalance(wallet.balance)} HTR` : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted mb-1">First Address:</p>
+            <p className="font-mono text-2xs m-0">{wallet.firstAddress || 'N/A'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Address Index Control */}
+      <div className="card-primary mb-7.5">
+        <label htmlFor="address-index" className="block mb-1.5 font-bold">
+          Address Index:
+        </label>
+        <input
+          id="address-index"
+          type="number"
+          min={0}
+          step={1}
+          value={addressIndex}
+          onChange={handleIndexChange}
+          className="input"
+        />
+        <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
+      </div>
+
+      {error && (
+        <div className="card-primary mb-7.5 bg-red-50 border border-danger">
+          <p className="m-0 text-red-900">{error}</p>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="card-primary mb-7.5 text-center">
+          <p className="m-0">Loading address...</p>
+        </div>
+      )}
+
+      {derivedAddress && !isLoading && (
+        <>
+          {/* Address Display */}
+          <div className="card-primary mb-7.5">
+            <div className="mb-3 text-center">
+              <h3 className="text-lg font-bold m-0">Address (Index {addressIndex})</h3>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
+                {derivedAddress}
+              </p>
+              <CopyButton text={derivedAddress} label="Copy address" className="ml-2" />
+            </div>
+          </div>
+
+          {/* Address URI QR Code */}
+          <div className="card-primary mb-7.5">
+            <div className="mb-3 text-center">
+              <h3 className="text-lg font-bold m-0">Address QR Code</h3>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-4 bg-white border-2 border-gray-300 rounded">
+                <QRCode value={getAddressUri()} size={200} />
+              </div>
+              <div className="flex items-center w-full justify-center">
+                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded text-center">
+                  {getAddressUri()}
+                </p>
+                <CopyButton text={getAddressUri()} label="Copy address URI" className="ml-2" />
+              </div>
+            </div>
+          </div>
+
+          {/* Amount Field */}
+          <div className="card-primary mb-7.5">
+            <label htmlFor="amount-input" className="block mb-1.5 font-bold">
+              Payment Amount:
+            </label>
+            <input
+              id="amount-input"
+              type="number"
+              min="1"
+              step="1"
+              value={amount}
+              onChange={handleAmountChange}
+              className="input"
+              placeholder="Enter amount"
+            />
+            <p className="text-muted text-xs mt-1.5 mb-0">
+              Enter a positive integer for the payment amount (HTR tokens)
+            </p>
+          </div>
+
+          {/* Payment Request QR Code */}
+          <div className="card-primary mb-7.5">
+            <div className="mb-3 text-center">
+              <h3 className="text-lg font-bold m-0">Payment Request QR Code</h3>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-4 bg-white border-2 border-gray-300 rounded">
+                <QRCode value={getPaymentRequest()} size={200} />
+              </div>
+              <div className="flex items-center w-full">
+                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
+                  {getPaymentRequest()}
+                </p>
+                <CopyButton text={getPaymentRequest()} label="Copy payment request" className="ml-2" />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+export default function AddressValidation() {
+  const { getAllWallets } = useWalletStore();
+  const wallets = getAllWallets();
+
+  const dispatch = useAppDispatch();
+  const addressIndexFromStore = useAppSelector((s) => s.addressValidation.addressIndex);
+  const amountFromStore = useAppSelector((s) => s.addressValidation.amount);
+  const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
+  const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
+
+  const [activeTab, setActiveTab] = useState<TabType>('funding');
+
+  const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
+  const testWallet = wallets.find((w) => w.metadata.id === testWalletId && w.status === 'ready');
+
+  const handleIndexChange = (index: number) => {
+    dispatch(setAddressIndex(index));
+  };
+
+  const handleAmountChange = (amount: number) => {
+    dispatch(setAmount(amount));
+  };
+
+  const noWalletsSelected = !fundingWallet && !testWallet;
+
+  return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Address Validation</h1>
       <p className="text-muted mb-7.5">
-        Select a ready wallet to view and share its first address through QR codes.
+        View and share wallet addresses through QR codes for the funding and test wallets.
       </p>
 
-      {readyWallets.length === 0 ? (
+      {noWalletsSelected ? (
         <div className="p-10 text-center border-2 border-dashed border-warning rounded-lg bg-yellow-50 text-yellow-800">
-          <h2 className="mt-0 text-2xl font-bold">No Ready Wallets Available</h2>
+          <h2 className="mt-0 text-2xl font-bold">No Wallets Selected</h2>
           <p className="text-base">
-            Please go to the <strong>Wallet Initialization</strong> stage, add a wallet, and start it before using this
-            feature.
+            Please go to the <strong>Wallet Initialization</strong> stage, start wallets, and select both a funding
+            wallet and a test wallet.
           </p>
         </div>
       ) : (
         <>
-          {/* Wallet Selection */}
-          <div className="card-primary mb-7.5">
-            <h2 className="text-xl font-bold mb-4">Select Wallet</h2>
-
-            <div className="mb-4 grid grid-cols-2 gap-4 items-end">
-              <div>
-                <label htmlFor="address-index" className="block mb-1.5 font-bold">
-                  Address Index:
-                </label>
-                <input
-                  id="address-index"
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={addressIndexFromStore}
-                  onChange={handleIndexChange}
-                  className="input"
-                />
-                <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
-              </div>
-
-              <div>
-                <label htmlFor="wallet-select" className="block mb-1.5 font-bold">
-                  Choose a Ready Wallet:
-                </label>
-                <select
-                  id="wallet-select"
-                  value={selectedWalletIdFromStore || selectedWalletIdLocal}
-                  onChange={(e) => dispatch(setSelectedWalletId(e.target.value))}
-                  className="input cursor-pointer bg-white"
-                >
-                  <option value="">-- Select a wallet --</option>
-                  {readyWallets.map((wallet) => (
-                    <option key={wallet.metadata.id} value={wallet.metadata.id}>
-                      {wallet.metadata.friendlyName} ({wallet.metadata.network})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Tab Navigation */}
+          <div className="mb-7.5">
+            <div className="flex border-b border-gray-300">
+              <button
+                onClick={() => setActiveTab('funding')}
+                className={`px-6 py-3 font-bold text-base border-b-2 transition-colors ${
+                  activeTab === 'funding'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted hover:text-primary'
+                }`}
+                disabled={!fundingWallet}
+              >
+                Funding Wallet
+                {!fundingWallet && ' (Not Selected)'}
+              </button>
+              <button
+                onClick={() => setActiveTab('test')}
+                className={`px-6 py-3 font-bold text-base border-b-2 transition-colors ${
+                  activeTab === 'test'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted hover:text-primary'
+                }`}
+                disabled={!testWallet}
+              >
+                Test Wallet
+                {!testWallet && ' (Not Selected)'}
+              </button>
             </div>
-
-            {error && (
-              <div className="p-4 bg-red-50 border border-danger rounded">
-                <p className="m-0 text-red-900">{error}</p>
-              </div>
-            )}
           </div>
 
-          {/* Address Display */}
-          {isLoading && (
-            <div className="card-primary mb-7.5 text-center">
-              <p className="m-0">Loading address...</p>
-            </div>
+          {/* Tab Content */}
+          {activeTab === 'funding' && fundingWallet && (
+            <WalletAddressDisplay
+              wallet={fundingWallet}
+              addressIndex={addressIndexFromStore}
+              amount={amountFromStore}
+              onIndexChange={handleIndexChange}
+              onAmountChange={handleAmountChange}
+            />
           )}
 
-          {derivedAddress && !isLoading && (
-            <>
-              {/* Address Display */}
-              <div className="card-primary mb-7.5">
-                <div className="mb-3 text-center">
-                  <h3 className="text-lg font-bold m-0">Address (Index {addressIndexFromStore})</h3>
-                </div>
-                <div className="flex items-center justify-center gap-2">
-                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
-                    {derivedAddress}
-                  </p>
-                  <CopyButton text={derivedAddress} label="Copy address" className="ml-2" />
-                </div>
-              </div>
-
-              {/* Address URI QR Code */}
-              <div className="card-primary mb-7.5">
-                <div className="mb-3 text-center">
-                  <h3 className="text-lg font-bold m-0">Address QR Code</h3>
-                </div>
-                <div className="flex flex-col items-center gap-3">
-                  <div className="p-4 bg-white border-2 border-gray-300 rounded">
-                    <QRCode value={getAddressUri()} size={200} />
-                  </div>
-                  <div className="flex items-center w-full justify-center">
-                    <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded text-center">
-                      {getAddressUri()}
-                    </p>
-                    <CopyButton text={getAddressUri()} label="Copy address URI" className="ml-2" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Amount Field */}
-              <div className="card-primary mb-7.5">
-                <label htmlFor="amount-input" className="block mb-1.5 font-bold">
-                  Payment Amount:
-                </label>
-                <input
-                  id="amount-input"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={amountFromStore}
-                  onChange={handleAmountChange}
-                  className="input"
-                  placeholder="Enter amount"
-                />
-                <p className="text-muted text-xs mt-1.5 mb-0">
-                  Enter a positive integer for the payment amount (HTR tokens)
-                </p>
-              </div>
-
-              {/* Payment Request QR Code */}
-              <div className="card-primary mb-7.5">
-                <div className="mb-3 text-center">
-                  <h3 className="text-lg font-bold m-0">Payment Request QR Code</h3>
-                </div>
-                <div className="flex flex-col items-center gap-3">
-                  <div className="p-4 bg-white border-2 border-gray-300 rounded">
-                    <QRCode value={getPaymentRequest()} size={200} />
-                  </div>
-                  <div className="flex items-center w-full">
-                    <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
-                      {getPaymentRequest()}
-                    </p>
-                    <CopyButton text={getPaymentRequest()} label="Copy payment request" className="ml-2" />
-                  </div>
-                </div>
-              </div>
-            </>
+          {activeTab === 'test' && testWallet && (
+            <WalletAddressDisplay
+              wallet={testWallet}
+              addressIndex={addressIndexFromStore}
+              amount={amountFromStore}
+              onIndexChange={handleIndexChange}
+              onAmountChange={handleAmountChange}
+            />
           )}
         </>
       )}

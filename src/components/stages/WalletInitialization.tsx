@@ -7,12 +7,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useAppDispatch } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
+import { setFundingWallet, setTestWallet } from '../../store/slices/walletSelectionSlice';
 import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
 import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
+import { formatBalance, compareBalances } from '../../utils/balanceUtils';
 import type { NetworkType } from '../../constants/network';
 
 export default function WalletInitialization() {
@@ -32,6 +34,16 @@ export default function WalletInitialization() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wallets = getAllWallets();
+
+  const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
+  const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
+
+  // Get ready wallets for selection
+  const readyWallets = wallets.filter((w) => w.status === 'ready');
+
+  // Sort wallets by balance for selection
+  const walletsSortedByBalanceDesc = [...readyWallets].sort((a, b) => -compareBalances(a.balance, b.balance));
+  const walletsSortedByBalanceAsc = [...readyWallets].sort((a, b) => compareBalances(a.balance, b.balance));
 
   const handleAddWallet = () => {
     const { valid: validation, treatedWords, error, invalidWords: invalidWordsList } = treatSeedWords(seedInput);
@@ -201,6 +213,11 @@ export default function WalletInitialization() {
                       <span className={`${getStatusColor(wallet.status)} font-bold text-sm`}>
                         {wallet.status}
                       </span>
+                      {wallet.status === 'ready' && wallet.balance && (
+                        <div className="text-xs text-success mt-1">
+                          Balance: {formatBalance(wallet.balance)} HTR
+                        </div>
+                      )}
                       {wallet.error && (
                         <div className="text-xs text-danger mt-1">{wallet.error}</div>
                       )}
@@ -251,6 +268,53 @@ export default function WalletInitialization() {
           </div>
         )}
       </div>
+
+      {/* Wallet Selection Cards */}
+      {readyWallets.length > 0 && (
+        <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Funding Wallet Selection */}
+          <div className="card-primary">
+            <h2 className="text-xl font-bold mb-4">Select Funding Wallet</h2>
+            <p className="text-muted text-sm mb-4">
+              Choose a wallet with funds to use for testing. Sorted by highest balance.
+            </p>
+            <select
+              id="funding-wallet-select"
+              value={fundingWalletId || ''}
+              onChange={(e) => dispatch(setFundingWallet(e.target.value || null))}
+              className="input cursor-pointer bg-white w-full"
+            >
+              <option value="">-- Select funding wallet --</option>
+              {walletsSortedByBalanceDesc.map((wallet) => (
+                <option key={wallet.metadata.id} value={wallet.metadata.id}>
+                  {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Test Wallet Selection */}
+          <div className="card-primary">
+            <h2 className="text-xl font-bold mb-4">Select Wallet Being Tested</h2>
+            <p className="text-muted text-sm mb-4">
+              Choose a wallet to test. Sorted by lowest balance.
+            </p>
+            <select
+              id="test-wallet-select"
+              value={testWalletId || ''}
+              onChange={(e) => dispatch(setTestWallet(e.target.value || null))}
+              className="input cursor-pointer bg-white w-full"
+            >
+              <option value="">-- Select test wallet --</option>
+              {walletsSortedByBalanceAsc.map((wallet) => (
+                <option key={wallet.metadata.id} value={wallet.metadata.id}>
+                  {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       <h1 className="mt-0 text-3xl font-bold">Wallet Initialization</h1>
       <p className="text-muted mb-7.5">
