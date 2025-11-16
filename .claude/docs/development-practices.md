@@ -19,7 +19,10 @@
 - **Reusable components**: Store in `src/components/common/`
 - **Stage-specific**: Store in `src/components/stages/`
 - **Global feedback**: Use `useToast()` hook (success/error/warning/info)
-- Example: `const { success } = useToast(); success('Copied!');`
+  - Example: `const { success } = useToast(); success('Copied!');`
+- **Styling**: Use DaisyUI components via UnoCSS preset
+  - See `daisyui-components.md` for available components
+  - Docs: https://daisyui.com/components/
 
 ## Performance
 - Monitor bundle size
