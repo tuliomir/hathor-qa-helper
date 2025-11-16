@@ -178,42 +178,46 @@ export default function AddressValidation() {
             <>
               {/* Address Display */}
               <div className="card-primary mb-7.5">
-                <div className="flex justify-between items-center mb-3">
+                <div className="mb-3 text-center">
                   <h3 className="text-lg font-bold m-0">Address (Index {addressIndexFromStore})</h3>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
+                    {derivedAddress}
+                  </p>
                   <button
                     onClick={() => handleCopy(derivedAddress)}
-                    className="btn-primary text-xs"
                     title="Copy address"
+                    className="ml-2 p-0 bg-transparent border-0 inline-flex items-center cursor-pointer"
+                    aria-label="Copy address"
                   >
-                    <span className="i-mdi-content-copy inline-block mr-1" />
-                    Copy
+                    <span className="i-mdi-content-copy" />
                   </button>
                 </div>
-                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded">
-                  {derivedAddress}
-                </p>
               </div>
 
               {/* Address URI QR Code */}
               <div className="card-primary mb-7.5">
-                <div className="flex justify-between items-center mb-3">
+                <div className="mb-3 text-center">
                   <h3 className="text-lg font-bold m-0">Address QR Code</h3>
-                  <button
-                    onClick={() => handleCopy(getAddressUri())}
-                    className="btn-primary text-xs"
-                    title="Copy address URI"
-                  >
-                    <span className="i-mdi-content-copy inline-block mr-1" />
-                    Copy
-                  </button>
                 </div>
                 <div className="flex flex-col items-center gap-3">
                   <div className="p-4 bg-white border-2 border-gray-300 rounded">
                     <QRCode value={getAddressUri()} size={200} />
                   </div>
-                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full text-center">
-                    {getAddressUri()}
-                  </p>
+                  <div className="flex items-center w-full justify-center">
+                    <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded text-center">
+                      {getAddressUri()}
+                    </p>
+                    <button
+                      onClick={() => handleCopy(getAddressUri())}
+                      title="Copy address URI"
+                      className="ml-2 p-0 bg-transparent border-0 inline-flex items-center cursor-pointer"
+                      aria-label="Copy address URI"
+                    >
+                      <span className="i-mdi-content-copy" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -239,24 +243,26 @@ export default function AddressValidation() {
 
               {/* Payment Request QR Code */}
               <div className="card-primary mb-7.5">
-                <div className="flex justify-between items-center mb-3">
+                <div className="mb-3 text-center">
                   <h3 className="text-lg font-bold m-0">Payment Request QR Code</h3>
-                  <button
-                    onClick={() => handleCopy(getPaymentRequest())}
-                    className="btn-primary text-xs"
-                    title="Copy payment request"
-                  >
-                    <span className="i-mdi-content-copy inline-block mr-1" />
-                    Copy
-                  </button>
                 </div>
                 <div className="flex flex-col items-center gap-3">
                   <div className="p-4 bg-white border-2 border-gray-300 rounded">
                     <QRCode value={getPaymentRequest()} size={200} />
                   </div>
-                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
-                    {getPaymentRequest()}
-                  </p>
+                  <div className="flex items-center w-full">
+                    <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
+                      {getPaymentRequest()}
+                    </p>
+                    <button
+                      onClick={() => handleCopy(getPaymentRequest())}
+                      title="Copy payment request"
+                      className="ml-2 p-0 bg-transparent border-0 inline-flex items-center cursor-pointer"
+                      aria-label="Copy payment request"
+                    >
+                      <span className="i-mdi-content-copy" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
