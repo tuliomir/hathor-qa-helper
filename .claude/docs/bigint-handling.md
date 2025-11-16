@@ -12,92 +12,123 @@ The Hathor wallet library uses **BigInt** for all token amounts (balances, trans
 
 ## Storage Strategy
 
-**Decision: Store balances as strings in Redux state**
+**Decision: Store as strings in Redux, expose as BigInt via selectors**
 
-This QA helper stores balances as **strings** for several reasons:
+This QA helper uses a two-layer approach:
 
-1. **Full serializability** - Redux state can be persisted to localStorage
-2. **No Redux warnings** - Maintains Redux best practices
-3. **Future-proof** - Easier to add persistence/debugging features
-4. **Type safety** - Explicit conversions make data flow clearer
+1. **Redux Layer**: Balances stored as **strings** (for serializability)
+2. **Application Layer**: Balances exposed as **BigInt** (via selectors)
+
+### Benefits:
+
+1. **Type Safety** - TypeScript enforces `bigint` throughout the app
+2. **Consistency** - Everything from wallet-lib is BigInt, everything in app is BigInt
+3. **Less Error-Prone** - No manual conversions in components
+4. **Future-Proof** - Works for all BigInt fields (amounts, locked balances, tx values, etc.)
+5. **Redux Best Practices** - State remains serializable
+6. **Better DX** - Components just use BigInt values directly
 
 ## Implementation Patterns
 
 ### 1. Type Definitions
 
 ```typescript
-// WalletInfo type
+// WalletInfo type - what components work with (BigInt balance)
 interface WalletInfo {
   metadata: WalletMetadata;
   instance: HathorWallet | null;
   status: WalletStatus;
   firstAddress?: string;
-  balance?: string; // Stored as string, not number or BigInt
+  balance?: bigint; // BigInt for type safety and consistency with wallet-lib
+  error?: string;
+}
+
+// StoredWalletInfo - what Redux stores (string balance)
+interface StoredWalletInfo {
+  metadata: WalletMetadata;
+  instance: null;
+  status: WalletStatus;
+  firstAddress?: string;
+  balance?: string; // Stored as string for serializability
   error?: string;
 }
 ```
 
-### 2. Fetching Balance from Wallet Library
+### 2. Fetching and Storing Balance (Redux Slice)
 
 ```typescript
 // In walletStoreSlice.ts - startWallet thunk
 const balanceData = await walletInstance.getBalance(selectedTokenUid);
 const balanceBigInt = balanceData?.[0]?.balance?.unlocked || 0n;
 
-// Convert BigInt to string for storage
+// Convert BigInt to string for Redux storage
 const balanceString = balanceBigInt.toString();
 
 dispatch(updateWalletBalance({ id: walletId, balance: balanceString }));
 ```
 
-### 3. Displaying Balance in UI
+### 3. Selectors Convert String → BigInt
 
 ```typescript
-import { numberUtils } from '@hathor/wallet-lib';
+// In walletStoreSelectors.ts
+function convertWalletData(
+  walletData: StoredWalletInfo,
+  instance: WalletInfo['instance']
+): WalletInfo {
+  return {
+    ...walletData,
+    instance,
+    // Convert string balance to BigInt
+    balance: walletData.balance ? BigInt(walletData.balance) : undefined,
+  };
+}
 
-// Convert string back to BigInt for display
-const balanceString = wallet.balance || '0';
-const balanceBigInt = BigInt(balanceString);
+export const selectWalletById = (state: RootState, id: string): WalletInfo | undefined => {
+  const walletInfo = state.walletStore.wallets[id];
+  if (!walletInfo) return undefined;
 
-// Use wallet-lib's prettyValue for formatting
-const formattedBalance = numberUtils.prettyValue(balanceBigInt, decimalPlaces);
-// Returns: "1,234.56789000" (with thousand separators and decimals)
+  return convertWalletData(
+    walletInfo,
+    walletInstancesMap.get(id) || null
+  );
+};
 ```
 
-### 4. Balance Arithmetic
+### 4. Components Work with BigInt Directly
 
 ```typescript
-// Convert strings to BigInt for calculations
-const balance1 = BigInt(wallet1.balance || '0');
-const balance2 = BigInt(wallet2.balance || '0');
+import { formatBalance } from '../../utils/balanceUtils';
 
-// Perform BigInt arithmetic
-const total = balance1 + balance2;
-const difference = balance1 - balance2;
+// Get wallet from hook (already has BigInt balance via selector)
+const { getAllWallets } = useWalletStore();
+const wallets = getAllWallets();
 
-// Convert back to string for storage
-const totalString = total.toString();
+// Balance is already BigInt - no conversion needed!
+const wallet = wallets[0];
+
+// Direct BigInt arithmetic
+const total = wallet1.balance + wallet2.balance;
+const difference = wallet1.balance - wallet2.balance;
+
+// Format for display
+const formattedBalance = formatBalance(wallet.balance);
+// Returns: "1,234.56" (using wallet-lib's prettyValue)
 ```
 
 ### 5. Comparison Operations
 
 ```typescript
-const balance = BigInt(wallet.balance || '0');
-
-// Direct BigInt comparisons
-if (balance > 0n) {
+// Direct BigInt comparisons (no conversion needed)
+if (wallet.balance > 0n) {
   // Wallet has funds
 }
 
-if (balance === 0n) {
+if (wallet.balance === 0n) {
   // Wallet is empty
 }
 
 // Comparing two balances
-const balance1 = BigInt(wallet1.balance || '0');
-const balance2 = BigInt(wallet2.balance || '0');
-
-if (balance1 > balance2) {
+if (wallet1.balance > wallet2.balance) {
   // wallet1 has more funds
 }
 ```
@@ -106,9 +137,9 @@ if (balance1 > balance2) {
 
 ```typescript
 // Sort by highest balance (descending)
-const sortedDesc = wallets.sort((a, b) => {
-  const balanceA = BigInt(a.balance || '0');
-  const balanceB = BigInt(b.balance || '0');
+const sortedDesc = [...wallets].sort((a, b) => {
+  const balanceA = a.balance || 0n;
+  const balanceB = b.balance || 0n;
 
   if (balanceA > balanceB) return -1;
   if (balanceA < balanceB) return 1;
@@ -116,14 +147,28 @@ const sortedDesc = wallets.sort((a, b) => {
 });
 
 // Sort by lowest balance (ascending)
-const sortedAsc = wallets.sort((a, b) => {
-  const balanceA = BigInt(a.balance || '0');
-  const balanceB = BigInt(b.balance || '0');
+const sortedAsc = [...wallets].sort((a, b) => {
+  const balanceA = a.balance || 0n;
+  const balanceB = b.balance || 0n;
 
   if (balanceA < balanceB) return -1;
   if (balanceA > balanceB) return 1;
   return 0;
 });
+```
+
+### 7. Displaying Balance in UI
+
+```typescript
+import { formatBalance } from '../../utils/balanceUtils';
+
+// Balance is BigInt from selector
+<div>
+  Balance: {formatBalance(wallet.balance)} HTR
+</div>
+
+// formatBalance uses wallet-lib's prettyValue internally
+// Returns: "1,234.56" with proper decimals and thousand separators
 ```
 
 ## Common Pitfalls
@@ -132,19 +177,33 @@ const sortedAsc = wallets.sort((a, b) => {
 
 ```typescript
 // WRONG - TypeError: Cannot mix BigInt and other types
-const balance = BigInt(wallet.balance);
+const balance = wallet.balance; // BigInt
 const display = balance / 100; // ERROR!
 ```
 
-### ✅ DO: Use Explicit Conversions
+### ✅ DO: Use formatBalance() or wallet-lib utilities
 
 ```typescript
-// CORRECT
-const balance = BigInt(wallet.balance);
-const display = Number(balance) / 100; // Convert to Number first
+// CORRECT - Use formatBalance utility
+const display = formatBalance(wallet.balance);
 
-// OR BETTER: Use wallet-lib utilities
-const display = numberUtils.prettyValue(balance, decimalPlaces);
+// OR use wallet-lib directly
+import { numberUtils } from '@hathor/wallet-lib';
+const display = numberUtils.prettyValue(wallet.balance, decimalPlaces);
+```
+
+### ❌ DON'T: Manually convert in components
+
+```typescript
+// WRONG - Selector already does this!
+const balance = BigInt(wallet.balance || '0');
+```
+
+### ✅ DO: Trust the selector
+
+```typescript
+// CORRECT - balance is already BigInt from selector
+const balance = wallet.balance || 0n;
 ```
 
 ### ❌ DON'T: Use JSON.stringify() with BigInt
@@ -165,43 +224,20 @@ const json = JSONBigInt.stringify(data);
 // Works correctly with BigInt values
 ```
 
-### ❌ DON'T: Store BigInt directly in Redux (in this app)
-
-```typescript
-// WRONG - Redux serialization error
-dispatch(updateWalletBalance({
-  id: walletId,
-  balance: 12345n // Don't store BigInt!
-}));
-```
-
-### ✅ DO: Convert to string before storing
-
-```typescript
-// CORRECT
-const balanceBigInt = balanceData[0].balance.unlocked;
-const balanceString = balanceBigInt.toString();
-
-dispatch(updateWalletBalance({
-  id: walletId,
-  balance: balanceString // Store as string
-}));
-```
-
 ## Decimal Places
 
 - **Native HTR token**: 2 decimal places (100 = 1 HTR, like cents)
 - **Custom tokens**: Varies (typically 0-8 decimal places)
 - **NFTs**: 0 decimal places (always whole numbers)
 
-The `numberUtils.prettyValue()` function handles decimal conversion automatically:
+The `formatBalance()` utility (via `numberUtils.prettyValue()`) handles decimal conversion automatically:
 
 ```typescript
 // balance = 12345n, decimalPlaces = 2
-numberUtils.prettyValue(12345n, 2) // "123.45"
+formatBalance(12345n, 2) // "123.45"
 
 // balance = 12345n, decimalPlaces = 0 (NFT)
-numberUtils.prettyValue(12345n, 0) // "12,345"
+formatBalance(12345n, 0) // "12,345"
 ```
 
 ## Wallet-lib Utilities
@@ -234,10 +270,55 @@ JSONBigInt.stringify(
 // Returns: JSON string with BigInt values serialized
 ```
 
+## Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Wallet Library (getBalance)                              │
+│    Returns: { balance: { unlocked: 998703n } }              │
+│    Type: BigInt                                              │
+└───────────────────┬─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 2. Redux Slice (startWallet thunk)                          │
+│    Converts: balanceBigInt.toString()                       │
+│    Stores: "998703"                                          │
+│    Type: string (serializable)                               │
+└───────────────────┬─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 3. Selector (convertWalletData)                             │
+│    Converts: BigInt(walletData.balance)                     │
+│    Returns: WalletInfo { balance: 998703n }                 │
+│    Type: BigInt                                              │
+└───────────────────┬─────────────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. Components (via useWalletStore hook)                     │
+│    Uses: wallet.balance (BigInt)                            │
+│    Operations: +, -, >, <, === (all work natively)          │
+│    Display: formatBalance(wallet.balance)                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## Reference Implementation
 
 See these files for complete examples:
-- `/src/store/slices/walletStoreSlice.ts` - Balance fetching and storage
+- `/src/types/walletStore.ts` - WalletInfo type definition (balance as BigInt)
+- `/src/store/slices/walletStoreSlice.ts` - StoredWalletInfo and balance fetching
+- `/src/store/selectors/walletStoreSelectors.ts` - String to BigInt conversion
+- `/src/hooks/useWalletStore.ts` - Hook using selectors
+- `/src/utils/balanceUtils.ts` - Display formatting utilities
 - `/src/components/stages/WalletInitialization.tsx` - Balance display and sorting
 - `/src/components/QALayout.tsx` - Header balance display
-- `/src/utils/balanceUtils.ts` - Conversion utilities (create this if needed)
+
+## Key Takeaways
+
+1. **Never manually convert** - Selectors handle string → BigInt conversion
+2. **Work with BigInt everywhere** - Components, calculations, comparisons
+3. **Only format for display** - Use `formatBalance()` for UI
+4. **Redux stores strings** - But you never touch them directly
+5. **Type system helps** - TypeScript enforces correct usage

@@ -4,7 +4,7 @@
  */
 
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import type { WalletMetadata, WalletInfo } from '../../types/walletStore';
+import type { WalletMetadata } from '../../types/walletStore';
 import type { WalletStatus } from '../../types/wallet';
 import type { RootState } from '../index';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
@@ -14,6 +14,19 @@ import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 
 const STORAGE_KEY = 'qa-helper-wallets';
+
+/**
+ * Stored wallet information in Redux (balance as string for serializability)
+ * This differs from WalletInfo which exposes balance as BigInt via selectors
+ */
+interface StoredWalletInfo {
+  metadata: WalletMetadata;
+  instance: null; // Always null in Redux state; actual instances in walletInstancesMap
+  status: WalletStatus;
+  firstAddress?: string;
+  balance?: string; // Stored as string for Redux serializability
+  error?: string;
+}
 
 /**
  * Load wallet metadata from LocalStorage
@@ -44,7 +57,7 @@ function saveWalletsToStorage(wallets: WalletMetadata[]): void {
  * State type for the wallet store slice
  */
 interface WalletStoreState {
-  wallets: Record<string, WalletInfo>;
+  wallets: Record<string, StoredWalletInfo>;
 }
 
 /**
@@ -60,7 +73,7 @@ const initialState: WalletStoreState = {
       };
       return acc;
     },
-    {} as Record<string, WalletInfo>
+    {} as Record<string, StoredWalletInfo>
   ),
 };
 

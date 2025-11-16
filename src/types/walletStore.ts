@@ -20,13 +20,14 @@ export interface WalletMetadata {
 
 /**
  * Runtime wallet information including the instance
+ * Note: Balance is BigInt in the app layer, but stored as string in Redux for serializability
  */
 export interface WalletInfo {
   metadata: WalletMetadata;
   instance: HathorWallet | null;
   status: WalletStatus;
   firstAddress?: string;
-  balance?: string; // Balance stored as string (converted from BigInt) for Redux serializability
+  balance?: bigint; // BigInt for type safety and consistency with wallet-lib
   error?: string;
 }
 

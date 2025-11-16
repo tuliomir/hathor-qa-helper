@@ -14,7 +14,7 @@ import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
 import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
-import { formatBalance, compareBalances } from '../../utils/balanceUtils';
+import { formatBalance } from '../../utils/balanceUtils';
 import type { NetworkType } from '../../constants/network';
 
 export default function WalletInitialization() {
@@ -41,9 +41,21 @@ export default function WalletInitialization() {
   // Get ready wallets for selection
   const readyWallets = wallets.filter((w) => w.status === 'ready');
 
-  // Sort wallets by balance for selection
-  const walletsSortedByBalanceDesc = [...readyWallets].sort((a, b) => -compareBalances(a.balance, b.balance));
-  const walletsSortedByBalanceAsc = [...readyWallets].sort((a, b) => compareBalances(a.balance, b.balance));
+  // Sort wallets by balance for selection (BigInt comparison)
+  const walletsSortedByBalanceDesc = [...readyWallets].sort((a, b) => {
+    const balanceA = a.balance || 0n;
+    const balanceB = b.balance || 0n;
+    if (balanceA > balanceB) return -1;
+    if (balanceA < balanceB) return 1;
+    return 0;
+  });
+  const walletsSortedByBalanceAsc = [...readyWallets].sort((a, b) => {
+    const balanceA = a.balance || 0n;
+    const balanceB = b.balance || 0n;
+    if (balanceA < balanceB) return -1;
+    if (balanceA > balanceB) return 1;
+    return 0;
+  });
 
   const handleAddWallet = () => {
     const { valid: validation, treatedWords, error, invalidWords: invalidWordsList } = treatSeedWords(seedInput);
