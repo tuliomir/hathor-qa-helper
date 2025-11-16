@@ -3,7 +3,7 @@
  * Provides camera access for capturing seed word images
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface CameraCaptureProps {
   onCapture: (imageDataUrl: string) => void;
@@ -142,24 +142,7 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
     };
   }, [facingMode]);
 
-  // Handle countdown
-  useEffect(() => {
-    if (countdown === null || countdown === 0) return;
-
-    const timer = setTimeout(() => {
-      if (countdown === 1) {
-        // Countdown finished, capture image
-        captureImage();
-        setCountdown(null);
-      } else {
-        setCountdown(countdown - 1);
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [countdown]);
-
-  const captureImage = () => {
+  const captureImage = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
@@ -186,7 +169,24 @@ export default function CameraCapture({ onCapture, onCancel }: CameraCaptureProp
 
     // Pass image to parent
     onCapture(imageDataUrl);
-  };
+  }, [onCapture]);
+
+  // Handle countdown
+  useEffect(() => {
+    if (countdown === null || countdown === 0) return;
+
+    const timer = setTimeout(() => {
+      if (countdown === 1) {
+        // Countdown finished, capture image
+        captureImage();
+        setCountdown(null);
+      } else {
+        setCountdown(countdown - 1);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown, captureImage]);
 
   const handleStartCountdown = () => {
     setCountdown(3);

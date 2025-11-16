@@ -111,7 +111,7 @@ export function parseSeedWords(ocrText: string): string {
 
   for (const line of lines) {
     // Remove common OCR artifacts and numbers
-    let cleanedLine = line
+    const cleanedLine = line
       .replace(/^\d+[\s.)\-:]+/g, '') // Remove leading numbers with separators (1. word, 1) word, 1- word)
       .replace(/[^\w\s]/g, ' ') // Remove special characters except word chars and spaces
       .trim()
