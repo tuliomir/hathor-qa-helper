@@ -6,21 +6,27 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { setSelectedWalletId, setAddressIndex, setAmount } from '../../store/slices/addressValidationSlice';
 
 export default function AddressValidation() {
   const { getAllWallets } = useWalletStore();
   const wallets = getAllWallets();
   const readyWallets = wallets.filter((w) => w.status === 'ready');
 
-  const [selectedWalletId, setSelectedWalletId] = useState<string>('');
+  const dispatch = useAppDispatch();
+  const selectedWalletIdFromStore = useAppSelector((s) => s.addressValidation.selectedWalletId);
+  const addressIndexFromStore = useAppSelector((s) => s.addressValidation.addressIndex);
+  const amountFromStore = useAppSelector((s) => s.addressValidation.amount);
+
+  const [selectedWalletIdLocal, setSelectedWalletIdLocal] = useState<string>(selectedWalletIdFromStore || '');
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
-  const [amount, setAmount] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedWallet = readyWallets.find((w) => w.metadata.id === selectedWalletId);
+  const selectedWallet = readyWallets.find((w) => w.metadata.id === (selectedWalletIdFromStore || selectedWalletIdLocal));
 
-  // Auto-derive address 0 when wallet is selected
+  // Auto-derive selected address when wallet is selected
   useEffect(() => {
     const deriveAddress = async () => {
       if (!selectedWallet || !selectedWallet.instance) {
@@ -32,7 +38,8 @@ export default function AddressValidation() {
       setError(null);
 
       try {
-        const address = await selectedWallet.instance.getAddressAtIndex(0);
+        const index = addressIndexFromStore ?? 0;
+        const address = await selectedWallet.instance.getAddressAtIndex(index);
         setDerivedAddress(address);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to derive address');
@@ -43,7 +50,12 @@ export default function AddressValidation() {
     };
 
     deriveAddress();
-  }, [selectedWallet]);
+  }, [selectedWallet, addressIndexFromStore]);
+
+  // Keep local selection in sync with store
+  useEffect(() => {
+    setSelectedWalletIdLocal(selectedWalletIdFromStore || '');
+  }, [selectedWalletIdFromStore]);
 
   const handleCopy = async (text: string) => {
     try {
@@ -56,9 +68,22 @@ export default function AddressValidation() {
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
     if (!isNaN(value) && value > 0) {
-      setAmount(value);
+      dispatch(setAmount(value));
     } else if (e.target.value === '') {
-      setAmount(1);
+      dispatch(setAmount(1));
+    }
+  };
+
+  const handleIndexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // allow empty input to be typed; only commit numbers >= 0
+    if (val === '') {
+      dispatch(setAddressIndex(0));
+      return;
+    }
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed) && parsed >= 0) {
+      dispatch(setAddressIndex(parsed));
     }
   };
 
@@ -68,7 +93,7 @@ export default function AddressValidation() {
     if (!derivedAddress) return '';
     return JSON.stringify({
       address: `hathor:${derivedAddress}`,
-      amount: amount.toString(),
+      amount: amountFromStore.toString(),
       token: {
         uid: '00',
         name: 'Hathor',
@@ -98,23 +123,41 @@ export default function AddressValidation() {
           <div className="card-primary mb-7.5">
             <h2 className="text-xl font-bold mb-4">Select Wallet</h2>
 
-            <div className="mb-4">
-              <label htmlFor="wallet-select" className="block mb-1.5 font-bold">
-                Choose a Ready Wallet:
-              </label>
-              <select
-                id="wallet-select"
-                value={selectedWalletId}
-                onChange={(e) => setSelectedWalletId(e.target.value)}
-                className="input cursor-pointer bg-white"
-              >
-                <option value="">-- Select a wallet --</option>
-                {readyWallets.map((wallet) => (
-                  <option key={wallet.metadata.id} value={wallet.metadata.id}>
-                    {wallet.metadata.friendlyName} ({wallet.metadata.network})
-                  </option>
-                ))}
-              </select>
+            <div className="mb-4 grid grid-cols-2 gap-4 items-end">
+              <div>
+                <label htmlFor="address-index" className="block mb-1.5 font-bold">
+                  Address Index:
+                </label>
+                <input
+                  id="address-index"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={addressIndexFromStore}
+                  onChange={handleIndexChange}
+                  className="input"
+                />
+                <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
+              </div>
+
+              <div>
+                <label htmlFor="wallet-select" className="block mb-1.5 font-bold">
+                  Choose a Ready Wallet:
+                </label>
+                <select
+                  id="wallet-select"
+                  value={selectedWalletIdFromStore || selectedWalletIdLocal}
+                  onChange={(e) => dispatch(setSelectedWalletId(e.target.value))}
+                  className="input cursor-pointer bg-white"
+                >
+                  <option value="">-- Select a wallet --</option>
+                  {readyWallets.map((wallet) => (
+                    <option key={wallet.metadata.id} value={wallet.metadata.id}>
+                      {wallet.metadata.friendlyName} ({wallet.metadata.network})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {error && (
@@ -136,7 +179,7 @@ export default function AddressValidation() {
               {/* Address Display */}
               <div className="card-primary mb-7.5">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-bold m-0">Address (Index 0)</h3>
+                  <h3 className="text-lg font-bold m-0">Address (Index {addressIndexFromStore})</h3>
                   <button
                     onClick={() => handleCopy(derivedAddress)}
                     className="btn-primary text-xs"
@@ -174,25 +217,25 @@ export default function AddressValidation() {
                 </div>
               </div>
 
-	            {/* Amount Field */}
-	            <div className="card-primary mb-7.5">
-		            <label htmlFor="amount-input" className="block mb-1.5 font-bold">
-			            Payment Amount:
-		            </label>
-		            <input
-			            id="amount-input"
-			            type="number"
-			            min="1"
-			            step="1"
-			            value={amount}
-			            onChange={handleAmountChange}
-			            className="input"
-			            placeholder="Enter amount"
-		            />
-		            <p className="text-muted text-xs mt-1.5 mb-0">
-			            Enter a positive integer for the payment amount (HTR tokens)
-		            </p>
-	            </div>
+              {/* Amount Field */}
+              <div className="card-primary mb-7.5">
+                <label htmlFor="amount-input" className="block mb-1.5 font-bold">
+                  Payment Amount:
+                </label>
+                <input
+                  id="amount-input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={amountFromStore}
+                  onChange={handleAmountChange}
+                  className="input"
+                  placeholder="Enter amount"
+                />
+                <p className="text-muted text-xs mt-1.5 mb-0">
+                  Enter a positive integer for the payment amount (HTR tokens)
+                </p>
+              </div>
 
               {/* Payment Request QR Code */}
               <div className="card-primary mb-7.5">

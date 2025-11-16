@@ -5,11 +5,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import walletStoreReducer from './slices/walletStoreSlice';
 import stageReducer from './slices/stageSlice';
+import addressValidationReducer from './slices/addressValidationSlice';
 
 export const store = configureStore({
   reducer: {
     walletStore: walletStoreReducer,
     stage: stageReducer,
+    addressValidation: addressValidationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
