@@ -11,7 +11,7 @@ import {
   updateWalletInstance as updateWalletInstanceAction,
   updateWalletStatus as updateWalletStatusAction,
 } from '../store/slices/walletStoreSlice';
-import { selectWalletById, selectWalletsMap } from '../store/selectors/walletStoreSelectors';
+import { selectWalletsMap } from '../store/selectors/walletStoreSelectors';
 import type { WalletStoreContextValue } from '../types/walletStore';
 
 export function useWalletStore(): WalletStoreContextValue {
@@ -36,7 +36,7 @@ export function useWalletStore(): WalletStoreContextValue {
 
   const getWallet = useCallback(
     (id: string) => {
-      return selectWalletById({ walletStore: { wallets: Object.fromEntries(walletsMap) }, stage: { currentStage: 'wallet-initialization' } }, id);
+      return walletsMap.get(id);
     },
     [walletsMap]
   );

@@ -1,3 +1,4 @@
+import { MdContentCopy } from 'react-icons/md';
 import { useToast } from '../../hooks/useToast';
 
 interface CopyButtonProps {
@@ -27,7 +28,7 @@ export default function CopyButton({ text, label = 'Copy', className = '' }: Cop
       className={`p-0 bg-transparent border-0 inline-flex items-center cursor-pointer ${className}`}
       aria-label={label}
     >
-      <span className="i-mdi-content-copy" />
+      <MdContentCopy />
     </button>
   );
 }

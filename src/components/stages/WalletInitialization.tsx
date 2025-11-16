@@ -5,6 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
@@ -221,23 +222,23 @@ export default function WalletInitialization() {
                         ) : (
                           <>
                             {wallet.status === 'idle' || wallet.status === 'error' ? (
-                              <button onClick={() => handleStartWallet(wallet.metadata.id)} className="btn-primary text-xs">
-                                <span className="i-mdi-play inline-block mr-1" />Start
+                              <button onClick={() => handleStartWallet(wallet.metadata.id)} className="btn-primary text-xs flex items-center gap-1">
+                                <MdPlayArrow />Start
                               </button>
                             ) : wallet.status === 'ready' ? (
-                              <button onClick={() => handleStopWallet(wallet.metadata.id)} className="btn-danger text-xs">
-                                <span className="i-mdi-stop inline-block mr-1" />Stop
+                              <button onClick={() => handleStopWallet(wallet.metadata.id)} className="btn-danger text-xs flex items-center gap-1">
+                                <MdStop />Stop
                               </button>
                             ) : (
                               <button disabled className="btn-secondary text-xs cursor-not-allowed opacity-60">
                                 {wallet.status === 'connecting' ? '⏳ Connecting...' : '⏳ Syncing...'}
                               </button>
                             )}
-                            <button onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)} className="btn-warning text-xs">
-                              <span className="i-mdi-pencil inline-block mr-1" />Rename
+                            <button onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)} className="btn-warning text-xs flex items-center gap-1">
+                              <MdEdit />Rename
                             </button>
-                            <button onClick={() => handleRemoveWallet(wallet.metadata.id)} className="btn-danger text-xs">
-                              <span className="i-mdi-delete inline-block mr-1" />Remove
+                            <button onClick={() => handleRemoveWallet(wallet.metadata.id)} className="btn-danger text-xs flex items-center gap-1">
+                              <MdDelete />Remove
                             </button>
                           </>
                         )}
@@ -282,7 +283,7 @@ export default function WalletInitialization() {
             <button
               onClick={() => setShowCamera(true)}
               className="btn bg-info text-white hover:bg-cyan-600 text-xs flex items-center gap-1">
-              <span className="i-mdi-camera inline-block" />
+              <MdCamera />
               Open Camera
             </button>
           </div>
