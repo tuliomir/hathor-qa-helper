@@ -1,8 +1,8 @@
 # Design System
 
-UnoCSS (atomic CSS) + JetBrains Mono + Material Design Icons
+Tailwind CSS v3 + DaisyUI + JetBrains Mono Nerd Font + React Icons
 
-## Shortcuts (uno.config.ts)
+## Component Classes (src/index.css)
 
 **Buttons**: `btn`, `btn-primary`, `btn-success`, `btn-danger`, `btn-warning`, `btn-secondary`
 **Cards**: `card`, `card-primary`
@@ -10,16 +10,20 @@ UnoCSS (atomic CSS) + JetBrains Mono + Material Design Icons
 **Tables**: `table-header`, `table-row`
 **Status**: `status-idle`, `status-connecting`, `status-syncing`, `status-ready`, `status-error`
 
-## Colors
+These are custom classes defined in `src/index.css` using `@layer components`.
+
+## Colors (tailwind.config.ts)
 - Primary: `#007bff`, Hover: `#0056b3`
 - Success: `#28a745`, Danger: `#dc3545`, Warning: `#ffc107`, Info: `#17a2b8`
 - Light: `#f8f9fa`, Dark: `#212529`, Muted: `#6c757d`, Border: `#dee2e6`
 
 ## Common Patterns
 ```tsx
+import { MdDelete, MdCamera } from 'react-icons/md';
+
 // Button with icon
-<button className="btn-primary text-xs">
-  <span className="i-mdi-delete inline-block mr-1" />
+<button className="btn-primary text-xs flex items-center gap-1">
+  <MdDelete />
   Delete
 </button>
 
@@ -37,17 +41,26 @@ UnoCSS (atomic CSS) + JetBrains Mono + Material Design Icons
 ```
 
 ## Icons
-Use `i-mdi-{name}` pattern: `i-mdi-play`, `i-mdi-stop`, `i-mdi-pencil`, `i-mdi-delete`, `i-mdi-camera`, `i-mdi-check`, `i-mdi-close`
+Use **react-icons** library (Material Design Icons):
+- Import from `react-icons/md`: `import { MdPlay, MdStop, MdEdit } from 'react-icons/md';`
+- Common icons: `MdPlayArrow`, `MdStop`, `MdEdit`, `MdDelete`, `MdCamera`, `MdCheck`, `MdClose`, `MdContentCopy`
+- Use as React components: `<MdPlay />`
+- Browse all icons: https://react-icons.github.io/react-icons/icons/md/
 
-Always add `inline-block`: `<span className="i-mdi-play inline-block mr-1" />`
+## Font
+JetBrains Mono Nerd Font (self-hosted in `public/fonts/`)
+- Includes Nerd Font icon glyphs
+- Weights: Regular (400), Medium (500), Bold (700)
 
 ## Spacing Scale
-`1`=4px, `2`=8px, `3`=12px, `4`=16px, `5`=20px, `7.5`=30px, `10`=40px
+Tailwind spacing: `1`=4px, `2`=8px, `3`=12px, `4`=16px, `5`=20px, `7.5`=30px, `10`=40px
 
 ## Responsive
-`sm:` (640px), `md:` (768px), `lg:` (1024px), `xl:` (1280px)
+Tailwind breakpoints: `sm:` (640px), `md:` (768px), `lg:` (1024px), `xl:` (1280px)
 
 ## Best Practices
-✅ Use shortcuts: `btn-primary` not `px-3 py-2 rounded...`
-✅ Semantic colors: `text-success` not `text-green-600`
-✅ Spacing scale: `mb-4` not `style={{marginBottom: '15px'}}`
+✅ Use custom component classes: `btn-primary` not `px-3 py-2 rounded...`
+✅ Use semantic colors: `text-success` not `text-green-600`
+✅ Use Tailwind spacing: `mb-4` not `style={{marginBottom: '15px'}}`
+✅ Import icons from react-icons: `import { MdIcon } from 'react-icons/md'`
+✅ Use DaisyUI components when available (toast, alert, etc.)

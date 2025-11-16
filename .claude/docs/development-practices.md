@@ -20,9 +20,13 @@
 - **Stage-specific**: Store in `src/components/stages/`
 - **Global feedback**: Use `useToast()` hook (success/error/warning/info)
   - Example: `const { success } = useToast(); success('Copied!');`
-- **Styling**: Use DaisyUI components via UnoCSS preset
+- **Styling**: Use Tailwind CSS + DaisyUI components
+  - Custom classes defined in `src/index.css` (@layer components)
   - See `daisyui-components.md` for available components
   - Docs: https://daisyui.com/components/
+- **Icons**: Use react-icons library
+  - Import from `react-icons/md` for Material Design icons
+  - Example: `import { MdDelete } from 'react-icons/md';`
 
 ## Performance
 - Monitor bundle size

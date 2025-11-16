@@ -2,6 +2,8 @@
 
 **Docs**: https://daisyui.com/components/
 
+This project uses **Tailwind CSS v3** with the **DaisyUI plugin** for pre-built component classes.
+
 ## Available Components
 
 ### Actions
@@ -66,7 +68,19 @@
 </div>
 ```
 
+## Configuration
+
+DaisyUI is configured in `tailwind.config.ts`:
+```typescript
+plugins: [require('daisyui')],
+daisyui: {
+  themes: ['light'],
+  logs: false,
+}
+```
+
 ## Notes
-- All components work with UnoCSS via `@unscatty/unocss-preset-daisy`
+- DaisyUI components work natively with Tailwind CSS v3
 - Use DaisyUI docs for detailed API and examples
-- Combine with Tailwind utilities (via UnoCSS preset-uno)
+- Combine with Tailwind utilities
+- Custom component classes are defined in `src/index.css` using `@layer components`

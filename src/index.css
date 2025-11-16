@@ -89,10 +89,20 @@
 
   /* Input shortcuts */
   .input {
-    @apply w-full px-3 py-2 text-sm border border-gray-300 rounded;
+    @apply w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900;
   }
   .input-error {
     @apply input border-danger border-2;
+  }
+
+  /* Ensure textareas also have proper styling */
+  textarea.input {
+    @apply bg-white text-gray-900;
+  }
+
+  /* Ensure selects have proper styling */
+  select.input {
+    @apply bg-white text-gray-900;
   }
 
   /* Table shortcuts */
