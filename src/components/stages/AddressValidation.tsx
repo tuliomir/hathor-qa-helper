@@ -27,6 +27,19 @@ export default function AddressValidation() {
 
   const selectedWallet = readyWallets.find((w) => w.metadata.id === (selectedWalletIdFromStore || selectedWalletIdLocal));
 
+  // If there's no selected wallet in the store, use the first "started" wallet as default.
+  // Note: repository uses 'ready' to indicate a started/usable wallet, so we treat 'ready' as "started" here.
+  useEffect(() => {
+    if (!selectedWalletIdFromStore && readyWallets.length > 0) {
+      const firstReady = readyWallets[0];
+      if (firstReady && firstReady.metadata && firstReady.metadata.id) {
+        // update both store and local state so UI and auto-derive behave consistently
+        dispatch(setSelectedWalletId(firstReady.metadata.id));
+        setSelectedWalletIdLocal(firstReady.metadata.id);
+      }
+    }
+  }, [readyWallets, selectedWalletIdFromStore, dispatch]);
+
   // Auto-derive selected address when wallet is selected
   useEffect(() => {
     const deriveAddress = async () => {
