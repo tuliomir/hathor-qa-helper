@@ -170,7 +170,7 @@ export default function WalletInitialization() {
               <thead>
                 <tr className="table-header">
                   <th className="p-3 text-left font-bold">Name</th>
-                  <th className="p-3 text-left font-bold">Seed (truncated)</th>
+                  <th className="p-3 text-left font-bold">Seed</th>
                   <th className="p-3 text-left font-bold">Network</th>
                   <th className="p-3 text-left font-bold">Status</th>
                   <th className="p-3 text-left font-bold">First Address</th>

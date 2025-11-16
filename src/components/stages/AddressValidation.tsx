@@ -3,64 +3,92 @@
  * Validates addresses using initialized wallets from the global store
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 
 export default function AddressValidation() {
   const { getAllWallets } = useWalletStore();
   const wallets = getAllWallets();
+  const readyWallets = wallets.filter((w) => w.status === 'ready');
 
   const [selectedWalletId, setSelectedWalletId] = useState<string>('');
-  const [addressIndex, setAddressIndex] = useState<number>(0);
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
+  const [amount, setAmount] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedWallet = wallets.find((w) => w.metadata.id === selectedWalletId);
+  const selectedWallet = readyWallets.find((w) => w.metadata.id === selectedWalletId);
 
-  const handleDeriveAddress = async () => {
-    if (!selectedWallet || !selectedWallet.instance) {
-      setError('Please select a wallet that is ready');
-      return;
-    }
+  // Auto-derive address 0 when wallet is selected
+  useEffect(() => {
+    const deriveAddress = async () => {
+      if (!selectedWallet || !selectedWallet.instance) {
+        setDerivedAddress(null);
+        return;
+      }
 
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
+      try {
+        const address = await selectedWallet.instance.getAddressAtIndex(0);
+        setDerivedAddress(address);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to derive address');
+        setDerivedAddress(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    deriveAddress();
+  }, [selectedWallet]);
+
+  const handleCopy = async (text: string) => {
     try {
-      const address = await selectedWallet.instance.getAddressAtIndex(addressIndex);
-      setDerivedAddress(address);
+      await navigator.clipboard.writeText(text);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to derive address');
-      setDerivedAddress(null);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to copy:', err);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ready': return 'text-success';
-      case 'error': return 'text-danger';
-      case 'connecting':
-      case 'syncing': return 'text-warning';
-      default: return 'text-muted';
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      setAmount(value);
+    } else if (e.target.value === '') {
+      setAmount(1);
     }
+  };
+
+  const getAddressUri = () => derivedAddress ? `hathor:${derivedAddress}` : '';
+
+  const getPaymentRequest = () => {
+    if (!derivedAddress) return '';
+    return JSON.stringify({
+      address: `hathor:${derivedAddress}`,
+      amount: amount.toString(),
+      token: {
+        uid: '00',
+        name: 'Hathor',
+        symbol: 'HTR'
+      }
+    });
   };
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Address Validation</h1>
       <p className="text-muted mb-7.5">
-        Validate and derive addresses using your initialized wallets. This stage demonstrates how to access wallet
-        instances from the global store.
+        Select a ready wallet to view and share its first address through QR codes.
       </p>
 
-      {wallets.length === 0 ? (
+      {readyWallets.length === 0 ? (
         <div className="p-10 text-center border-2 border-dashed border-warning rounded-lg bg-yellow-50 text-yellow-800">
-          <h2 className="mt-0 text-2xl font-bold">No Wallets Available</h2>
+          <h2 className="mt-0 text-2xl font-bold">No Ready Wallets Available</h2>
           <p className="text-base">
-            Please go to the <strong>Wallet Initialization</strong> stage and add at least one wallet before using this
+            Please go to the <strong>Wallet Initialization</strong> stage, add a wallet, and start it before using this
             feature.
           </p>
         </div>
@@ -68,146 +96,128 @@ export default function AddressValidation() {
         <>
           {/* Wallet Selection */}
           <div className="card-primary mb-7.5">
-            <h2 className="text-xl font-bold mb-4">Derive Address</h2>
+            <h2 className="text-xl font-bold mb-4">Select Wallet</h2>
 
             <div className="mb-4">
               <label htmlFor="wallet-select" className="block mb-1.5 font-bold">
-                Select Wallet:
+                Choose a Ready Wallet:
               </label>
               <select
                 id="wallet-select"
                 value={selectedWalletId}
-                onChange={(e) => {
-                  setSelectedWalletId(e.target.value);
-                  setDerivedAddress(null);
-                  setError(null);
-                }}
+                onChange={(e) => setSelectedWalletId(e.target.value)}
                 className="input cursor-pointer bg-white"
               >
                 <option value="">-- Select a wallet --</option>
-                {wallets.map((wallet) => (
+                {readyWallets.map((wallet) => (
                   <option key={wallet.metadata.id} value={wallet.metadata.id}>
-                    {wallet.metadata.friendlyName} ({wallet.metadata.network}) - Status: {wallet.status}
+                    {wallet.metadata.friendlyName} ({wallet.metadata.network})
                   </option>
                 ))}
               </select>
             </div>
 
-            {selectedWallet && (
-              <div className="p-4 bg-cyan-50 border border-info rounded mb-4">
-                <p className="m-0 mb-1.5 text-sm">
-                  <strong>Wallet:</strong> {selectedWallet.metadata.friendlyName}
-                </p>
-                <p className="m-0 mb-1.5 text-sm">
-                  <strong>Network:</strong> {selectedWallet.metadata.network}
-                </p>
-                <p className="m-0 mb-1.5 text-sm">
-                  <strong>Status:</strong>{' '}
-                  <span className={`${getStatusColor(selectedWallet.status)} font-bold`}>
-                    {selectedWallet.status}
-                  </span>
-                </p>
-                {selectedWallet.firstAddress && (
-                  <p className="m-0 mt-1.5 text-xs font-mono">
-                    <strong>First Address:</strong> {selectedWallet.firstAddress}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="mb-4">
-              <label htmlFor="address-index" className="block mb-1.5 font-bold">
-                Address Index:
-              </label>
-              <input
-                id="address-index"
-                type="number"
-                min="0"
-                value={addressIndex}
-                onChange={(e) => {
-                  setAddressIndex(parseInt(e.target.value, 10) || 0);
-                  setDerivedAddress(null);
-                  setError(null);
-                }}
-                className="input"
-              />
-              <p className="text-muted text-xs mt-1.5 mb-0">
-                Enter the index of the address to derive (0 = first address, 1 = second address, etc.)
-              </p>
-            </div>
-
-            <button
-              onClick={handleDeriveAddress}
-              disabled={!selectedWalletId || isLoading || selectedWallet?.status !== 'ready'}
-              className={`w-full btn text-base font-bold ${
-                selectedWalletId && !isLoading && selectedWallet?.status === 'ready'
-                  ? 'btn-primary'
-                  : 'btn-secondary cursor-not-allowed'
-              }`}
-            >
-              {isLoading ? 'Deriving...' : 'Derive Address'}
-            </button>
-
             {error && (
-              <div className="mt-4 p-4 bg-red-50 border border-danger rounded">
-                <p className="m-0 text-red-900">❌ {error}</p>
+              <div className="p-4 bg-red-50 border border-danger rounded">
+                <p className="m-0 text-red-900">{error}</p>
               </div>
             )}
+          </div>
 
-            {derivedAddress && (
-              <div className="mt-4 p-4 bg-green-50 border border-success rounded">
-                <h3 className="mt-0 text-lg font-bold">✅ Derived Address:</h3>
-                <p className="font-mono text-lg break-all font-bold m-0">
+          {/* Address Display */}
+          {isLoading && (
+            <div className="card-primary mb-7.5 text-center">
+              <p className="m-0">Loading address...</p>
+            </div>
+          )}
+
+          {derivedAddress && !isLoading && (
+            <>
+              {/* Address Display */}
+              <div className="card-primary mb-7.5">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-bold m-0">Address (Index 0)</h3>
+                  <button
+                    onClick={() => handleCopy(derivedAddress)}
+                    className="btn-primary text-xs"
+                    title="Copy address"
+                  >
+                    <span className="i-mdi-content-copy inline-block mr-1" />
+                    Copy
+                  </button>
+                </div>
+                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded">
                   {derivedAddress}
                 </p>
               </div>
-            )}
-          </div>
 
-          {/* Wallet List */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Available Wallets ({wallets.length})</h2>
-            <div className="flex flex-col gap-4">
-              {wallets.map((wallet) => (
-                <div
-                  key={wallet.metadata.id}
-                  className={`p-4 rounded-lg ${
-                    wallet.metadata.id === selectedWalletId
-                      ? 'border-2 border-primary bg-blue-50'
-                      : 'border border-gray-300 bg-white'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="m-0 mb-2.5 text-lg font-bold">{wallet.metadata.friendlyName}</h3>
-                      <p className="m-0 my-1.5 text-sm">
-                        <strong>Network:</strong> {wallet.metadata.network}
-                      </p>
-                      <p className="m-0 my-1.5 text-sm">
-                        <strong>Status:</strong>{' '}
-                        <span className={`${getStatusColor(wallet.status)} font-bold`}>
-                          {wallet.status}
-                        </span>
-                      </p>
-                      {wallet.firstAddress && (
-                        <p className="m-0 my-1.5 text-xs font-mono text-success">
-                          <strong>First Address:</strong> {wallet.firstAddress}
-                        </p>
-                      )}
-                    </div>
-                    {wallet.metadata.id !== selectedWalletId && (
-                      <button
-                        onClick={() => setSelectedWalletId(wallet.metadata.id)}
-                        className="btn-primary text-sm"
-                      >
-                        Select
-                      </button>
-                    )}
-                  </div>
+              {/* Address URI QR Code */}
+              <div className="card-primary mb-7.5">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-bold m-0">Address QR Code</h3>
+                  <button
+                    onClick={() => handleCopy(getAddressUri())}
+                    className="btn-primary text-xs"
+                    title="Copy address URI"
+                  >
+                    <span className="i-mdi-content-copy inline-block mr-1" />
+                    Copy
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="p-4 bg-white border-2 border-gray-300 rounded">
+                    <QRCode value={getAddressUri()} size={200} />
+                  </div>
+                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full text-center">
+                    {getAddressUri()}
+                  </p>
+                </div>
+              </div>
+
+	            {/* Amount Field */}
+	            <div className="card-primary mb-7.5">
+		            <label htmlFor="amount-input" className="block mb-1.5 font-bold">
+			            Payment Amount:
+		            </label>
+		            <input
+			            id="amount-input"
+			            type="number"
+			            min="1"
+			            step="1"
+			            value={amount}
+			            onChange={handleAmountChange}
+			            className="input"
+			            placeholder="Enter amount"
+		            />
+		            <p className="text-muted text-xs mt-1.5 mb-0">
+			            Enter a positive integer for the payment amount (HTR tokens)
+		            </p>
+	            </div>
+
+              {/* Payment Request QR Code */}
+              <div className="card-primary mb-7.5">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-bold m-0">Payment Request QR Code</h3>
+                  <button
+                    onClick={() => handleCopy(getPaymentRequest())}
+                    className="btn-primary text-xs"
+                    title="Copy payment request"
+                  >
+                    <span className="i-mdi-content-copy inline-block mr-1" />
+                    Copy
+                  </button>
+                </div>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="p-4 bg-white border-2 border-gray-300 rounded">
+                    <QRCode value={getPaymentRequest()} size={200} />
+                  </div>
+                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
+                    {getPaymentRequest()}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
