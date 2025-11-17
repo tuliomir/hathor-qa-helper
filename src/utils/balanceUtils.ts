@@ -5,11 +5,7 @@
  */
 
 import { numberUtils } from '@hathor/wallet-lib';
-
-/**
- * Default decimal places for HTR token
- */
-export const HTR_DECIMAL_PLACES = 2;
+import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants'
 
 /**
  * Formats a BigInt balance to a display string
@@ -19,9 +15,18 @@ export const HTR_DECIMAL_PLACES = 2;
  * @returns Formatted balance string (e.g., "1,234.56")
  */
 export function formatBalance(
-  balance: bigint | undefined,
-  decimalPlaces: number = HTR_DECIMAL_PLACES
+  balance: bigint | string | undefined,
+  decimalPlaces: number = DECIMAL_PLACES
 ): string {
   if (balance === undefined) return '0.00';
+  // Ensure prettyValue receives a bigint (convert from string when necessary)
+  if (typeof balance === 'string') {
+    try {
+      return numberUtils.prettyValue(BigInt(balance), decimalPlaces);
+    } catch (_e) {
+      // Fallback: attempt to parse as number if BigInt conversion fails
+      return numberUtils.prettyValue(BigInt(Math.floor(Number(balance))), decimalPlaces);
+    }
+  }
   return numberUtils.prettyValue(balance, decimalPlaces);
 }

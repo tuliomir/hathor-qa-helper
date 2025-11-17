@@ -9,6 +9,7 @@ import addressValidationReducer from './slices/addressValidationSlice';
 import toastReducer from './slices/toastSlice';
 import walletSelectionReducer from './slices/walletSelectionSlice';
 import tokensReducer from './slices/tokensSlice';
+import transactionHistoryReducer from './slices/transactionHistorySlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     toast: toastReducer,
     walletSelection: walletSelectionReducer,
     tokens: tokensReducer,
+    transactionHistory: transactionHistoryReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
