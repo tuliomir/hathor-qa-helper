@@ -37,6 +37,7 @@ export default function WalletInitialization() {
   const [defaultTestWalletId, setDefaultTestWalletId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasAutoStartedRef = useRef(false);
   const allWallets = getAllWallets();
 
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
@@ -56,9 +57,15 @@ export default function WalletInitialization() {
     }
   }, []);
 
-  // Auto-start default wallets on mount
+  // Auto-start default wallets after they're loaded from localStorage
   useEffect(() => {
     const autoStartDefaults = async () => {
+      // Only run once, and only after we've loaded defaults from localStorage
+      if (hasAutoStartedRef.current) return;
+      if (!defaultFundWalletId && !defaultTestWalletId) return;
+
+      hasAutoStartedRef.current = true;
+
       if (defaultFundWalletId) {
         const wallet = allWallets.find(w => w.metadata.id === defaultFundWalletId);
         if (wallet && wallet.status === 'idle') {
@@ -73,11 +80,8 @@ export default function WalletInitialization() {
       }
     };
 
-    // Only run once on initial load
-    if (defaultFundWalletId || defaultTestWalletId) {
-      autoStartDefaults();
-    }
-  }, []); // Empty dependency array to run only on mount
+    autoStartDefaults();
+  }, [defaultFundWalletId, defaultTestWalletId]); // Run when default wallet IDs are loaded
 
   // Sort wallets: started (ready) first, then loading (connecting/syncing), then others
   const wallets = [...allWallets].sort((a, b) => {
