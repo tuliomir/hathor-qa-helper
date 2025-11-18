@@ -4,19 +4,25 @@
  */
 
 import { useState } from 'react';
+import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
+import { addToken } from '../../store/slices/tokensSlice';
+import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { tokensUtils } from '@hathor/wallet-lib';
+import CopyButton from '../common/CopyButton';
 
 type TabType = 'fund' | 'test';
 
 // Component for displaying wallet tokens
 function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
-  const [tokenUids, setTokenUids] = useState<string[] | null>(null);
-  const [tokenDetails, setTokenDetails] = useState<any>(null);
+  const dispatch = useAppDispatch();
+  const tokens = useAppSelector((s) => s.tokens.tokens);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTokenUid, setSelectedTokenUid] = useState<string | null>(null);
+  const [configString, setConfigString] = useState<string | null>(null);
 
   const handleLoadTokens = async () => {
     if (!wallet || !wallet.instance) {
@@ -30,28 +36,43 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
     try {
       // Get token UIDs
       const uids = await wallet.instance.getTokens();
-      setTokenUids(uids);
 
-      // Fetch details for each token UID
-      const details: Record<string, any> = {};
+      // Fetch details for each token UID (skip native token "00")
       for (const uid of uids) {
+        // Skip native token - we already have it in the slice
+        if (uid === NATIVE_TOKEN_UID) {
+          continue;
+        }
+
         try {
           const txData = await wallet.instance.getTxById(uid);
-          details[uid] = txData;
+
+          // Extract token info and store in Redux
+          if (txData.success && txData.txTokens) {
+            const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
+            if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
+              dispatch(addToken({
+                uid,
+                name: tokenInfo.tokenName,
+                symbol: tokenInfo.tokenSymbol,
+              }));
+            }
+          }
         } catch (err) {
-          details[uid] = {
-            error: err instanceof Error ? err.message : 'Failed to fetch token details'
-          };
+          console.error(`Failed to fetch token details for ${uid}:`, err);
         }
       }
-      setTokenDetails(details);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load tokens');
-      setTokenUids(null);
-      setTokenDetails(null);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleTokenClick = (uid: string, name: string, symbol: string) => {
+    setSelectedTokenUid(uid);
+    const config = tokensUtils.getConfigurationString(uid, name, symbol);
+    setConfigString(config);
   };
 
   return (
@@ -90,26 +111,61 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
         </div>
       )}
 
-      {/* Token UIDs Display */}
-      {tokenUids && (
+      {/* Tokens List */}
+      {tokens.length > 0 && (
         <div className="card-primary mb-7.5">
-          <h3 className="text-lg font-bold mb-3">Token UIDs</h3>
-          <div className="bg-gray-100 p-4 rounded overflow-auto max-h-[200px]">
-            <pre className="text-xs font-mono whitespace-pre-wrap break-words m-0">
-              {JSONBigInt.stringify(tokenUids, 2)}
-            </pre>
+          <h3 className="text-lg font-bold mb-3">Available Tokens</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-gray-300">
+                <tr>
+                  <th className="text-left py-2 px-3 font-bold">Symbol</th>
+                  <th className="text-left py-2 px-3 font-bold">Name</th>
+                  <th className="text-left py-2 px-3 font-bold">UID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tokens.map((token) => (
+                  <tr
+                    key={token.uid}
+                    onClick={() => handleTokenClick(token.uid, token.name, token.symbol)}
+                    className={`border-b border-gray-200 cursor-pointer transition-colors ${
+                      selectedTokenUid === token.uid
+                        ? 'bg-primary/10'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <td className="py-2 px-3 font-semibold">{token.symbol}</td>
+                    <td className="py-2 px-3">{token.name}</td>
+                    <td className="py-2 px-3 font-mono text-2xs">{token.uid}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {/* Token Details Display */}
-      {tokenDetails && (
+      {/* Configuration String Display */}
+      {configString && selectedTokenUid && (
         <div className="card-primary mb-7.5">
-          <h3 className="text-lg font-bold mb-3">Token Details (from getTxById)</h3>
-          <div className="bg-gray-100 p-4 rounded overflow-auto max-h-[600px]">
-            <pre className="text-xs font-mono whitespace-pre-wrap break-words m-0">
-              {JSONBigInt.stringify(tokenDetails, 2)}
-            </pre>
+          <div className="mb-3 text-center">
+            <h3 className="text-lg font-bold m-0">Configuration String</h3>
+          </div>
+
+          {/* Configuration String */}
+          <div className="flex items-center justify-center gap-2 mb-7.5">
+            <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
+              {configString}
+            </p>
+            <CopyButton text={configString} label="Copy config string" className="ml-2" />
+          </div>
+
+          {/* QR Code */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="p-4 bg-white border-2 border-gray-300 rounded">
+              <QRCode value={configString} size={200} />
+            </div>
           </div>
         </div>
       )}
