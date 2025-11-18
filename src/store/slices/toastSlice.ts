@@ -4,13 +4,18 @@
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { ReactNode } from 'react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+// Centralized options type for toasts (duration in milliseconds)
+export type ToastOptions = { duration?: number };
+
 export interface Toast {
   id: string;
-  message: string;
+  message: ReactNode; // allow React nodes so toasts can include links
   type: ToastType;
+  duration?: number; // optional duration in milliseconds
 }
 
 interface ToastState {
@@ -25,7 +30,7 @@ const toastSlice = createSlice({
   name: 'toast',
   initialState,
   reducers: {
-    addToast: (state, action: PayloadAction<{ id: string; message: string; type: ToastType }>) => {
+    addToast: (state, action: PayloadAction<Toast>) => {
       state.toasts.push(action.payload);
     },
     removeToast: (state, action: PayloadAction<string>) => {

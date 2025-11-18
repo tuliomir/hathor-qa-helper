@@ -1,28 +1,30 @@
 import { useCallback } from 'react';
 import { useAppDispatch } from '../store/hooks';
-import { addToast, removeToast, type ToastType } from '../store/slices/toastSlice';
+import { addToast, removeToast, type ToastType, type ToastOptions } from '../store/slices/toastSlice';
 
 export function useToast() {
   const dispatch = useAppDispatch();
 
   const showToast = useCallback(
-    (message: string, type: ToastType = 'success') => {
+    (message: any, type: ToastType = 'success', options?: ToastOptions) => {
       const id = `toast-${Date.now()}-${Math.random()}`;
-      dispatch(addToast({ id, message, type }));
+      const duration = options?.duration;
 
-      // Auto-remove toast after 2 seconds
+      dispatch(addToast({ id, message, type, duration }));
+
+      // Auto-remove toast after duration or default 2000ms
       setTimeout(() => {
         dispatch(removeToast(id));
-      }, 2000);
+      }, typeof duration === 'number' ? duration : 2000);
     },
     [dispatch]
   );
 
   return {
     showToast,
-    success: useCallback((message: string) => showToast(message, 'success'), [showToast]),
-    error: useCallback((message: string) => showToast(message, 'error'), [showToast]),
-    warning: useCallback((message: string) => showToast(message, 'warning'), [showToast]),
-    info: useCallback((message: string) => showToast(message, 'info'), [showToast]),
+    success: useCallback((message: any, options?: ToastOptions) => showToast(message, 'success', options), [showToast]),
+    error: useCallback((message: any, options?: ToastOptions) => showToast(message, 'error', options), [showToast]),
+    warning: useCallback((message: any, options?: ToastOptions) => showToast(message, 'warning', options), [showToast]),
+    info: useCallback((message: any, options?: ToastOptions) => showToast(message, 'info', options), [showToast]),
   };
 }

@@ -1,7 +1,7 @@
 import { useAppSelector } from '../../store/hooks';
-import type { ToastType } from '../../store/slices/toastSlice';
+import type { Toast } from '../../store/slices/toastSlice';
 
-const toastTypeClasses: Record<ToastType, string> = {
+const toastTypeClasses: Record<NonNullable<Toast['type']>, string> = {
   success: 'alert-success',
   error: 'alert-error',
   warning: 'alert-warning',
@@ -16,7 +16,7 @@ export default function ToastContainer() {
   }
 
   return (
-    <div className="toast toast-start toast-bottom z-50">
+    <div className="toast toast-start toast-bottom z-50 space-y-2">
       {toasts.map((toast) => (
         <div key={toast.id} className={`alert ${toastTypeClasses[toast.type]}`}>
           <span>{toast.message}</span>

@@ -82,7 +82,19 @@ export function useSendTransaction() {
       const explorerUrl = NETWORK_CONFIG[DEFAULT_NETWORK].explorerUrl;
       const txUrl = `${explorerUrl}transaction/${tx.hash}`;
 
-      success(`Transaction sent successfully! View on explorer: ${txUrl}`);
+      // Show toast with a link and longer duration (20s)
+      success(
+        (
+          <span>
+            Transaction sent successfully! View on explorer (
+            <a href={txUrl} target="_blank" rel="noreferrer" className="underline text-primary">
+              link
+            </a>
+            )
+          </span>
+        ),
+        { duration: 20000 }
+      );
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
       setError(errorMessage);
