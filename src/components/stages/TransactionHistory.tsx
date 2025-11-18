@@ -13,10 +13,17 @@ import { NETWORK_CONFIG } from '../../constants/network';
 import dateFormatter from '@hathor/wallet-lib/lib/utils/date';
 
 interface WalletTransaction {
-  hash: string;
+  txId: string;
   timestamp: number;
-  inputs: unknown[];
-  outputs: unknown[];
+  balance: number;
+  firstBlock?: number;
+  voided: boolean;
+  version?: number;
+  ncCaller?: string;
+  ncId?: string;
+  ncMethod?: string;
+  // Keep raw data for console export
+  raw: any;
 }
 
 export default function TransactionHistory() {
@@ -48,14 +55,19 @@ export default function TransactionHistory() {
         console.log('Raw getTxHistory() response:', txHistory);
         console.log('First transaction sample:', txHistory[0]);
 
-        // Extract only the fields we need
+        // Extract the fields we need
         const simplifiedTxs: WalletTransaction[] = txHistory.map((tx: any) => {
-          const hash = tx.tx_id || tx.hash || tx.txId || tx.id || 'unknown';
           return {
-            hash,
+            txId: tx.tx_id || tx.txId || 'unknown',
             timestamp: (tx.timestamp || 0) * 1000, // Convert to milliseconds
-            inputs: tx.inputs || [],
-            outputs: tx.outputs || [],
+            balance: tx.balance || 0,
+            firstBlock: tx.first_block || tx.firstBlock,
+            voided: tx.voided || false,
+            version: tx.version,
+            ncCaller: tx.nc_caller || tx.ncCaller,
+            ncId: tx.nc_id || tx.ncId,
+            ncMethod: tx.nc_method || tx.ncMethod,
+            raw: tx, // Keep raw data for console export
           };
         });
 
@@ -81,16 +93,29 @@ export default function TransactionHistory() {
   // Get explorer URL based on network
   function getExplorerUrl(hash: string): string {
     const network = testWallet?.metadata.network || 'testnet';
-    const baseUrl = network === 'mainnet'
+    const baseUrl = network === 'MAINNET'
       ? NETWORK_CONFIG.MAINNET.explorerUrl
       : NETWORK_CONFIG.TESTNET.explorerUrl;
     return `${baseUrl}transaction/${hash}`;
   }
 
+  // Determine transaction status
+  function getTxStatus(tx: WalletTransaction): string {
+    if (!tx.firstBlock) return 'pending';
+    return tx.voided ? 'voided' : 'valid';
+  }
+
+  // Determine transaction type
+  function getTxType(tx: WalletTransaction): string {
+    if (tx.ncCaller || tx.ncId || tx.ncMethod) return 'Nano';
+    if (tx.version === 2) return 'Token Creation';
+    return 'Common';
+  }
+
   // Handle transaction row click
   function handleTxClick(tx: WalletTransaction) {
-    const truncated = truncateHash(tx.hash);
-    console.log(`Showing tx ${truncated}`, tx);
+    const truncated = truncateHash(tx.txId);
+    console.log(`Showing tx ${truncated}`, tx.raw);
     info('Raw tx exported to console');
   }
 
@@ -223,46 +248,64 @@ export default function TransactionHistory() {
                   <tr>
                     <th className="text-left py-2 px-3 font-bold">Hash</th>
                     <th className="text-left py-2 px-3 font-bold">Timestamp</th>
-                    <th className="text-center py-2 px-3 font-bold">Inputs</th>
-                    <th className="text-center py-2 px-3 font-bold">Outputs</th>
+                    <th className="text-right py-2 px-3 font-bold">Balance</th>
+                    <th className="text-center py-2 px-3 font-bold">Status</th>
+                    <th className="text-center py-2 px-3 font-bold">Type</th>
                     <th className="text-center py-2 px-3 font-bold">Explorer</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedTxs.map((tx) => (
-                    <tr
-                      key={tx.hash}
-                      className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleTxClick(tx)}
-                    >
-                      <td className="py-2 px-3 font-mono text-xs" title={tx.hash}>
-                        <div className="flex items-center gap-2">
-                          {truncateHash(tx.hash)}
-                          <CopyButton text={tx.hash} label="" />
-                        </div>
-                      </td>
-                      <td className="py-2 px-3 text-xs">
-                        {dateFormatter.parseTimestamp(tx.timestamp)}
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        {tx.inputs.length}
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        {tx.outputs.length}
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        <a
-                          href={getExplorerUrl(tx.hash)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-primary hover:underline text-xs"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          View
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
+                  {paginatedTxs.map((tx) => {
+                    const status = getTxStatus(tx);
+                    const txType = getTxType(tx);
+                    return (
+                      <tr
+                        key={tx.txId}
+                        className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleTxClick(tx)}
+                      >
+                        <td className="py-2 px-3 font-mono text-xs" title={tx.txId}>
+                          <div className="flex items-center gap-2">
+                            {truncateHash(tx.txId)}
+                            <CopyButton text={tx.txId} label="" />
+                          </div>
+                        </td>
+                        <td className="py-2 px-3 text-xs">
+                          {dateFormatter.parseTimestamp(tx.timestamp/1000)}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          {tx.balance}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs ${
+                              status === 'valid'
+                                ? 'bg-success/10 text-success'
+                                : status === 'pending'
+                                ? 'bg-warning/10 text-warning'
+                                : 'bg-danger/10 text-danger'
+                            }`}
+                          >
+                            {status}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-center text-xs">
+                          {txType}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <a
+                            href={getExplorerUrl(tx.txId)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline text-xs"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
