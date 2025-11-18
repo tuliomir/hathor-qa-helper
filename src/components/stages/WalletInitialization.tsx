@@ -186,6 +186,16 @@ export default function WalletInitialization() {
     }
   };
 
+  const getRowBackgroundColor = (status: string) => {
+    switch (status) {
+      case 'ready': return 'bg-green-50';
+      case 'error': return 'bg-red-50';
+      case 'connecting':
+      case 'syncing': return 'bg-yellow-50';
+      default: return '';
+    }
+  };
+
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
@@ -239,7 +249,7 @@ export default function WalletInitialization() {
               </thead>
               <tbody>
                 {wallets.map((wallet) => (
-                  <tr key={wallet.metadata.id} className="table-row">
+                  <tr key={wallet.metadata.id} className={`table-row ${getRowBackgroundColor(wallet.status)}`}>
                     <td className="p-3">
                       {editingId === wallet.metadata.id ? (
                         <input
