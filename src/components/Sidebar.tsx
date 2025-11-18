@@ -25,6 +25,8 @@ export default function Sidebar() {
         <div className="flex flex-col gap-2.5">
           {STAGES.map((stage) => {
             const isActive = currentStage === stage.id;
+						// TODO: Add the possibility of "Separator" stages, which will consist of only a title
+	          // and a nice visual separation, but no button functionality
             return (
               <button
                 key={stage.id}
