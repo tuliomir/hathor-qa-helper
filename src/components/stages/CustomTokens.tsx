@@ -372,6 +372,24 @@ function WalletTokensDisplay({
         </div>
       )}
 
+	    {/* Token Uid String Display */}
+	    {selectedTokenUid && (
+		    <div className="card-primary mb-7.5">
+			    <div className="mb-3 text-center">
+				    <h3 className="text-lg font-bold m-0">Token UID String</h3>
+			    </div>
+
+			    {/* Configuration String */}
+			    <div className="flex items-center justify-center gap-2 mb-7.5">
+				    <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
+					    {selectedTokenUid}
+				    </p>
+				    <CopyButton text={selectedTokenUid} label="Copy config string" className="ml-2" />
+			    </div>
+
+		    </div>
+	    )}
+
       {/* Configuration String Display */}
       {configString && selectedTokenUid && selectedToken && (
         <div className="card-primary mb-7.5">
