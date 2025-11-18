@@ -9,13 +9,12 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { tokensUtils, SendTransaction, TransactionTemplateBuilder } from '@hathor/wallet-lib';
+import { tokensUtils, TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import CopyButton from '../common/CopyButton';
 import { refreshWalletTokens, refreshWalletBalance } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
-import { addTransaction } from '../../store/slices/transactionHistorySlice';
-import { useToast } from '../../hooks/useToast';
-import { WALLET_CONFIG, NETWORK_CONFIG, DEFAULT_NETWORK } from '../../constants/network';
+import { useSendTransaction } from '../../hooks/useSendTransaction';
+import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 
 type TabType = 'fund' | 'test';
@@ -130,7 +129,7 @@ function WalletTokensDisplay({
 }) {
   const dispatch = useAppDispatch();
   const { getAllWallets } = useWalletStore();
-  const { success, error: showError } = useToast();
+  const { sendTransaction, isSending, error: transactionError } = useSendTransaction();
   const allTokens = useAppSelector((s) => s.tokens.tokens);
   const [selectedTokenUid, setSelectedTokenUid] = useState<string | null>(null);
   const [configString, setConfigString] = useState<string | null>(null);
@@ -139,8 +138,6 @@ function WalletTokensDisplay({
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
   // Just reset selected token when wallet changes
@@ -236,12 +233,8 @@ function WalletTokensDisplay({
   // Send handler for the "Send from Fund Wallet" button
   const handleSendFromFundWallet = async () => {
     if (!fundingWalletId || !derivedAddress || !selectedToken) {
-      showError('Funding wallet, address, or token not available');
       return;
     }
-
-    setIsSending(true);
-    setError(null);
 
     try {
       // Get the funding wallet
@@ -257,9 +250,7 @@ function WalletTokensDisplay({
       // Get the first address of the funding wallet for change
       const fundWalletFirstAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
-      // Build and send the transaction
-      const hWallet = fundingWallet.instance;
-
+      // Build the transaction template
       const template = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: derivedAddress })
         .addSetVarAction({ name: 'changeAddr', value: fundWalletFirstAddress })
@@ -273,43 +264,22 @@ function WalletTokensDisplay({
         })
         .build();
 
-      const tx = await hWallet.buildTxTemplate(template, {
-        signTx: true,
-        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE
-      });
-
-      const sendTx = new SendTransaction({ storage: hWallet.storage, transaction: tx });
-      await sendTx.runFromMining();
-
-      // Track transaction in history
-      if (tx.hash) {
-        dispatch(
-          addTransaction({
-            hash: tx.hash,
-            timestamp: Date.now(),
-            fromWalletId: fundingWalletId,
-            toAddress: derivedAddress,
-            amount,
-            tokenUid: selectedToken.uid,
-            tokenSymbol: selectedToken.symbol,
-            network: fundingWallet.metadata.network,
-            status: 'confirmed'
-          })
-        );
-      }
-
-      // Get explorer URL for the network
-      const explorerUrl = NETWORK_CONFIG[DEFAULT_NETWORK].explorerUrl;
-      const txUrl = `${explorerUrl}transaction/${tx.hash}`;
-
-      success(`Transaction sent successfully! View on explorer: ${txUrl}`);
+      // Send the transaction using the centralized hook
+      await sendTransaction(
+        template,
+        {
+          fromWalletId: fundingWalletId,
+          fromWallet: fundingWallet,
+          toAddress: derivedAddress,
+          amount,
+          tokenUid: selectedToken.uid,
+          tokenSymbol: selectedToken.symbol
+        },
+        WALLET_CONFIG.DEFAULT_PIN_CODE
+      );
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
-      setError(errorMessage);
-      showError(errorMessage);
+      // Error is already handled by the hook
       console.error('Transaction error:', err);
-    } finally {
-      setIsSending(false);
     }
   };
 
@@ -334,9 +304,9 @@ function WalletTokensDisplay({
       {isSending && <Loading overlay message="Sending transaction..." />}
 
       {/* Error Display */}
-      {error && (
+      {transactionError && (
         <div className="card-primary mb-7.5 bg-red-50 border border-danger">
-          <p className="m-0 text-red-900">{error}</p>
+          <p className="m-0 text-red-900">{transactionError}</p>
         </div>
       )}
 

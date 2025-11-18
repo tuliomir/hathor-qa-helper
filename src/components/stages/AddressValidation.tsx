@@ -8,15 +8,14 @@ import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { setAddressIndex, setAmount } from '../../store/slices/addressValidationSlice';
-import { addTransaction } from '../../store/slices/transactionHistorySlice';
 import CopyButton from '../common/CopyButton';
 import Loading from '../common/Loading';
 import { formatBalance } from '../../utils/balanceUtils';
 import type { WalletInfo } from '../../types/walletStore';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants'
-import { WALLET_CONFIG, NETWORK_CONFIG, DEFAULT_NETWORK } from '../../constants/network.ts'
-import { SendTransaction, TransactionTemplateBuilder } from '@hathor/wallet-lib'
-import { useToast } from '../../hooks/useToast';
+import { WALLET_CONFIG } from '../../constants/network.ts'
+import { TransactionTemplateBuilder } from '@hathor/wallet-lib'
+import { useSendTransaction } from '../../hooks/useSendTransaction';
 import * as React from 'react'
 
 type TabType = 'funding' | 'test';
@@ -37,14 +36,12 @@ function WalletAddressDisplay({
   onAmountChange: (amount: number) => void;
   fundingWalletId: string | null;
 }) {
-  const dispatch = useAppDispatch();
   const { getAllWallets } = useWalletStore();
-  const { success, error: showError } = useToast();
+  const { sendTransaction, isSending, error: transactionError } = useSendTransaction();
 
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSending, setIsSending] = useState(false);
 	// TODO: add setSelectedToken as soon as we have custom token feature implemented
 	const [selectedToken] = useState<{ uid: string; name: string; symbol: string }>({
 		uid: NATIVE_TOKEN_UID,
@@ -101,12 +98,8 @@ function WalletAddressDisplay({
   // Send handler for the "Send from Fund Wallet" button
   const handleSendFromFundWallet = async () => {
     if (!fundingWalletId || !derivedAddress) {
-      showError('Funding wallet or address not available');
       return;
     }
-
-    setIsSending(true);
-    setError(null);
 
     try {
       // Get the funding wallet
@@ -122,9 +115,7 @@ function WalletAddressDisplay({
       // Get the first address of the funding wallet for change
       const fundWalletFirstAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
-      // Build and send the transaction
-      const hWallet = fundingWallet.instance;
-
+      // Build the transaction template
       const template = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: derivedAddress })
         .addSetVarAction({ name: 'changeAddr', value: fundWalletFirstAddress })
@@ -138,55 +129,22 @@ function WalletAddressDisplay({
         })
         .build();
 
-      const tx = await hWallet.buildTxTemplate(template, {
-        signTx: true,
-        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE
-      });
-			/*
-			 * Not working:
-			 * Transaction error: TypeError: Cannot read properties of undefined (reading 'from')
-			    at intToBytes (buffer.js:46:33)
-			    at P2PKH.createScript (p2pkh.js:71:26)
-			    at createOutputScriptFromAddress (address.js:116:18)
-			    at execTokenOutputInstruction (executor.js:298:31)
-			    at runInstruction (executor.js:43:60)
-			    at WalletTxTemplateInterpreter.build (interpreter.js:126:27)
-			    at async HathorWallet.buildTxTemplate (wallet.js:3442:16)
-			    at async handleSendFromFundWallet (AddressValidation.tsx:141:18)
-			 */
-
-      const sendTx = new SendTransaction({ storage: hWallet.storage, transaction: tx });
-      await sendTx.runFromMining();
-
-      // Track transaction in history
-      if (tx.hash) {
-        dispatch(
-          addTransaction({
-            hash: tx.hash,
-            timestamp: Date.now(),
-            fromWalletId: fundingWalletId,
-            toAddress: derivedAddress,
-            amount,
-            tokenUid: selectedToken.uid,
-            tokenSymbol: selectedToken.symbol,
-            network: fundingWallet.metadata.network,
-            status: 'confirmed'
-          })
-        );
-      }
-
-      // Get explorer URL for the network
-      const explorerUrl = NETWORK_CONFIG[DEFAULT_NETWORK].explorerUrl;
-      const txUrl = `${explorerUrl}transaction/${tx.hash}`;
-
-      success(`Transaction sent successfully! View on explorer: ${txUrl}`);
+      // Send the transaction using the centralized hook
+      await sendTransaction(
+        template,
+        {
+          fromWalletId: fundingWalletId,
+          fromWallet: fundingWallet,
+          toAddress: derivedAddress,
+          amount,
+          tokenUid: selectedToken.uid,
+          tokenSymbol: selectedToken.symbol
+        },
+        WALLET_CONFIG.DEFAULT_PIN_CODE
+      );
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
-      setError(errorMessage);
-      showError(errorMessage);
+      // Error is already handled by the hook
       console.error('Transaction error:', err);
-    } finally {
-      setIsSending(false);
     }
   };
 
@@ -252,9 +210,9 @@ function WalletAddressDisplay({
         <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
       </div>
 
-      {error && (
+      {(error || transactionError) && (
         <div className="card-primary mb-7.5 bg-red-50 border border-danger">
-          <p className="m-0 text-red-900">{error}</p>
+          <p className="m-0 text-red-900">{error || transactionError}</p>
         </div>
       )}
 
