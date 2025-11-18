@@ -25,6 +25,7 @@ interface StoredWalletInfo {
   status: WalletStatus;
   firstAddress?: string;
   balance?: string; // Stored as string for Redux serializability
+  tokenUids?: string[]; // Array of token UIDs for this wallet
   error?: string;
 }
 
@@ -171,6 +172,10 @@ export const startWallet = createAsyncThunk(
 
       // Update balance
       dispatch(updateWalletBalance({ id: walletId, balance: balanceString }));
+
+      // Get token UIDs
+      const tokenUids = await walletInstance.getTokens();
+      dispatch(updateWalletTokens({ id: walletId, tokenUids }));
 
       return { walletId, firstAddress, balance: balanceString };
     } catch (error) {
@@ -325,6 +330,21 @@ const walletStoreSlice = createSlice({
         walletInfo.balance = balance;
       }
     },
+
+    updateWalletTokens: (
+      state,
+      action: PayloadAction<{
+        id: string;
+        tokenUids: string[];
+      }>
+    ) => {
+      const { id, tokenUids } = action.payload;
+      const walletInfo = state.wallets[id];
+
+      if (walletInfo) {
+        walletInfo.tokenUids = tokenUids;
+      }
+    },
   },
 });
 
@@ -335,6 +355,7 @@ export const {
   updateWalletInstance,
   updateWalletStatus,
   updateWalletBalance,
+  updateWalletTokens,
 } = walletStoreSlice.actions;
 
 export default walletStoreSlice.reducer;

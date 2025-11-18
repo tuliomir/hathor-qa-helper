@@ -28,6 +28,7 @@ export interface WalletInfo {
   status: WalletStatus;
   firstAddress?: string;
   balance?: bigint; // BigInt for type safety and consistency with wallet-lib
+  tokenUids?: string[]; // Array of token UIDs for this wallet
   error?: string;
 }
 

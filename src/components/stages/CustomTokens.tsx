@@ -3,7 +3,7 @@
  * Displays custom tokens for wallets from the global store
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -15,64 +15,153 @@ import CopyButton from '../common/CopyButton';
 
 type TabType = 'fund' | 'test';
 
+interface Token {
+  uid: string;
+  name: string;
+  symbol: string;
+}
+
 // Component for displaying wallet tokens
 function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
   const dispatch = useAppDispatch();
-  const tokens = useAppSelector((s) => s.tokens.tokens);
+  const allTokens = useAppSelector((s) => s.tokens.tokens);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTokenUid, setSelectedTokenUid] = useState<string | null>(null);
   const [configString, setConfigString] = useState<string | null>(null);
+  const [addressIndex, setAddressIndex] = useState(0);
+  const [amount, setAmount] = useState(1);
+  const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
 
-  const handleLoadTokens = async () => {
-    if (!wallet || !wallet.instance) {
-      setError('Wallet instance not available');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Get token UIDs
-      const uids = await wallet.instance.getTokens();
-
-      // Fetch details for each token UID (skip native token "00")
-      for (const uid of uids) {
-        // Skip native token - we already have it in the slice
-        if (uid === NATIVE_TOKEN_UID) {
-          continue;
-        }
-
-        try {
-          const txData = await wallet.instance.getTxById(uid);
-
-          // Extract token info and store in Redux
-          if (txData.success && txData.txTokens) {
-            const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
-            if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
-              dispatch(addToken({
-                uid,
-                name: tokenInfo.tokenName,
-                symbol: tokenInfo.tokenSymbol,
-              }));
-            }
-          }
-        } catch (err) {
-          console.error(`Failed to fetch token details for ${uid}:`, err);
-        }
+  // Load tokens when wallet changes
+  useEffect(() => {
+    const loadTokens = async () => {
+      if (!wallet || !wallet.instance || !wallet.tokenUids) {
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tokens');
-    } finally {
-      setIsLoading(false);
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Fetch details for each token UID (skip native token "00")
+        for (const uid of wallet.tokenUids) {
+          // Skip native token
+          if (uid === NATIVE_TOKEN_UID) {
+            continue;
+          }
+
+          // Check if we already have this token in Redux
+          if (allTokens.find((t) => t.uid === uid)) {
+            continue;
+          }
+
+          try {
+            const txData = await wallet.instance.getTxById(uid);
+
+            // Extract token info and store in Redux
+            if (txData.success && txData.txTokens) {
+              const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
+              if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
+                dispatch(addToken({
+                  uid,
+                  name: tokenInfo.tokenName,
+                  symbol: tokenInfo.tokenSymbol,
+                }));
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to fetch token details for ${uid}:`, err);
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load tokens');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTokens();
+  }, [wallet?.metadata.id, wallet?.tokenUids, dispatch, allTokens]);
+
+  // Filter tokens for this wallet (exclude native token)
+  const walletTokens: Token[] = wallet.tokenUids
+    ? wallet.tokenUids
+        .filter((uid) => uid !== NATIVE_TOKEN_UID)
+        .map((uid) => allTokens.find((t) => t.uid === uid))
+        .filter((t): t is Token => t !== undefined)
+    : [];
+
+  // Auto-select first token when wallet changes or tokens load
+  useEffect(() => {
+    if (walletTokens.length > 0 && !selectedTokenUid) {
+      const firstToken = walletTokens[0];
+      setSelectedTokenUid(firstToken.uid);
+      const config = tokensUtils.getConfigurationString(firstToken.uid, firstToken.name, firstToken.symbol);
+      setConfigString(config);
     }
-  };
+  }, [walletTokens.length, selectedTokenUid]);
+
+  // Derive address when index changes
+  useEffect(() => {
+    const deriveAddress = async () => {
+      if (!wallet || !wallet.instance) {
+        setDerivedAddress(null);
+        return;
+      }
+
+      try {
+        const address = await wallet.instance.getAddressAtIndex(addressIndex);
+        setDerivedAddress(address);
+      } catch (err) {
+        console.error('Failed to derive address:', err);
+        setDerivedAddress(null);
+      }
+    };
+
+    deriveAddress();
+  }, [wallet, addressIndex]);
 
   const handleTokenClick = (uid: string, name: string, symbol: string) => {
     setSelectedTokenUid(uid);
     const config = tokensUtils.getConfigurationString(uid, name, symbol);
     setConfigString(config);
+  };
+
+  const handleAddressIndexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === '') {
+      setAddressIndex(0);
+      return;
+    }
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed) && parsed >= 0) {
+      setAddressIndex(parsed);
+    }
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value) && value > 0) {
+      setAmount(value);
+    } else if (e.target.value === '') {
+      setAmount(1);
+    }
+  };
+
+  const selectedToken = walletTokens.find((t) => t.uid === selectedTokenUid);
+
+  const getPaymentRequest = () => {
+    if (!derivedAddress || !selectedToken) return '';
+    return JSON.stringify({
+      address: `hathor:${derivedAddress}`,
+      amount: amount.toString(),
+      token: {
+        uid: selectedToken.uid,
+        name: selectedToken.name,
+        symbol: selectedToken.symbol,
+      }
+    });
   };
 
   return (
@@ -92,17 +181,12 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
         </div>
       </div>
 
-      {/* Load Tokens Button */}
-      <div className="card-primary mb-7.5">
-        <button
-          type="button"
-          onClick={handleLoadTokens}
-          className="btn-primary px-4 py-2 w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Loading...' : 'Load Custom Tokens'}
-        </button>
-      </div>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="card-primary mb-7.5 text-center">
+          <p className="m-0">Loading tokens...</p>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -111,10 +195,17 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
         </div>
       )}
 
+      {/* No Tokens Message */}
+      {!isLoading && walletTokens.length === 0 && (
+        <div className="card-primary mb-7.5 text-center">
+          <p className="m-0 text-muted">No custom tokens found for this wallet.</p>
+        </div>
+      )}
+
       {/* Tokens List */}
-      {tokens.length > 0 && (
+      {walletTokens.length > 0 && (
         <div className="card-primary mb-7.5">
-          <h3 className="text-lg font-bold mb-3">Available Tokens</h3>
+          <h3 className="text-lg font-bold mb-3">Custom Tokens</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-gray-300">
@@ -125,7 +216,7 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
                 </tr>
               </thead>
               <tbody>
-                {tokens.map((token) => (
+                {walletTokens.map((token) => (
                   <tr
                     key={token.uid}
                     onClick={() => handleTokenClick(token.uid, token.name, token.symbol)}
@@ -147,7 +238,7 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
       )}
 
       {/* Configuration String Display */}
-      {configString && selectedTokenUid && (
+      {configString && selectedTokenUid && selectedToken && (
         <div className="card-primary mb-7.5">
           <div className="mb-3 text-center">
             <h3 className="text-lg font-bold m-0">Configuration String</h3>
@@ -168,6 +259,68 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Payment Request Section */}
+      {selectedToken && (
+        <>
+          {/* Address Index Control */}
+          <div className="card-primary mb-7.5">
+            <label htmlFor="address-index" className="block mb-1.5 font-bold">
+              Address Index:
+            </label>
+            <input
+              id="address-index"
+              type="number"
+              min={0}
+              step={1}
+              value={addressIndex}
+              onChange={handleAddressIndexChange}
+              className="input"
+            />
+            <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
+          </div>
+
+          {/* Amount Field */}
+          <div className="card-primary mb-7.5">
+            <label htmlFor="amount-input" className="block mb-1.5 font-bold">
+              Payment Amount:
+            </label>
+            <input
+              id="amount-input"
+              type="number"
+              min="1"
+              step="1"
+              value={amount}
+              onChange={handleAmountChange}
+              className="input"
+              placeholder="Enter amount"
+            />
+            <p className="text-muted text-xs mt-1.5 mb-0">
+              Enter a positive integer for the payment amount ({selectedToken.symbol} tokens)
+            </p>
+          </div>
+
+          {/* Payment Request QR Code */}
+          {derivedAddress && (
+            <div className="card-primary mb-7.5">
+              <div className="mb-3 text-center">
+                <h3 className="text-lg font-bold m-0">Payment Request QR Code</h3>
+              </div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-4 bg-white border-2 border-gray-300 rounded">
+                  <QRCode value={getPaymentRequest()} size={200} />
+                </div>
+                <div className="flex items-center w-full">
+                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
+                    {getPaymentRequest()}
+                  </p>
+                  <CopyButton text={getPaymentRequest()} label="Copy payment request" className="ml-2" />
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </>
   );

@@ -16,6 +16,7 @@ interface StoredWalletInfo {
   status: WalletInfo['status'];
   firstAddress?: string;
   balance?: string; // Stored as string in Redux
+  tokenUids?: string[]; // Array of token UIDs for this wallet
   error?: string;
   instance: null;
 }

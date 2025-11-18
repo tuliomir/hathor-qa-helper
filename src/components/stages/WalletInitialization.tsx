@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera } from 'react-icons/md';
+import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
@@ -16,6 +16,8 @@ import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import type { NetworkType } from '../../constants/network';
+
+const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
 
 export default function WalletInitialization() {
   const dispatch = useAppDispatch();
@@ -31,12 +33,51 @@ export default function WalletInitialization() {
   const [showCamera, setShowCamera] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [defaultFundWalletId, setDefaultFundWalletId] = useState<string | null>(null);
+  const [defaultTestWalletId, setDefaultTestWalletId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const allWallets = getAllWallets();
 
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
+
+  // Load default wallets from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DEFAULT_WALLETS_KEY);
+      if (stored) {
+        const { fundWalletId, testWalletId } = JSON.parse(stored);
+        setDefaultFundWalletId(fundWalletId || null);
+        setDefaultTestWalletId(testWalletId || null);
+      }
+    } catch (error) {
+      console.error('Failed to load default wallets:', error);
+    }
+  }, []);
+
+  // Auto-start default wallets on mount
+  useEffect(() => {
+    const autoStartDefaults = async () => {
+      if (defaultFundWalletId) {
+        const wallet = allWallets.find(w => w.metadata.id === defaultFundWalletId);
+        if (wallet && wallet.status === 'idle') {
+          await handleStartWallet(defaultFundWalletId);
+        }
+      }
+      if (defaultTestWalletId) {
+        const wallet = allWallets.find(w => w.metadata.id === defaultTestWalletId);
+        if (wallet && wallet.status === 'idle') {
+          await handleStartWallet(defaultTestWalletId);
+        }
+      }
+    };
+
+    // Only run once on initial load
+    if (defaultFundWalletId || defaultTestWalletId) {
+      autoStartDefaults();
+    }
+  }, []); // Empty dependency array to run only on mount
 
   // Sort wallets: started (ready) first, then loading (connecting/syncing), then others
   const wallets = [...allWallets].sort((a, b) => {
@@ -168,7 +209,36 @@ export default function WalletInitialization() {
   const handleRemoveWallet = (walletId: string) => {
     if (window.confirm('Are you sure you want to remove this wallet?')) {
       removeWallet(walletId);
+
+      // Clear default status if this wallet was default
+      if (walletId === defaultFundWalletId || walletId === defaultTestWalletId) {
+        const newDefaults = {
+          fundWalletId: walletId === defaultFundWalletId ? null : defaultFundWalletId,
+          testWalletId: walletId === defaultTestWalletId ? null : defaultTestWalletId,
+        };
+        localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(newDefaults));
+        if (walletId === defaultFundWalletId) setDefaultFundWalletId(null);
+        if (walletId === defaultTestWalletId) setDefaultTestWalletId(null);
+      }
     }
+  };
+
+  const handleSetDefaultFundWallet = (walletId: string | null) => {
+    setDefaultFundWalletId(walletId);
+    const defaults = {
+      fundWalletId: walletId,
+      testWalletId: defaultTestWalletId,
+    };
+    localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(defaults));
+  };
+
+  const handleSetDefaultTestWallet = (walletId: string | null) => {
+    setDefaultTestWalletId(walletId);
+    const defaults = {
+      fundWalletId: defaultFundWalletId,
+      testWalletId: walletId,
+    };
+    localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(defaults));
   };
 
   const truncateSeed = (seed: string, maxLength: number = 30) => {
@@ -339,7 +409,7 @@ export default function WalletInitialization() {
               id="funding-wallet-select"
               value={fundingWalletId || ''}
               onChange={(e) => dispatch(setFundingWallet(e.target.value || null))}
-              className="input cursor-pointer bg-white w-full"
+              className="input cursor-pointer bg-white w-full mb-3"
             >
               <option value="">-- Select funding wallet --</option>
               {walletsSortedByBalanceDesc.map((wallet) => (
@@ -348,6 +418,17 @@ export default function WalletInitialization() {
                 </option>
               ))}
             </select>
+            {fundingWalletId && (
+              <button
+                onClick={() => handleSetDefaultFundWallet(defaultFundWalletId === fundingWalletId ? null : fundingWalletId)}
+                className={`btn text-xs flex items-center gap-1 w-full ${
+                  defaultFundWalletId === fundingWalletId ? 'btn-warning' : 'btn-secondary'
+                }`}
+              >
+                {defaultFundWalletId === fundingWalletId ? <MdStar /> : <MdStarBorder />}
+                {defaultFundWalletId === fundingWalletId ? 'Unset Default Fund Wallet' : 'Set as Default Fund Wallet'}
+              </button>
+            )}
           </div>
 
           {/* Test Wallet Selection */}
@@ -360,7 +441,7 @@ export default function WalletInitialization() {
               id="test-wallet-select"
               value={testWalletId || ''}
               onChange={(e) => dispatch(setTestWallet(e.target.value || null))}
-              className="input cursor-pointer bg-white w-full"
+              className="input cursor-pointer bg-white w-full mb-3"
             >
               <option value="">-- Select test wallet --</option>
               {walletsSortedByBalanceAsc.map((wallet) => (
@@ -369,6 +450,17 @@ export default function WalletInitialization() {
                 </option>
               ))}
             </select>
+            {testWalletId && (
+              <button
+                onClick={() => handleSetDefaultTestWallet(defaultTestWalletId === testWalletId ? null : testWalletId)}
+                className={`btn text-xs flex items-center gap-1 w-full ${
+                  defaultTestWalletId === testWalletId ? 'btn-warning' : 'btn-secondary'
+                }`}
+              >
+                {defaultTestWalletId === testWalletId ? <MdStar /> : <MdStarBorder />}
+                {defaultTestWalletId === testWalletId ? 'Unset Default Test Wallet' : 'Set as Default Test Wallet'}
+              </button>
+            )}
           </div>
         </div>
       )}
