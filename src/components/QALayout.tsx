@@ -19,41 +19,47 @@ export default function QALayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header with Test Wallet Info */}
-      {testWallet && (
-        <div className="bg-gradient-to-r from-primary to-blue-700 text-white shadow-md">
-          <div className="px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-bold m-0">Test Wallet:</h2>
-              <div className="flex items-center gap-2">
-                <span className="text-base font-semibold">{testWallet.metadata.friendlyName}</span>
-                <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
-                  {testWallet.metadata.network}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <div
-                className="text-sm cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => setCurrentStage('transaction-history')}
-                title="Click to view transaction history"
-              >
-                <span className="opacity-80">Transactions: </span>
-                <span className="font-bold">0</span>
-              </div>
-              {testWallet.balance && (
-                <div className="text-sm">
-                  <span className="opacity-80">Balance: </span>
-                  <span className="font-bold">{formatBalance(testWallet.balance)} HTR</span>
+      {/* Fixed Header always visible */}
+      <div className="fixed top-0 left-0 right-0 z-40 h-14 bg-gradient-to-r from-primary to-blue-700 text-white shadow-md">
+        <div className="px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Conditionally render test wallet info */}
+            {testWallet ? (
+              <>
+                <h2 className="text-lg font-bold m-0">Test Wallet:</h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold">{testWallet.metadata.friendlyName}</span>
+                  <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
+                    {testWallet.metadata.network}
+                  </span>
                 </div>
-              )}
+              </>
+            ) : (
+              <h2 className="text-lg font-bold m-0">QA Helper</h2>
+            )}
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div
+              className="text-sm cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setCurrentStage('transaction-history')}
+              title="Click to view transaction history"
+            >
+              <span className="opacity-80">Transactions: </span>
+              <span className="font-bold">0</span>
             </div>
+            {testWallet && testWallet.balance && (
+              <div className="text-sm">
+                <span className="opacity-80">Balance: </span>
+                <span className="font-bold">{formatBalance(testWallet.balance)} HTR</span>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Main Content Area */}
-      <div className="flex flex-1">
+      {/* Main Content Area: add top padding equal to header height (h-14 = 56px) */}
+      <div className="flex flex-1 pt-14">
         <Sidebar />
         <StageContent />
         <ToastContainer />
