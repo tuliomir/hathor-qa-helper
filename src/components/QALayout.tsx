@@ -8,11 +8,13 @@ import StageContent from './StageContent';
 import ToastContainer from './common/ToastContainer';
 import { useAppSelector } from '../store/hooks';
 import { useWalletStore } from '../hooks/useWalletStore';
+import { useStage } from '../hooks/useStage';
 import { formatBalance } from '../utils/balanceUtils';
 
 export default function QALayout() {
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
   const { getWallet } = useWalletStore();
+  const { setCurrentStage } = useStage();
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
 
   return (
@@ -31,7 +33,11 @@ export default function QALayout() {
               </div>
             </div>
             <div className="flex items-center gap-6">
-              <div className="text-sm">
+              <div
+                className="text-sm cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setCurrentStage('transaction-history')}
+                title="Click to view transaction history"
+              >
                 <span className="opacity-80">Transactions: </span>
                 <span className="font-bold">0</span>
               </div>

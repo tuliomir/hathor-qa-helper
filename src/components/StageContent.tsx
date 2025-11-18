@@ -7,6 +7,7 @@ import { useStage } from '../hooks/useStage';
 import WalletInitialization from './stages/WalletInitialization';
 import AddressValidation from './stages/AddressValidation';
 import CustomTokens from './stages/CustomTokens';
+import TransactionHistory from './stages/TransactionHistory';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -16,6 +17,7 @@ export default function StageContent() {
       {currentStage === 'wallet-initialization' && <WalletInitialization />}
       {currentStage === 'address-validation' && <AddressValidation />}
       {currentStage === 'custom-tokens' && <CustomTokens />}
+      {currentStage === 'transaction-history' && <TransactionHistory />}
     </div>
   );
 }
