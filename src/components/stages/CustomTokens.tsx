@@ -6,9 +6,8 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { useAppSelector } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
-import { addToken } from '../../store/slices/tokensSlice';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { tokensUtils } from '@hathor/wallet-lib';
 import CopyButton from '../common/CopyButton';
@@ -23,66 +22,19 @@ interface Token {
 
 // Component for displaying wallet tokens
 function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
-  const dispatch = useAppDispatch();
   const allTokens = useAppSelector((s) => s.tokens.tokens);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedTokenUid, setSelectedTokenUid] = useState<string | null>(null);
   const [configString, setConfigString] = useState<string | null>(null);
   const [addressIndex, setAddressIndex] = useState(0);
   const [amount, setAmount] = useState(1);
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
 
-  // Load tokens when wallet changes
+  // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
+  // Just reset selected token when wallet changes
   useEffect(() => {
-    const loadTokens = async () => {
-      if (!wallet || !wallet.instance || !wallet.tokenUids) {
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Fetch details for each token UID (skip native token "00")
-        for (const uid of wallet.tokenUids) {
-          // Skip native token
-          if (uid === NATIVE_TOKEN_UID) {
-            continue;
-          }
-
-          // Check if we already have this token in Redux
-          if (allTokens.find((t) => t.uid === uid)) {
-            continue;
-          }
-
-          try {
-            const txData = await wallet.instance.getTxById(uid);
-
-            // Extract token info and store in Redux
-            if (txData.success && txData.txTokens) {
-              const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
-              if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
-                dispatch(addToken({
-                  uid,
-                  name: tokenInfo.tokenName,
-                  symbol: tokenInfo.tokenSymbol,
-                }));
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to fetch token details for ${uid}:`, err);
-          }
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load tokens');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadTokens();
-  }, [wallet?.metadata.id, wallet?.tokenUids, dispatch, allTokens]);
+    setSelectedTokenUid(null);
+    setConfigString(null);
+  }, [wallet?.metadata.id]);
 
   // Filter tokens for this wallet (exclude native token)
   const walletTokens: Token[] = wallet.tokenUids
@@ -181,22 +133,8 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
         </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="card-primary mb-7.5 text-center">
-          <p className="m-0">Loading tokens...</p>
-        </div>
-      )}
-
-      {/* Error Display */}
-      {error && (
-        <div className="card-primary mb-7.5 bg-red-50 border border-danger">
-          <p className="m-0 text-red-900">{error}</p>
-        </div>
-      )}
-
       {/* No Tokens Message */}
-      {!isLoading && walletTokens.length === 0 && (
+      {walletTokens.length === 0 && (
         <div className="card-primary mb-7.5 text-center">
           <p className="m-0 text-muted">No custom tokens found for this wallet.</p>
         </div>

@@ -12,6 +12,8 @@ import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
+import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { addToken } from './tokensSlice';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
@@ -176,6 +178,34 @@ export const startWallet = createAsyncThunk(
       // Get token UIDs
       const tokenUids = await walletInstance.getTokens();
       dispatch(updateWalletTokens({ id: walletId, tokenUids }));
+
+      // Load token details for custom tokens (skip native token "00")
+      for (const uid of tokenUids) {
+        // Skip native token
+        if (uid === NATIVE_TOKEN_UID) {
+          continue;
+        }
+
+        try {
+          const txData = await walletInstance.getTxById(uid);
+
+          // Extract token info and store in Redux
+          if (txData.success && txData.txTokens) {
+            const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
+            if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
+              dispatch(addToken({
+                uid,
+                name: tokenInfo.tokenName,
+                symbol: tokenInfo.tokenSymbol,
+              }));
+            }
+          }
+        } catch (err) {
+          // Silently ignore errors for tokens without balance or other getTxById errors
+          // This can happen when wallet has a token UID but no balance for that token
+          console.debug(`Skipping token ${uid}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
 
       return { walletId, firstAddress, balance: balanceString };
     } catch (error) {
