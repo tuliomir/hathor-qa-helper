@@ -33,10 +33,20 @@ export default function WalletInitialization() {
   const [editingName, setEditingName] = useState('');
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const wallets = getAllWallets();
+  const allWallets = getAllWallets();
 
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
+
+  // Sort wallets: started (ready) first, then loading (connecting/syncing), then others
+  const wallets = [...allWallets].sort((a, b) => {
+    const statusPriority = (status: string) => {
+      if (status === 'ready') return 0;
+      if (status === 'connecting' || status === 'syncing') return 1;
+      return 2;
+    };
+    return statusPriority(a.status) - statusPriority(b.status);
+  });
 
   // Get ready wallets for selection
   const readyWallets = wallets.filter((w) => w.status === 'ready');
@@ -179,6 +189,31 @@ export default function WalletInitialization() {
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  // Auto-assign fund and test wallets when exactly 2 ready wallets exist
+  useEffect(() => {
+    if (readyWallets.length === 2) {
+      // Sort by balance to determine which is richest
+      const sortedByBalance = [...readyWallets].sort((a, b) => {
+        const balanceA = a.balance || 0n;
+        const balanceB = b.balance || 0n;
+        if (balanceA > balanceB) return -1;
+        if (balanceA < balanceB) return 1;
+        return 0;
+      });
+
+      const richestWallet = sortedByBalance[0];
+      const otherWallet = sortedByBalance[1];
+
+      // Only auto-assign if not already set
+      if (!fundingWalletId) {
+        dispatch(setFundingWallet(richestWallet.metadata.id));
+      }
+      if (!testWalletId) {
+        dispatch(setTestWallet(otherWallet.metadata.id));
+      }
+    }
+  }, [readyWallets, fundingWalletId, testWalletId, dispatch]);
 
   return (
     <div className="max-w-300 mx-auto">

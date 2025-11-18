@@ -362,7 +362,7 @@ export default function AddressValidation() {
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
 
-  const [activeTab, setActiveTab] = useState<TabType>('funding');
+  const [activeTab, setActiveTab] = useState<TabType>('test');
 
   const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
   const testWallet = wallets.find((w) => w.metadata.id === testWalletId && w.status === 'ready');
