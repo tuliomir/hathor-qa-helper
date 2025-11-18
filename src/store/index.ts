@@ -10,6 +10,7 @@ import toastReducer from './slices/toastSlice';
 import walletSelectionReducer from './slices/walletSelectionSlice';
 import tokensReducer from './slices/tokensSlice';
 import transactionHistoryReducer from './slices/transactionHistorySlice';
+import customTokensReducer from './slices/customTokensSlice';
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +21,7 @@ export const store = configureStore({
     walletSelection: walletSelectionReducer,
     tokens: tokensReducer,
     transactionHistory: transactionHistoryReducer,
+    customTokens: customTokensReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

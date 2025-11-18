@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens';
 
 /**
  * Stage configuration
@@ -32,5 +32,11 @@ export const STAGES: Stage[] = [
     title: 'Address Validation',
     description: 'Validate addresses using initialized wallets',
     icon: '✅',
+  },
+  {
+    id: 'custom-tokens',
+    title: 'Custom Tokens',
+    description: 'View custom tokens for funding and test wallets',
+    icon: '🪙',
   },
 ];
