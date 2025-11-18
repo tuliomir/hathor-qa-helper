@@ -127,3 +127,62 @@ export function WalletComponent({walletId}: Props) {
   );
 }
 ```
+
+## Event Listeners
+
+### Built-in Event Handling
+
+The `startWallet` thunk automatically sets up 'new-tx' event listeners that:
+- Detect custom token transactions (with `tokenName` and `tokenSymbol`)
+- Refresh wallet tokens using the cache (only fetch new tokens)
+- Refresh wallet balance
+
+Event handlers are stored in `walletEventHandlers` map for cleanup when wallet stops.
+
+### Available Thunks
+
+#### `refreshWalletTokens(walletId)`
+Fetches custom tokens for a wallet with caching - only fetches tokens not already in the slice.
+
+```tsx
+import { refreshWalletTokens } from '../store/slices/walletStoreSlice';
+
+// In a component
+const handleRefresh = async () => {
+  await dispatch(refreshWalletTokens(walletId)).unwrap();
+};
+```
+
+#### `refreshWalletBalance(walletId)`
+Updates the balance for the currently selected token.
+
+```tsx
+import { refreshWalletBalance } from '../store/slices/walletStoreSlice';
+
+// In a component
+const handleRefresh = async () => {
+  await dispatch(refreshWalletBalance(walletId)).unwrap();
+};
+```
+
+### Custom Event Listeners
+
+For custom event handling in components:
+
+```tsx
+// ✅ DO
+useEffect(() => {
+  const instance = walletInfo?.instance;
+  if (!instance) return;
+
+  const handleEvent = (data: any) => {
+    // Handle event
+  };
+
+  instance.on('event-name', handleEvent);
+  return () => instance.off('event-name', handleEvent);
+}, [walletInfo?.instance]);
+
+// ❌ DON'T - Store handlers in Redux
+dispatch(addEventHandler({ walletId, handler })); // Non-serializable
+```

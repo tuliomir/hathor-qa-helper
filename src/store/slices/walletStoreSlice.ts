@@ -86,6 +86,11 @@ const initialState: WalletStoreState = {
 export const walletInstancesMap = new Map<string, HathorWallet | null>();
 
 /**
+ * Global map to store event handlers for each wallet (for cleanup)
+ */
+const walletEventHandlers = new Map<string, Record<string, (...args: any[]) => void>>();
+
+/**
  * Async Thunk: Start a wallet
  * Initializes a wallet instance and updates its status through the lifecycle
  */
@@ -207,6 +212,30 @@ export const startWallet = createAsyncThunk(
         }
       }
 
+      // Set up 'new-tx' event listener to handle incoming transactions
+      const handleNewTx = async (tx: any) => {
+        console.log('New transaction received:', tx);
+
+        // Check if the transaction has tokenName and tokenSymbol (custom token transaction)
+        if (tx.tokenName && tx.tokenSymbol) {
+          console.log('Custom token transaction detected, refreshing tokens');
+          // Refresh custom tokens for this wallet (with caching)
+          dispatch(refreshWalletTokens(walletId));
+        }
+
+        // Always refresh balance on new transactions
+        dispatch(refreshWalletBalance(walletId));
+      };
+
+      // Store the event listener reference so we can remove it later
+      walletInstance.on('new-tx', handleNewTx);
+
+      // Store the handler in a global map for cleanup
+      if (!walletEventHandlers.has(walletId)) {
+        walletEventHandlers.set(walletId, {});
+      }
+      walletEventHandlers.get(walletId)!['new-tx'] = handleNewTx;
+
       return { walletId, firstAddress, balance: balanceString };
     } catch (error) {
       // Cleanup on error
@@ -234,6 +263,15 @@ export const stopWallet = createAsyncThunk(
 
     if (instance) {
       try {
+        // Remove all event listeners
+        const handlers = walletEventHandlers.get(walletId);
+        if (handlers) {
+          Object.entries(handlers).forEach(([event, handler]) => {
+            instance.off(event, handler);
+          });
+          walletEventHandlers.delete(walletId);
+        }
+
         await instance.stop();
         walletInstancesMap.delete(walletId);
         dispatch(updateWalletInstance({ id: walletId, instance: null }));
@@ -245,6 +283,106 @@ export const stopWallet = createAsyncThunk(
     }
 
     return { walletId };
+  }
+);
+
+/**
+ * Async Thunk: Refresh wallet tokens
+ * Fetches custom tokens for a wallet with caching (only fetches tokens not already in the slice)
+ */
+export const refreshWalletTokens = createAsyncThunk(
+  'walletStore/refreshWalletTokens',
+  async (walletId: string, { dispatch, getState }) => {
+    const instance = walletInstancesMap.get(walletId);
+
+    if (!instance) {
+      throw new Error(`Wallet instance ${walletId} not found`);
+    }
+
+    try {
+      // Get token UIDs from the wallet
+      const tokenUids = await instance.getTokens();
+      dispatch(updateWalletTokens({ id: walletId, tokenUids }));
+
+      // Get existing tokens from the store to use as cache
+      const state = getState() as RootState;
+      const existingTokens = state.tokens.tokens;
+
+      // Load token details for custom tokens (skip native token "00")
+      for (const uid of tokenUids) {
+        // Skip native token
+        if (uid === NATIVE_TOKEN_UID) {
+          continue;
+        }
+
+        // Check if token is already in the cache
+        const existingToken = existingTokens.find((t) => t.uid === uid);
+        if (existingToken) {
+          // Token already in cache, skip fetching
+          continue;
+        }
+
+        try {
+          const txData = await instance.getTxById(uid);
+
+          // Extract token info and store in Redux
+          if (txData.success && txData.txTokens) {
+            const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
+            if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
+              dispatch(addToken({
+                uid,
+                name: tokenInfo.tokenName,
+                symbol: tokenInfo.tokenSymbol,
+              }));
+            }
+          }
+        } catch (err) {
+          // Silently ignore errors for tokens without balance or other getTxById errors
+          console.debug(`Skipping token ${uid}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      }
+
+      return { walletId, tokenUids };
+    } catch (error) {
+      console.error(`Failed to refresh tokens for wallet ${walletId}:`, error);
+      throw error;
+    }
+  }
+);
+
+/**
+ * Async Thunk: Refresh wallet balance
+ * Updates the balance for the currently selected token
+ */
+export const refreshWalletBalance = createAsyncThunk(
+  'walletStore/refreshWalletBalance',
+  async (walletId: string, { dispatch, getState }) => {
+    const instance = walletInstancesMap.get(walletId);
+
+    if (!instance) {
+      throw new Error(`Wallet instance ${walletId} not found`);
+    }
+
+    try {
+      // Get the selected token UID from state
+      const state = getState() as RootState;
+      const selectedTokenUid = state.tokens.selectedTokenUid;
+
+      // Get the balance for the selected token
+      const balanceData = await instance.getBalance(selectedTokenUid);
+      const balanceBigInt = balanceData && balanceData[0] ? balanceData[0].balance.unlocked : 0n;
+
+      // Convert BigInt to string for Redux storage
+      const balanceString = balanceBigInt.toString();
+
+      // Update balance in state
+      dispatch(updateWalletBalance({ id: walletId, balance: balanceString }));
+
+      return { walletId, balance: balanceString };
+    } catch (error) {
+      console.error(`Failed to refresh balance for wallet ${walletId}:`, error);
+      throw error;
+    }
   }
 );
 

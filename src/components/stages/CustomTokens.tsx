@@ -6,11 +6,12 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useAppSelector } from '../../store/hooks';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { tokensUtils } from '@hathor/wallet-lib';
 import CopyButton from '../common/CopyButton';
+import { refreshWalletTokens, refreshWalletBalance } from '../../store/slices/walletStoreSlice';
 
 type TabType = 'fund' | 'test';
 
@@ -22,12 +23,14 @@ interface Token {
 
 // Component for displaying wallet tokens
 function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
+  const dispatch = useAppDispatch();
   const allTokens = useAppSelector((s) => s.tokens.tokens);
   const [selectedTokenUid, setSelectedTokenUid] = useState<string | null>(null);
   const [configString, setConfigString] = useState<string | null>(null);
   const [addressIndex, setAddressIndex] = useState(0);
   const [amount, setAmount] = useState(1);
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
   // Just reset selected token when wallet changes
@@ -101,6 +104,23 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!wallet || isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      // Refresh both tokens and balance
+      await Promise.all([
+        dispatch(refreshWalletTokens(wallet.metadata.id)).unwrap(),
+        dispatch(refreshWalletBalance(wallet.metadata.id)).unwrap(),
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh wallet data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const selectedToken = walletTokens.find((t) => t.uid === selectedTokenUid);
 
   const getPaymentRequest = () => {
@@ -143,7 +163,16 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
       {/* Tokens List */}
       {walletTokens.length > 0 && (
         <div className="card-primary mb-7.5">
-          <h3 className="text-lg font-bold mb-3">Custom Tokens</h3>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-lg font-bold m-0">Custom Tokens</h3>
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="btn-primary py-1.5 px-4 text-sm"
+            >
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-gray-300">
