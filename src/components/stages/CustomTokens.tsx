@@ -12,6 +12,7 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { tokensUtils } from '@hathor/wallet-lib';
 import CopyButton from '../common/CopyButton';
 import { refreshWalletTokens, refreshWalletBalance } from '../../store/slices/walletStoreSlice';
+import { formatBalance } from '../../utils/balanceUtils';
 
 type TabType = 'fund' | 'test';
 
@@ -19,6 +20,98 @@ interface Token {
   uid: string;
   name: string;
   symbol: string;
+}
+
+// Hook for lazy-loading token balance
+function useTokenBalance(walletInstance: any | null, tokenUid: string, refreshKey?: number) {
+  const [balance, setBalance] = useState<bigint | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBalance = async () => {
+      if (!walletInstance) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const bal = await walletInstance.getBalance(tokenUid);
+        if (isMounted) {
+          setBalance(bal[0]?.balance?.unlocked || 0n);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error(`Failed to load balance for token ${tokenUid}:`, err);
+          setError('Failed to load');
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchBalance();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [walletInstance, tokenUid, refreshKey]);
+
+  return { balance, isLoading, error };
+}
+
+// Helper function to truncate UID
+function truncateUid(uid: string): string {
+  if (uid.length <= 12) return uid;
+  return `${uid.slice(0, 6)}...${uid.slice(-6)}`;
+}
+
+// Component for a single token row with lazy-loaded balance
+function TokenRow({
+  token,
+  walletInstance,
+  isSelected,
+  onClick,
+  refreshKey,
+}: {
+  token: Token;
+  walletInstance: any | null;
+  isSelected: boolean;
+  onClick: () => void;
+  refreshKey?: number;
+}) {
+  const { balance, isLoading, error } = useTokenBalance(walletInstance, token.uid, refreshKey);
+
+  return (
+    <tr
+      onClick={onClick}
+      className={`border-b border-gray-200 cursor-pointer transition-colors ${
+        isSelected ? 'bg-primary/10' : 'hover:bg-gray-50'
+      }`}
+    >
+      <td className="py-2 px-3 font-semibold">{token.symbol}</td>
+      <td className="py-2 px-3">{token.name}</td>
+      <td className="py-2 px-3 font-mono text-2xs" title={token.uid}>
+        {truncateUid(token.uid)}
+      </td>
+      <td className="py-2 px-3 text-right">
+        {isLoading ? (
+          <span className="text-muted text-xs">Loading...</span>
+        ) : error ? (
+          <span className="text-danger text-xs">{error}</span>
+        ) : balance !== null ? (
+          <span className="font-mono text-sm">{formatBalance(balance)}</span>
+        ) : (
+          <span className="text-muted text-xs">-</span>
+        )}
+      </td>
+    </tr>
+  );
 }
 
 // Component for displaying wallet tokens
@@ -31,6 +124,7 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
   const [amount, setAmount] = useState(1);
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
   // Just reset selected token when wallet changes
@@ -114,6 +208,8 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
         dispatch(refreshWalletTokens(wallet.metadata.id)).unwrap(),
         dispatch(refreshWalletBalance(wallet.metadata.id)).unwrap(),
       ]);
+      // Trigger token balance refresh by incrementing the key
+      setRefreshKey((prev) => prev + 1);
     } catch (error) {
       console.error('Failed to refresh wallet data:', error);
     } finally {
@@ -180,23 +276,19 @@ function WalletTokensDisplay({ wallet }: { wallet: WalletInfo }) {
                   <th className="text-left py-2 px-3 font-bold">Symbol</th>
                   <th className="text-left py-2 px-3 font-bold">Name</th>
                   <th className="text-left py-2 px-3 font-bold">UID</th>
+                  <th className="text-right py-2 px-3 font-bold">Balance</th>
                 </tr>
               </thead>
               <tbody>
                 {walletTokens.map((token) => (
-                  <tr
+                  <TokenRow
                     key={token.uid}
+                    token={token}
+                    walletInstance={wallet.instance}
+                    isSelected={selectedTokenUid === token.uid}
                     onClick={() => handleTokenClick(token.uid, token.name, token.symbol)}
-                    className={`border-b border-gray-200 cursor-pointer transition-colors ${
-                      selectedTokenUid === token.uid
-                        ? 'bg-primary/10'
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <td className="py-2 px-3 font-semibold">{token.symbol}</td>
-                    <td className="py-2 px-3">{token.name}</td>
-                    <td className="py-2 px-3 font-mono text-2xs">{token.uid}</td>
-                  </tr>
+                    refreshKey={refreshKey}
+                  />
                 ))}
               </tbody>
             </table>
