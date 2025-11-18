@@ -1481,7 +1481,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"buffer@npm:6.0.3":
+"buffer@npm:6.0.3, buffer@npm:^6.0.3":
   version: 6.0.3
   resolution: "buffer@npm:6.0.3"
   dependencies:
@@ -2609,6 +2609,7 @@ __metadata:
     autoprefixer: "npm:^10.4.22"
     bitcore-lib: "npm:8.25.10"
     bitcore-mnemonic: "npm:8.25.10"
+    buffer: "npm:^6.0.3"
     daisyui: "npm:^5.5.5"
     eslint: "npm:^9.36.0"
     eslint-config-prettier: "npm:^10.1.8"

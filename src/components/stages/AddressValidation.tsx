@@ -130,7 +130,7 @@ function WalletAddressDisplay({
         .addSetVarAction({ name: 'changeAddr', value: fundWalletFirstAddress })
         .addTokenOutput({
           address: '{recipientAddr}',
-          amount,
+          amount: BigInt(amount),
           token: selectedToken.uid
         })
         .addCompleteAction({

@@ -79,33 +79,6 @@ if (fundingWallet?.instance) {
 
 See the complete example in `src/components/stages/AddressValidation.tsx` (line 100+):
 
-```typescript
-// Get funding wallet
-const fundingWallet = wallets.find(
-  (w) => w.metadata.id === fundingWalletId && w.status === 'ready'
-);
-
-// Build and send transaction
-const hWallet = fundingWallet.instance;
-const builder = hWallet.TransactionTemplateBuilder();
-const template = builder
-  .addTokenOutput({
-    address: recipientAddress,
-    amount,
-    token: tokenUid
-  })
-  .addCompleteAction({
-    changeAddress: fundWalletFirstAddress
-  });
-
-const tx = await hWallet.buildTxTemplate(template, {
-  signTx: true,
-  pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE
-});
-
-const sendTx = new SendTransaction({ storage: hWallet.storage, transaction: tx });
-await sendTx.runFromMining();
-```
 
 ### 3. Getting Network Configuration
 
