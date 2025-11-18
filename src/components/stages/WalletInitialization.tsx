@@ -15,6 +15,7 @@ import CameraCapture from '../CameraCapture';
 import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
+import CopyButton from '../common/CopyButton';
 import type { NetworkType } from '../../constants/network';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
@@ -337,7 +338,10 @@ export default function WalletInitialization() {
                       )}
                     </td>
                     <td className="p-3 font-mono text-xs text-muted">
-                      {truncateSeed(wallet.metadata.seedWords, 40)}
+                      <div className="flex items-center gap-2">
+                        <span className="truncate max-w-[20rem] block">{truncateSeed(wallet.metadata.seedWords, 40)}</span>
+                        <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} className="text-muted" />
+                      </div>
                     </td>
                     <td className="p-3">{wallet.metadata.network}</td>
                     <td className="p-3">
