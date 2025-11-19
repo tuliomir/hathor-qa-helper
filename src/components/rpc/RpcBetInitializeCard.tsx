@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
-import { safeStringify } from '../../utils/betHelpers';
+import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
 
 export interface RpcBetInitializeCardProps {
   onExecute: () => Promise<any>;
@@ -52,8 +52,20 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [requestExpanded, setRequestExpanded] = useState(false);
+  const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
+  const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const { showToast } = useToast();
+
+  // Live request building - calculate request and intermediates on every input change
+  const [liveRequest, setLiveRequest] = useState<{ method: string; params: any } | null>(null);
+  const [intermediates, setIntermediates] = useState<{
+    oracleBuffer: string | null;
+    timestamp: number | null;
+    oracleBufferError?: string;
+  }>({
+    oracleBuffer: null,
+    timestamp: null,
+  });
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -70,6 +82,62 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       setExpanded(true);
     }
   }, [initialRequest, initialResponse, initialError]);
+
+  // Live request building - recalculate on every input change
+  useEffect(() => {
+    // Calculate intermediates
+    let oracleBuffer: string | null = null;
+    let oracleBufferError: string | undefined = undefined;
+    let timestamp: number | null = null;
+
+    // Calculate oracle buffer if address is provided
+    if (oracleAddress.trim()) {
+      try {
+        oracleBuffer = getOracleBuffer(oracleAddress);
+      } catch (error) {
+        oracleBufferError = error instanceof Error ? error.message : 'Invalid oracle address';
+      }
+    }
+
+    // Calculate timestamp if deadline is provided
+    if (deadline) {
+      try {
+        const deadlineDate = new Date(deadline);
+        timestamp = Math.floor(deadlineDate.getTime() / 1000);
+      } catch (error) {
+        // Invalid date, timestamp stays null
+      }
+    }
+
+    // Update intermediates state
+    setIntermediates({
+      oracleBuffer,
+      timestamp,
+      oracleBufferError,
+    });
+
+    // Build the live request
+    const invokeParams = {
+      network: 'testnet',
+      method: 'initialize',
+      blueprint_id: blueprintId || '<blueprint_id>',
+      actions: [],
+      args: [
+        oracleBuffer || '<oracle_script>',
+        token || '<token>',
+        timestamp !== null ? timestamp : '<timestamp>',
+      ],
+      push_tx: pushTx,
+      nc_id: null,
+    };
+
+    const requestParams = {
+      method: 'htr_sendNanoContractTx',
+      params: invokeParams,
+    };
+
+    setLiveRequest(requestParams);
+  }, [blueprintId, oracleAddress, token, deadline, pushTx]);
 
   const handleExecute = async () => {
     setLoading(true);
@@ -270,8 +338,82 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
         </div>
       )}
 
-      {/* Request Info Section */}
-      {requestInfo && (
+      {/* Intermediates Section */}
+      <div className="card-primary mb-7.5">
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={() => setIntermediatesExpanded(!intermediatesExpanded)}
+            className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
+          >
+            <span>{intermediatesExpanded ? '▼' : '▶'}</span>
+            Intermediate Calculations
+          </button>
+        </div>
+
+        {intermediatesExpanded && (
+          <div className="bg-yellow-50 border border-yellow-300 rounded p-4">
+            <p className="text-sm text-yellow-800 mb-3">
+              These values are calculated automatically from your inputs and will be used in the request.
+            </p>
+            <div className="space-y-3">
+              {/* Oracle Buffer */}
+              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
+                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-yellow-800">
+                      Oracle Script (from address)
+                    </span>
+                    {intermediates.oracleBuffer && (
+                      <CopyButton text={intermediates.oracleBuffer} label="Copy" />
+                    )}
+                  </div>
+                </div>
+                <div className="px-3 py-2">
+                  {intermediates.oracleBufferError ? (
+                    <span className="text-sm text-red-600">{intermediates.oracleBufferError}</span>
+                  ) : intermediates.oracleBuffer ? (
+                    <span className="text-sm font-mono text-yellow-900 break-all">
+                      {intermediates.oracleBuffer}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted italic">
+                      Enter oracle address to calculate
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Timestamp */}
+              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
+                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-yellow-800">
+                      Unix Timestamp (from deadline)
+                    </span>
+                    {intermediates.timestamp !== null && (
+                      <CopyButton text={intermediates.timestamp.toString()} label="Copy" />
+                    )}
+                  </div>
+                </div>
+                <div className="px-3 py-2">
+                  {intermediates.timestamp !== null ? (
+                    <span className="text-sm font-mono text-yellow-900">
+                      {intermediates.timestamp}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted italic">
+                      Enter deadline to calculate
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Live Request Section */}
+      {liveRequest && (
         <div className="card-primary mb-7.5">
           <div className="flex items-center justify-between mb-3">
             <button
@@ -279,20 +421,25 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
             >
               <span>{requestExpanded ? '▼' : '▶'}</span>
-              Request
+              Request {requestInfo ? '(Sent)' : '(Preview)'}
             </button>
-            <CopyButton text={safeStringify(requestInfo, 2)} label="Copy request" />
+            <CopyButton text={safeStringify(liveRequest, 2)} label="Copy request" />
           </div>
 
           {requestExpanded && (
             <div className="bg-blue-50 border border-blue-300 rounded p-4">
+              {!requestInfo && (
+                <p className="text-sm text-blue-800 mb-3">
+                  This is a live preview of the request that will be sent. It updates as you change the inputs above.
+                </p>
+              )}
               <div className="space-y-3">
                 <div className="bg-white border border-blue-200 rounded overflow-hidden">
                   <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
                     <span className="text-sm font-semibold text-blue-800">method</span>
                   </div>
                   <div className="px-3 py-2">
-                    <span className="text-sm font-mono text-blue-900">{requestInfo.method}</span>
+                    <span className="text-sm font-mono text-blue-900">{liveRequest.method}</span>
                   </div>
                 </div>
                 <div className="bg-white border border-blue-200 rounded overflow-hidden">
@@ -301,7 +448,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                   </div>
                   <div className="px-3 py-2 max-h-64 overflow-y-auto">
                     <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
-                      {safeStringify(requestInfo.params, 2)}
+                      {safeStringify(liveRequest.params, 2)}
                     </pre>
                   </div>
                 </div>

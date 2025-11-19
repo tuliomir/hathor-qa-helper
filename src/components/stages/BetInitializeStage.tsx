@@ -16,6 +16,7 @@ import { setBetNanoContractId } from '../../store/slices/betNanoContractSlice';
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcBetInitializeCard } from '../rpc/RpcBetInitializeCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { NETWORK_CONFIG } from '../../constants/network';
 
 export const BetInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -33,7 +34,7 @@ export const BetInitializeStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [blueprintId, setBlueprintId] = useState<string>('');
+  const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.betBlueprintId);
   const [oracleAddress, setOracleAddress] = useState<string>('');
   const [token, setToken] = useState<string>('00');
   const [deadline, setDeadline] = useState<string>(() => {
