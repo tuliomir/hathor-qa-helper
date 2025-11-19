@@ -99,6 +99,112 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
     try {
       const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
 
+      // Special handling for balance response
+      if (parsedResult.type === 3 && Array.isArray(parsedResult.response)) {
+        const balances = parsedResult.response;
+
+        if (balances.length === 0) {
+          return <div className="text-sm text-muted italic p-3">No balance data</div>;
+        }
+
+        return (
+          <div className="space-y-4">
+            {balances.map((item: any, idx: number) => (
+              <div key={idx} className="border border-gray-300 rounded overflow-hidden">
+                {/* Token Header */}
+                <div className="bg-primary/10 px-4 py-3 border-b border-gray-300">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-lg font-bold text-primary m-0">
+                        {item.token?.name || 'Unknown Token'} ({item.token?.symbol || 'N/A'})
+                      </h4>
+                      <p className="text-xs text-muted font-mono mt-1 mb-0 break-all">
+                        {item.token?.id || 'Unknown ID'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Balance Section */}
+                <div className="px-4 py-3 bg-white">
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div className="bg-green-50 border border-green-200 rounded p-3">
+                      <div className="text-xs text-muted mb-1">Unlocked Balance</div>
+                      <div className="text-xl font-bold text-green-700">
+                        {item.balance?.unlocked || '0'}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                      <div className="text-xs text-muted mb-1">Locked Balance</div>
+                      <div className="text-xl font-bold text-gray-700">
+                        {item.balance?.locked || '0'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transaction Count & Lock Expires */}
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <div className="text-xs text-muted mb-1">Transactions</div>
+                      <div className="text-base font-semibold">{item.transactions ?? 0}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted mb-1">Lock Expires</div>
+                      <div className="text-base font-semibold">
+                        {item.lockExpires ? String(item.lockExpires) : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Token Authorities */}
+                  {item.tokenAuthorities && (
+                    <div className="border-t border-gray-200 pt-3">
+                      <div className="text-xs text-muted mb-2 font-semibold">Token Authorities</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-blue-50 border border-blue-200 rounded p-2">
+                          <div className="text-xs font-semibold text-blue-800 mb-1">Unlocked</div>
+                          <div className="text-xs space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-muted">Mint:</span>
+                              <span className="font-mono">
+                                {item.tokenAuthorities.unlocked?.mint || '0'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted">Melt:</span>
+                              <span className="font-mono">
+                                {item.tokenAuthorities.unlocked?.melt || '0'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-200 rounded p-2">
+                          <div className="text-xs font-semibold text-gray-800 mb-1">Locked</div>
+                          <div className="text-xs space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-muted">Mint:</span>
+                              <span className="font-mono">
+                                {item.tokenAuthorities.locked?.mint || '0'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted">Melt:</span>
+                              <span className="font-mono">
+                                {item.tokenAuthorities.locked?.melt || '0'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      }
+
       // Handle arrays
       if (Array.isArray(parsedResult)) {
         if (parsedResult.length === 0) {
