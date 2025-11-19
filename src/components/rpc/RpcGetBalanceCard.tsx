@@ -24,6 +24,8 @@ export interface RpcGetBalanceCardProps {
   disabled?: boolean;
   tokens: Array<{ uid: string; name: string; symbol: string }>;
   isDryRun?: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
@@ -31,6 +33,8 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   disabled = false,
   tokens,
   isDryRun = false,
+  onRefresh,
+  isRefreshing = false,
 }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -169,7 +173,18 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
     <>
       {/* Tokens Table */}
       <div className="card-primary mb-7.5">
-        <h3 className="text-lg font-bold mb-3">Tokens to Query</h3>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-lg font-bold m-0">Tokens to Query</h3>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="btn-primary py-1.5 px-4 text-sm"
+            >
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          )}
+        </div>
         <p className="text-sm text-muted mb-4">
           The following tokens will be queried for balance information:
         </p>

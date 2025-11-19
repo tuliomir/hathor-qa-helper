@@ -121,6 +121,24 @@ export const RpcTesting: React.FC = () => {
     dispatch(toggleDryRunMode());
   };
 
+  const handleRefreshTokens = async () => {
+    if (!testWalletId || isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        dispatch(refreshWalletTokens(testWalletId)).unwrap(),
+        dispatch(refreshWalletBalance(testWalletId)).unwrap(),
+      ]);
+      showToast('Tokens refreshed successfully', 'success');
+    } catch (error) {
+      console.error('Failed to refresh tokens:', error);
+      showToast('Failed to refresh tokens', 'error');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -273,6 +291,8 @@ export const RpcTesting: React.FC = () => {
             disabled={false}
             tokens={walletTokens}
             isDryRun={isDryRun}
+            onRefresh={handleRefreshTokens}
+            isRefreshing={isRefreshing}
           />
         </>
       )}
