@@ -59,7 +59,8 @@ export default function QALayout() {
       </div>
 
       {/* Main Content Area: add top padding equal to header height (h-14 = 56px) */}
-      <div className="flex flex-1 pt-14">
+      {/* `min-h-0` allows flex children with `overflow` to size correctly inside the column */}
+      <div className="flex flex-1 pt-14 min-h-0">
         <Sidebar />
         <StageContent />
         <ToastContainer />

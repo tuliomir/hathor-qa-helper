@@ -54,7 +54,11 @@
 
   #root {
     width: 100%;
-    height: 100vh;
+    /* Allow the root to grow with content instead of forcing a viewport height.
+       Using min-height keeps the original intent (at least screen tall) while
+       preventing overflow children from being cut off and showing an incorrect
+       background. */
+    min-height: 100vh;
   }
 }
 

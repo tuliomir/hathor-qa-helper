@@ -21,7 +21,9 @@ export default function Sidebar() {
 
   return (
     // Adjust sticky to account for fixed header (top-14) and use full remaining height
-    <div className="w-70 bg-light border-r-2 border-border sticky top-14 h-[calc(100vh-56px)] flex flex-col">
+    // Use `bottom-0` instead of explicit calc-height so the sticky element stretches
+    // between `top-14` and the viewport bottom. The inner scroll area handles overflow.
+    <div className="w-70 bg-light border-r-2 border-border sticky top-14 bottom-0 flex flex-col">
       <div className="p-5 flex-shrink-0">
         <h2 className="m-0 text-xl text-dark">QA Stages</h2>
       </div>
