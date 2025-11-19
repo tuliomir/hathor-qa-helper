@@ -246,9 +246,25 @@ export default function WalletInitialization() {
     localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(defaults));
   };
 
-  const truncateSeed = (seed: string, maxLength: number = 30) => {
-    if (seed.length <= maxLength) return seed;
-    return seed.substring(0, maxLength) + '...';
+  // Return the first `n` words of the seed phrase (useful for compact display)
+  const firstNWords = (seed: string, n: number = 3) => {
+    if (!seed) return '';
+    const words = seed.trim().split(/\s+/);
+    if (words.length <= n) return words.join(' ');
+    return words.slice(0, n).join(' ') + '...';
+  };
+
+	/**
+	 * Truncate an address for display, keeping start and end for recognizability
+	 * @param addr
+	 * @param start
+	 * @param end
+	 * @deprecated Use the function from utils instead
+	 */
+  const truncateAddress = (addr: string, start = 8, end = 4) => {
+    if (!addr) return '';
+    if (addr.length <= start + end + 3) return addr;
+    return addr.slice(0, start) + '...' + addr.slice(-end);
   };
 
   const getStatusColor = (status: string) => {
@@ -339,15 +355,16 @@ export default function WalletInitialization() {
                     </td>
                     <td className="p-3 font-mono text-xs text-muted">
                       <div className="flex items-center gap-2">
-                        <span className="truncate max-w-[20rem] block">{truncateSeed(wallet.metadata.seedWords, 40)}</span>
+                        {/* show first 3 words, allow wrapping inside the cell */}
+                        <span className="break-words max-w-[20rem] block font-mono">
+                          {firstNWords(wallet.metadata.seedWords, 3)}
+                        </span>
                         <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} className="text-muted" />
                       </div>
                     </td>
                     <td className="p-3">{wallet.metadata.network}</td>
-                    <td className="p-3">
-                      <span className={`${getStatusColor(wallet.status)} font-bold text-sm`}>
-                        {wallet.status}
-                      </span>
+                    <td className={`p-3 ${getStatusColor(wallet.status)} font-bold text-sm`}>
+                      {wallet.status}
                       {wallet.status === 'ready' && wallet.balance && (
                         <div className="text-xs text-success mt-1">
                           Balance: {formatBalance(wallet.balance)} HTR
@@ -358,13 +375,21 @@ export default function WalletInitialization() {
                       )}
                     </td>
                     <td className={`p-3 font-mono text-2.5xs ${wallet.firstAddress ? 'text-success' : 'text-muted'}`}>
-                      {wallet.firstAddress || '-'}
+                      {wallet.firstAddress ? (
+                        <div className="flex items-center gap-2">
+                          <span className="break-all">{truncateAddress(wallet.firstAddress)}</span>
+                          <CopyButton text={wallet.firstAddress} label={`Copy address for ${wallet.metadata.friendlyName}`} className="text-muted" />
+                        </div>
+                      ) : (
+                        '-'
+                      )}
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1.5 justify-center flex-wrap">
                         {editingId === wallet.metadata.id ? (
                           <>
                             <button onClick={handleSaveEdit} className="btn-success text-xs">
+                              {/* Keep Save text during edit for clarity */}
                               Save
                             </button>
                             <button onClick={() => { setEditingId(null); setEditingName(''); }} className="btn-secondary text-xs">
@@ -374,23 +399,45 @@ export default function WalletInitialization() {
                         ) : (
                           <>
                             {wallet.status === 'idle' || wallet.status === 'error' ? (
-                              <button onClick={() => handleStartWallet(wallet.metadata.id)} className="btn-primary text-xs flex items-center gap-1">
-                                <MdPlayArrow />Start
+                              <button
+                                onClick={() => handleStartWallet(wallet.metadata.id)}
+                                title="Start"
+                                aria-label={`Start ${wallet.metadata.friendlyName}`}
+                                className="btn-primary btn-square text-xs p-2"
+                              >
+                                <MdPlayArrow />
                               </button>
                             ) : wallet.status === 'ready' ? (
-                              <button onClick={() => handleStopWallet(wallet.metadata.id)} className="btn-danger text-xs flex items-center gap-1">
-                                <MdStop />Stop
+                              <button
+                                onClick={() => handleStopWallet(wallet.metadata.id)}
+                                title="Stop"
+                                aria-label={`Stop ${wallet.metadata.friendlyName}`}
+                                className="btn btn-square text-xs p-2 bg-black text-white hover:bg-gray-800"
+                              >
+                                <MdStop />
                               </button>
                             ) : (
-                              <button disabled className="btn-secondary text-xs cursor-not-allowed opacity-60">
-                                {wallet.status === 'connecting' ? '⏳ Connecting...' : '⏳ Syncing...'}
+                              <button disabled className="btn-secondary btn-square text-xs cursor-not-allowed opacity-60 p-2">
+                                ⏳
                               </button>
                             )}
-                            <button onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)} className="btn-warning text-xs flex items-center gap-1">
-                              <MdEdit />Rename
+
+                            <button
+                              onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)}
+                              title="Rename"
+                              aria-label={`Rename ${wallet.metadata.friendlyName}`}
+                              className="btn-warning btn-square text-xs p-2"
+                            >
+                              <MdEdit />
                             </button>
-                            <button onClick={() => handleRemoveWallet(wallet.metadata.id)} className="btn-danger text-xs flex items-center gap-1">
-                              <MdDelete />Remove
+
+                            <button
+                              onClick={() => handleRemoveWallet(wallet.metadata.id)}
+                              title="Remove"
+                              aria-label={`Remove ${wallet.metadata.friendlyName}`}
+                              className="btn-danger btn-square text-xs p-2"
+                            >
+                              <MdDelete />
                             </button>
                           </>
                         )}
