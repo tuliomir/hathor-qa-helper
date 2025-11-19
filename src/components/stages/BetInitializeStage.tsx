@@ -18,6 +18,7 @@ import { RpcBetInitializeCard } from '../rpc/RpcBetInitializeCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { NETWORK_CONFIG } from '../../constants/network';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { NATIVE_TOKEN_UID, DEFAULT_NATIVE_TOKEN_CONFIG } from '@hathor/wallet-lib/lib/constants';
 
 export const BetInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -38,7 +39,7 @@ export const BetInitializeStage: React.FC = () => {
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
   const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.betBlueprintId);
   const [oracleAddress, setOracleAddress] = useState<string>('');
-  const [token, setToken] = useState<string>('00');
+  const [token, setToken] = useState<string>(NATIVE_TOKEN_UID);
   const [deadline, setDeadline] = useState<string>(() => {
     const date = new Date(Date.now() + 3600 * 1000);
     return date.toISOString().slice(0, 16);
@@ -64,6 +65,29 @@ export const BetInitializeStage: React.FC = () => {
 
     getAddress();
   }, [testWallet]);
+
+  // Compute wallet tokens (include native token + custom tokens from Redux)
+  const allTokens = useSelector((state: RootState) => state.tokens.tokens);
+  const walletTokens = React.useMemo(() => {
+    const tokens = [
+      {
+        uid: NATIVE_TOKEN_UID,
+        symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+        name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+      },
+    ];
+
+    if (testWallet?.tokenUids) {
+      const customTokens = testWallet.tokenUids
+        .filter((uid) => uid !== NATIVE_TOKEN_UID)
+        .map((uid) => allTokens.find((t) => t.uid === uid))
+        .filter((t): t is { uid: string; name: string; symbol: string } => t !== undefined);
+
+      tokens.push(...customTokens);
+    }
+
+    return tokens;
+  }, [testWallet, allTokens]);
 
   // Derive oracle address from selected index
   useEffect(() => {
@@ -233,6 +257,7 @@ export const BetInitializeStage: React.FC = () => {
         <RpcBetInitializeCard
           onExecute={handleExecuteBetInitialize}
           disabled={false}
+          tokens={walletTokens}
           blueprintId={blueprintId}
           setBlueprintId={setBlueprintId}
           oracleAddress={oracleAddress}

@@ -25,6 +25,7 @@ export interface RpcBetInitializeCardProps {
   setPushTx: (value: boolean) => void;
   addressIndex: number;
   setAddressIndex: (value: number) => void;
+  tokens?: { uid: string; symbol: string; name?: string }[];
   // Persisted data from Redux
   initialRequest?: { method: string; params: any } | null;
   initialResponse?: any | null;
@@ -46,6 +47,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   setPushTx,
   addressIndex,
   setAddressIndex,
+  tokens = [],
   initialRequest = null,
   initialResponse = null,
   initialError = null,
@@ -262,13 +264,28 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           {/* Token */}
           <div>
             <label className="block text-sm font-medium mb-1.5">Token</label>
-            <input
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Enter token ID (e.g., 00 for HTR)"
-              className="input"
-            />
+            {tokens && tokens.length > 0 ? (
+              <select
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                className="input"
+              >
+                {tokens.map((t) => (
+                  <option key={t.uid} value={t.uid}>
+                    {t.symbol ? `${t.symbol} (${t.uid})` : t.uid}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              // Fallback to text input if tokens not provided
+              <input
+                type="text"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Enter token ID (e.g., 00 for HTR)"
+                className="input"
+              />
+            )}
             <p className="text-xs text-muted mt-1">
               Token used for placing bets
             </p>
