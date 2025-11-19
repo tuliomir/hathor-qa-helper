@@ -42,6 +42,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(false);
+  const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
 
   const handleExecute = async () => {
@@ -92,6 +93,22 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
 
   const hasResult = result !== null || error !== null;
 
+  // Check if result is a balance response
+  const isBalanceResponse = (data: any) => {
+    return data && data.type === 3 && Array.isArray(data.response);
+  };
+
+  // Render raw JSON view
+  const renderRawJson = (data: any) => {
+    return (
+      <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50">
+        <pre className="text-sm font-mono text-left whitespace-pre-wrap break-words m-0">
+          {safeStringify(data, 2)}
+        </pre>
+      </div>
+    );
+  };
+
   // Render result with proper nested object handling
   const renderResult = () => {
     if (!result) return null;
@@ -99,8 +116,13 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
     try {
       const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
 
+      // If showing raw, always use raw renderer
+      if (showRawResponse) {
+        return renderRawJson(parsedResult);
+      }
+
       // Special handling for balance response
-      if (parsedResult.type === 3 && Array.isArray(parsedResult.response)) {
+      if (isBalanceResponse(parsedResult)) {
         const balances = parsedResult.response;
 
         if (balances.length === 0) {
@@ -366,7 +388,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
                     <span className="text-sm font-semibold text-blue-800">params</span>
                   </div>
                   <div className="px-3 py-2 max-h-64 overflow-y-auto">
-                    <pre className="text-sm font-mono text-blue-900">
+                    <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
                       {safeStringify(requestInfo.params, 2)}
                     </pre>
                   </div>
@@ -388,10 +410,20 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
               <span>{expanded ? '▼' : '▶'}</span>
               {error ? 'Error Details' : 'Response'}
             </button>
-            <CopyButton
-              text={result ? safeStringify(result, 2) : error || ''}
-              label="Copy response"
-            />
+            <div className="flex items-center gap-2">
+              {result && isBalanceResponse(typeof result === 'string' ? JSON.parse(result) : result) && (
+                <button
+                  onClick={() => setShowRawResponse(!showRawResponse)}
+                  className="btn-secondary py-1.5 px-3 text-sm"
+                >
+                  {showRawResponse ? 'Show Formatted' : 'Show Raw'}
+                </button>
+              )}
+              <CopyButton
+                text={result ? safeStringify(result, 2) : error || ''}
+                label="Copy response"
+              />
+            </div>
           </div>
 
           {expanded && (
