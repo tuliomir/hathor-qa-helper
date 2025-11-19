@@ -195,7 +195,7 @@ export const ConnectionStage: React.FC = () => {
         </div>
       )}
 
-      {/* Dry Run Mode Toggle */}
+      {/* Dry Run Mode Toggle using DaisyUI `swap` component */}
       {isConnected && !addressMismatch && (
         <div className="card-primary mb-7.5">
           <div className="flex items-center justify-between">
@@ -207,15 +207,47 @@ export const ConnectionStage: React.FC = () => {
                   : 'Execute will send actual RPC requests'}
               </p>
             </div>
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isDryRun}
-                onChange={handleToggleDryRun}
-                className="mr-2"
-              />
-              <span className="text-sm font-medium">{isDryRun ? 'Enabled' : 'Disabled'}</span>
-            </label>
+
+            {/* DaisyUI swap: input controls the state, swap-on/swap-off show icons */}
+            <div className="flex items-center">
+              <label className="swap swap-rotate">
+                <input
+                  type="checkbox"
+                  checked={isDryRun}
+                  onChange={handleToggleDryRun}
+                  aria-label="Toggle Dry Run mode"
+                />
+
+                {/* swap-on: Dry Run enabled (show a check icon) */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="swap-on h-6 w-6 text-green-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+
+                {/* swap-off: Dry Run disabled (show an x icon) */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="swap-off h-6 w-6 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </label>
+
+              <span className="ml-3 text-sm font-medium">{isDryRun ? 'Enabled' : 'Disabled'}</span>
+            </div>
           </div>
         </div>
       )}
