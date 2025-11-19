@@ -8,7 +8,8 @@ import WalletInitialization from './stages/WalletInitialization';
 import AddressValidation from './stages/AddressValidation';
 import CustomTokens from './stages/CustomTokens';
 import TransactionHistory from './stages/TransactionHistory';
-import { RpcTesting } from './stages/RpcTesting';
+import { ConnectionStage } from './stages/ConnectionStage';
+import { GetBalanceStage } from './stages/GetBalanceStage';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -20,7 +21,8 @@ export default function StageContent() {
       {currentStage === 'address-validation' && <AddressValidation />}
       {currentStage === 'custom-tokens' && <CustomTokens />}
       {currentStage === 'transaction-history' && <TransactionHistory />}
-      {currentStage === 'rpc-testing' && <RpcTesting />}
+      {currentStage === 'rpc-connection' && <ConnectionStage />}
+      {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
     </div>
   );
 }

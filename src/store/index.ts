@@ -13,6 +13,7 @@ import transactionHistoryReducer from './slices/transactionHistorySlice';
 import customTokensReducer from './slices/customTokensSlice';
 import rpcReducer from './slices/rpcSlice';
 import walletConnectReducer from './slices/walletConnectSlice';
+import getBalanceReducer from './slices/getBalanceSlice';
 
 export const store = configureStore({
   reducer: {
@@ -26,6 +27,7 @@ export const store = configureStore({
     customTokens: customTokensReducer,
     rpc: rpcReducer,
     walletConnect: walletConnectReducer,
+    getBalance: getBalanceReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

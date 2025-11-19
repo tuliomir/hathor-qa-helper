@@ -4,7 +4,7 @@
  * Card for testing htr_getBalance RPC call
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 
@@ -26,6 +26,10 @@ export interface RpcGetBalanceCardProps {
   isDryRun?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  // Persisted data from Redux
+  initialRequest?: { method: string; params: any } | null;
+  initialResponse?: any | null;
+  initialError?: string | null;
 }
 
 export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
@@ -35,6 +39,9 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   isDryRun = false,
   onRefresh,
   isRefreshing = false,
+  initialRequest = null,
+  initialResponse = null,
+  initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -44,6 +51,22 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   const [requestExpanded, setRequestExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
+
+  // Load persisted data from Redux when component mounts or when initial data changes
+  useEffect(() => {
+    if (initialRequest) {
+      setRequestInfo(initialRequest);
+      setRequestExpanded(true);
+    }
+    if (initialResponse) {
+      setResult(initialResponse);
+      setExpanded(true);
+    }
+    if (initialError) {
+      setError(initialError);
+      setExpanded(true);
+    }
+  }, [initialRequest, initialResponse, initialError]);
 
   const handleExecute = async () => {
     setLoading(true);

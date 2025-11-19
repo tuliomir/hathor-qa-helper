@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-testing';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-connection' | 'rpc-get-balance';
 
 /**
  * Stage configuration
@@ -61,10 +61,16 @@ export const STAGES: StageItem[] = [
     title: 'RPC',
   },
   {
-    id: 'rpc-testing',
-    title: 'RPC Testing',
-    description: 'Test RPC calls with detailed request/response inspection',
+    id: 'rpc-connection',
+    title: 'Connection',
+    description: 'Connect to wallet via WalletConnect and configure RPC options',
     icon: '🔌',
+  },
+  {
+    id: 'rpc-get-balance',
+    title: 'Get Balance',
+    description: 'Test htr_getBalance RPC method to query token balances',
+    icon: '💰',
   },
   {
     type: 'separator',
