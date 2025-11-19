@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
+import { NETWORK_CONFIG } from '../../constants/network';
 
 export interface RpcBetInitializeCardProps {
   onExecute: () => Promise<any>;
@@ -233,13 +234,34 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           {/* Blueprint ID */}
           <div>
             <label className="block text-sm font-medium mb-1.5">Blueprint ID</label>
-            <input
-              type="text"
-              value={blueprintId}
-              onChange={(e) => setBlueprintId(e.target.value)}
-              placeholder="Enter blueprint ID"
-              className="input"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={blueprintId}
+                onChange={(e) => setBlueprintId(e.target.value)}
+                placeholder="Enter blueprint ID"
+                className="input pr-10"
+              />
+              {blueprintId && (
+                <a
+                  href={`${NETWORK_CONFIG.TESTNET.explorerUrl}blueprint/detail/${blueprintId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-primary transition-colors"
+                  title="View blueprint in explorer"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                    <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                  </svg>
+                </a>
+              )}
+            </div>
             <p className="text-xs text-muted mt-1">
               The blueprint ID for the bet nano contract
             </p>
@@ -265,17 +287,33 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           <div>
             <label className="block text-sm font-medium mb-1.5">Token</label>
             {tokens && tokens.length > 0 ? (
-              <select
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                className="input"
-              >
-                {tokens.map((t) => (
-                  <option key={t.uid} value={t.uid}>
-                    {t.symbol ? `${t.symbol} (${t.uid})` : t.uid}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  className="input cursor-pointer appearance-none pr-10"
+                >
+                  {tokens.map((t) => (
+                    <option key={t.uid} value={t.uid}>
+                      {t.symbol ? `${t.symbol} (${t.uid})` : t.uid}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-gray-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
             ) : (
               // Fallback to text input if tokens not provided
               <input
