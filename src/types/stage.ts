@@ -18,9 +18,26 @@ export interface Stage {
 }
 
 /**
- * All available stages
+ * Section separator for organizing stages
  */
-export const STAGES: Stage[] = [
+export interface StageSection {
+  type: 'separator';
+  title: string;
+}
+
+/**
+ * Union type for stage items (stage or separator)
+ */
+export type StageItem = Stage | StageSection;
+
+/**
+ * All available stages with section separators
+ */
+export const STAGES: StageItem[] = [
+  {
+    type: 'separator',
+    title: 'Main QA',
+  },
   {
     id: 'wallet-initialization',
     title: 'Wallet Initialization',
@@ -40,15 +57,23 @@ export const STAGES: Stage[] = [
     icon: '🪙',
   },
   {
-    id: 'transaction-history',
-    title: 'Transaction History',
-    description: 'View transaction history for the test wallet',
-    icon: '📜',
+    type: 'separator',
+    title: 'RPC',
   },
   {
     id: 'rpc-testing',
     title: 'RPC Testing',
     description: 'Test RPC calls with detailed request/response inspection',
     icon: '🔌',
+  },
+  {
+    type: 'separator',
+    title: 'Auditing',
+  },
+  {
+    id: 'transaction-history',
+    title: 'Transaction History',
+    description: 'View transaction history for the test wallet',
+    icon: '📜',
   },
 ];

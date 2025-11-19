@@ -5,13 +5,18 @@
 
 import { useStage } from '../hooks/useStage';
 import { STAGES } from '../types/stage';
-import type { StageId } from '../types/stage';
+import type { StageId, StageItem, StageSection } from '../types/stage';
 
 export default function Sidebar() {
   const { currentStage, setCurrentStage } = useStage();
 
   const handleStageClick = (stageId: StageId) => {
     setCurrentStage(stageId);
+  };
+
+  // Type guard to check if item is a separator
+  const isSeparator = (item: StageItem): item is StageSection => {
+    return 'type' in item && item.type === 'separator';
   };
 
   return (
@@ -23,10 +28,28 @@ export default function Sidebar() {
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-5">
         <div className="flex flex-col gap-2.5">
-          {STAGES.map((stage) => {
+          {STAGES.map((item, index) => {
+            // Render separator
+            if (isSeparator(item)) {
+              return (
+                <div
+                  key={`separator-${index}`}
+                  className={`${index > 0 ? 'mt-4' : ''} mb-2`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-px bg-border flex-1"></div>
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                      {item.title}
+                    </span>
+                    <div className="h-px bg-border flex-1"></div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Render stage button
+            const stage = item;
             const isActive = currentStage === stage.id;
-						// TODO: Add the possibility of "Separator" stages, which will consist of only a title
-	          // and a nice visual separation, but no button functionality
             return (
               <button
                 key={stage.id}
