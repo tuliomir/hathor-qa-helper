@@ -11,6 +11,8 @@ import walletSelectionReducer from './slices/walletSelectionSlice';
 import tokensReducer from './slices/tokensSlice';
 import transactionHistoryReducer from './slices/transactionHistorySlice';
 import customTokensReducer from './slices/customTokensSlice';
+import rpcReducer from './slices/rpcSlice';
+import walletConnectReducer from './slices/walletConnectSlice';
 
 export const store = configureStore({
   reducer: {
@@ -22,13 +24,19 @@ export const store = configureStore({
     tokens: tokensReducer,
     transactionHistory: transactionHistoryReducer,
     customTokens: customTokensReducer,
+    rpc: rpcReducer,
+    walletConnect: walletConnectReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      // Disable serializability check for wallet instances
+      // Disable serializability check for wallet instances and WalletConnect client
       serializableCheck: {
-        ignoredActions: ['walletStore/updateWalletInstance'],
-        ignoredPaths: ['walletStore.wallets'],
+        ignoredActions: [
+          'walletStore/updateWalletInstance',
+          'walletConnect/initialize/fulfilled',
+          'walletConnect/connect/fulfilled',
+        ],
+        ignoredPaths: ['walletStore.wallets', 'walletConnect.client', 'walletConnect.session'],
       },
     }),
 });

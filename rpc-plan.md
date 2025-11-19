@@ -601,15 +601,15 @@ All copyable elements must:
 ## Notes and Questions
 
 ### Questions for User (if needed during implementation):
-1. Should we add rate limiting to prevent accidental RPC spam?
-2. Should we cache RPC responses (e.g., network, balance)?
-3. Do we need to support custom RPC endpoints?
-4. Should we add RPC execution time metrics?
+1. Should we add rate limiting to prevent accidental RPC spam? -- No
+2. Should we cache RPC responses (e.g., network, balance)? -- Yes
+3. Do we need to support custom RPC endpoints? -- No
+4. Should we add RPC execution time metrics? -- Yes
 
 ### Technical Decisions Pending:
-1. Use Context API or Redux for RPC history?
-2. Should we add WebSocket support for real-time updates?
-3. Should intermediate updates be throttled/debounced?
+1. Use Context API or Redux for RPC history? -- Use Redux.
+2. Should we add WebSocket support for real-time updates? -- No
+3. Should intermediate updates be throttled/debounced? -- No
 
 ## Current Focus: Phase 1 - GetBalance Implementation
 

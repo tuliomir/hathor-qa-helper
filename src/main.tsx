@@ -4,6 +4,10 @@ import { Provider } from 'react-redux';
 import './index.css';
 import App from './App.tsx';
 import { store } from './store';
+import { initializeWalletConnect } from './store/slices/walletConnectSlice';
+
+// Initialize WalletConnect on app load
+store.dispatch(initializeWalletConnect());
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

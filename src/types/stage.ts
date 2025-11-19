@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-testing';
 
 /**
  * Stage configuration
@@ -44,5 +44,11 @@ export const STAGES: Stage[] = [
     title: 'Transaction History',
     description: 'View transaction history for the test wallet',
     icon: '📜',
+  },
+  {
+    id: 'rpc-testing',
+    title: 'RPC Testing',
+    description: 'Test RPC calls with detailed request/response inspection',
+    icon: '🔌',
   },
 ];

@@ -19,6 +19,11 @@
   "dependencies": {
     "@hathor/wallet-lib": "2.9.1",
     "@reduxjs/toolkit": "^2.10.1",
+    "@walletconnect/core": "^2.15.1",
+    "@walletconnect/modal": "^2.7.0",
+    "@walletconnect/sign-client": "^2.15.1",
+    "@walletconnect/types": "^2.15.1",
+    "@walletconnect/utils": "^2.15.1",
     "bitcore-lib": "8.25.10",
     "bitcore-mnemonic": "8.25.10",
     "buffer": "^6.0.3",
