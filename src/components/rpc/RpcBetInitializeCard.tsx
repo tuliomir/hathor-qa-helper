@@ -244,7 +244,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
 
           {/* Oracle Address */}
 	        <div>
-		        <label className="block text-sm font-medium mb-1.5">Change Address Index</label>
+		        <label className="block text-sm font-medium mb-1.5">Change Oracle Address Index</label>
 		        <input
 			        type="number"
 			        value={addressIndex}
@@ -359,6 +359,32 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               These values are calculated automatically from your inputs and will be used in the request.
             </p>
             <div className="space-y-3">
+
+	            {/* Oracle Address */}
+	            <div className="bg-white border border-yellow-200 rounded overflow-hidden">
+		            <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
+			            <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-yellow-800">
+                      Oracle Address (from index {addressIndex})
+                    </span>
+				            {oracleAddress && (
+					            <CopyButton text={oracleAddress} label="Copy" />
+				            )}
+			            </div>
+		            </div>
+		            <div className="px-3 py-2">
+			            {oracleAddress ? (
+				            <span className="text-sm font-mono text-yellow-900 break-all">
+                      {oracleAddress}
+                    </span>
+			            ) : (
+				            <span className="text-sm text-muted italic">
+                      Deriving oracle address from wallet...
+                    </span>
+			            )}
+		            </div>
+	            </div>
+
               {/* Oracle Buffer */}
               <div className="bg-white border border-yellow-200 rounded overflow-hidden">
                 <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
@@ -406,31 +432,6 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                   ) : (
                     <span className="text-sm text-muted italic">
                       Enter deadline to calculate
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Derived Address */}
-              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
-                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-yellow-800">
-                      Oracle Address (from index {addressIndex})
-                    </span>
-                    {oracleAddress && (
-                      <CopyButton text={oracleAddress} label="Copy" />
-                    )}
-                  </div>
-                </div>
-                <div className="px-3 py-2">
-                  {oracleAddress ? (
-                    <span className="text-sm font-mono text-yellow-900 break-all">
-                      {oracleAddress}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted italic">
-                      Deriving oracle address from wallet...
                     </span>
                   )}
                 </div>

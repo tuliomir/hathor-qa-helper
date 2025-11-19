@@ -68,11 +68,9 @@ export const BetInitializeStage: React.FC = () => {
   // Derive oracle address from selected index
   useEffect(() => {
     const deriveAddress = async () => {
-      console.log('[BetInitialize] Deriving oracle address, testWallet:', testWallet, 'addressIndex:', addressIndex);
       if (testWallet?.instance) {
         try {
           const address = await testWallet.instance.getAddressAtIndex(addressIndex);
-          console.log('[BetInitialize] Derived oracle address:', address);
           setOracleAddress(address);
         } catch (error) {
           console.error(`[BetInitialize] Failed to derive address at index ${addressIndex}:`, error);
