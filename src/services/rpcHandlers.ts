@@ -73,5 +73,52 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         throw errorWithRequest;
       }
     },
+
+    /**
+     * Sign with Address
+     * Signs a message using a specific address
+     */
+    getRpcSignWithAddress: async (message: string, addressIndex: number) => {
+      if (!session || !client) {
+        throw new Error('WalletConnect session not available');
+      }
+
+      // Build request params
+      const requestParams = {
+        method: 'htr_signWithAddress',
+        params: {
+          network: DEFAULT_NETWORK,
+          message,
+          addressIndex,
+        },
+      };
+
+      try {
+        let result;
+
+        if (dryRun) {
+          // Dry run: don't actually call RPC
+          result = null;
+        } else {
+          // Make the RPC request via WalletConnect
+          result = await client.request({
+            topic: session.topic,
+            chainId: HATHOR_TESTNET_CHAIN,
+            request: requestParams,
+          });
+        }
+
+        // Return both request and response
+        return {
+          request: requestParams,
+          response: result,
+        };
+      } catch (error) {
+        // Attach request to error so UI can display it
+        const errorWithRequest = error as any;
+        errorWithRequest.requestParams = requestParams;
+        throw errorWithRequest;
+      }
+    },
   };
 };

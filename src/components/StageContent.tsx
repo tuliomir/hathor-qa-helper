@@ -10,6 +10,7 @@ import CustomTokens from './stages/CustomTokens';
 import TransactionHistory from './stages/TransactionHistory';
 import { ConnectionStage } from './stages/ConnectionStage';
 import { GetBalanceStage } from './stages/GetBalanceStage';
+import { SignWithAddressStage } from './stages/SignWithAddressStage';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -23,6 +24,7 @@ export default function StageContent() {
       {currentStage === 'transaction-history' && <TransactionHistory />}
       {currentStage === 'rpc-connection' && <ConnectionStage />}
       {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
+      {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
     </div>
   );
 }

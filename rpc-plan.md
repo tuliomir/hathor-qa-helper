@@ -623,7 +623,11 @@ The next steps are to:
 ## Key Architecture Decisions (Confirmed)
 
 1. **WalletConnect**: Connect to local RPC server via WalletConnect protocol
-2. **No Base Card**: Each RPC method has its own dedicated card component
+2. **Stage-Based Architecture**: Each RPC method requires:
+   - **Card Component** (`RpcXxxCard.tsx`) - Reusable RPC card with inputs and display
+   - **Stage Component** (`XxxStage.tsx`) - Stage wrapper with connection validation and Redux persistence
+   - **Redux Slice** (`xxxSlice.ts`) - State management for request/response/error
+   - **Stage Registration** - Add to `StageId` type, `STAGES` array, `StageContent`, and store
 3. **Simple Return Structure**: Handlers return `{ request, response }` - no complex state management
 4. **Intermediates in Request**: For complex RPCs, intermediate calculations appear in the request params
 5. **Dry Run Mode**: Handlers check flag and skip actual RPC call
@@ -639,9 +643,242 @@ Primary reference: `/Users/tuliomir/code/bet-dapp/packages/bet-dapp/src/componen
 - `rpc-walletconnect.tsx` - Connection widget
 - `rpc-initialize-bet-card.tsx` - Example of RPC with intermediate calculations
 
+## Migration Guide: From Reference App to QA Helper
+
+When migrating RPC cards from the bet-dapp reference to QA Helper, follow these steps:
+
+### 1. **Input Styling Changes**
+
+**❌ DON'T use** (bet-dapp reference app styles):
+```tsx
+// Input
+className="bg-gray-900/50 border-gray-700"
+className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none..."
+
+// Textarea
+className="bg-gray-900/50 border-gray-700 min-h-[80px]"
+```
+
+**✅ DO use** (QA Helper DaisyUI styles):
+```tsx
+// Input (number, text, etc.)
+className="input"
+
+// Textarea
+className="input font-mono resize-y"
+rows={4}
+```
+
+### 2. **Response Format Handling**
+
+RPC responses come wrapped in a `type` field:
+```typescript
+{
+  type: 1,
+  response: {
+    // Actual response data here
+  }
+}
+```
+
+**Handle both formats** in response detection:
+```tsx
+const isXxxResponse = (data: any) => {
+  // Check if it's the full response with type field
+  if (data && data.type === 1 && data.response) {
+    const response = data.response;
+    return response.someField && response.anotherField;
+  }
+  // Or if it's just the response data directly
+  return data && data.someField && data.anotherField;
+};
+```
+
+**Extract data** for rendering:
+```tsx
+const renderFormattedResponse = (parsedResult: any) => {
+  // Extract the actual response data (handle both formats)
+  const responseData = parsedResult.response || parsedResult;
+
+  // Use responseData for rendering
+  return <div>{responseData.someField}</div>;
+};
+```
+
+### 3. **Formatted/Raw Toggle**
+
+Add the same toggle as `getBalance`:
+
+**State**:
+```tsx
+const [showRawResponse, setShowRawResponse] = useState(false);
+```
+
+**Toggle button** (in Response Section header):
+```tsx
+<div className="flex items-center gap-2">
+  {result && isXxxResponse(typeof result === 'string' ? JSON.parse(result) : result) && (
+    <button
+      onClick={() => setShowRawResponse(!showRawResponse)}
+      className="btn-secondary py-1.5 px-3 text-sm"
+    >
+      {showRawResponse ? 'Show Formatted' : 'Show Raw'}
+    </button>
+  )}
+  <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
+</div>
+```
+
+**Conditional rendering**:
+```tsx
+{(() => {
+  try {
+    const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+
+    // Show raw or formatted based on toggle
+    if (showRawResponse) {
+      return renderRawJson(result);
+    }
+
+    // Show formatted if it's the expected response type
+    if (isXxxResponse(parsedResult)) {
+      return renderFormattedResponse(parsedResult);
+    }
+
+    // Otherwise show raw
+    return renderRawJson(result);
+  } catch (e) {
+    return renderRawJson(result);
+  }
+})()}
+```
+
+### 4. **Architecture: Card vs Stage**
+
+The reference app has everything in one `rpc-tester.tsx` file. QA Helper uses **stage-based architecture**:
+
+#### **Card Component** (`src/components/rpc/RpcXxxCard.tsx`)
+- **Purpose**: Reusable RPC UI component
+- **Props**: `onExecute`, `disabled`, `isDryRun`, `initialRequest`, `initialResponse`, `initialError`
+- **Responsibilities**:
+  - Input fields
+  - Execute button
+  - Request/Response display
+  - Formatted/Raw toggle
+- **State**: Local component state only (no Redux)
+
+#### **Stage Component** (`src/components/stages/XxxStage.tsx`)
+- **Purpose**: Stage-level wrapper with full page layout
+- **Responsibilities**:
+  - Connection status checks
+  - Address mismatch warnings
+  - Create RPC handlers
+  - **Redux integration** (load/save request/response/error)
+  - Wrapper function for `onExecute` that stores to Redux
+  - Duration tracking
+- **Pattern**: Follow `GetBalanceStage.tsx` exactly
+
+#### **Redux Slice** (`src/store/slices/xxxSlice.ts`)
+- **Purpose**: Persist request/response across navigation
+- **State**: `request`, `response`, `rawResponse`, `error`, `timestamp`, `duration`, `isDryRun`
+- **Actions**: `setXxxRequest`, `setXxxResponse`, `setXxxError`, `clearXxxData`
+- **Pattern**: Follow `getBalanceSlice.ts` exactly
+
+### 5. **Stage Registration Checklist**
+
+For each new RPC method, you must:
+
+- [ ] Create Redux slice: `src/store/slices/xxxSlice.ts`
+- [ ] Register in store: `src/store/index.ts` (import + add to reducer)
+- [ ] Create card component: `src/components/rpc/RpcXxxCard.tsx`
+- [ ] Create stage component: `src/components/stages/XxxStage.tsx`
+- [ ] Add to stage types: `src/types/stage.ts` (StageId union type)
+- [ ] Add to STAGES array: `src/types/stage.ts` (under RPC separator)
+- [ ] Add to StageContent: `src/components/StageContent.tsx` (import + routing)
+- [ ] Add RPC handler: `src/services/rpcHandlers.ts`
+
+### 6. **Component Import Changes**
+
+**❌ DON'T import** (shadcn/ui components from reference):
+```tsx
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select } from '@/components/ui/select';
+```
+
+**✅ DO use** (DaisyUI classes + QA Helper components):
+```tsx
+// No card component - use card-primary class directly
+<div className="card-primary mb-7.5">
+
+// No button component - use btn classes
+<button className="btn-primary">Execute</button>
+<button className="btn-secondary">Toggle</button>
+
+// No input/textarea components - use input class
+<input className="input" />
+<textarea className="input font-mono resize-y" rows={4} />
+
+// Import QA Helper components
+import CopyButton from '../common/CopyButton';
+import { useToast } from '../../hooks/useToast';
+```
+
+### 7. **Color Theming**
+
+**Reference app** uses dark theme with custom colors. **QA Helper** uses light theme:
+
+**Request Section** (blue-themed):
+```tsx
+<div className="bg-blue-50 border border-blue-300 rounded p-4">
+  <div className="bg-white border border-blue-200 rounded overflow-hidden">
+    <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
+      <span className="text-sm font-semibold text-blue-800">method</span>
+    </div>
+  </div>
+</div>
+```
+
+**Success Response** (green-themed):
+```tsx
+<div className="bg-green-50 border border-green-300 rounded p-4">
+  <div className="flex items-center gap-2 text-green-700 mb-3">
+    {/* Success icon */}
+  </div>
+</div>
+```
+
+**Error Response** (red-themed):
+```tsx
+<div className="flex items-start gap-2 p-4 bg-red-50 border border-danger rounded">
+  {/* Error icon */}
+</div>
+```
+
+**Dry Run Mode** (purple-themed):
+```tsx
+<div className="bg-purple-50 border border-purple-300 rounded p-4">
+  <div className="flex items-center gap-2 text-purple-700 mb-2">
+    {/* Flask icon */}
+  </div>
+</div>
+```
+
+### 8. **Common Pitfalls**
+
+1. **Don't forget `safeStringify`** helper for BigInt handling
+2. **Always add both `initialXxx` props** to card for Redux persistence
+3. **Use `showToast`** from `useToast()` hook (not `toast` from reference)
+4. **Remember to register slice in store** - build will fail otherwise
+5. **Add stage to STAGES array** - won't appear in sidebar otherwise
+6. **Use `card-primary` class** - not `<Card>` component
+7. **Test with response sample** - verify format detection works
+
 ---
 
-**Last Updated**: 2025-11-18
-**Current Phase**: Phase 1 - Foundation + GetBalance
-**Status**: Planning Complete, Ready for Implementation
-**Architecture**: WalletConnect RPC Testing
+**Last Updated**: 2025-11-19
+**Current Phase**: Phase 1 - Foundation + GetBalance + SignWithAddress
+**Status**: GetBalance ✅ Complete, SignWithAddress ✅ Complete, Migration Guide Added
+**Architecture**: Stage-Based WalletConnect RPC Testing

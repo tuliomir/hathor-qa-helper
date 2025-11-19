@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-connection' | 'rpc-get-balance';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address';
 
 /**
  * Stage configuration
@@ -71,6 +71,12 @@ export const STAGES: StageItem[] = [
     title: 'Get Balance',
     description: 'Test htr_getBalance RPC method to query token balances',
     icon: '💰',
+  },
+  {
+    id: 'rpc-sign-with-address',
+    title: 'Sign with Address',
+    description: 'Test htr_signWithAddress RPC method to sign messages',
+    icon: '✍️',
   },
   {
     type: 'separator',
