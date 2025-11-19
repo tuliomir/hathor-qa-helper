@@ -51,9 +51,13 @@ const result = await client.request({
 });
 ```
 
+### Data storage
+
+All RPC units ( we will call them "cards" ) will store their information in a single `rpc` slice in Redux, allowing for integration on other parts of the application. The generated data will be added to a "RPC History" in this redux, allowing for the tester to reproduce the entire sequence of RPC calls made during a testing session along with a reference of their responses. All this data will have an option to be exported to JSON.
+
 ### 2. RPC Card Pattern
 
-Each RPC method has its own dedicated card component (NOT a shared base card). This allows for:
+Each RPC method has its own dedicated card component. This allows for:
 - Custom input fields per RPC method
 - Tailored parameter validation
 - Method-specific help text and examples
@@ -311,7 +315,7 @@ getRpcInitializeBet: async (params: InitializeBetParams) => {
 
 **Key Differences points**:
 1. **No intermediate RPCS**: Intermediate calculations are done locally (oracle buffer, timestamps)
-2. **Single RPC call**: Each handler makes ONE RPC call (except setResult which makes two)
+2. **Single RPC call**: Each handler makes ONE RPC call (except special cases like `setResult` which makes two)
 3. **Request structure visible**: Intermediate values appear in the request params, not separate
 4. **Dry run support**: Handlers check `dryRun` flag and skip actual RPC call if true
 
@@ -416,7 +420,7 @@ export const STAGES: Stage[] = [
 **Acceptance Criteria**:
 - ✓ User can connect to local RPC server via WalletConnect
 - ✓ User can toggle dry run mode on/off
-- ✓ User can add/remove/import token IDs
+- ✓ User can add/remove/import token IDs from the list of tokenUIDs from that wallet ( see CustomWallet stage )
 - ✓ User can execute getBalance RPC call
 - ✓ Request section displays method + params with copy button
 - ✓ Response section displays pretty formatted result with copy button
@@ -424,6 +428,9 @@ export const STAGES: Stage[] = [
 - ✓ Errors are properly displayed with request params preserved
 - ✓ All sections are collapsible
 - ✓ UI matches DaisyUI styling
+
+#### Note:
+On WalletConnect successful connection, an "address" is returned from the client, which is supposed to be the address at index 0 of the wallet. In that moment we should verify if that address matches the address at index 0 of the currently selected test wallet in the QA Helper. If they don't match, we should show a warning to the user indicating that the connected wallet does not match the selected test wallet and not display the RPC Cards for interaction.
 
 ### Phase 2: Additional Wallet RPCs (Future)
 **Status**: ⚪ Planned
