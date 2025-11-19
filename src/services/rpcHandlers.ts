@@ -131,7 +131,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       oracleAddress: string,
       token: string,
       deadline: Date,
-      pushTx: boolean
+      pushTx: boolean,
     ) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
@@ -143,7 +143,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       // Convert Date to unix timestamp (seconds)
       const timestamp = Math.floor(deadline.getTime() / 1000);
 
-      const invokeParams = {
+      const invokeParams: any = {
         network: DEFAULT_NETWORK,
         method: 'initialize',
         blueprint_id: blueprintId,

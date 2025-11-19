@@ -17,20 +17,22 @@ import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from 
 import { RpcBetInitializeCard } from '../rpc/RpcBetInitializeCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { NETWORK_CONFIG } from '../../constants/network';
+import { useWalletStore } from '../../hooks/useWalletStore';
 
 export const BetInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const { getWallet } = useWalletStore();
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const testWallet = useSelector((state: RootState) =>
-    testWalletId ? state.walletStore.wallets[testWalletId] : null
-  );
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const betInitializeData = useSelector((state: RootState) => state.betInitialize);
+
+  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
@@ -42,15 +44,14 @@ export const BetInitializeStage: React.FC = () => {
     return date.toISOString().slice(0, 16);
   });
   const [pushTx, setPushTx] = useState<boolean>(false);
+  const [addressIndex, setAddressIndex] = useState<number>(0);
 
   // Get test wallet address at index 0
   useEffect(() => {
     const getAddress = async () => {
       if (testWallet?.instance) {
         try {
-          // Type assertion since we know the instance has getAddressAtIndex method
-          const wallet = testWallet.instance as { getAddressAtIndex: (index: number) => Promise<string> };
-          const address = await wallet.getAddressAtIndex(0);
+          const address = await testWallet.instance.getAddressAtIndex(0);
           setTestWalletAddress(address);
         } catch (error) {
           console.error('Failed to get test wallet address:', error);
@@ -63,6 +64,30 @@ export const BetInitializeStage: React.FC = () => {
 
     getAddress();
   }, [testWallet]);
+
+  // Derive oracle address from selected index
+  useEffect(() => {
+    const deriveAddress = async () => {
+      console.log('[BetInitialize] Deriving oracle address, testWallet:', testWallet, 'addressIndex:', addressIndex);
+      if (testWallet?.instance) {
+        try {
+          const address = await testWallet.instance.getAddressAtIndex(addressIndex);
+          console.log('[BetInitialize] Derived oracle address:', address);
+          setOracleAddress(address);
+        } catch (error) {
+          console.error(`[BetInitialize] Failed to derive address at index ${addressIndex}:`, error);
+          // Keep the previous value or empty string on error
+          setOracleAddress('');
+        }
+      } else {
+        console.log('[BetInitialize] Wallet not loaded yet');
+        // Wallet not loaded yet, clear the address and wait
+        setOracleAddress('');
+      }
+    };
+
+    deriveAddress();
+  }, [testWallet, addressIndex]);
 
   // Check if connected address matches test wallet address at index 0
   const addressMismatch = useMemo(() => {
@@ -100,7 +125,7 @@ export const BetInitializeStage: React.FC = () => {
         oracleAddress,
         token,
         deadlineDate,
-        pushTx
+        pushTx,
       );
       const duration = Date.now() - startTime;
 
@@ -213,13 +238,14 @@ export const BetInitializeStage: React.FC = () => {
           blueprintId={blueprintId}
           setBlueprintId={setBlueprintId}
           oracleAddress={oracleAddress}
-          setOracleAddress={setOracleAddress}
           token={token}
           setToken={setToken}
           deadline={deadline}
           setDeadline={setDeadline}
           pushTx={pushTx}
           setPushTx={setPushTx}
+          addressIndex={addressIndex}
+          setAddressIndex={setAddressIndex}
           isDryRun={isDryRun}
           initialRequest={betInitializeData.request}
           initialResponse={betInitializeData.rawResponse}

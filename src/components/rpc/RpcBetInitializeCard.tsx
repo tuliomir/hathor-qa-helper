@@ -16,13 +16,14 @@ export interface RpcBetInitializeCardProps {
   blueprintId: string;
   setBlueprintId: (value: string) => void;
   oracleAddress: string;
-  setOracleAddress: (value: string) => void;
   token: string;
   setToken: (value: string) => void;
   deadline: string;
   setDeadline: (value: string) => void;
   pushTx: boolean;
   setPushTx: (value: boolean) => void;
+  addressIndex: number;
+  setAddressIndex: (value: number) => void;
   // Persisted data from Redux
   initialRequest?: { method: string; params: any } | null;
   initialResponse?: any | null;
@@ -36,13 +37,14 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   blueprintId,
   setBlueprintId,
   oracleAddress,
-  setOracleAddress,
   token,
   setToken,
   deadline,
   setDeadline,
   pushTx,
   setPushTx,
+  addressIndex,
+  setAddressIndex,
   initialRequest = null,
   initialResponse = null,
   initialError = null,
@@ -241,19 +243,20 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           </div>
 
           {/* Oracle Address */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Oracle Address</label>
-            <input
-              type="text"
-              value={oracleAddress}
-              onChange={(e) => setOracleAddress(e.target.value)}
-              placeholder="Enter oracle address"
-              className="input"
-            />
-            <p className="text-xs text-muted mt-1">
-              The oracle address that will set the bet result
-            </p>
-          </div>
+	        <div>
+		        <label className="block text-sm font-medium mb-1.5">Change Address Index</label>
+		        <input
+			        type="number"
+			        value={addressIndex}
+			        onChange={(e) => setAddressIndex(parseInt(e.target.value) || 0)}
+			        min="0"
+			        placeholder="0"
+			        className="input"
+		        />
+		        <p className="text-xs text-muted mt-1">
+			        Index of the address to use as the oracle address
+		        </p>
+	        </div>
 
           {/* Token */}
           <div>
@@ -403,6 +406,31 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                   ) : (
                     <span className="text-sm text-muted italic">
                       Enter deadline to calculate
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Derived Address */}
+              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
+                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-yellow-800">
+                      Oracle Address (from index {addressIndex})
+                    </span>
+                    {oracleAddress && (
+                      <CopyButton text={oracleAddress} label="Copy" />
+                    )}
+                  </div>
+                </div>
+                <div className="px-3 py-2">
+                  {oracleAddress ? (
+                    <span className="text-sm font-mono text-yellow-900 break-all">
+                      {oracleAddress}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted italic">
+                      Deriving oracle address from wallet...
                     </span>
                   )}
                 </div>
