@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
+import { DateTimePicker } from '../ui/datetime-picker';
 
 export interface RpcBetInitializeCardProps {
   onExecute: () => Promise<any>;
@@ -276,11 +277,18 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           {/* Deadline */}
           <div>
             <label className="block text-sm font-medium mb-1.5">Bet Deadline</label>
-            <input
-              type="datetime-local"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="input"
+            <DateTimePicker
+              value={deadline ? new Date(deadline) : undefined}
+              onChange={(date) => {
+                if (date) {
+                  // Convert to the format expected by the existing state (same format produced by the previous input)
+                  const isoString = date.toISOString().slice(0, 16);
+                  setDeadline(isoString);
+                }
+              }}
+              placeholder="Select bet deadline"
+              granularity="minute"
+              hourCycle={24}
             />
             <p className="text-xs text-muted mt-1">
               Last time users can place a bet
