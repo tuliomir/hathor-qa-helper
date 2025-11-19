@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw';
 
 /**
  * Stage configuration
@@ -77,6 +77,34 @@ export const STAGES: StageItem[] = [
     title: 'Sign with Address',
     description: 'Test htr_signWithAddress RPC method to sign messages',
     icon: '✍️',
+  },
+  {
+    type: 'separator',
+    title: 'Bet Nano Contracts',
+  },
+  {
+    id: 'rpc-bet-initialize',
+    title: 'Initialize Bet',
+    description: 'Initialize a new bet nano contract with oracle and token configuration',
+    icon: '🎲',
+  },
+  {
+    id: 'rpc-bet-deposit',
+    title: 'Place Bet',
+    description: 'Place a bet on an existing bet nano contract',
+    icon: '💸',
+  },
+  {
+    id: 'rpc-set-bet-result',
+    title: 'Set Bet Result',
+    description: 'Set the result for a bet nano contract (oracle action)',
+    icon: '⚖️',
+  },
+  {
+    id: 'rpc-bet-withdraw',
+    title: 'Withdraw Prize',
+    description: 'Withdraw your prize from a bet nano contract',
+    icon: '🏆',
   },
   {
     type: 'separator',

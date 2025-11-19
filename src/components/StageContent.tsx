@@ -11,6 +11,10 @@ import TransactionHistory from './stages/TransactionHistory';
 import { ConnectionStage } from './stages/ConnectionStage';
 import { GetBalanceStage } from './stages/GetBalanceStage';
 import { SignWithAddressStage } from './stages/SignWithAddressStage';
+import { BetInitializeStage } from './stages/BetInitializeStage';
+import { BetDepositStage } from './stages/BetDepositStage';
+import { SetBetResultStage } from './stages/SetBetResultStage';
+import { BetWithdrawStage } from './stages/BetWithdrawStage';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -25,6 +29,10 @@ export default function StageContent() {
       {currentStage === 'rpc-connection' && <ConnectionStage />}
       {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
       {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
+      {currentStage === 'rpc-bet-initialize' && <BetInitializeStage />}
+      {currentStage === 'rpc-bet-deposit' && <BetDepositStage />}
+      {currentStage === 'rpc-set-bet-result' && <SetBetResultStage />}
+      {currentStage === 'rpc-bet-withdraw' && <BetWithdrawStage />}
     </div>
   );
 }
