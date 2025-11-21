@@ -44,19 +44,23 @@ export default function TxUpdateEvents() {
   }
 
   // Extract transaction hash from event data
+  // Handles both tx_id and txId naming conventions
   function getTxHash(event: WalletEvent & { walletId: string }): string | undefined {
     if (event.eventType === 'new-tx' || event.eventType === 'update-tx') {
-      return event.data?.tx_id || event.data?.txId;
+      return event.data?.tx_id ?? event.data?.txId;
     }
     return undefined;
   }
 
   // Get status for transaction events
+  // Handles both naming conventions (first_block/firstBlock, is_voided/voided)
   function getTxStatus(event: WalletEvent & { walletId: string }): string | null {
     if (event.eventType === 'new-tx' || event.eventType === 'update-tx') {
       if (event.data) {
         const status = getTransactionStatus({
-          firstBlock: event.data.first_block || event.data.firstBlock,
+          first_block: event.data.first_block,
+          firstBlock: event.data.firstBlock,
+          is_voided: event.data.is_voided,
           voided: event.data.voided,
         });
         return status;

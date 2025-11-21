@@ -648,7 +648,7 @@ export const selectAllWalletEvents = (state: RootState): Array<WalletEvent & { w
 
 /**
  * Get all events that involve a specific transaction hash
- * Searches for tx_id or txId in the event data
+ * Searches for tx_id or txId in the event data (handles both naming conventions)
  */
 export const selectEventsByTxHash = (state: RootState, txHash: string): Array<WalletEvent & { walletId: string }> => {
   const allEvents = selectAllWalletEvents(state);
@@ -656,7 +656,7 @@ export const selectEventsByTxHash = (state: RootState, txHash: string): Array<Wa
   return allEvents.filter((event) => {
     // Check if the event data contains this transaction hash
     if (event.data && typeof event.data === 'object') {
-      const eventTxId = event.data.tx_id || event.data.txId;
+      const eventTxId = event.data.tx_id ?? event.data.txId;
       return eventTxId === txHash;
     }
     return false;

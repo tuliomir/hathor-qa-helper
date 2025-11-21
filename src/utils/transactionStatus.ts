@@ -7,17 +7,23 @@ export type TransactionStatus = 'Unconfirmed' | 'Valid' | 'Voided';
 
 interface Transaction {
   firstBlock?: number;
+  first_block?: number;
   voided?: boolean;
+  is_voided?: boolean;
 }
 
 /**
- * Determine transaction status based on firstBlock and voided properties
- * @param tx Transaction object with firstBlock and voided properties
+ * Determine transaction status based on firstBlock/first_block and voided/is_voided properties
+ * Handles both naming conventions for compatibility with different wallet-lib versions
+ * @param tx Transaction object with block and voided properties
  * @returns Status: "Unconfirmed", "Valid", or "Voided"
  */
 export function getTransactionStatus(tx: Transaction): TransactionStatus {
-  if (!tx.firstBlock) return 'Unconfirmed';
-  return tx.voided ? 'Voided' : 'Valid';
+  const firstBlock = tx.firstBlock ?? tx.first_block;
+  const isVoided = tx.voided ?? tx.is_voided;
+
+  if (!firstBlock) return 'Unconfirmed';
+  return isVoided ? 'Voided' : 'Valid';
 }
 
 /**
