@@ -3,9 +3,10 @@
  * Displays real-time wallet events from all active wallets
  */
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { selectAllWalletEvents, type WalletEvent } from '../../store/slices/walletStoreSlice';
+import { setFilterWalletId, setCurrentPage } from '../../store/slices/txUpdateEventsSlice';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import dateFormatter from '@hathor/wallet-lib/lib/utils/date';
@@ -15,10 +16,10 @@ export default function TxUpdateEvents() {
   const dispatch = useAppDispatch();
   const allWallets = useAppSelector((s) => s.walletStore.wallets);
   const allEvents = useAppSelector(selectAllWalletEvents);
+  const filterWalletId = useAppSelector((s) => s.txUpdateEvents.filterWalletId);
+  const currentPage = useAppSelector((s) => s.txUpdateEvents.currentPage);
   const { info } = useToast();
 
-  const [filterWalletId, setFilterWalletId] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 20;
 
   // Filter events by selected wallet
@@ -112,8 +113,7 @@ export default function TxUpdateEvents() {
             <select
               value={filterWalletId}
               onChange={(e) => {
-                setFilterWalletId(e.target.value);
-                setCurrentPage(0);
+                dispatch(setFilterWalletId(e.target.value));
               }}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm"
             >
@@ -210,7 +210,7 @@ export default function TxUpdateEvents() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                  onClick={() => dispatch(setCurrentPage(Math.max(0, currentPage - 1)))}
                   disabled={currentPage === 0}
                   className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -222,7 +222,7 @@ export default function TxUpdateEvents() {
                 </span>
 
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                  onClick={() => dispatch(setCurrentPage(Math.min(totalPages - 1, currentPage + 1)))}
                   disabled={currentPage === totalPages - 1}
                   className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >

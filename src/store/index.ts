@@ -20,6 +20,7 @@ import betInitializeReducer from './slices/betInitializeSlice';
 import betDepositReducer from './slices/betDepositSlice';
 import setBetResultReducer from './slices/setBetResultSlice';
 import betWithdrawReducer from './slices/betWithdrawSlice';
+import txUpdateEventsReducer from './slices/txUpdateEventsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -40,6 +41,7 @@ export const store = configureStore({
     betDeposit: betDepositReducer,
     setBetResult: setBetResultReducer,
     betWithdraw: betWithdrawReducer,
+    txUpdateEvents: txUpdateEventsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
