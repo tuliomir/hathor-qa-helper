@@ -3,6 +3,7 @@
  * These selectors handle conversion from stored strings to BigInt for app usage
  */
 
+import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
 import type { WalletInfo } from '../../types/walletStore';
 import { walletInstancesMap } from '../slices/walletStoreSlice';
@@ -54,30 +55,41 @@ export const selectWalletById = (state: RootState, id: string): WalletInfo | und
 };
 
 /**
- * Get all wallets as an array
+ * Base selector to get the raw wallets object from state
  */
-export const selectAllWallets = (state: RootState): WalletInfo[] => {
-  return Object.values(state.walletStore.wallets).map((walletInfo) =>
-    convertWalletData(
-      walletInfo,
-      walletInstancesMap.get(walletInfo.metadata.id) || null
-    )
-  );
-};
+const selectWalletsRaw = (state: RootState) => state.walletStore.wallets;
 
 /**
- * Get wallets as a Map (for compatibility with old API)
+ * Get all wallets as an array (memoized)
  */
-export const selectWalletsMap = (state: RootState): Map<string, WalletInfo> => {
-  const map = new Map<string, WalletInfo>();
-  Object.entries(state.walletStore.wallets).forEach(([id, walletInfo]) => {
-    map.set(
-      id,
+export const selectAllWallets = createSelector(
+  [selectWalletsRaw],
+  (wallets): WalletInfo[] => {
+    return Object.values(wallets).map((walletInfo) =>
       convertWalletData(
         walletInfo,
-        walletInstancesMap.get(id) || null
+        walletInstancesMap.get(walletInfo.metadata.id) || null
       )
     );
-  });
-  return map;
-};
+  }
+);
+
+/**
+ * Get wallets as a Map (for compatibility with old API) (memoized)
+ */
+export const selectWalletsMap = createSelector(
+  [selectWalletsRaw],
+  (wallets): Map<string, WalletInfo> => {
+    const map = new Map<string, WalletInfo>();
+    Object.entries(wallets).forEach(([id, walletInfo]) => {
+      map.set(
+        id,
+        convertWalletData(
+          walletInfo,
+          walletInstancesMap.get(id) || null
+        )
+      );
+    });
+    return map;
+  }
+);
