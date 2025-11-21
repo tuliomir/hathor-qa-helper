@@ -132,12 +132,22 @@ export function WalletComponent({walletId}: Props) {
 
 ### Built-in Event Handling
 
-The `startWallet` thunk automatically sets up 'new-tx' event listeners that:
-- Detect custom token transactions (with `tokenName` and `tokenSymbol`)
-- Refresh wallet tokens using the cache (only fetch new tokens)
-- Refresh wallet balance
+The `startWallet` thunk automatically sets up event listeners for ALL event types:
+- **new-tx**: New transaction arrives
+- **update-tx**: Transaction updated (gets first_block, output spent, etc.)
+- **state**: Wallet state changes
+- **more-addresses-loaded**: Address history loading progress
+
+All events are automatically captured and stored in Redux (`walletStore.events[]`) for global access.
+
+**Automatic actions on events**:
+- Detect custom token transactions → refresh tokens (cached)
+- New/updated transactions → refresh balance
+- All events → stored in Redux for monitoring
 
 Event handlers are stored in `walletEventHandlers` map for cleanup when wallet stops.
+
+For detailed event monitoring patterns, see `wallet-event-monitoring.md`.
 
 ### Available Thunks
 

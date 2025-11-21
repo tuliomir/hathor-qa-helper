@@ -53,11 +53,18 @@ idle → connecting → syncing → ready
         instance: null, // Always null in Redux
         status: 'idle' | 'connecting' | 'syncing' | 'ready' | 'error',
         firstAddress?: string,
+        balance?: string,
+        tokenUids?: string[],
+        events: WalletEvent[], // All wallet events (new-tx, update-tx, state, etc.)
         error?: string
       }
     }
   },
-  stage: { currentStage: 'wallet-initialization' | 'address-validation' }
+  stage: { currentStage: 'wallet-initialization' | 'tx-update-events' | ... },
+  transactionHistory: { transactions: TransactionRecord[] },
+  tokens: { tokens: TokenInfo[], selectedTokenUid: string },
+  walletSelection: { fundingWalletId?: string, testWalletId?: string },
+  // ... RPC slices (getBalance, signWithAddress, betNanoContract, etc.)
 }
 ```
 
