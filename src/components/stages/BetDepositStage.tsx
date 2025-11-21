@@ -15,38 +15,72 @@ import {
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcBetDepositCard } from '../rpc/RpcBetDepositCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { useWalletStore } from '../../hooks/useWalletStore';
+import { NATIVE_TOKEN_UID, DEFAULT_NATIVE_TOKEN_CONFIG } from '@hathor/wallet-lib/lib/constants';
 
 export const BetDepositStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const { getWallet } = useWalletStore();
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const testWallet = useSelector((state: RootState) =>
-    testWalletId ? state.walletStore.wallets[testWalletId] : null
-  );
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const betDepositData = useSelector((state: RootState) => state.betDeposit);
-  const ncId = useSelector((state: RootState) => state.betNanoContract.ncId);
+  const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
+  const ncId = betNanoContract.ncId;
+  const initialToken = betNanoContract.token;
+
+  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [betChoice, setBetChoice] = useState<string>('');
+  const [betChoice, setBetChoice] = useState<string>('Result_1');
   const [amount, setAmount] = useState<string>('1');
   const [address, setAddress] = useState<string>('');
-  const [token, setToken] = useState<string>('00');
+  const [token, setToken] = useState<string>(initialToken || NATIVE_TOKEN_UID);
+  const [addressIndex, setAddressIndex] = useState<number>(0);
   const [pushTx, setPushTx] = useState<boolean>(false);
+
+  // Update token when initialToken changes
+  useEffect(() => {
+    if (initialToken) {
+      setToken(initialToken);
+    }
+  }, [initialToken]);
+
+  // Compute wallet tokens (include native token + custom tokens from Redux)
+  const allTokens = useSelector((state: RootState) => state.tokens.tokens);
+  const walletTokens = React.useMemo(() => {
+    const tokens = [
+      {
+        uid: NATIVE_TOKEN_UID,
+        symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+        name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+      },
+    ];
+
+    if (testWallet?.tokenUids) {
+      const customTokens = testWallet.tokenUids
+        .filter((uid) => uid !== NATIVE_TOKEN_UID)
+        .map((uid) => allTokens.find((t) => t.uid === uid))
+        .filter((t): t is { uid: string; name: string; symbol: string } => t !== undefined);
+
+      tokens.push(...customTokens);
+    }
+
+    return tokens;
+  }, [testWallet, allTokens]);
 
   // Get test wallet address at index 0
   useEffect(() => {
     const getAddress = async () => {
       if (testWallet?.instance) {
         try {
-          // Type assertion since we know the instance has getAddressAtIndex method
-          const wallet = testWallet.instance as { getAddressAtIndex: (index: number) => Promise<string> };
-          const address = await wallet.getAddressAtIndex(0);
+          const address = await testWallet.instance.getAddressAtIndex(0);
           setTestWalletAddress(address);
         } catch (error) {
           console.error('Failed to get test wallet address:', error);
@@ -59,6 +93,26 @@ export const BetDepositStage: React.FC = () => {
 
     getAddress();
   }, [testWallet]);
+
+  // Derive address from selected index
+  useEffect(() => {
+    const deriveAddress = async () => {
+      if (testWallet?.instance) {
+        try {
+          const derivedAddress = await testWallet.instance.getAddressAtIndex(addressIndex);
+          setAddress(derivedAddress);
+        } catch (error) {
+          console.error(`[BetDeposit] Failed to derive address at index ${addressIndex}:`, error);
+          setAddress('');
+        }
+      } else {
+        console.log('[BetDeposit] Wallet not loaded yet');
+        setAddress('');
+      }
+    };
+
+    deriveAddress();
+  }, [testWallet, addressIndex]);
 
   // Check if connected address matches test wallet address at index 0
   const addressMismatch = useMemo(() => {
@@ -112,10 +166,11 @@ export const BetDepositStage: React.FC = () => {
         isDryRun,
       }));
 
-      // Store response in Redux
+      // Store response in Redux with betChoice metadata
       dispatch(setBetDepositResponse({
         response,
         duration,
+        betChoice,
       }));
 
       return { request, response };
@@ -231,16 +286,20 @@ export const BetDepositStage: React.FC = () => {
         <RpcBetDepositCard
           onExecute={handleExecuteBetDeposit}
           disabled={!ncId}
+          ncId={ncId}
           betChoice={betChoice}
           setBetChoice={setBetChoice}
           amount={amount}
           setAmount={setAmount}
           address={address}
-          setAddress={setAddress}
+          addressIndex={addressIndex}
+          setAddressIndex={setAddressIndex}
           token={token}
           setToken={setToken}
+          initialToken={initialToken}
           pushTx={pushTx}
           setPushTx={setPushTx}
+          tokens={walletTokens}
           isDryRun={isDryRun}
           initialRequest={betDepositData.request}
           initialResponse={betDepositData.rawResponse}

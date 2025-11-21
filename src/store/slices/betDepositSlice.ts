@@ -18,6 +18,7 @@ export interface BetDepositState {
   timestamp: number | null;
   duration: number | null;
   isDryRun: boolean;
+  betChoice: string | null; // Store the bet choice for later redemption
 }
 
 const initialState: BetDepositState = {
@@ -28,6 +29,7 @@ const initialState: BetDepositState = {
   timestamp: null,
   duration: null,
   isDryRun: false,
+  betChoice: null,
 };
 
 const betDepositSlice = createSlice({
@@ -48,12 +50,15 @@ const betDepositSlice = createSlice({
     },
     setBetDepositResponse: (
       state,
-      action: PayloadAction<{ response: unknown; duration: number }>
+      action: PayloadAction<{ response: unknown; duration: number; betChoice?: string }>
     ) => {
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
+      if (action.payload.betChoice) {
+        state.betChoice = action.payload.betChoice;
+      }
     },
     setBetDepositError: (state, action: PayloadAction<{ error: string; duration: number }>) => {
       state.error = action.payload.error;
@@ -69,6 +74,7 @@ const betDepositSlice = createSlice({
       state.timestamp = null;
       state.duration = null;
       state.isDryRun = false;
+      state.betChoice = null;
     },
   },
 });

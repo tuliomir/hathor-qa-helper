@@ -11,12 +11,14 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 export interface BetNanoContractState {
   ncId: string | null;
   blueprintId: string | null;
+  token: string | null;
   timestamp: number | null;
 }
 
 const initialState: BetNanoContractState = {
   ncId: null,
   blueprintId: null,
+  token: null,
   timestamp: null,
 };
 
@@ -24,10 +26,13 @@ const betNanoContractSlice = createSlice({
   name: 'betNanoContract',
   initialState,
   reducers: {
-    setBetNanoContractId: (state, action: PayloadAction<{ ncId: string; blueprintId?: string }>) => {
+    setBetNanoContractId: (state, action: PayloadAction<{ ncId: string; blueprintId?: string; token?: string }>) => {
       state.ncId = action.payload.ncId;
       if (action.payload.blueprintId) {
         state.blueprintId = action.payload.blueprintId;
+      }
+      if (action.payload.token) {
+        state.token = action.payload.token;
       }
       state.timestamp = Date.now();
     },
@@ -37,6 +42,7 @@ const betNanoContractSlice = createSlice({
     clearBetNanoContractData: (state) => {
       state.ncId = null;
       state.blueprintId = null;
+      state.token = null;
       state.timestamp = null;
     },
   },

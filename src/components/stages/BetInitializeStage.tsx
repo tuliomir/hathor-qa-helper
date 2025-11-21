@@ -169,6 +169,7 @@ export const BetInitializeStage: React.FC = () => {
         dispatch(setBetNanoContractId({
           ncId: (response as any).response.hash,
           blueprintId,
+          token,
         }));
       }
 

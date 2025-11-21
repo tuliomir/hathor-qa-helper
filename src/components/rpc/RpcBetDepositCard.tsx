@@ -13,16 +13,20 @@ export interface RpcBetDepositCardProps {
   onExecute: () => Promise<any>;
   disabled?: boolean;
   isDryRun?: boolean;
+  ncId: string | null;
   betChoice: string;
   setBetChoice: (value: string) => void;
   amount: string;
   setAmount: (value: string) => void;
   address: string;
-  setAddress: (value: string) => void;
+  addressIndex: number;
+  setAddressIndex: (value: number) => void;
   token: string;
   setToken: (value: string) => void;
+  initialToken?: string | null; // Token from initialized nano contract
   pushTx: boolean;
   setPushTx: (value: boolean) => void;
+  tokens?: { uid: string; symbol: string; name?: string }[];
   // Persisted data from Redux
   initialRequest?: { method: string; params: any } | null;
   initialResponse?: any | null;
@@ -33,16 +37,20 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   onExecute,
   disabled = false,
   isDryRun = false,
+  ncId,
   betChoice,
   setBetChoice,
   amount,
   setAmount,
   address,
-  setAddress,
+  addressIndex,
+  setAddressIndex,
   token,
   setToken,
+  initialToken = null,
   pushTx,
   setPushTx,
+  tokens = [],
   initialRequest = null,
   initialResponse = null,
   initialError = null,
@@ -52,8 +60,14 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [requestExpanded, setRequestExpanded] = useState(false);
+  const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
   const { showToast } = useToast();
+
+  // Live request building - calculate request on every input change
+  const [liveRequest, setLiveRequest] = useState<{ method: string; params: any } | null>(null);
+
+  // Check if token matches the initialized token
+  const tokenMismatch = initialToken && token && token.toLowerCase() !== initialToken.toLowerCase();
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -70,6 +84,37 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
       setExpanded(true);
     }
   }, [initialRequest, initialResponse, initialError]);
+
+  // Live request building - recalculate on every input change
+  useEffect(() => {
+    const amountNum = parseFloat(amount) || 0;
+
+    const invokeParams = {
+      network: 'testnet',
+      method: 'bet',
+      blueprint_id: null,
+      actions: [
+        {
+          type: 'deposit',
+          token: token || '<token>',
+          amount: amountNum || '<amount>',
+        },
+      ],
+      args: [betChoice || '<bet_choice>'],
+      push_tx: pushTx,
+      nc_id: ncId || '<nc_id>',
+      nc_method: 'bet',
+      nc_args: [betChoice || '<bet_choice>'],
+      address: address || '<address>',
+    };
+
+    const requestParams = {
+      method: 'htr_sendNanoContractTx',
+      params: invokeParams,
+    };
+
+    setLiveRequest(requestParams);
+  }, [ncId, betChoice, amount, address, token, pushTx]);
 
   const handleExecute = async () => {
     setLoading(true);
@@ -164,7 +209,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               type="text"
               value={betChoice}
               onChange={(e) => setBetChoice(e.target.value)}
-              placeholder="E.g., Yes, No, 1x0, 2x0"
+              placeholder="Result_1"
               className="input"
             />
             <p className="text-xs text-muted mt-1">
@@ -187,34 +232,85 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
             </p>
           </div>
 
-          {/* Address */}
+          {/* Address Index */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Your Address</label>
+            <label className="block text-sm font-medium mb-1.5">Change Address Index</label>
             <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter your wallet address"
+              type="number"
+              value={addressIndex}
+              onChange={(e) => setAddressIndex(parseInt(e.target.value) || 0)}
+              min="0"
+              placeholder="0"
               className="input"
             />
             <p className="text-xs text-muted mt-1">
-              Your wallet address for placing the bet
+              Index of the address to use for placing the bet
             </p>
           </div>
 
           {/* Token */}
           <div>
             <label className="block text-sm font-medium mb-1.5">Token</label>
-            <input
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Enter token ID (e.g., 00 for HTR)"
-              className="input"
-            />
+            {tokens && tokens.length > 0 ? (
+              <div className="relative">
+                <select
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  className="input cursor-pointer appearance-none pr-10"
+                >
+                  {tokens.map((t) => (
+                    <option key={t.uid} value={t.uid}>
+                      {t.symbol ? `${t.symbol} (${t.uid})` : t.uid}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-gray-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              </div>
+            ) : (
+              // Fallback to text input if tokens not provided
+              <input
+                type="text"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Enter token ID (e.g., 00 for HTR)"
+                className="input"
+              />
+            )}
             <p className="text-xs text-muted mt-1">
               Token used for placing the bet
             </p>
+            {tokenMismatch && (
+              <div className="mt-2 text-xs text-warning flex items-start gap-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 flex-shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>
+                  Warning: This token ({token}) is different from the one used to initialize the nano contract ({initialToken})
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Push TX Checkbox */}
@@ -223,10 +319,10 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               type="checkbox"
               checked={pushTx}
               onChange={(e) => setPushTx(e.target.checked)}
-              className="h-4 w-4"
+              className="checkbox checkbox-primary"
               id="pushTx"
             />
-            <label htmlFor="pushTx" className="text-sm">
+            <label htmlFor="pushTx" className="text-sm cursor-pointer">
               Push Transaction
             </label>
           </div>
@@ -271,8 +367,8 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
         </div>
       )}
 
-      {/* Request Info Section */}
-      {requestInfo && (
+      {/* Live Request Section */}
+      {liveRequest && (
         <div className="card-primary mb-7.5">
           <div className="flex items-center justify-between mb-3">
             <button
@@ -280,20 +376,25 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
             >
               <span>{requestExpanded ? '▼' : '▶'}</span>
-              Request
+              Request {requestInfo ? '(Sent)' : '(Preview)'}
             </button>
-            <CopyButton text={safeStringify(requestInfo, 2)} label="Copy request" />
+            <CopyButton text={safeStringify(liveRequest, 2)} label="Copy request" />
           </div>
 
           {requestExpanded && (
             <div className="bg-blue-50 border border-blue-300 rounded p-4">
+              {!requestInfo && (
+                <p className="text-sm text-blue-800 mb-3">
+                  This is a live preview of the request that will be sent. It updates as you change the inputs above.
+                </p>
+              )}
               <div className="space-y-3">
                 <div className="bg-white border border-blue-200 rounded overflow-hidden">
                   <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
                     <span className="text-sm font-semibold text-blue-800">method</span>
                   </div>
                   <div className="px-3 py-2">
-                    <span className="text-sm font-mono text-blue-900">{requestInfo.method}</span>
+                    <span className="text-sm font-mono text-blue-900">{liveRequest.method}</span>
                   </div>
                 </div>
                 <div className="bg-white border border-blue-200 rounded overflow-hidden">
@@ -302,7 +403,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
                   </div>
                   <div className="px-3 py-2 max-h-64 overflow-y-auto">
                     <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
-                      {safeStringify(requestInfo.params, 2)}
+                      {safeStringify(liveRequest.params, 2)}
                     </pre>
                   </div>
                 </div>
