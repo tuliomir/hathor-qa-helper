@@ -61,6 +61,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
+  const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const { showToast } = useToast();
 
   // Live request building - calculate request on every input change
@@ -366,6 +367,53 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Intermediates Section */}
+      <div className="card-primary mb-7.5">
+        <div className="flex items-center justify-between mb-3">
+          <button
+            onClick={() => setIntermediatesExpanded(!intermediatesExpanded)}
+            className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
+          >
+            <span>{intermediatesExpanded ? '▼' : '▶'}</span>
+            Intermediate Calculations
+          </button>
+        </div>
+
+        {intermediatesExpanded && (
+          <div className="bg-yellow-50 border border-yellow-300 rounded p-4">
+            <p className="text-sm text-yellow-800 mb-3">
+              These values are calculated automatically from your inputs and will be used in the request.
+            </p>
+            <div className="space-y-3">
+              {/* Derived Address */}
+              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
+                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-yellow-800">
+                      Bet Address (from index {addressIndex})
+                    </span>
+                    {address && (
+                      <CopyButton text={address} label="Copy" />
+                    )}
+                  </div>
+                </div>
+                <div className="px-3 py-2">
+                  {address ? (
+                    <span className="text-sm font-mono text-yellow-900 break-all">
+                      {address}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted italic">
+                      Deriving address from wallet...
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Live Request Section */}
       {liveRequest && (
