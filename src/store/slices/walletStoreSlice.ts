@@ -18,6 +18,16 @@ import { addToken } from './tokensSlice';
 const STORAGE_KEY = 'qa-helper-wallets';
 
 /**
+ * Wallet event captured from HathorWallet event emitter
+ */
+export interface WalletEvent {
+  id: string; // Unique event ID
+  eventType: 'new-tx' | 'update-tx' | 'state' | 'more-addresses-loaded';
+  timestamp: number; // Unix timestamp in milliseconds
+  data: any; // Event payload from wallet-lib
+}
+
+/**
  * Stored wallet information in Redux (balance as string for serializability)
  * This differs from WalletInfo which exposes balance as BigInt via selectors
  */
@@ -28,6 +38,7 @@ interface StoredWalletInfo {
   firstAddress?: string;
   balance?: string; // Stored as string for Redux serializability
   tokenUids?: string[]; // Array of token UIDs for this wallet
+  events: WalletEvent[]; // Event history for this wallet
   error?: string;
 }
 
@@ -73,6 +84,7 @@ const initialState: WalletStoreState = {
         metadata,
         instance: null,
         status: 'idle',
+        events: [],
       };
       return acc;
     },
@@ -212,9 +224,17 @@ export const startWallet = createAsyncThunk(
         }
       }
 
-      // Set up 'new-tx' event listener to handle incoming transactions
+      // Set up event listeners for all wallet events
+      // Handler for 'new-tx' event
       const handleNewTx = async (tx: any) => {
         console.log('New transaction received:', tx);
+
+        // Store event in Redux
+        dispatch(addWalletEvent({
+          walletId,
+          eventType: 'new-tx',
+          data: tx,
+        }));
 
         // Check if the transaction has tokenName and tokenSymbol (custom token transaction)
         if (tx.tokenName && tx.tokenSymbol) {
@@ -227,21 +247,67 @@ export const startWallet = createAsyncThunk(
         dispatch(refreshWalletBalance(walletId));
       };
 
-      // Store the event listener reference so we can remove it later
-      walletInstance.on('new-tx', handleNewTx);
+      // Handler for 'update-tx' event
+      const handleUpdateTx = async (tx: any) => {
+        console.log('Transaction update received:', tx);
 
-      // Store the handler in a global map for cleanup
+        // Store event in Redux
+        dispatch(addWalletEvent({
+          walletId,
+          eventType: 'update-tx',
+          data: tx,
+        }));
+
+        // Refresh balance on transaction updates
+        dispatch(refreshWalletBalance(walletId));
+      };
+
+      // Handler for 'state' event
+      const handleState = (state: any) => {
+        console.log('Wallet state changed:', state);
+
+        // Store event in Redux
+        dispatch(addWalletEvent({
+          walletId,
+          eventType: 'state',
+          data: state,
+        }));
+      };
+
+      // Handler for 'more-addresses-loaded' event
+      const handleMoreAddressesLoaded = (data: any) => {
+        console.log('More addresses loaded:', data);
+
+        // Store event in Redux
+        dispatch(addWalletEvent({
+          walletId,
+          eventType: 'more-addresses-loaded',
+          data,
+        }));
+      };
+
+      // Register all event listeners
+      walletInstance.on('new-tx', handleNewTx);
+      walletInstance.on('update-tx', handleUpdateTx);
+      walletInstance.on('state', handleState);
+      walletInstance.on('more-addresses-loaded', handleMoreAddressesLoaded);
+
+      // Store all handlers in the global map for cleanup
       if (!walletEventHandlers.has(walletId)) {
         walletEventHandlers.set(walletId, {});
       }
-      walletEventHandlers.get(walletId)!['new-tx'] = handleNewTx;
+      const handlers = walletEventHandlers.get(walletId)!;
+      handlers['new-tx'] = handleNewTx;
+      handlers['update-tx'] = handleUpdateTx;
+      handlers['state'] = handleState;
+      handlers['more-addresses-loaded'] = handleMoreAddressesLoaded;
 
       return { walletId, firstAddress, balance: balanceString };
     } catch (error) {
       // Cleanup on error
       const instance = walletInstancesMap.get(walletId);
       if (instance) {
-        await instance.stop().catch(console.error);
+	      await instance.stop().catch((err: unknown) => console.error('Error stopping wallet after failed start:', err));
         walletInstancesMap.delete(walletId);
       }
 
@@ -398,6 +464,7 @@ const walletStoreSlice = createSlice({
           metadata,
           instance: null,
           status: 'idle',
+          events: [],
         };
 
         // Sync to LocalStorage
@@ -513,6 +580,28 @@ const walletStoreSlice = createSlice({
         walletInfo.tokenUids = tokenUids;
       }
     },
+
+    addWalletEvent: (
+      state,
+      action: PayloadAction<{
+        walletId: string;
+        eventType: WalletEvent['eventType'];
+        data: any;
+      }>
+    ) => {
+      const { walletId, eventType, data } = action.payload;
+      const walletInfo = state.wallets[walletId];
+
+      if (walletInfo) {
+        const event: WalletEvent = {
+          id: `${walletId}-${eventType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          eventType,
+          timestamp: Date.now(),
+          data,
+        };
+        walletInfo.events.push(event);
+      }
+    },
   },
 });
 
@@ -524,6 +613,60 @@ export const {
   updateWalletStatus,
   updateWalletBalance,
   updateWalletTokens,
+  addWalletEvent,
 } = walletStoreSlice.actions;
 
 export default walletStoreSlice.reducer;
+
+/**
+ * Selectors for wallet events
+ */
+
+/**
+ * Get all events for a specific wallet
+ */
+export const selectWalletEvents = (state: RootState, walletId: string): WalletEvent[] => {
+  const walletInfo = state.walletStore.wallets[walletId];
+  return walletInfo?.events || [];
+};
+
+/**
+ * Get all events across all wallets (useful for global event monitoring)
+ */
+export const selectAllWalletEvents = (state: RootState): Array<WalletEvent & { walletId: string }> => {
+  const allEvents: Array<WalletEvent & { walletId: string }> = [];
+
+  Object.entries(state.walletStore.wallets).forEach(([walletId, walletInfo]) => {
+    walletInfo.events.forEach((event) => {
+      allEvents.push({ ...event, walletId });
+    });
+  });
+
+  // Sort by timestamp, most recent first
+  return allEvents.sort((a, b) => b.timestamp - a.timestamp);
+};
+
+/**
+ * Get all events that involve a specific transaction hash
+ * Searches for tx_id or txId in the event data
+ */
+export const selectEventsByTxHash = (state: RootState, txHash: string): Array<WalletEvent & { walletId: string }> => {
+  const allEvents = selectAllWalletEvents(state);
+
+  return allEvents.filter((event) => {
+    // Check if the event data contains this transaction hash
+    if (event.data && typeof event.data === 'object') {
+      const eventTxId = event.data.tx_id || event.data.txId;
+      return eventTxId === txHash;
+    }
+    return false;
+  });
+};
+
+/**
+ * Get the latest event for a specific transaction hash
+ */
+export const selectLatestEventForTx = (state: RootState, txHash: string): (WalletEvent & { walletId: string }) | null => {
+  const events = selectEventsByTxHash(state, txHash);
+  return events.length > 0 ? events[0] : null;
+};

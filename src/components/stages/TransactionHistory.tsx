@@ -11,6 +11,7 @@ import CopyButton from '../common/CopyButton';
 import Loading from '../common/Loading';
 import { NETWORK_CONFIG } from '../../constants/network';
 import dateFormatter from '@hathor/wallet-lib/lib/utils/date';
+import { getTransactionStatus, getStatusColorClass } from '../../utils/transactionStatus';
 
 interface WalletTransaction {
   txId: string;
@@ -97,12 +98,6 @@ export default function TransactionHistory() {
       ? NETWORK_CONFIG.MAINNET.explorerUrl
       : NETWORK_CONFIG.TESTNET.explorerUrl;
     return `${baseUrl}transaction/${hash}`;
-  }
-
-  // Determine transaction status
-  function getTxStatus(tx: WalletTransaction): string {
-    if (!tx.firstBlock) return 'pending';
-    return tx.voided ? 'voided' : 'valid';
   }
 
   // Determine transaction type
@@ -256,7 +251,7 @@ export default function TransactionHistory() {
                 </thead>
                 <tbody>
                   {paginatedTxs.map((tx) => {
-                    const status = getTxStatus(tx);
+                    const status = getTransactionStatus(tx);
                     const txType = getTxType(tx);
                     return (
                       <tr
@@ -277,15 +272,7 @@ export default function TransactionHistory() {
                           {tx.balance}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs ${
-                              status === 'valid'
-                                ? 'bg-success/10 text-success'
-                                : status === 'pending'
-                                ? 'bg-warning/10 text-warning'
-                                : 'bg-danger/10 text-danger'
-                            }`}
-                          >
+                          <span className={`px-2 py-0.5 rounded text-xs ${getStatusColorClass(status)}`}>
                             {status}
                           </span>
                         </td>

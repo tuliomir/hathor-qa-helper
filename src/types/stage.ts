@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw';
 
 /**
  * Stage configuration
@@ -115,5 +115,11 @@ export const STAGES: StageItem[] = [
     title: 'Transaction History',
     description: 'View transaction history for the test wallet',
     icon: '📜',
+  },
+  {
+    id: 'tx-update-events',
+    title: 'Tx Update Events',
+    description: 'Monitor real-time wallet events (new-tx, update-tx, state, etc.)',
+    icon: '📡',
   },
 ];

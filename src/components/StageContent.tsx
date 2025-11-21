@@ -8,6 +8,7 @@ import WalletInitialization from './stages/WalletInitialization';
 import AddressValidation from './stages/AddressValidation';
 import CustomTokens from './stages/CustomTokens';
 import TransactionHistory from './stages/TransactionHistory';
+import TxUpdateEvents from './stages/TxUpdateEvents';
 import { ConnectionStage } from './stages/ConnectionStage';
 import { GetBalanceStage } from './stages/GetBalanceStage';
 import { SignWithAddressStage } from './stages/SignWithAddressStage';
@@ -26,6 +27,7 @@ export default function StageContent() {
       {currentStage === 'address-validation' && <AddressValidation />}
       {currentStage === 'custom-tokens' && <CustomTokens />}
       {currentStage === 'transaction-history' && <TransactionHistory />}
+      {currentStage === 'tx-update-events' && <TxUpdateEvents />}
       {currentStage === 'rpc-connection' && <ConnectionStage />}
       {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
       {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
