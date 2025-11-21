@@ -30,7 +30,7 @@ export const BetDepositStage: React.FC = () => {
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const betDepositData = useSelector((state: RootState) => state.betDeposit);
   const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
-  const ncId = betNanoContract.ncId;
+  const latestInitializedNcId = betNanoContract.ncId;
   const initialToken = betNanoContract.token;
 
   // Get the actual wallet instance (not from Redux, from walletInstancesMap)
@@ -38,12 +38,20 @@ export const BetDepositStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
+  const [ncId, setNcId] = useState<string>(latestInitializedNcId || '');
   const [betChoice, setBetChoice] = useState<string>('Result_1');
   const [amount, setAmount] = useState<string>('1');
   const [address, setAddress] = useState<string>('');
   const [token, setToken] = useState<string>(initialToken || NATIVE_TOKEN_UID);
   const [addressIndex, setAddressIndex] = useState<number>(0);
   const [pushTx, setPushTx] = useState<boolean>(false);
+
+  // Update ncId when latestInitializedNcId changes
+  useEffect(() => {
+    if (latestInitializedNcId) {
+      setNcId(latestInitializedNcId);
+    }
+  }, [latestInitializedNcId]);
 
   // Update token when initialToken changes
   useEffect(() => {
@@ -253,40 +261,13 @@ export const BetDepositStage: React.FC = () => {
         </div>
       )}
 
-      {/* No Nano Contract Warning */}
-      {!ncId && isConnected && !addressMismatch && (
-        <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-warning flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-yellow-900 m-0">No Nano Contract ID Available</p>
-              <p className="text-sm text-yellow-800 mt-1 mb-0">
-                No Nano Contract ID available. Please initialize a bet first in the Initialize Bet stage.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* BetDeposit Card */}
       {isConnected && !addressMismatch && rpcHandlers && (
         <RpcBetDepositCard
           onExecute={handleExecuteBetDeposit}
-          disabled={!ncId}
           ncId={ncId}
+          setNcId={setNcId}
+          latestInitializedNcId={latestInitializedNcId}
           betChoice={betChoice}
           setBetChoice={setBetChoice}
           amount={amount}

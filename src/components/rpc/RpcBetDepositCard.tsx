@@ -11,9 +11,10 @@ import { safeStringify } from '../../utils/betHelpers';
 
 export interface RpcBetDepositCardProps {
   onExecute: () => Promise<any>;
-  disabled?: boolean;
   isDryRun?: boolean;
-  ncId: string | null;
+  ncId: string;
+  setNcId: (value: string) => void;
+  latestInitializedNcId: string | null; // The latest initialized NC ID from Initialize stage
   betChoice: string;
   setBetChoice: (value: string) => void;
   amount: string;
@@ -35,9 +36,10 @@ export interface RpcBetDepositCardProps {
 
 export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   onExecute,
-  disabled = false,
   isDryRun = false,
   ncId,
+  setNcId,
+  latestInitializedNcId,
   betChoice,
   setBetChoice,
   amount,
@@ -117,7 +119,22 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
     setLiveRequest(requestParams);
   }, [ncId, betChoice, amount, address, token, pushTx]);
 
+  const handleSelectLatestNcId = () => {
+    if (!latestInitializedNcId) {
+      showToast('No nano contract has been initialized yet. Please initialize a bet first.', 'error');
+      return;
+    }
+    setNcId(latestInitializedNcId);
+    showToast('Nano Contract ID selected successfully', 'success');
+  };
+
   const handleExecute = async () => {
+    // Validate ncId is provided
+    if (!ncId || ncId.trim() === '') {
+      showToast('Please provide a Nano Contract ID', 'error');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -203,6 +220,43 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
         </div>
 
         <div className="space-y-4">
+          {/* Nano Contract ID */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Nano Contract ID</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={ncId}
+                onChange={(e) => setNcId(e.target.value)}
+                placeholder="Enter nano contract ID"
+                className="input flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleSelectLatestNcId}
+                className="btn-secondary px-4 flex items-center gap-2"
+                title="Select latest initialized nano contract"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Select
+              </button>
+            </div>
+            <p className="text-xs text-muted mt-1">
+              The nano contract ID to place a bet on. Click "Select" to use the latest initialized bet.
+            </p>
+          </div>
+
           {/* Bet Choice */}
           <div>
             <label className="block text-sm font-medium mb-1.5">Bet Choice</label>
@@ -330,7 +384,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
         </div>
 
         <div className="mt-6">
-          <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
+          <button onClick={handleExecute} disabled={loading} className="btn-primary">
             {loading ? 'Placing Bet...' : 'Place Bet'}
           </button>
         </div>
