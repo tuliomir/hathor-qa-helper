@@ -12,8 +12,8 @@ export interface TokenBalanceInfo {
   tokenSymbol: string;
   tokenName: string;
   balance: {
-    unlocked: number;
-    locked: number;
+    unlocked: string;  // Store as string for Redux serialization
+    locked: string;    // Store as string for Redux serialization
   };
   lockExpires: number | null;
   transactions: number;
@@ -66,6 +66,7 @@ const getBalanceSlice = createSlice({
       state,
       action: PayloadAction<{ response: unknown; duration: number }>
     ) => {
+      // Response is already serialized (BigInt converted to strings) before dispatch
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
@@ -75,14 +76,21 @@ const getBalanceSlice = createSlice({
         if (action.payload.response && Array.isArray(action.payload.response)) {
           const balances: TokenBalanceInfo[] = action.payload.response.map((token: unknown) => {
             const tokenData = token as Record<string, unknown>;
-            const balance = tokenData.balance as { unlocked?: number; locked?: number } | undefined;
+            const balance = tokenData.balance as { unlocked?: string | number; locked?: string | number } | undefined;
+
+            // Convert to string for Redux storage (handles both string and number)
+            const convertToString = (val: string | number | undefined): string => {
+              if (val === undefined || val === null) return '0';
+              return typeof val === 'string' ? val : val.toString();
+            };
+
             return {
               tokenId: (tokenData.tokenId || tokenData.token_id || '') as string,
               tokenSymbol: (tokenData.tokenSymbol || tokenData.token_symbol || '') as string,
               tokenName: (tokenData.tokenName || tokenData.token_name || '') as string,
               balance: {
-                unlocked: balance?.unlocked || 0,
-                locked: balance?.locked || 0,
+                unlocked: convertToString(balance?.unlocked),
+                locked: convertToString(balance?.locked),
               },
               lockExpires: (tokenData.lockExpires || tokenData.lock_expires || null) as number | null,
               transactions: (tokenData.transactions || 0) as number,

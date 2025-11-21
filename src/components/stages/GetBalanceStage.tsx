@@ -18,6 +18,7 @@ import { RpcGetBalanceCard } from '../rpc/RpcGetBalanceCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useToast } from '../../hooks/useToast';
 import { NATIVE_TOKEN_UID, DEFAULT_NATIVE_TOKEN_CONFIG } from '@hathor/wallet-lib/lib/constants';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const GetBalanceStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -143,9 +144,12 @@ export const GetBalanceStage: React.FC = () => {
         isDryRun,
       }));
 
+      // Serialize response to convert BigInt values to strings before dispatching
+      const serializedResponse = JSON.parse(JSONBigInt.stringify(response));
+
       // Store response in Redux
       dispatch(setGetBalanceResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
