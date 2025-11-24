@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
+import { ExplorerLink } from '../common/ExplorerLink';
 import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
@@ -525,7 +526,10 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs text-muted font-medium">Nano Contract ID</span>
-                <CopyButton text={result.response.hash} label="Copy NC ID" />
+                <div className="flex items-center gap-1">
+                  <CopyButton text={result.response.hash} label="Copy NC ID" />
+                  <ExplorerLink hash={result.response.hash} />
+                </div>
               </div>
               <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
                 {result.response.hash}
@@ -793,24 +797,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                                     <span className="text-xs text-muted font-medium">Nano Contract ID (Hash)</span>
                                     <div className="flex items-center gap-1">
                                       <CopyButton text={hash} label="Copy ID" />
-                                      <a
-                                        href={`${NETWORK_CONFIG.TESTNET.explorerUrl}nano_contract/detail/${hash}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white border border-green-300 rounded hover:bg-green-100 transition-colors"
-                                        title="View in explorer"
-                                      >
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="h-3.5 w-3.5"
-                                          viewBox="0 0 20 20"
-                                          fill="currentColor"
-                                        >
-                                          <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                                          <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                                        </svg>
-                                        Explorer
-                                      </a>
+                                      <ExplorerLink hash={hash} specificPage="nc_detail" />
                                     </div>
                                   </div>
                                   <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-all">

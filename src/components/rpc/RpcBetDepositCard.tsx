@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
+import { ExplorerLink } from '../common/ExplorerLink';
 import { safeStringify } from '../../utils/betHelpers';
 
 export interface RpcBetDepositCardProps {
@@ -64,6 +65,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
+  const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
 
   // Live request building - calculate request on every input change
@@ -182,15 +184,141 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
 
   const hasResult = result !== null || error !== null;
 
+  // Helper to check if an object is a Buffer
+  const isBuffer = (obj: any): boolean => {
+    return obj && typeof obj === 'object' && obj.type === 'Buffer' && Array.isArray(obj.data);
+  };
+
+  // Helper to render Buffer in a compact way
+  const renderBuffer = (buffer: any) => {
+    const dataLength = buffer.data?.length || 0;
+    const preview = buffer.data?.slice(0, 8).join(', ') || '';
+    return (
+      <div className="text-sm">
+        <span className="text-muted">Buffer({dataLength} bytes)</span>
+        {dataLength > 0 && (
+          <span className="text-xs text-muted ml-2">
+            [{preview}{dataLength > 8 ? '...' : ''}]
+          </span>
+        )}
+      </div>
+    );
+  };
+
   // Render raw JSON view
   const renderRawJson = (data: any) => {
     return (
-      <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50">
-        <pre className="text-sm font-mono text-left whitespace-pre-wrap break-words m-0">
+      <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50 text-left">
+        <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 text-left">
           {safeStringify(data, 2)}
         </pre>
       </div>
     );
+  };
+
+  // Render formatted response for bet deposit
+  const renderFormattedResponse = (data: any) => {
+    if (!data || typeof data !== 'object') {
+      return <div className="text-sm text-muted italic p-3">Invalid response data</div>;
+    }
+
+    // Helper to render a single field
+    const renderField = (key: string, value: any, depth: number = 0): React.ReactElement => {
+      const indent = depth * 12;
+
+      // Handle Buffer objects
+      if (isBuffer(value)) {
+        return (
+          <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
+            <span className="text-sm font-semibold text-primary">{key}: </span>
+            {renderBuffer(value)}
+          </div>
+        );
+      }
+
+      // Handle arrays
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return (
+            <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
+              <span className="text-sm font-semibold text-primary">{key}: </span>
+              <span className="text-sm text-muted italic">[]</span>
+            </div>
+          );
+        }
+
+        return (
+          <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
+            <div className="text-sm font-semibold text-primary mb-1">{key}:</div>
+            <div className="ml-4 space-y-1">
+              {value.map((item, idx) => (
+                <div key={idx}>
+                  {typeof item === 'object' && item !== null ? (
+                    <div className="border-l-2 border-gray-300 pl-3">
+                      {Object.entries(item).map(([k, v]) => renderField(k, v, depth + 1))}
+                    </div>
+                  ) : (
+                    <div className="text-sm">
+                      <span className="text-muted">[{idx}]: </span>
+                      <span className="font-mono">{String(item)}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      // Handle nested objects
+      if (typeof value === 'object' && value !== null) {
+        return (
+          <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
+            <div className="text-sm font-semibold text-primary mb-1">{key}:</div>
+            <div className="ml-4 border-l-2 border-gray-300 pl-3">
+              {Object.entries(value).map(([k, v]) => renderField(k, v, depth + 1))}
+            </div>
+          </div>
+        );
+      }
+
+      // Handle primitives
+      return (
+        <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
+          <span className="text-sm font-semibold text-primary">{key}: </span>
+          <span className="text-sm font-mono">{String(value)}</span>
+        </div>
+      );
+    };
+
+    return (
+      <div className="border border-gray-300 rounded p-4 overflow-auto max-h-96 bg-white text-left">
+        {Object.entries(data).map(([key, value]) => renderField(key, value))}
+      </div>
+    );
+  };
+
+  // Main render function for results
+  const renderResult = () => {
+    if (!result) return null;
+
+    try {
+      const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+
+      // If showing raw, always use raw renderer
+      if (showRawResponse) {
+        return renderRawJson(parsedResult);
+      }
+
+      // Otherwise show formatted
+      return renderFormattedResponse(parsedResult);
+    } catch (e) {
+      return (
+        <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
+          <pre className="text-sm font-mono">{String(result)}</pre>
+        </div>
+      );
+    }
   };
 
   return (
@@ -412,7 +540,10 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs text-muted font-medium">Transaction Hash</span>
-                <CopyButton text={result.response.hash} label="Copy TX hash" />
+                <div className="flex items-center gap-1">
+                  <CopyButton text={result.response.hash} label="Copy TX hash" />
+                  <ExplorerLink hash={result.response.hash} />
+                </div>
               </div>
               <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-all">
                 {result.response.hash}
@@ -526,10 +657,20 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               <span>{expanded ? '▼' : '▶'}</span>
               {error ? 'Error Details' : 'Response'}
             </button>
-            <CopyButton
-              text={result ? safeStringify(result, 2) : error || ''}
-              label="Copy response"
-            />
+            <div className="flex items-center gap-2">
+              {result && !error && (
+                <button
+                  onClick={() => setShowRawResponse(!showRawResponse)}
+                  className="btn-secondary py-1.5 px-3 text-sm"
+                >
+                  {showRawResponse ? 'Show Formatted' : 'Show Raw'}
+                </button>
+              )}
+              <CopyButton
+                text={result ? safeStringify(result, 2) : error || ''}
+                label="Copy response"
+              />
+            </div>
           </div>
 
           {expanded && (
@@ -587,7 +728,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
                         </svg>
                         <span className="text-sm font-medium">Success</span>
                       </div>
-                      {renderRawJson(result)}
+                      {renderResult()}
                     </div>
                   )}
                 </>
