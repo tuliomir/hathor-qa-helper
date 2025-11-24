@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { NETWORK_CONFIG, NetworkType } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkType } from '../../constants/network';
 
 export interface ExplorerLinkProps {
   hash: string;

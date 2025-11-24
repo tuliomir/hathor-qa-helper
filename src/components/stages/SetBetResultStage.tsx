@@ -15,36 +15,56 @@ import {
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcSetBetResultCard } from '../rpc/RpcSetBetResultCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { useWalletStore } from '../../hooks/useWalletStore';
 
 export const SetBetResultStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const { getWallet } = useWalletStore();
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const testWallet = useSelector((state: RootState) =>
-    testWalletId ? state.walletStore.wallets[testWalletId] : null
-  );
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const setBetResultData = useSelector((state: RootState) => state.setBetResult);
-  const ncId = useSelector((state: RootState) => state.betNanoContract.ncId);
+  const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
+  const betDepositData = useSelector((state: RootState) => state.betDeposit);
+  const latestNcId = betNanoContract.ncId;
+  const depositedBetChoice = betDepositData.betChoice; // The choice from the deposit stage
+
+  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
+  const [ncId, setNcId] = useState<string>(latestNcId || '');
   const [oracleAddress, setOracleAddress] = useState<string>('');
   const [result, setResult] = useState<string>('');
+  const [oracleSignature, setOracleSignature] = useState<string>('');
+  const [addressIndex, setAddressIndex] = useState<number>(0);
   const [pushTx, setPushTx] = useState<boolean>(false);
+
+  // Update ncId when latestNcId changes
+  useEffect(() => {
+    if (latestNcId) {
+      setNcId(latestNcId);
+    }
+  }, [latestNcId]);
+
+  // Suggest result from deposited bet choice
+  useEffect(() => {
+    if (depositedBetChoice && !result) {
+      setResult(depositedBetChoice);
+    }
+  }, [depositedBetChoice]);
 
   // Get test wallet address at index 0
   useEffect(() => {
     const getAddress = async () => {
       if (testWallet?.instance) {
         try {
-          // Type assertion since we know the instance has getAddressAtIndex method
-          const wallet = testWallet.instance as { getAddressAtIndex: (index: number) => Promise<string> };
-          const address = await wallet.getAddressAtIndex(0);
+          const address = await testWallet.instance.getAddressAtIndex(0);
           setTestWalletAddress(address);
         } catch (error) {
           console.error('Failed to get test wallet address:', error);
@@ -57,6 +77,26 @@ export const SetBetResultStage: React.FC = () => {
 
     getAddress();
   }, [testWallet]);
+
+  // Derive oracle address from selected index
+  useEffect(() => {
+    const deriveAddress = async () => {
+      if (testWallet?.instance) {
+        try {
+          const address = await testWallet.instance.getAddressAtIndex(addressIndex);
+          setOracleAddress(address);
+        } catch (error) {
+          console.error(`[SetBetResult] Failed to derive address at index ${addressIndex}:`, error);
+          setOracleAddress('');
+        }
+      } else {
+        console.log('[SetBetResult] Wallet not loaded yet');
+        setOracleAddress('');
+      }
+    };
+
+    deriveAddress();
+  }, [testWallet, addressIndex]);
 
   // Check if connected address matches test wallet address at index 0
   const addressMismatch = useMemo(() => {
@@ -96,6 +136,7 @@ export const SetBetResultStage: React.FC = () => {
         ncId,
         oracleAddress,
         result,
+        oracleSignature,
         pushTx
       );
       const duration = Date.now() - startTime;
@@ -226,10 +267,17 @@ export const SetBetResultStage: React.FC = () => {
         <RpcSetBetResultCard
           onExecute={handleExecuteSetBetResult}
           disabled={!ncId}
+          ncId={ncId}
+          setNcId={setNcId}
+          latestNcId={latestNcId}
           oracleAddress={oracleAddress}
-          setOracleAddress={setOracleAddress}
+          addressIndex={addressIndex}
+          setAddressIndex={setAddressIndex}
           result={result}
           setResult={setResult}
+          depositedBetChoice={depositedBetChoice}
+          oracleSignature={oracleSignature}
+          setOracleSignature={setOracleSignature}
           pushTx={pushTx}
           setPushTx={setPushTx}
           isDryRun={isDryRun}

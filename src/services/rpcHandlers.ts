@@ -259,56 +259,24 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       ncId: string,
       oracle: string,
       result: string,
+      oracleSignature: string,
       pushTx: boolean
     ) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
       }
 
-      // First, sign the oracle data
-      const signRequestParams = {
-        method: 'htr_signOracleData',
-        params: {
-          network: DEFAULT_NETWORK,
-          nc_id: ncId,
-          data: result,
-          oracle,
-        },
-      };
+      // Use the provided oracle signature (will be calculated asynchronously in future updates)
+      // For now, the signature must be provided manually
+      const signedData = oracleSignature || '<oracle_signature>';
 
-      let signedData: string;
-      try {
-        if (dryRun) {
-          // In dry-run mode, use a placeholder signed data
-          signedData = '<signed_oracle_data_placeholder>';
-        } else {
-          const signResponse = await client.request({
-            topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
-            request: signRequestParams,
-          });
-
-          // Parse the signed data from the response
-          if ((signResponse as any)?.response?.signedData) {
-            signedData = (signResponse as any).response.signedData;
-          } else {
-            throw new Error('Failed to extract signed data from oracle signature response');
-          }
-        }
-      } catch (error) {
-        console.error('Failed to sign oracle data:', error);
-        const errorWithRequest = error as any;
-        errorWithRequest.requestParams = signRequestParams;
-        throw errorWithRequest;
-      }
-
-      // Now send the set_result transaction with the signed data
+      // Send the set_result transaction with the oracle signature
       const invokeParams = {
         network: DEFAULT_NETWORK,
         method: 'set_result',
         nc_id: ncId,
         actions: [],
-        args: [signedData],
+        args: [result, signedData],
         push_tx: pushTx,
       };
 
