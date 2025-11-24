@@ -10,6 +10,7 @@ import CopyButton from '../common/CopyButton';
 import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
+import { formatTimeUntil } from '../../utils/valuesUtils.ts'
 
 export interface RpcBetInitializeCardProps {
   onExecute: () => Promise<any>;
@@ -350,7 +351,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
-                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 002-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
               </svg>
               DRY RUN
             </span>
@@ -474,6 +475,9 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
             />
             <p className="text-xs text-muted mt-1">
               Last time users can place a bet
+            </p>
+            <p className="text-xs text-muted mt-1">
+              Time until this deadline: {formatTimeUntil(deadline)}
             </p>
           </div>
 
@@ -715,7 +719,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                       viewBox="0 0 20 20"
                       fill="currentColor"
                     >
-                      <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                      <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 002-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
