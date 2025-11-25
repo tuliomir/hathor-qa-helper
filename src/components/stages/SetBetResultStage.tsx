@@ -11,9 +11,10 @@ import {
   setSetBetResultRequest,
   setSetBetResultResponse,
   setSetBetResultError,
+  setSetBetResultFormData,
 } from '../../store/slices/setBetResultSlice';
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import { setSignOracleDataResult, clearSetBetResultOracleSignature } from '../../store/slices/navigationSlice';
+import { navigateToSignOracleData, clearSetBetResultNavigation } from '../../store/slices/navigationSlice';
 import { RpcSetBetResultCard } from '../rpc/RpcSetBetResultCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -24,8 +25,8 @@ export const SetBetResultStage: React.FC = () => {
   const { getWallet } = useWalletStore();
   const { setCurrentStage } = useStage();
 
-  // Check if we're coming from Sign Oracle Data with a signature
-  const incomingOracleSignature = useSelector((state: RootState) => state.navigation.setBetResult_oracleSignature);
+  // Check if we're coming from Sign Oracle Data with data
+  const navigationData = useSelector((state: RootState) => state.navigation.setBetResult);
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
@@ -44,28 +45,46 @@ export const SetBetResultStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [ncId, setNcId] = useState<string>(latestNcId || '');
+  const [ncId, setNcId] = useState<string>('');
   const [oracleAddress, setOracleAddress] = useState<string>('');
   const [result, setResult] = useState<string>('');
   const [oracleSignature, setOracleSignature] = useState<string>('');
   const [addressIndex, setAddressIndex] = useState<number>(0);
   const [pushTx, setPushTx] = useState<boolean>(false);
 
-  // Load oracle signature from Redux if available (coming from Sign Oracle Data)
+  // Initialize from Redux on mount
   useEffect(() => {
-    if (incomingOracleSignature) {
-      setOracleSignature(incomingOracleSignature);
-      // Clear it from Redux after loading
-      dispatch(clearSetBetResultOracleSignature());
-    }
-  }, [incomingOracleSignature, dispatch]);
+    // Load from persisted state
+    setNcId(setBetResultData.ncId || latestNcId || '');
+    setAddressIndex(setBetResultData.addressIndex);
+    setResult(setBetResultData.result);
+    setOracleSignature(setBetResultData.oracleSignature);
+    setPushTx(setBetResultData.pushTx);
+  }, []); // Only on mount
 
-  // Update ncId when latestNcId changes
+  // Load data from navigation if available (coming from Sign Oracle Data)
   useEffect(() => {
-    if (latestNcId) {
+    if (navigationData.ncId !== null) {
+      setNcId(navigationData.ncId);
+      setAddressIndex(navigationData.addressIndex ?? 0);
+      setResult(navigationData.result ?? '');
+      setOracleSignature(navigationData.oracleSignature ?? '');
+      // Clear navigation data after loading
+      dispatch(clearSetBetResultNavigation());
+    }
+  }, [navigationData, dispatch]);
+
+  // Update ncId when latestNcId changes (only if current ncId is empty)
+  useEffect(() => {
+    if (latestNcId && !ncId) {
       setNcId(latestNcId);
     }
-  }, [latestNcId]);
+  }, [latestNcId, ncId]);
+
+  // Save form state to Redux whenever it changes
+  useEffect(() => {
+    dispatch(setSetBetResultFormData({ ncId, addressIndex, result, oracleSignature, pushTx }));
+  }, [ncId, addressIndex, result, oracleSignature, pushTx, dispatch]);
 
   // Suggest result from deposited bet choice
   useEffect(() => {
@@ -184,10 +203,10 @@ export const SetBetResultStage: React.FC = () => {
     }
   };
 
-  // Callback to navigate to Sign Oracle Data with current result
+  // Callback to navigate to Sign Oracle Data with current data
   const handleNavigateToSignOracleData = () => {
-    // Store the result in Redux so Sign Oracle Data can pick it up
-    dispatch(setSignOracleDataResult(result));
+    // Store all data in Redux so Sign Oracle Data can pick it up
+    dispatch(navigateToSignOracleData({ ncId, addressIndex, result }));
     // Navigate to Sign Oracle Data stage
     setCurrentStage('rpc-sign-oracle-data');
   };

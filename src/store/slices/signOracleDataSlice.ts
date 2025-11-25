@@ -16,6 +16,10 @@ interface SignOracleDataState {
   duration: number | null;
   isDryRun: boolean;
   signedData: string | null; // Extracted signed data for convenience
+  // Form state
+  ncId: string;
+  addressIndex: number;
+  data: string;
 }
 
 const initialState: SignOracleDataState = {
@@ -27,6 +31,10 @@ const initialState: SignOracleDataState = {
   duration: null,
   isDryRun: false,
   signedData: null,
+  // Form state
+  ncId: '',
+  addressIndex: 0,
+  data: '',
 };
 
 const signOracleDataSlice = createSlice({
@@ -81,6 +89,19 @@ const signOracleDataSlice = createSlice({
       state.duration = null;
       state.signedData = null;
     },
+    // Form state actions
+    setSignOracleDataFormData: (
+      state,
+      action: PayloadAction<{
+        ncId?: string;
+        addressIndex?: number;
+        data?: string;
+      }>
+    ) => {
+      if (action.payload.ncId !== undefined) state.ncId = action.payload.ncId;
+      if (action.payload.addressIndex !== undefined) state.addressIndex = action.payload.addressIndex;
+      if (action.payload.data !== undefined) state.data = action.payload.data;
+    },
   },
 });
 
@@ -89,6 +110,7 @@ export const {
   setSignOracleDataResponse,
   setSignOracleDataError,
   clearSignOracleDataData,
+  setSignOracleDataFormData,
 } = signOracleDataSlice.actions;
 
 export default signOracleDataSlice.reducer;

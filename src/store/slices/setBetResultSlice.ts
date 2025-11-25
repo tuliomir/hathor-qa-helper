@@ -18,6 +18,12 @@ export interface SetBetResultState {
   timestamp: number | null;
   duration: number | null;
   isDryRun: boolean;
+  // Form state
+  ncId: string;
+  addressIndex: number;
+  result: string;
+  oracleSignature: string;
+  pushTx: boolean;
 }
 
 const initialState: SetBetResultState = {
@@ -28,6 +34,12 @@ const initialState: SetBetResultState = {
   timestamp: null,
   duration: null,
   isDryRun: false,
+  // Form state
+  ncId: '',
+  addressIndex: 0,
+  result: '',
+  oracleSignature: '',
+  pushTx: false,
 };
 
 const setBetResultSlice = createSlice({
@@ -70,6 +82,23 @@ const setBetResultSlice = createSlice({
       state.duration = null;
       state.isDryRun = false;
     },
+    // Form state actions
+    setSetBetResultFormData: (
+      state,
+      action: PayloadAction<{
+        ncId?: string;
+        addressIndex?: number;
+        result?: string;
+        oracleSignature?: string;
+        pushTx?: boolean;
+      }>
+    ) => {
+      if (action.payload.ncId !== undefined) state.ncId = action.payload.ncId;
+      if (action.payload.addressIndex !== undefined) state.addressIndex = action.payload.addressIndex;
+      if (action.payload.result !== undefined) state.result = action.payload.result;
+      if (action.payload.oracleSignature !== undefined) state.oracleSignature = action.payload.oracleSignature;
+      if (action.payload.pushTx !== undefined) state.pushTx = action.payload.pushTx;
+    },
   },
 });
 
@@ -78,6 +107,7 @@ export const {
   setSetBetResultResponse,
   setSetBetResultError,
   clearSetBetResultData,
+  setSetBetResultFormData,
 } = setBetResultSlice.actions;
 
 export default setBetResultSlice.reducer;

@@ -11,9 +11,10 @@ import {
   setSignOracleDataRequest,
   setSignOracleDataResponse,
   setSignOracleDataError,
+  setSignOracleDataFormData,
 } from '../../store/slices/signOracleDataSlice';
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import { setSetBetResultOracleSignature, clearSignOracleDataResult } from '../../store/slices/navigationSlice';
+import { navigateToSetBetResult, clearSignOracleDataNavigation } from '../../store/slices/navigationSlice';
 import { RpcSignOracleDataCard } from '../rpc/RpcSignOracleDataCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -24,8 +25,8 @@ export const SignOracleDataStage: React.FC = () => {
   const { getWallet } = useWalletStore();
   const { setCurrentStage } = useStage();
 
-  // Check if we're coming from Set Bet Result with pre-filled data
-  const incomingResultData = useSelector((state: RootState) => state.navigation.signOracleData_resultData);
+  // Check if we're coming from Set Bet Result with data
+  const navigationData = useSelector((state: RootState) => state.navigation.signOracleData);
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
@@ -42,26 +43,41 @@ export const SignOracleDataStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [ncId, setNcId] = useState<string>(latestNcId || '');
+  const [ncId, setNcId] = useState<string>('');
   const [oracleAddress, setOracleAddress] = useState<string>('');
   const [data, setData] = useState<string>('');
   const [addressIndex, setAddressIndex] = useState<number>(0);
 
-  // Load result data from Redux if available (coming from Set Bet Result)
+  // Initialize from Redux on mount
   useEffect(() => {
-    if (incomingResultData) {
-      setData(incomingResultData);
-      // Clear it from Redux after loading
-      dispatch(clearSignOracleDataResult());
-    }
-  }, [incomingResultData, dispatch]);
+    // Load from persisted state
+    setNcId(signOracleDataData.ncId || latestNcId || '');
+    setAddressIndex(signOracleDataData.addressIndex);
+    setData(signOracleDataData.data);
+  }, []); // Only on mount
 
-  // Update ncId when latestNcId changes
+  // Load data from navigation if available (coming from Set Bet Result)
   useEffect(() => {
-    if (latestNcId) {
+    if (navigationData.ncId !== null) {
+      setNcId(navigationData.ncId);
+      setAddressIndex(navigationData.addressIndex ?? 0);
+      setData(navigationData.result ?? '');
+      // Clear navigation data after loading
+      dispatch(clearSignOracleDataNavigation());
+    }
+  }, [navigationData, dispatch]);
+
+  // Update ncId when latestNcId changes (only if current ncId is empty)
+  useEffect(() => {
+    if (latestNcId && !ncId) {
       setNcId(latestNcId);
     }
-  }, [latestNcId]);
+  }, [latestNcId, ncId]);
+
+  // Save form state to Redux whenever it changes
+  useEffect(() => {
+    dispatch(setSignOracleDataFormData({ ncId, addressIndex, data }));
+  }, [ncId, addressIndex, data, dispatch]);
 
   // Get test wallet address at index 0
   useEffect(() => {
@@ -173,8 +189,8 @@ export const SignOracleDataStage: React.FC = () => {
 
   // Callback to send signature back to Set Bet Result
   const handleSendToSetBetResult = (signedData: string) => {
-    // Store the signature in Redux so Set Bet Result can pick it up
-    dispatch(setSetBetResultOracleSignature(signedData));
+    // Store all data in Redux so Set Bet Result can pick it up
+    dispatch(navigateToSetBetResult({ ncId, addressIndex, result: data, oracleSignature: signedData }));
     // Navigate to Set Bet Result stage
     setCurrentStage('rpc-set-bet-result');
   };

@@ -8,48 +8,87 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 
 interface NavigationState {
   // Data for Sign Oracle Data stage (from Set Bet Result)
-  signOracleData_resultData: string | null;
+  signOracleData: {
+    ncId: string | null;
+    addressIndex: number | null;
+    result: string | null;
+  };
 
   // Data for Set Bet Result stage (from Sign Oracle Data)
-  setBetResult_oracleSignature: string | null;
+  setBetResult: {
+    ncId: string | null;
+    addressIndex: number | null;
+    result: string | null;
+    oracleSignature: string | null;
+  };
 }
 
 const initialState: NavigationState = {
-  signOracleData_resultData: null,
-  setBetResult_oracleSignature: null,
+  signOracleData: {
+    ncId: null,
+    addressIndex: null,
+    result: null,
+  },
+  setBetResult: {
+    ncId: null,
+    addressIndex: null,
+    result: null,
+    oracleSignature: null,
+  },
 };
 
 const navigationSlice = createSlice({
   name: 'navigation',
   initialState,
   reducers: {
-    // Store result data for Sign Oracle Data stage
-    setSignOracleDataResult: (state, action: PayloadAction<string>) => {
-      state.signOracleData_resultData = action.payload;
+    // Navigate to Sign Oracle Data with data
+    navigateToSignOracleData: (
+      state,
+      action: PayloadAction<{ ncId: string; addressIndex: number; result: string }>
+    ) => {
+      state.signOracleData.ncId = action.payload.ncId;
+      state.signOracleData.addressIndex = action.payload.addressIndex;
+      state.signOracleData.result = action.payload.result;
     },
 
-    // Clear result data for Sign Oracle Data stage
-    clearSignOracleDataResult: (state) => {
-      state.signOracleData_resultData = null;
+    // Clear Sign Oracle Data navigation data
+    clearSignOracleDataNavigation: (state) => {
+      state.signOracleData.ncId = null;
+      state.signOracleData.addressIndex = null;
+      state.signOracleData.result = null;
     },
 
-    // Store oracle signature for Set Bet Result stage
-    setSetBetResultOracleSignature: (state, action: PayloadAction<string>) => {
-      state.setBetResult_oracleSignature = action.payload;
+    // Navigate to Set Bet Result with data
+    navigateToSetBetResult: (
+      state,
+      action: PayloadAction<{
+        ncId: string;
+        addressIndex: number;
+        result: string;
+        oracleSignature: string;
+      }>
+    ) => {
+      state.setBetResult.ncId = action.payload.ncId;
+      state.setBetResult.addressIndex = action.payload.addressIndex;
+      state.setBetResult.result = action.payload.result;
+      state.setBetResult.oracleSignature = action.payload.oracleSignature;
     },
 
-    // Clear oracle signature for Set Bet Result stage
-    clearSetBetResultOracleSignature: (state) => {
-      state.setBetResult_oracleSignature = null;
+    // Clear Set Bet Result navigation data
+    clearSetBetResultNavigation: (state) => {
+      state.setBetResult.ncId = null;
+      state.setBetResult.addressIndex = null;
+      state.setBetResult.result = null;
+      state.setBetResult.oracleSignature = null;
     },
   },
 });
 
 export const {
-  setSignOracleDataResult,
-  clearSignOracleDataResult,
-  setSetBetResultOracleSignature,
-  clearSetBetResultOracleSignature,
+  navigateToSignOracleData,
+  clearSignOracleDataNavigation,
+  navigateToSetBetResult,
+  clearSetBetResultNavigation,
 } = navigationSlice.actions;
 
 export default navigationSlice.reducer;
