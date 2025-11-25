@@ -11,41 +11,76 @@ import {
   setBetWithdrawRequest,
   setBetWithdrawResponse,
   setBetWithdrawError,
+  setBetWithdrawFormData,
 } from '../../store/slices/betWithdrawSlice';
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcBetWithdrawCard } from '../rpc/RpcBetWithdrawCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { useWalletStore } from '../../hooks/useWalletStore';
 
 export const BetWithdrawStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const { getWallet } = useWalletStore();
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const testWallet = useSelector((state: RootState) =>
-    testWalletId ? state.walletStore.wallets[testWalletId] : null
-  );
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const betWithdrawData = useSelector((state: RootState) => state.betWithdraw);
-  const ncId = useSelector((state: RootState) => state.betNanoContract.ncId);
+  const betDepositData = useSelector((state: RootState) => state.betDeposit);
+  const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
+  const latestNcId = betNanoContract.ncId;
+
+  // Get the actual wallet instance
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [address, setAddress] = useState<string>('');
-  const [amount, setAmount] = useState<string>('100');
+  const [ncId, setNcId] = useState<string>('');
+  const [withdrawAddress, setWithdrawAddress] = useState<string>('');
+  const [addressIndex, setAddressIndex] = useState<number>(0);
+  const [amount, setAmount] = useState<string>('1');
   const [token, setToken] = useState<string>('00');
   const [pushTx, setPushTx] = useState<boolean>(false);
+
+  // Initialize ncId from latest on mount or when it changes
+  useEffect(() => {
+    if (latestNcId && !ncId) {
+      setNcId(latestNcId);
+    }
+  }, [latestNcId, ncId]);
+
+  // Initialize from Redux on mount
+  useEffect(() => {
+    // Prepopulate from Place Bet stage if it was used successfully
+    if (betDepositData.timestamp && !betDepositData.error && betDepositData.ncId) {
+      // Use deposit data as defaults (tester likely wants to withdraw what they deposited)
+      setNcId(betDepositData.ncId);
+      setAddressIndex(betDepositData.addressIndex);
+      setAmount(betDepositData.amount);
+      setToken(betDepositData.token);
+    } else {
+      // Fall back to persisted withdraw data or defaults
+      setAddressIndex(0);
+      setAmount(betWithdrawData.amount);
+      setToken(betWithdrawData.token);
+    }
+    setPushTx(betWithdrawData.pushTx);
+  }, []); // Only on mount
+
+  // Save form state to Redux whenever it changes
+  useEffect(() => {
+    dispatch(setBetWithdrawFormData({ address: withdrawAddress, amount, token, pushTx }));
+  }, [withdrawAddress, amount, token, pushTx, dispatch]);
 
   // Get test wallet address at index 0
   useEffect(() => {
     const getAddress = async () => {
       if (testWallet?.instance) {
         try {
-          // Type assertion since we know the instance has getAddressAtIndex method
-          const wallet = testWallet.instance as { getAddressAtIndex: (index: number) => Promise<string> };
-          const address = await wallet.getAddressAtIndex(0);
+          const address = await testWallet.instance.getAddressAtIndex(0);
           setTestWalletAddress(address);
         } catch (error) {
           console.error('Failed to get test wallet address:', error);
@@ -58,6 +93,26 @@ export const BetWithdrawStage: React.FC = () => {
 
     getAddress();
   }, [testWallet]);
+
+  // Derive withdrawal address from selected index
+  useEffect(() => {
+    const deriveAddress = async () => {
+      if (testWallet?.instance) {
+        try {
+          const address = await testWallet.instance.getAddressAtIndex(addressIndex);
+          setWithdrawAddress(address);
+        } catch (error) {
+          console.error(`[BetWithdraw] Failed to derive address at index ${addressIndex}:`, error);
+          setWithdrawAddress('');
+        }
+      } else {
+        console.log('[BetWithdraw] Wallet not loaded yet');
+        setWithdrawAddress('');
+      }
+    };
+
+    deriveAddress();
+  }, [testWallet, addressIndex]);
 
   // Check if connected address matches test wallet address at index 0
   const addressMismatch = useMemo(() => {
@@ -96,7 +151,7 @@ export const BetWithdrawStage: React.FC = () => {
       const amountNum = parseFloat(amount) || 0;
       const { request, response } = await rpcHandlers.getRpcBetWithdraw(
         ncId,
-        address,
+        withdrawAddress,
         amountNum,
         token,
         pushTx
@@ -229,8 +284,12 @@ export const BetWithdrawStage: React.FC = () => {
         <RpcBetWithdrawCard
           onExecute={handleExecuteBetWithdraw}
           disabled={!ncId}
-          address={address}
-          setAddress={setAddress}
+          ncId={ncId}
+          setNcId={setNcId}
+          latestNcId={latestNcId}
+          withdrawAddress={withdrawAddress}
+          addressIndex={addressIndex}
+          setAddressIndex={setAddressIndex}
           amount={amount}
           setAmount={setAmount}
           token={token}

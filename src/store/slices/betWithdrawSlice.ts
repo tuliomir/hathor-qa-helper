@@ -18,6 +18,11 @@ export interface BetWithdrawState {
   timestamp: number | null;
   duration: number | null;
   isDryRun: boolean;
+  // Form state
+  address: string;
+  amount: string;
+  token: string;
+  pushTx: boolean;
 }
 
 const initialState: BetWithdrawState = {
@@ -28,6 +33,11 @@ const initialState: BetWithdrawState = {
   timestamp: null,
   duration: null,
   isDryRun: false,
+  // Form state
+  address: '',
+  amount: '100',
+  token: '00',
+  pushTx: false,
 };
 
 const betWithdrawSlice = createSlice({
@@ -70,6 +80,21 @@ const betWithdrawSlice = createSlice({
       state.duration = null;
       state.isDryRun = false;
     },
+    // Form state actions
+    setBetWithdrawFormData: (
+      state,
+      action: PayloadAction<{
+        address?: string;
+        amount?: string;
+        token?: string;
+        pushTx?: boolean;
+      }>
+    ) => {
+      if (action.payload.address !== undefined) state.address = action.payload.address;
+      if (action.payload.amount !== undefined) state.amount = action.payload.amount;
+      if (action.payload.token !== undefined) state.token = action.payload.token;
+      if (action.payload.pushTx !== undefined) state.pushTx = action.payload.pushTx;
+    },
   },
 });
 
@@ -78,6 +103,7 @@ export const {
   setBetWithdrawResponse,
   setBetWithdrawError,
   clearBetWithdrawData,
+  setBetWithdrawFormData,
 } = betWithdrawSlice.actions;
 
 export default betWithdrawSlice.reducer;

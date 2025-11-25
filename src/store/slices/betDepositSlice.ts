@@ -19,6 +19,11 @@ export interface BetDepositState {
   duration: number | null;
   isDryRun: boolean;
   betChoice: string | null; // Store the bet choice for later redemption
+  // Form state for prepopulating withdraw
+  ncId: string;
+  amount: string;
+  token: string;
+  addressIndex: number;
 }
 
 const initialState: BetDepositState = {
@@ -30,6 +35,11 @@ const initialState: BetDepositState = {
   duration: null,
   isDryRun: false,
   betChoice: null,
+  // Form state
+  ncId: '',
+  amount: '1',
+  token: '00',
+  addressIndex: 0,
 };
 
 const betDepositSlice = createSlice({
@@ -76,6 +86,21 @@ const betDepositSlice = createSlice({
       state.isDryRun = false;
       state.betChoice = null;
     },
+    // Form state actions
+    setBetDepositFormData: (
+      state,
+      action: PayloadAction<{
+        ncId?: string;
+        amount?: string;
+        token?: string;
+        addressIndex?: number;
+      }>
+    ) => {
+      if (action.payload.ncId !== undefined) state.ncId = action.payload.ncId;
+      if (action.payload.amount !== undefined) state.amount = action.payload.amount;
+      if (action.payload.token !== undefined) state.token = action.payload.token;
+      if (action.payload.addressIndex !== undefined) state.addressIndex = action.payload.addressIndex;
+    },
   },
 });
 
@@ -84,6 +109,7 @@ export const {
   setBetDepositResponse,
   setBetDepositError,
   clearBetDepositData,
+  setBetDepositFormData,
 } = betDepositSlice.actions;
 
 export default betDepositSlice.reducer;

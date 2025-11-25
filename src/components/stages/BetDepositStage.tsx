@@ -11,6 +11,7 @@ import {
   setBetDepositRequest,
   setBetDepositResponse,
   setBetDepositError,
+  setBetDepositFormData,
 } from '../../store/slices/betDepositSlice';
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcBetDepositCard } from '../rpc/RpcBetDepositCard';
@@ -59,6 +60,11 @@ export const BetDepositStage: React.FC = () => {
       setToken(initialToken);
     }
   }, [initialToken]);
+
+  // Save form state to Redux whenever it changes (for prepopulating withdraw)
+  useEffect(() => {
+    dispatch(setBetDepositFormData({ ncId, amount, token, addressIndex }));
+  }, [ncId, amount, token, addressIndex, dispatch]);
 
   // Compute wallet tokens (include native token + custom tokens from Redux)
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
