@@ -8,10 +8,10 @@ import { useAppSelector } from '../../store/hooks';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
+import TxStatus from '../common/TxStatus';
 import Loading from '../common/Loading';
 import { NETWORK_CONFIG } from '../../constants/network';
 import dateFormatter from '@hathor/wallet-lib/lib/utils/date';
-import { getTransactionStatus, getStatusColorClass } from '../../utils/transactionStatus';
 
 interface WalletTransaction {
   txId: string;
@@ -185,17 +185,7 @@ export default function TransactionHistory() {
                       {tx.amount} {tx.tokenSymbol}
                     </td>
                     <td className="py-2 px-3 text-center">
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs ${
-                          tx.status === 'confirmed'
-                            ? 'bg-success/10 text-success'
-                            : tx.status === 'pending'
-                            ? 'bg-warning/10 text-warning'
-                            : 'bg-danger/10 text-danger'
-                        }`}
-                      >
-                        {tx.status}
-                      </span>
+                      <TxStatus hash={tx.hash} walletId={testWalletId ?? undefined} />
                     </td>
                     <td className="py-2 px-3 text-center">
                       <a
@@ -251,7 +241,6 @@ export default function TransactionHistory() {
                 </thead>
                 <tbody>
                   {paginatedTxs.map((tx) => {
-                    const status = getTransactionStatus(tx);
                     const txType = getTxType(tx);
                     return (
                       <tr
@@ -272,9 +261,7 @@ export default function TransactionHistory() {
                           {tx.balance}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded text-xs ${getStatusColorClass(status)}`}>
-                            {status}
-                          </span>
+                          <TxStatus hash={tx.txId} walletId={testWalletId ?? undefined} />
                         </td>
                         <td className="py-2 px-3 text-center text-xs">
                           {txType}

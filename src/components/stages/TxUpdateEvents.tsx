@@ -9,8 +9,8 @@ import { selectAllWalletEvents, type WalletEvent } from '../../store/slices/wall
 import { setFilterWalletId, setCurrentPage } from '../../store/slices/txUpdateEventsSlice';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
+import TxStatus from '../common/TxStatus';
 import dateFormatter from '@hathor/wallet-lib/lib/utils/date';
-import { getTransactionStatus, getStatusColorClass } from '../../utils/transactionStatus';
 
 export default function TxUpdateEvents() {
   const dispatch = useAppDispatch();
@@ -51,23 +51,6 @@ export default function TxUpdateEvents() {
       return event.data?.tx_id ?? event.data?.txId;
     }
     return undefined;
-  }
-
-  // Get status for transaction events
-  // Handles both naming conventions (first_block/firstBlock, is_voided/voided)
-  function getTxStatus(event: WalletEvent & { walletId: string }): string | null {
-    if (event.eventType === 'new-tx' || event.eventType === 'update-tx') {
-      if (event.data) {
-        const status = getTransactionStatus({
-          first_block: event.data.first_block,
-          firstBlock: event.data.firstBlock,
-          is_voided: event.data.is_voided,
-          voided: event.data.voided,
-        });
-        return status;
-      }
-    }
-    return null;
   }
 
   // Get wallet friendly name
@@ -158,7 +141,6 @@ export default function TxUpdateEvents() {
                 <tbody>
                   {paginatedEvents.map((event) => {
                     const txHash = getTxHash(event);
-                    const status = getTxStatus(event);
                     return (
                       <tr
                         key={event.id}
@@ -191,10 +173,8 @@ export default function TxUpdateEvents() {
                           )}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          {status ? (
-                            <span className={`px-2 py-0.5 rounded text-xs ${getStatusColorClass(status)}`}>
-                              {status}
-                            </span>
+                          {txHash ? (
+                            <TxStatus hash={txHash} walletId={event.walletId} />
                           ) : (
                             <span className="text-muted text-xs">—</span>
                           )}
