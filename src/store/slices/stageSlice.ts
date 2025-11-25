@@ -8,10 +8,12 @@ import type { StageId } from '../../types/stage';
 
 interface StageState {
   currentStage: StageId;
+  scrollPositions: Record<StageId, number>;
 }
 
 const initialState: StageState = {
   currentStage: 'wallet-initialization',
+  scrollPositions: {},
 };
 
 const stageSlice = createSlice({
@@ -21,9 +23,12 @@ const stageSlice = createSlice({
     setCurrentStage: (state, action: PayloadAction<StageId>) => {
       state.currentStage = action.payload;
     },
+    saveScrollPosition: (state, action: PayloadAction<{ stageId: StageId; position: number }>) => {
+      state.scrollPositions[action.payload.stageId] = action.payload.position;
+    },
   },
 });
 
-export const { setCurrentStage } = stageSlice.actions;
+export const { setCurrentStage, saveScrollPosition } = stageSlice.actions;
 
 export default stageSlice.reducer;

@@ -4,6 +4,7 @@
  */
 
 import { useStage } from '../hooks/useStage';
+import { useScrollPreservation } from '../hooks/useScrollPreservation';
 import WalletInitialization from './stages/WalletInitialization';
 import AddressValidation from './stages/AddressValidation';
 import CustomTokens from './stages/CustomTokens';
@@ -20,10 +21,14 @@ import { BetWithdrawStage } from './stages/BetWithdrawStage';
 
 export default function StageContent() {
   const { currentStage } = useStage();
+  const scrollContainerRef = useScrollPreservation();
 
   return (
-    // Ensure this content sits below the fixed header and is independently scrollable
-    <div className="flex-1 p-7.5 bg-white overflow-y-auto pt-14">
+    // Independently scrollable content area with scroll position preservation
+    <div
+      ref={scrollContainerRef}
+      className="flex-1 p-7.5 bg-white overflow-y-auto"
+    >
       {currentStage === 'wallet-initialization' && <WalletInitialization />}
       {currentStage === 'address-validation' && <AddressValidation />}
       {currentStage === 'custom-tokens' && <CustomTokens />}

@@ -20,10 +20,10 @@ export default function Sidebar() {
   };
 
   return (
-    // Adjust sticky to account for fixed header (top-14) and use full remaining height
-    // Use `bottom-0` instead of explicit calc-height so the sticky element stretches
-    // between `top-14` and the viewport bottom. The inner scroll area handles overflow.
-    <div className="bg-light border-r-2 border-border sticky top-14 bottom-0 flex flex-col basis-80">
+    // Adjust sticky to account for fixed header (top-14) and constrain height
+    // h-[calc(100vh-3.5rem)] ensures sidebar fills viewport height minus header (3.5rem = 56px)
+    // This constrains the sidebar, making the inner overflow-y-auto div scroll independently
+    <div className="bg-light border-r-2 border-border sticky top-14 flex flex-col basis-80 h-[calc(100vh-3.5rem)]">
       <div className="p-5 flex-shrink-0">
         <h2 className="m-0 text-xl text-dark">QA Stages</h2>
       </div>
