@@ -55,7 +55,7 @@ export function didYouMean(invalidWord: string, validWordSet: string[] = Mnemoni
 		for (let i = 0; i <= la; i++) prev[i] = i;
 
 		for (let j = 1; j <= lb; j++) {
-			let cur = new Array(la + 1);
+			const cur = new Array(la + 1);
 			cur[0] = j;
 			const bj = b.charAt(j - 1);
 			for (let i = 1; i <= la; i++) {

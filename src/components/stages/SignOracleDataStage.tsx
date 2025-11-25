@@ -1,31 +1,31 @@
 /**
- * Set Bet Result Stage
+ * Sign Oracle Data Stage
  *
- * Tests htr_sendNanoContractTx (set_result) RPC call with Redux state persistence
+ * Tests htr_signOracleData RPC call with Redux state persistence
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../store';
 import {
-  setSetBetResultRequest,
-  setSetBetResultResponse,
-  setSetBetResultError,
-} from '../../store/slices/setBetResultSlice';
+  setSignOracleDataRequest,
+  setSignOracleDataResponse,
+  setSignOracleDataError,
+} from '../../store/slices/signOracleDataSlice';
 import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import { setSignOracleDataResult, clearSetBetResultOracleSignature } from '../../store/slices/navigationSlice';
-import { RpcSetBetResultCard } from '../rpc/RpcSetBetResultCard';
+import { setSetBetResultOracleSignature, clearSignOracleDataResult } from '../../store/slices/navigationSlice';
+import { RpcSignOracleDataCard } from '../rpc/RpcSignOracleDataCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useStage } from '../../hooks/useStage';
 
-export const SetBetResultStage: React.FC = () => {
+export const SignOracleDataStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { getWallet } = useWalletStore();
   const { setCurrentStage } = useStage();
 
-  // Check if we're coming from Sign Oracle Data with a signature
-  const incomingOracleSignature = useSelector((state: RootState) => state.navigation.setBetResult_oracleSignature);
+  // Check if we're coming from Set Bet Result with pre-filled data
+  const incomingResultData = useSelector((state: RootState) => state.navigation.signOracleData_resultData);
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
@@ -33,32 +33,28 @@ export const SetBetResultStage: React.FC = () => {
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
-  const setBetResultData = useSelector((state: RootState) => state.setBetResult);
+  const signOracleDataData = useSelector((state: RootState) => state.signOracleData);
   const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
-  const betDepositData = useSelector((state: RootState) => state.betDeposit);
   const latestNcId = betNanoContract.ncId;
-  const depositedBetChoice = betDepositData.betChoice; // The choice from the deposit stage
 
-  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
+  // Get the actual wallet instance
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
   const [ncId, setNcId] = useState<string>(latestNcId || '');
   const [oracleAddress, setOracleAddress] = useState<string>('');
-  const [result, setResult] = useState<string>('');
-  const [oracleSignature, setOracleSignature] = useState<string>('');
+  const [data, setData] = useState<string>('');
   const [addressIndex, setAddressIndex] = useState<number>(0);
-  const [pushTx, setPushTx] = useState<boolean>(false);
 
-  // Load oracle signature from Redux if available (coming from Sign Oracle Data)
+  // Load result data from Redux if available (coming from Set Bet Result)
   useEffect(() => {
-    if (incomingOracleSignature) {
-      setOracleSignature(incomingOracleSignature);
+    if (incomingResultData) {
+      setData(incomingResultData);
       // Clear it from Redux after loading
-      dispatch(clearSetBetResultOracleSignature());
+      dispatch(clearSignOracleDataResult());
     }
-  }, [incomingOracleSignature, dispatch]);
+  }, [incomingResultData, dispatch]);
 
   // Update ncId when latestNcId changes
   useEffect(() => {
@@ -66,13 +62,6 @@ export const SetBetResultStage: React.FC = () => {
       setNcId(latestNcId);
     }
   }, [latestNcId]);
-
-  // Suggest result from deposited bet choice
-  useEffect(() => {
-    if (depositedBetChoice && !result) {
-      setResult(depositedBetChoice);
-    }
-  }, [depositedBetChoice]);
 
   // Get test wallet address at index 0
   useEffect(() => {
@@ -101,11 +90,11 @@ export const SetBetResultStage: React.FC = () => {
           const address = await testWallet.instance.getAddressAtIndex(addressIndex);
           setOracleAddress(address);
         } catch (error) {
-          console.error(`[SetBetResult] Failed to derive address at index ${addressIndex}:`, error);
+          console.error(`[SignOracleData] Failed to derive address at index ${addressIndex}:`, error);
           setOracleAddress('');
         }
       } else {
-        console.log('[SetBetResult] Wallet not loaded yet');
+        console.log('[SignOracleData] Wallet not loaded yet');
         setOracleAddress('');
       }
     };
@@ -135,7 +124,7 @@ export const SetBetResultStage: React.FC = () => {
   }, [walletConnect.client, walletConnect.session, isDryRun]);
 
   // Wrapper for onExecute that stores results in Redux
-  const handleExecuteSetBetResult = async () => {
+  const handleExecuteSignOracleData = async () => {
     if (!rpcHandlers) {
       throw new Error('RPC handlers not initialized');
     }
@@ -147,24 +136,22 @@ export const SetBetResultStage: React.FC = () => {
     const startTime = Date.now();
 
     try {
-      const { request, response } = await rpcHandlers.getRpcSetBetResult(
+      const { request, response } = await rpcHandlers.getRpcSignOracleData(
         ncId,
         oracleAddress,
-        result,
-        oracleSignature,
-        pushTx
+        data
       );
       const duration = Date.now() - startTime;
 
       // Store request in Redux
-      dispatch(setSetBetResultRequest({
+      dispatch(setSignOracleDataRequest({
         method: request.method,
         params: request.params,
         isDryRun,
       }));
 
       // Store response in Redux
-      dispatch(setSetBetResultResponse({
+      dispatch(setSignOracleDataResponse({
         response,
         duration,
       }));
@@ -175,7 +162,7 @@ export const SetBetResultStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      dispatch(setSetBetResultError({
+      dispatch(setSignOracleDataError({
         error: errorMessage,
         duration,
       }));
@@ -184,19 +171,19 @@ export const SetBetResultStage: React.FC = () => {
     }
   };
 
-  // Callback to navigate to Sign Oracle Data with current result
-  const handleNavigateToSignOracleData = () => {
-    // Store the result in Redux so Sign Oracle Data can pick it up
-    dispatch(setSignOracleDataResult(result));
-    // Navigate to Sign Oracle Data stage
-    setCurrentStage('rpc-sign-oracle-data');
+  // Callback to send signature back to Set Bet Result
+  const handleSendToSetBetResult = (signedData: string) => {
+    // Store the signature in Redux so Set Bet Result can pick it up
+    dispatch(setSetBetResultOracleSignature(signedData));
+    // Navigate to Set Bet Result stage
+    setCurrentStage('rpc-set-bet-result');
   };
 
   return (
     <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Set Bet Result RPC</h1>
+      <h1 className="mt-0 text-3xl font-bold">Sign Oracle Data RPC</h1>
       <p className="text-muted mb-7.5">
-        Set the result for a bet nano contract (oracle action)
+        Sign data as the oracle for a nano contract
       </p>
 
       {/* Connection Status Info */}
@@ -285,10 +272,10 @@ export const SetBetResultStage: React.FC = () => {
         </div>
       )}
 
-      {/* SetBetResult Card */}
+      {/* SignOracleData Card */}
       {isConnected && !addressMismatch && rpcHandlers && (
-        <RpcSetBetResultCard
-          onExecute={handleExecuteSetBetResult}
+        <RpcSignOracleDataCard
+          onExecute={handleExecuteSignOracleData}
           disabled={!ncId}
           ncId={ncId}
           setNcId={setNcId}
@@ -296,23 +283,18 @@ export const SetBetResultStage: React.FC = () => {
           oracleAddress={oracleAddress}
           addressIndex={addressIndex}
           setAddressIndex={setAddressIndex}
-          result={result}
-          setResult={setResult}
-          depositedBetChoice={depositedBetChoice}
-          oracleSignature={oracleSignature}
-          setOracleSignature={setOracleSignature}
-          pushTx={pushTx}
-          setPushTx={setPushTx}
+          data={data}
+          setData={setData}
+          onSendToSetBetResult={handleSendToSetBetResult}
           isDryRun={isDryRun}
-          initialRequest={setBetResultData.request}
-          initialResponse={setBetResultData.rawResponse}
-          initialError={setBetResultData.error}
-          onNavigateToSignOracleData={handleNavigateToSignOracleData}
+          initialRequest={signOracleDataData.request}
+          initialResponse={signOracleDataData.rawResponse}
+          initialError={signOracleDataData.error}
         />
       )}
 
       {/* Persisted Data Info */}
-      {setBetResultData.timestamp && (
+      {signOracleDataData.timestamp && (
         <div className="card-primary mt-7.5 bg-green-50 border border-success">
           <div className="flex items-start gap-3">
             <svg
@@ -332,9 +314,9 @@ export const SetBetResultStage: React.FC = () => {
             <div>
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
-                {setBetResultData.duration !== null && (
+                {signOracleDataData.duration !== null && (
                   <span className="block mt-1">
-                    Last request took {setBetResultData.duration}ms
+                    Last request took {signOracleDataData.duration}ms
                   </span>
                 )}
               </p>

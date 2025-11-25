@@ -252,6 +252,57 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
     },
 
     /**
+     * Sign Oracle Data
+     * Sign data as oracle for a nano contract
+     */
+    getRpcSignOracleData: async (
+      ncId: string,
+      oracle: string,
+      data: string
+    ) => {
+      if (!session || !client) {
+        throw new Error('WalletConnect session not available');
+      }
+
+      // Build the sign oracle data request
+      const requestParams = {
+        method: 'htr_signOracleData',
+        params: {
+          network: DEFAULT_NETWORK,
+          nc_id: ncId,
+          data: data,
+          oracle: oracle,
+        },
+      };
+
+      try {
+        let response;
+
+        if (dryRun) {
+          // Dry run: don't actually call RPC
+          response = null;
+        } else {
+          // Make the RPC request via WalletConnect
+          response = await client.request({
+            topic: session.topic,
+            chainId: HATHOR_TESTNET_CHAIN,
+            request: requestParams,
+          });
+        }
+
+        return {
+          request: requestParams,
+          response,
+        };
+      } catch (error) {
+        console.error('Failed to sign oracle data:', error);
+        const errorWithRequest = error as any;
+        errorWithRequest.requestParams = requestParams;
+        throw errorWithRequest;
+      }
+    },
+
+    /**
      * Set Bet Result
      * Set the result for a bet nano contract (oracle action)
      */

@@ -1,16 +1,15 @@
 /**
- * RPC Set Bet Result Card Component
+ * RPC Sign Oracle Data Card Component
  *
- * Card for testing setting bet result via RPC call (oracle action)
+ * Card for signing oracle data via RPC call
  */
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
-import { ExplorerLink } from '../common/ExplorerLink';
 import { safeStringify } from '../../utils/betHelpers';
 
-export interface RpcSetBetResultCardProps {
+export interface RpcSignOracleDataCardProps {
   onExecute: () => Promise<any>;
   disabled?: boolean;
   isDryRun?: boolean;
@@ -20,22 +19,16 @@ export interface RpcSetBetResultCardProps {
   oracleAddress: string;
   addressIndex: number;
   setAddressIndex: (value: number) => void;
-  result: string;
-  setResult: (value: string) => void;
-  depositedBetChoice: string | null; // The choice from bet deposit stage
-  oracleSignature: string;
-  setOracleSignature: (value: string) => void;
-  pushTx: boolean;
-  setPushTx: (value: boolean) => void;
-  // Navigation callback to Sign Oracle Data
-  onNavigateToSignOracleData: () => void;
+  data: string;
+  setData: (value: string) => void;
+  onSendToSetBetResult?: (signedData: string) => void; // Callback to send signature back
   // Persisted data from Redux
   initialRequest?: { method: string; params: any } | null;
   initialResponse?: any | null;
   initialError?: string | null;
 }
 
-export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
+export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   onExecute,
   disabled = false,
   isDryRun = false,
@@ -45,39 +38,34 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   oracleAddress,
   addressIndex,
   setAddressIndex,
-  result,
-  setResult,
-  depositedBetChoice,
-  oracleSignature,
-  setOracleSignature,
-  pushTx,
-  setPushTx,
-  onNavigateToSignOracleData,
+  data,
+  setData,
+  onSendToSetBetResult,
   initialRequest = null,
   initialResponse = null,
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [resultData, setResultData] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
+  const [requestExpanded, setRequestExpanded] = useState(true);
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
 
-  // Live request building - calculate request on every input change
+  // Live request building
   const [liveRequest, setLiveRequest] = useState<{ method: string; params: any } | null>(null);
 
-  // Load persisted data from Redux when component mounts or when initial data changes
+  // Load persisted data from Redux
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
       setRequestExpanded(true);
     }
     if (initialResponse) {
-      setResultData(initialResponse);
+      setResult(initialResponse);
       setExpanded(true);
     }
     if (initialError) {
@@ -86,27 +74,20 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
     }
   }, [initialRequest, initialResponse, initialError]);
 
-  // Live request building - recalculate on every input change
+  // Live request building
   useEffect(() => {
-    const invokeParams = {
-      network: 'testnet',
-      method: 'set_result',
-      blueprint_id: null,
-      actions: [],
-      args: [result || '<result>', oracleSignature || '<oracle_signature>'],
-      push_tx: pushTx,
-      nc_id: ncId || '<nc_id>',
-      nc_method: 'set_result',
-      nc_args: [result || '<result>', oracleSignature || '<oracle_signature>'],
-    };
-
     const requestParams = {
-      method: 'htr_sendNanoContractTx',
-      params: invokeParams,
+      method: 'htr_signOracleData',
+      params: {
+        network: 'testnet',
+        nc_id: ncId || '<nc_id>',
+        data: data || '<data>',
+        oracle: oracleAddress || '<oracle_address>',
+      },
     };
 
     setLiveRequest(requestParams);
-  }, [ncId, result, oracleSignature, pushTx]);
+  }, [ncId, data, oracleAddress]);
 
   const handleSelectLatestNcId = () => {
     if (!latestNcId) {
@@ -118,31 +99,34 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   };
 
   const handleExecute = async () => {
-    // Validate ncId is provided
     if (!ncId || ncId.trim() === '') {
       showToast('Please provide a Nano Contract ID', 'error');
       return;
     }
 
+    if (!data || data.trim() === '') {
+      showToast('Please provide data to sign', 'error');
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    setResultData(null);
+    setResult(null);
     setRequestInfo(null);
 
     try {
       const { request, response } = await onExecute();
 
-      // Store request and response separately
       setRequestInfo(request);
-      setResultData(response);
+      setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
 
-      console.log(`[RPC Request] Set Bet Result`, request);
-      console.log(`[RPC Success] Set Bet Result`, response);
+      console.log(`[RPC Request] Sign Oracle Data`, request);
+      console.log(`[RPC Success] Sign Oracle Data`, response);
 
       showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Result set successfully',
+        isDryRun ? 'Request generated (not sent to RPC)' : 'Data signed successfully',
         'success'
       );
     } catch (err: any) {
@@ -151,13 +135,12 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
       setError(errorMessage);
       setExpanded(true);
 
-      // Capture request params from error if available
       if (err.requestParams) {
         setRequestInfo(err.requestParams);
         setRequestExpanded(true);
       }
 
-      console.error(`[RPC Error] Set Bet Result`, {
+      console.error(`[RPC Error] Sign Oracle Data`, {
         message: errorMessage,
         error: err,
         requestParams: err.requestParams,
@@ -169,7 +152,38 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
     }
   };
 
-  const hasResult = resultData !== null || error !== null;
+  // Extract signed data signature from response
+  const getSignedData = (): string | null => {
+    try {
+      const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+      // Handle wrapped response with type field
+      if (parsedResult?.response?.signedData?.signature) {
+        return parsedResult.response.signedData.signature;
+      } else if (parsedResult?.signedData?.signature) {
+        return parsedResult.signedData.signature;
+      } else if (parsedResult?.response?.signedData && typeof parsedResult.response.signedData === 'string') {
+        return parsedResult.response.signedData;
+      } else if (parsedResult?.signedData && typeof parsedResult.signedData === 'string') {
+        return parsedResult.signedData;
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    return null;
+  };
+
+  const handleSendToSetBetResult = () => {
+    const signedData = getSignedData();
+    if (signedData && onSendToSetBetResult) {
+      onSendToSetBetResult(signedData);
+      showToast('Signature sent to Set Bet Result stage', 'success');
+    } else {
+      showToast('No signed data available to send', 'error');
+    }
+  };
+
+  const hasResult = result !== null || error !== null;
+  const signedData = getSignedData();
 
   // Helper to check if an object is a Buffer
   const isBuffer = (obj: any): boolean => {
@@ -203,17 +217,15 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
     );
   };
 
-  // Render formatted response for set bet result
+  // Render formatted response
   const renderFormattedResponse = (data: any) => {
     if (!data || typeof data !== 'object') {
       return <div className="text-sm text-muted italic p-3">Invalid response data</div>;
     }
 
-    // Helper to render a single field
     const renderField = (key: string, value: any, depth: number = 0): React.ReactElement => {
       const indent = depth * 12;
 
-      // Handle Buffer objects
       if (isBuffer(value)) {
         return (
           <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
@@ -223,7 +235,6 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
         );
       }
 
-      // Handle arrays
       if (Array.isArray(value)) {
         if (value.length === 0) {
           return (
@@ -257,7 +268,6 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
         );
       }
 
-      // Handle nested objects
       if (typeof value === 'object' && value !== null) {
         return (
           <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
@@ -269,7 +279,6 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
         );
       }
 
-      // Handle primitives
       return (
         <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
           <span className="text-sm font-semibold text-primary">{key}: </span>
@@ -287,22 +296,20 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
 
   // Main render function for results
   const renderResult = () => {
-    if (!resultData) return null;
+    if (!result) return null;
 
     try {
-      const parsedResult = typeof resultData === 'string' ? JSON.parse(resultData) : resultData;
+      const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
 
-      // If showing raw, always use raw renderer
       if (showRawResponse) {
         return renderRawJson(parsedResult);
       }
 
-      // Otherwise show formatted
       return renderFormattedResponse(parsedResult);
     } catch (e) {
       return (
         <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
-          <pre className="text-sm font-mono">{String(resultData)}</pre>
+          <pre className="text-sm font-mono">{String(result)}</pre>
         </div>
       );
     }
@@ -314,9 +321,9 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
       <div className="card-primary mb-7.5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-bold">Set Bet Result</h3>
+            <h3 className="text-lg font-bold">Sign Oracle Data</h3>
             <p className="text-sm text-muted mt-1">
-              Set the result for a bet nano contract (oracle action)
+              Sign data as the oracle for a nano contract
             </p>
           </div>
           {isDryRun && (
@@ -368,13 +375,13 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
               </button>
             </div>
             <p className="text-xs text-muted mt-1">
-              The nano contract ID to set the result for. Click "Select" to use the latest initialized bet.
+              The nano contract ID for which to sign the data
             </p>
           </div>
 
           {/* Oracle Address Index */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Change Oracle Address Index</label>
+            <label className="block text-sm font-medium mb-1.5">Oracle Address Index</label>
             <input
               type="number"
               value={addressIndex}
@@ -384,111 +391,119 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
               className="input"
             />
             <p className="text-xs text-muted mt-1">
-              Index of the address to use as the oracle address
+              Index of the address to use as the oracle
             </p>
           </div>
 
-          {/* Result */}
+          {/* Data to Sign */}
           <div>
-            <label className="block text-sm font-medium mb-1.5">Result</label>
+            <label className="block text-sm font-medium mb-1.5">Data to Sign</label>
             <input
               type="text"
-              value={result}
-              onChange={(e) => setResult(e.target.value)}
-              placeholder="E.g., Result_1, Result_2"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              placeholder="E.g., Result_1"
               className="input"
             />
             <p className="text-xs text-muted mt-1">
-              The result to set for the bet
-              {depositedBetChoice && (
-                <span className="block mt-1 text-info">
-                  💡 Suggested from bet deposit: {depositedBetChoice}
-                </span>
-              )}
+              The data/result to sign (e.g., the bet result)
             </p>
-          </div>
-
-          {/* Oracle Signature */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium">Oracle Signature</label>
-              <button
-                type="button"
-                onClick={onNavigateToSignOracleData}
-                className="btn-secondary py-1 px-3 text-sm flex items-center gap-1.5"
-              >
-                <span>🔮</span>
-                <span>Sign Oracle Data</span>
-              </button>
-            </div>
-            <textarea
-              value={oracleSignature}
-              onChange={(e) => setOracleSignature(e.target.value)}
-              placeholder="Enter oracle signature or use the 'Sign Oracle Data' button above"
-              className="input font-mono text-xs"
-              rows={3}
-            />
-            <p className="text-xs text-muted mt-1">
-              The oracle signature to authorize setting the result. Click "Sign Oracle Data" to navigate to the signing stage with the current result pre-filled.
-            </p>
-          </div>
-
-          {/* Push TX Checkbox */}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={pushTx}
-              onChange={(e) => setPushTx(e.target.checked)}
-              className="checkbox checkbox-primary"
-              id="pushTx"
-            />
-            <label htmlFor="pushTx" className="text-sm cursor-pointer">
-              Push Transaction
-            </label>
           </div>
         </div>
 
         <div className="mt-6">
           <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
-            {loading ? 'Setting Result...' : 'Set Result'}
+            {loading ? 'Signing...' : 'Sign Data'}
           </button>
         </div>
       </div>
 
-      {/* Transaction Hash Display (if available) */}
-      {resultData?.response?.hash && (
-        <div className="card-primary mb-7.5">
-          <div className="bg-green-50 border border-green-300 rounded p-4">
-            <div className="flex items-center gap-2 text-green-700 mb-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span className="font-medium">Result set successfully</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs text-muted font-medium">Transaction Hash</span>
-                <div className="flex items-center gap-1">
-                  <CopyButton text={resultData.response.hash} label="Copy TX hash" />
-                  <ExplorerLink hash={resultData.response.hash} />
+      {/* Signed Data Display (if available) */}
+      {result && !error && (() => {
+        try {
+          const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+          const responseData = parsedResult?.response;
+
+          if (!responseData) return null;
+
+          return (
+            <div className="card-primary mb-7.5">
+              <div className="bg-green-50 border border-green-300 rounded p-4">
+                <div className="flex items-center gap-2 text-green-700 mb-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="font-medium">Data signed successfully</span>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Data Signed */}
+                  {responseData.data && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-muted font-medium">Data Signed</span>
+                        <CopyButton text={responseData.data} label="Copy" />
+                      </div>
+                      <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm">
+                        {responseData.data}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Oracle Address */}
+                  {responseData.oracle && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-muted font-medium">Oracle Address</span>
+                        <CopyButton text={responseData.oracle} label="Copy" />
+                      </div>
+                      <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-all">
+                        {responseData.oracle}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Oracle Signature */}
+                  {signedData && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-muted font-medium">Oracle Signature (for Set Bet Result)</span>
+                        <CopyButton text={signedData} label="Copy signature" />
+                      </div>
+                      <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
+                        {signedData}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Send to Set Bet Result button */}
+                  {signedData && onSendToSetBetResult && (
+                    <div className="pt-2">
+                      <button
+                        onClick={handleSendToSetBetResult}
+                        className="btn-primary w-full"
+                      >
+                        🔮 Send to Set Bet Result
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-all">
-                {resultData.response.hash}
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        } catch (e) {
+          return null;
+        }
+      })()}
 
       {/* Intermediates Section */}
       <div className="card-primary mb-7.5">
@@ -528,31 +543,6 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
                   ) : (
                     <span className="text-sm text-muted italic">
                       Deriving oracle address from wallet...
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Oracle Signature Placeholder */}
-              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
-                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-yellow-800">
-                      Oracle Signature (Manual for now)
-                    </span>
-                    {oracleSignature && (
-                      <CopyButton text={oracleSignature} label="Copy" />
-                    )}
-                  </div>
-                </div>
-                <div className="px-3 py-2">
-                  {oracleSignature ? (
-                    <span className="text-sm font-mono text-yellow-900 break-all">
-                      {oracleSignature.slice(0, 50)}{oracleSignature.length > 50 ? '...' : ''}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted italic">
-                      Enter oracle signature above (will be auto-calculated in future)
                     </span>
                   )}
                 </div>
@@ -620,7 +610,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {resultData && !error && (
+              {result && !error && (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -629,7 +619,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
                 </button>
               )}
               <CopyButton
-                text={resultData ? safeStringify(resultData, 2) : error || ''}
+                text={result ? safeStringify(result, 2) : error || ''}
                 label="Copy response"
               />
             </div>
@@ -637,7 +627,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
 
           {expanded && (
             <div className="relative">
-              {isDryRun && resultData === null ? (
+              {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
                     <svg

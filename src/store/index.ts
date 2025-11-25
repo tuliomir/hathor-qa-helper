@@ -15,12 +15,14 @@ import rpcReducer from './slices/rpcSlice';
 import walletConnectReducer from './slices/walletConnectSlice';
 import getBalanceReducer from './slices/getBalanceSlice';
 import signWithAddressReducer from './slices/signWithAddressSlice';
+import signOracleDataReducer from './slices/signOracleDataSlice';
 import betNanoContractReducer from './slices/betNanoContractSlice';
 import betInitializeReducer from './slices/betInitializeSlice';
 import betDepositReducer from './slices/betDepositSlice';
 import setBetResultReducer from './slices/setBetResultSlice';
 import betWithdrawReducer from './slices/betWithdrawSlice';
 import txUpdateEventsReducer from './slices/txUpdateEventsSlice';
+import navigationReducer from './slices/navigationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -36,12 +38,14 @@ export const store = configureStore({
     walletConnect: walletConnectReducer,
     getBalance: getBalanceReducer,
     signWithAddress: signWithAddressReducer,
+    signOracleData: signOracleDataReducer,
     betNanoContract: betNanoContractReducer,
     betInitialize: betInitializeReducer,
     betDeposit: betDepositReducer,
     setBetResult: setBetResultReducer,
     betWithdraw: betWithdrawReducer,
     txUpdateEvents: txUpdateEventsReducer,
+    navigation: navigationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
