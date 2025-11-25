@@ -327,7 +327,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         method: 'set_result',
         nc_id: ncId,
         actions: [],
-        args: [result, signedData],
+        args: [{ type: 'str', signature: signedData, value: result }],
         push_tx: pushTx,
       };
 
