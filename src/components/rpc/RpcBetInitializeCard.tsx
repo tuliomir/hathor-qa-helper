@@ -12,6 +12,8 @@ import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
 import { formatTimeUntil } from '../../utils/valuesUtils.ts'
+import TxStatus from '../common/TxStatus.tsx'
+import { useAppSelector } from '../../store/hooks.ts'
 
 export interface RpcBetInitializeCardProps {
   onExecute: () => Promise<any>;
@@ -63,6 +65,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const [showRawResponse, setShowRawResponse] = useState(false);
+	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
   const { showToast } = useToast();
 
   // Live request building - calculate request and intermediates on every input change
@@ -528,7 +531,8 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                 <span className="text-xs text-muted font-medium">Nano Contract ID</span>
                 <div className="flex items-center gap-1">
                   <CopyButton text={result.response.hash} label="Copy NC ID" />
-                  <ExplorerLink hash={result.response.hash} />
+	                <TxStatus hash={result.response.hash} walletId={testWalletId} />
+	                <ExplorerLink hash={result.response.hash} />
                 </div>
               </div>
               <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
@@ -797,6 +801,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                                     <span className="text-xs text-muted font-medium">Nano Contract ID (Hash)</span>
                                     <div className="flex items-center gap-1">
                                       <CopyButton text={hash} label="Copy ID" />
+	                                    <TxStatus hash={hash} walletId={testWalletId} />
                                       <ExplorerLink hash={hash} specificPage="nc_detail" />
                                     </div>
                                   </div>
