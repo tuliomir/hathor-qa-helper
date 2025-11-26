@@ -2,27 +2,51 @@
  * TxStatus Component
  * Displays transaction status badge with smart data fetching
  *
- * Data sources (in priority order):
- * 1. Redux wallet events (latest event for this tx)
- * 2. Wallet getTx() with smart caching
- * 3. Event listener updates (automatic via Redux)
+ * Data Fetching Strategy (priority order):
+ * 1. Redux wallet events (instant updates for new transactions)
+ * 2. Component cache (avoid redundant API calls)
+ * 3. Wallet cache via getTx() (fast, no HTTP)
+ * 4. Full node via getFullTxById() (only for unconfirmed txs)
  *
- * IMPORTANT: Wallet API Methods
+ * Two-Step Fetch Strategy:
+ * Step 1: Check wallet cache with getTx()
+ *   - If first_block exists → transaction is confirmed, use cached data
+ *   - Avoids HTTP calls for already-confirmed transactions
  *
- * getTx(hash) vs getTxById(hash):
- * - getTx(hash): Returns FULL transaction data including confirmation status
- *   - Response structure: { tx_id, version, timestamp, is_voided, first_block, inputs, outputs, ... }
- *   - Contains is_voided and first_block fields needed to determine status
- *   - Use this when you need to check transaction confirmation status
+ * Step 2: If no first_block, poll full node with getFullTxById()
+ *   - Fetches fresh data to detect recent confirmations
+ *   - Only runs for genuinely unconfirmed transactions
+ *   - Re-checks every 5 seconds until confirmed
  *
- * - getTxById(hash): Returns BASIC transaction data WITHOUT confirmation status
- *   - Response structure: { success, tx: {...}, txTokens: [...] }
- *   - Does NOT contain is_voided or first_block in the main tx object
- *   - Use this only when you need token metadata (txTokens array)
+ * IMPORTANT: Wallet API Methods for Transaction Data
+ *
+ * - getFullTxById(hash): Fetches FRESH data from full node via HTTP
+ *   - Response: { success, tx: FullNodeTx, meta: FullNodeMeta, ... }
+ *   - meta.first_block: Block hash where tx was confirmed (null if unconfirmed)
+ *   - meta.voided_by: Array of tx hashes that voided this tx (empty if not voided)
+ *   - Always gets the latest confirmation status from the network
+ *   - Use when you MUST have up-to-date confirmation/voided status
+ *
+ * - getTx(hash): Returns transaction data from WALLET CACHE (fast, may be stale)
+ *   - Response: { tx_id, version, timestamp, is_voided, first_block, inputs, outputs, ... }
+ *   - Does NOT fetch from server, uses wallet's internal cache
+ *   - Good for checking if tx is already confirmed (first_block present)
+ *   - Will NOT show NEW confirmations after wallet initialization
+ *
+ * - getTxById(hash): Returns BASIC transaction data with token metadata
+ *   - Response: { success, tx: {...}, txTokens: [...] }
+ *   - Primarily for token information, not for transaction status
+ *   - Use when you need token metadata (txTokens array)
+ *
+ * Why This Approach?
+ * - Wallet events (new-tx, update-tx) do NOT fire when a transaction gets confirmed
+ * - The wallet only notifies on new transactions, not on block confirmations
+ * - We must poll the full node to detect confirmation updates
+ * - But we optimize by checking wallet cache first to avoid unnecessary HTTP calls
  *
  * Caching Strategy:
- * - Valid/Voided transactions: Cached indefinitely (only change via Redux events)
- * - Unconfirmed transactions: 5-second TTL (may become confirmed)
+ * - Valid/Voided transactions: Cached indefinitely (won't change)
+ * - Unconfirmed transactions: 5-second TTL (re-check for confirmation)
  */
 
 import { useState, useEffect } from 'react';
@@ -108,20 +132,21 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
 
       setIsLoading(true);
       try {
-        // Use getTx() instead of getTxById() - getTx() includes status fields (first_block, is_voided)
-        // while getTxById() only returns basic transaction data without confirmation status
+        // Step 1: Try getTx() from wallet cache first (fast, no HTTP call)
         const txData = await walletInstance.getTx(hash);
-        console.log(`[TxStatus ${hash.slice(0, 8)}] getTx() response:`, txData);
+        console.log(`[TxStatus ${hash.slice(0, 8)}] getTx() from wallet cache:`, txData);
 
-        // getTx() returns the transaction data directly at the top level
-        // Structure: { tx_id, version, timestamp, is_voided, first_block, inputs, outputs, ... }
-        if (txData && txData.tx_id) {
+        // If wallet cache has first_block, the transaction is already confirmed
+        // Use this cached data to avoid unnecessary HTTP calls
+        if (txData && txData.first_block) {
+          console.log(`[TxStatus ${hash.slice(0, 8)}] Found first_block in wallet cache, using cached data`);
+
           const txStatus = getTransactionStatus({
             first_block: txData.first_block,
             is_voided: txData.is_voided,
           });
 
-          console.log(`[TxStatus ${hash.slice(0, 8)}] Computed status: ${txStatus} from tx data:`, {
+          console.log(`[TxStatus ${hash.slice(0, 8)}] Status from wallet cache: ${txStatus}`, {
             first_block: txData.first_block,
             is_voided: txData.is_voided,
           });
@@ -133,8 +158,42 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
           });
 
           setStatus(txStatus);
+          return;
+        }
+
+        // Step 2: No first_block in cache - transaction is unconfirmed
+        // Fetch fresh data from full node to check for recent confirmation
+        console.log(`[TxStatus ${hash.slice(0, 8)}] No first_block in wallet cache, fetching from full node`);
+        const response = await walletInstance.getFullTxById(hash);
+        console.log(`[TxStatus ${hash.slice(0, 8)}] getFullTxById() response:`, response);
+
+        if (response.success && response.meta) {
+          // Extract status from FullNodeMeta
+          // - first_block: if present (string), tx is confirmed in this block
+          // - voided_by: array of txs that voided this one (if not empty, tx is voided)
+          const isVoided = response.meta.voided_by && response.meta.voided_by.length > 0;
+          const firstBlock = response.meta.first_block;
+
+          const txStatus = getTransactionStatus({
+            first_block: firstBlock,
+            is_voided: isVoided,
+          });
+
+          console.log(`[TxStatus ${hash.slice(0, 8)}] Computed status from full node: ${txStatus}`, {
+            first_block: firstBlock,
+            voided_by: response.meta.voided_by,
+            is_voided: isVoided,
+          });
+
+          // Cache the result
+          txStatusCache.set(hash, {
+            status: txStatus,
+            timestamp: Date.now(),
+          });
+
+          setStatus(txStatus);
         } else {
-          console.log(`[TxStatus ${hash.slice(0, 8)}] getTx() failed or returned invalid data:`, txData);
+          console.log(`[TxStatus ${hash.slice(0, 8)}] getFullTxById() failed:`, response);
           setStatus(null);
         }
       } catch (err) {
