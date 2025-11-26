@@ -3,9 +3,15 @@
  * Helpers for determining and displaying transaction confirmation status
  */
 
-export type TransactionStatus = 'Unconfirmed' | 'Valid' | 'Voided';
+export type TransactionStatus = 'Unconfirmed' | 'Valid' | 'Voided' | 'Unknown';
 
 interface Transaction {
+	nc_context?: unknown;
+	nc_address?: unknown;
+  nc_args?: unknown;
+  nc_method?: string;
+  nc_blueprint_id?: string;
+  nc_id?: string;
   firstBlock?: number;
   first_block?: number;
   voided?: boolean;
@@ -21,9 +27,13 @@ interface Transaction {
 export function getTransactionStatus(tx: Transaction): TransactionStatus {
   const firstBlock = tx.firstBlock ?? tx.first_block;
   const isVoided = tx.voided ?? tx.is_voided;
+	const isNano = tx.nc_id || tx.nc_blueprint_id || tx.nc_method || tx.nc_args || tx.nc_address || tx.nc_context;
+
+	if (isVoided) return 'Voided';
+	if (!isNano) return 'Valid';
 
   if (!firstBlock) return 'Unconfirmed';
-  return isVoided ? 'Voided' : 'Valid';
+	return 'Valid';
 }
 
 /**

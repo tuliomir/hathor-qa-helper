@@ -79,12 +79,7 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
   useEffect(() => {
     if (latestEvent?.data) {
       console.log(`[TxStatus ${hash.slice(0, 8)}] Deriving status from Redux event:`, latestEvent.data);
-      const eventStatus = getTransactionStatus({
-        firstBlock: latestEvent.data.firstBlock,
-        first_block: latestEvent.data.first_block,
-        voided: latestEvent.data.voided,
-        is_voided: latestEvent.data.is_voided,
-      });
+      const eventStatus = getTransactionStatus(latestEvent.data);
       console.log(`[TxStatus ${hash.slice(0, 8)}] Status from event: ${eventStatus}`);
       setStatus(eventStatus);
       return;
