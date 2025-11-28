@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder } from 'react-icons/md';
+import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder, MdSwapVert } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
@@ -22,7 +22,7 @@ const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
 
 export default function WalletInitialization() {
   const dispatch = useAppDispatch();
-  const { addWallet, removeWallet, getAllWallets, updateFriendlyName } = useWalletStore();
+  const { addWallet, removeWallet, getAllWallets, updateFriendlyName, updateNetwork } = useWalletStore();
 
   const [seedInput, setSeedInput] = useState('');
   const [walletName, setWalletName] = useState('');
@@ -246,6 +246,22 @@ export default function WalletInitialization() {
     localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(defaults));
   };
 
+  const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkType, status: string) => {
+    const newNetwork: NetworkType = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
+
+    if (status === 'ready') {
+      // Stop the wallet first
+      await handleStopWallet(walletId);
+      // Update the network
+      updateNetwork(walletId, newNetwork);
+      // Start the wallet again
+      await handleStartWallet(walletId);
+    } else {
+      // Just update the network
+      updateNetwork(walletId, newNetwork);
+    }
+  };
+
   // Return the first `n` words of the seed phrase (useful for compact display)
   const firstNWords = (seed: string, n: number = 3) => {
     if (!seed) return '';
@@ -362,7 +378,19 @@ export default function WalletInitialization() {
                         <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} className="text-muted" />
                       </div>
                     </td>
-                    <td className="p-3">{wallet.metadata.network}</td>
+                    <td className="p-3">
+                      <div className="flex flex-col items-start gap-1">
+                        <span>{wallet.metadata.network}</span>
+                        <button
+                          onClick={() => handleSwapNetwork(wallet.metadata.id, wallet.metadata.network, wallet.status)}
+                          title={`Switch to ${wallet.metadata.network === 'TESTNET' ? 'MAINNET' : 'TESTNET'}`}
+                          className="btn btn-square text-2xs p-1 bg-gray-200 hover:bg-gray-300 border-0"
+                          disabled={wallet.status === 'connecting' || wallet.status === 'syncing'}
+                        >
+                          <MdSwapVert />
+                        </button>
+                      </div>
+                    </td>
                     <td className={`p-3 ${getStatusColor(wallet.status)} font-bold text-sm`}>
                       {wallet.status}
                       {wallet.status === 'ready' && (

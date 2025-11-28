@@ -10,7 +10,7 @@ import type { RootState } from '../index';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
-import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
+import { NETWORK_CONFIG, WALLET_CONFIG, type NetworkType } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
@@ -515,6 +515,19 @@ const walletStoreSlice = createSlice({
       }
     },
 
+    updateNetwork: (state, action: PayloadAction<{ id: string; network: NetworkType }>) => {
+      const { id, network } = action.payload;
+      const walletInfo = state.wallets[id];
+
+      if (walletInfo) {
+        walletInfo.metadata.network = network;
+
+        // Sync to LocalStorage
+        const metadataArray = Object.values(state.wallets).map((info) => info.metadata);
+        saveWalletsToStorage(metadataArray);
+      }
+    },
+
     updateWalletInstance: (
       state,
       action: PayloadAction<{ id: string; instance: HathorWallet | null }>
@@ -632,6 +645,7 @@ export const {
   addWallet,
   removeWallet,
   updateFriendlyName,
+  updateNetwork,
   updateWalletInstance,
   updateWalletStatus,
   updateWalletBalance,

@@ -8,6 +8,7 @@ import {
   addWallet as addWalletAction,
   removeWallet as removeWalletAction,
   updateFriendlyName as updateFriendlyNameAction,
+  updateNetwork as updateNetworkAction,
   updateWalletInstance as updateWalletInstanceAction,
   updateWalletStatus as updateWalletStatusAction,
 } from '../store/slices/walletStoreSlice';
@@ -48,6 +49,13 @@ export function useWalletStore(): WalletStoreContextValue {
     [dispatch]
   );
 
+  const updateNetwork = useCallback(
+    (id: string, network: Parameters<WalletStoreContextValue['updateNetwork']>[1]) => {
+      dispatch(updateNetworkAction({ id, network }));
+    },
+    [dispatch]
+  );
+
   const updateWalletInstance = useCallback(
     (id: string, instance: Parameters<WalletStoreContextValue['updateWalletInstance']>[1]) => {
       dispatch(updateWalletInstanceAction({ id, instance }));
@@ -72,6 +80,7 @@ export function useWalletStore(): WalletStoreContextValue {
     removeWallet,
     getWallet,
     updateFriendlyName,
+    updateNetwork,
     updateWalletInstance,
     updateWalletStatus,
     getAllWallets,

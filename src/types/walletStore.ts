@@ -41,6 +41,7 @@ export interface WalletStoreContextValue {
   removeWallet: (id: string) => void;
   getWallet: (id: string) => WalletInfo | undefined;
   updateFriendlyName: (id: string, friendlyName: string) => void;
+  updateNetwork: (id: string, network: NetworkType) => void;
   updateWalletInstance: (id: string, instance: HathorWallet | null) => void;
   updateWalletStatus: (id: string, status: WalletStatus, firstAddress?: string, error?: string) => void;
   getAllWallets: () => WalletInfo[];
