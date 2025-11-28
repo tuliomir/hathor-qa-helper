@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder, MdSwapVert } from 'react-icons/md';
+import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
@@ -16,6 +16,8 @@ import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
+import NetworkSwapButton from '../common/NetworkSwapButton';
+import Select from '../common/Select';
 import type { NetworkType } from '../../constants/network';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
@@ -381,14 +383,12 @@ export default function WalletInitialization() {
                     <td className="p-3">
                       <div className="flex flex-col items-start gap-1">
                         <span>{wallet.metadata.network}</span>
-                        <button
-                          onClick={() => handleSwapNetwork(wallet.metadata.id, wallet.metadata.network, wallet.status)}
-                          title={`Switch to ${wallet.metadata.network === 'TESTNET' ? 'MAINNET' : 'TESTNET'}`}
-                          className="btn btn-square text-2xs p-1 bg-gray-200 hover:bg-gray-300 border-0"
-                          disabled={wallet.status === 'connecting' || wallet.status === 'syncing'}
-                        >
-                          <MdSwapVert />
-                        </button>
+                        <NetworkSwapButton
+                          walletId={wallet.metadata.id}
+                          currentNetwork={wallet.metadata.network}
+                          walletStatus={wallet.status}
+                          onSwap={handleSwapNetwork}
+                        />
                       </div>
                     </td>
                     <td className={`p-3 ${getStatusColor(wallet.status)} font-bold text-sm`}>
@@ -488,11 +488,11 @@ export default function WalletInitialization() {
             <p className="text-muted text-sm mb-4">
               Choose a wallet with funds to use for testing. Sorted by highest balance.
             </p>
-            <select
+            <Select
               id="funding-wallet-select"
               value={fundingWalletId || ''}
               onChange={(e) => dispatch(setFundingWallet(e.target.value || null))}
-              className="input cursor-pointer bg-white w-full mb-3"
+              className="w-full mb-3"
             >
               <option value="">-- Select funding wallet --</option>
               {walletsSortedByBalanceDesc.map((wallet) => (
@@ -500,7 +500,7 @@ export default function WalletInitialization() {
                   {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
                 </option>
               ))}
-            </select>
+            </Select>
             {fundingWalletId && (
               <button
                 onClick={() => handleSetDefaultFundWallet(defaultFundWalletId === fundingWalletId ? null : fundingWalletId)}
@@ -520,11 +520,11 @@ export default function WalletInitialization() {
             <p className="text-muted text-sm mb-4">
               Choose a wallet to test. Sorted by lowest balance.
             </p>
-            <select
+            <Select
               id="test-wallet-select"
               value={testWalletId || ''}
               onChange={(e) => dispatch(setTestWallet(e.target.value || null))}
-              className="input cursor-pointer bg-white w-full mb-3"
+              className="w-full mb-3"
             >
               <option value="">-- Select test wallet --</option>
               {walletsSortedByBalanceAsc.map((wallet) => (
@@ -532,7 +532,7 @@ export default function WalletInitialization() {
                   {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
                 </option>
               ))}
-            </select>
+            </Select>
             {testWalletId && (
               <button
                 onClick={() => handleSetDefaultTestWallet(defaultTestWalletId === testWalletId ? null : testWalletId)}
@@ -647,15 +647,14 @@ export default function WalletInitialization() {
           <label htmlFor="network-select" className="block mb-1.5 font-bold">
             Network:
           </label>
-          <select
+          <Select
             id="network-select"
             value={network}
             onChange={handleNetworkChange}
-            className="input cursor-pointer bg-white"
           >
             <option value="TESTNET">Testnet</option>
             <option value="MAINNET">Mainnet</option>
-          </select>
+          </Select>
         </div>
 
         <button

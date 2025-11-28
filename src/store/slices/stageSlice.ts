@@ -8,7 +8,7 @@ import type { StageId } from '../../types/stage';
 
 interface StageState {
   currentStage: StageId;
-  scrollPositions: Record<StageId, number>;
+  scrollPositions: Partial<Record<StageId, number>>;
 }
 
 const initialState: StageState = {

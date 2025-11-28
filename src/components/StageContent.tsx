@@ -19,6 +19,7 @@ import { BetInitializeStage } from './stages/BetInitializeStage';
 import { BetDepositStage } from './stages/BetDepositStage';
 import { SetBetResultStage } from './stages/SetBetResultStage';
 import { BetWithdrawStage } from './stages/BetWithdrawStage';
+import PushNotifications from './stages/PushNotifications';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -44,6 +45,7 @@ export default function StageContent() {
       {currentStage === 'rpc-bet-deposit' && <BetDepositStage />}
       {currentStage === 'rpc-set-bet-result' && <SetBetResultStage />}
       {currentStage === 'rpc-bet-withdraw' && <BetWithdrawStage />}
+      {currentStage === 'push-notifications' && <PushNotifications />}
     </div>
   );
 }

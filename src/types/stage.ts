@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
 
 /**
  * Stage configuration
@@ -118,6 +118,16 @@ export const STAGES: StageItem[] = [
     description: 'Withdraw your prize from a bet nano contract',
     icon: '🏆',
   },
+	{
+		type: 'separator',
+		title: 'Push Notifications',
+	},
+	{
+		id: 'push-notifications',
+		title: 'Push Notifications',
+		description: 'Test push notifications by sending tokens to test wallet',
+		icon: '🔔',
+	},
   {
     type: 'separator',
     title: 'Auditing',
