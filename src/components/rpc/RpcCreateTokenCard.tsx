@@ -13,6 +13,7 @@ export interface RpcCreateTokenCardProps {
   onExecute: (params: CreateTokenParams) => Promise<{ request: any; response: any }>;
   disabled?: boolean;
   isDryRun?: boolean;
+  walletAddress?: string | null;
   initialRequest?: { method: string; params: unknown } | null;
   initialResponse?: unknown | null;
   initialError?: string | null;
@@ -22,6 +23,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   onExecute,
   disabled = false,
   isDryRun = false,
+  walletAddress = null,
   initialRequest = null,
   initialResponse = null,
   initialError = null,
@@ -52,6 +54,16 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
     data: [],
   });
 
+  // Pre-populate change_address with wallet address on mount
+  useEffect(() => {
+    if (walletAddress && !params.change_address) {
+      setParams((prev) => ({
+        ...prev,
+        change_address: walletAddress,
+      }));
+    }
+  }, [walletAddress]);
+
   // Sync with initial values from Redux
   useEffect(() => {
     if (initialRequest) setRequestInfo(initialRequest);
@@ -64,6 +76,13 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
       setExpanded(true);
     }
   }, [initialRequest, initialResponse, initialError]);
+
+  // Helper to populate address field
+  const populateAddress = (field: 'change_address' | 'mint_authority_address' | 'melt_authority_address') => {
+    if (walletAddress) {
+      setParams({ ...params, [field]: walletAddress });
+    }
+  };
 
   // Handler for simple field changes
   const handleFieldChange = (field: keyof CreateTokenParams, value: string | boolean) => {
@@ -104,10 +123,10 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
       setRequestExpanded(true);
       setExpanded(true);
 
-      showToast({
-        message: isDryRun ? 'Request generated (not sent to RPC)' : 'Token created successfully',
-        type: 'success',
-      });
+      showToast(
+        isDryRun ? 'Request generated (not sent to RPC)' : 'Token created successfully',
+        'success'
+      );
     } catch (err: any) {
       const errorMessage = err.message || 'An error occurred';
       setError(errorMessage);
@@ -119,10 +138,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
         setRequestExpanded(true);
       }
 
-      showToast({
-        message: errorMessage,
-        type: 'error',
-      });
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -191,7 +207,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
             <span className="text-sm font-semibold text-green-800">Full Transaction</span>
           </div>
           <div className="max-h-64 overflow-y-auto px-3 py-2">
-            <pre className="text-xs font-mono text-gray-700">
+            <pre className="text-xs font-mono text-gray-700 text-left">
               {safeStringify(responseData.tx, 2)}
             </pre>
           </div>
@@ -204,7 +220,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   const renderRawJson = (data: any) => {
     return (
       <div className="bg-white border border-green-200 rounded p-3 overflow-auto max-h-64">
-        <pre className="text-sm font-mono text-gray-700">
+        <pre className="text-sm font-mono text-gray-700 text-left">
           {safeStringify(data, 2)}
         </pre>
       </div>
@@ -265,12 +281,23 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           {/* Change Address */}
           <div className="space-y-2">
             <label className="block text-sm font-medium mb-1">Change Address (optional)</label>
-            <input
-              value={params.change_address}
-              onChange={(e) => handleFieldChange('change_address', e.target.value)}
-              placeholder="Change address"
-              className="input"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                value={params.change_address}
+                onChange={(e) => handleFieldChange('change_address', e.target.value)}
+                placeholder="Change address"
+                className="input flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => populateAddress('change_address')}
+                disabled={!walletAddress}
+                className="btn-secondary py-2 px-3 text-sm whitespace-nowrap"
+                title="Populate with address 0"
+              >
+                Use Addr 0
+              </button>
+            </div>
           </div>
 
           {/* Mint Settings */}
@@ -287,12 +314,23 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
             </div>
             {params.create_mint && (
               <>
-                <input
-                  value={params.mint_authority_address}
-                  onChange={(e) => handleFieldChange('mint_authority_address', e.target.value)}
-                  placeholder="Mint Authority Address (optional)"
-                  className="input"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    value={params.mint_authority_address}
+                    onChange={(e) => handleFieldChange('mint_authority_address', e.target.value)}
+                    placeholder="Mint Authority Address (optional)"
+                    className="input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => populateAddress('mint_authority_address')}
+                    disabled={!walletAddress}
+                    className="btn-secondary py-2 px-3 text-sm whitespace-nowrap"
+                    title="Populate with address 0"
+                  >
+                    Use Addr 0
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -322,12 +360,23 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
             </div>
             {params.create_melt && (
               <>
-                <input
-                  value={params.melt_authority_address}
-                  onChange={(e) => handleFieldChange('melt_authority_address', e.target.value)}
-                  placeholder="Melt Authority Address (optional)"
-                  className="input"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    value={params.melt_authority_address}
+                    onChange={(e) => handleFieldChange('melt_authority_address', e.target.value)}
+                    placeholder="Melt Authority Address (optional)"
+                    className="input flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => populateAddress('melt_authority_address')}
+                    disabled={!walletAddress}
+                    className="btn-secondary py-2 px-3 text-sm whitespace-nowrap"
+                    title="Populate with address 0"
+                  >
+                    Use Addr 0
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -366,7 +415,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
                     />
                     <button
                       onClick={() => handleRemoveData(index)}
-                      className="btn-secondary py-2 px-3 text-sm text-red-600 hover:text-red-700"
+                      className="btn-secondary py-2 px-3 text-sm"
                     >
                       Remove
                     </button>
@@ -417,7 +466,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
                       <span className="text-sm font-semibold text-blue-800">params</span>
                     </div>
                     <div className="px-3 py-2 max-h-64 overflow-y-auto">
-                      <pre className="text-sm font-mono text-blue-900">
+                      <pre className="text-sm font-mono text-blue-900 text-left">
                         {safeStringify(requestInfo.params, 2)}
                       </pre>
                     </div>

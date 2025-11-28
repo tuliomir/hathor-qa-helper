@@ -17,20 +17,23 @@ import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from 
 import { RpcCreateTokenCard } from '../rpc/RpcCreateTokenCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
+import { useWalletStore } from '../../hooks/useWalletStore';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const CreateTokenStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const { getWallet } = useWalletStore();
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const testWallet = useSelector((state: RootState) =>
-    testWalletId ? state.walletStore.wallets[testWalletId] : null
-  );
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const createTokenData = useSelector((state: RootState) => state.createToken);
+
+  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
@@ -40,9 +43,7 @@ export const CreateTokenStage: React.FC = () => {
     const getAddress = async () => {
       if (testWallet?.instance) {
         try {
-          // Type assertion since we know the instance has getAddressAtIndex method
-          const wallet = testWallet.instance as { getAddressAtIndex: (index: number) => Promise<string> };
-          const address = await wallet.getAddressAtIndex(0);
+          const address = await testWallet.instance.getAddressAtIndex(0);
           setTestWalletAddress(address);
         } catch (error) {
           console.error('Failed to get test wallet address:', error);
@@ -88,6 +89,9 @@ export const CreateTokenStage: React.FC = () => {
       const { request, response } = await rpcHandlers.getRpcCreateToken(params);
       const duration = Date.now() - startTime;
 
+      // Convert BigInt to strings for Redux serialization
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store request in Redux
       dispatch(setCreateTokenRequest({
         method: request.method,
@@ -95,9 +99,9 @@ export const CreateTokenStage: React.FC = () => {
         isDryRun,
       }));
 
-      // Store response in Redux
+      // Store response in Redux (with BigInt converted to strings)
       dispatch(setCreateTokenResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
@@ -116,7 +120,7 @@ export const CreateTokenStage: React.FC = () => {
         }
       }
 
-      return { request, response };
+      return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
 
@@ -202,6 +206,7 @@ export const CreateTokenStage: React.FC = () => {
           onExecute={handleExecuteCreateToken}
           disabled={false}
           isDryRun={isDryRun}
+          walletAddress={testWalletAddress}
           initialRequest={createTokenData.request}
           initialResponse={createTokenData.rawResponse}
           initialError={createTokenData.error}

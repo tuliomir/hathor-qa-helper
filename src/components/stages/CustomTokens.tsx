@@ -145,6 +145,11 @@ function WalletTokensDisplay({
   const [isMelting, setIsMelting] = useState(false);
   const [meltError, setMeltError] = useState<string | null>(null);
 
+	// Refresh the tokens when page is opened
+	useEffect(() => {
+		handleRefresh().catch(e => console.error('Failed refresh', e));
+	}, []);
+
   // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
   // Just reset selected token when wallet changes
   useEffect(() => {
