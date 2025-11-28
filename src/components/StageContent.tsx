@@ -13,6 +13,7 @@ import TxUpdateEvents from './stages/TxUpdateEvents';
 import { ConnectionStage } from './stages/ConnectionStage';
 import { GetBalanceStage } from './stages/GetBalanceStage';
 import { SignWithAddressStage } from './stages/SignWithAddressStage';
+import { CreateTokenStage } from './stages/CreateTokenStage';
 import { SignOracleDataStage } from './stages/SignOracleDataStage';
 import { BetInitializeStage } from './stages/BetInitializeStage';
 import { BetDepositStage } from './stages/BetDepositStage';
@@ -37,6 +38,7 @@ export default function StageContent() {
       {currentStage === 'rpc-connection' && <ConnectionStage />}
       {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
       {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
+      {currentStage === 'rpc-create-token' && <CreateTokenStage />}
       {currentStage === 'rpc-sign-oracle-data' && <SignOracleDataStage />}
       {currentStage === 'rpc-bet-initialize' && <BetInitializeStage />}
       {currentStage === 'rpc-bet-deposit' && <BetDepositStage />}

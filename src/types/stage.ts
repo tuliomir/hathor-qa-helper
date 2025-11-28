@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw';
 
 /**
  * Stage configuration
@@ -77,6 +77,12 @@ export const STAGES: StageItem[] = [
     title: 'Sign with Address',
     description: 'Test htr_signWithAddress RPC method to sign messages',
     icon: '✍️',
+  },
+  {
+    id: 'rpc-create-token',
+    title: 'Create Token',
+    description: 'Create a new custom token with mint/melt authorities',
+    icon: '🪙',
   },
   {
     id: 'rpc-sign-oracle-data',

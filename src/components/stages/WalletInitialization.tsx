@@ -261,7 +261,7 @@ export default function WalletInitialization() {
 	 * @param end
 	 * @deprecated Use the function from utils instead
 	 */
-  const truncateAddress = (addr: string, start = 8, end = 4) => {
+  const truncateAddress = (addr: string, start = 3, end = 8) => {
     if (!addr) return '';
     if (addr.length <= start + end + 3) return addr;
     return addr.slice(0, start) + '...' + addr.slice(-end);
@@ -365,9 +365,9 @@ export default function WalletInitialization() {
                     <td className="p-3">{wallet.metadata.network}</td>
                     <td className={`p-3 ${getStatusColor(wallet.status)} font-bold text-sm`}>
                       {wallet.status}
-                      {wallet.status === 'ready' && wallet.balance && (
+                      {wallet.status === 'ready' && (
                         <div className="text-xs text-success mt-1">
-                          Balance: {formatBalance(wallet.balance)} HTR
+                          Balance: {formatBalance(wallet.balance ?? 0n)} HTR
                         </div>
                       )}
                       {wallet.error && (
@@ -377,7 +377,7 @@ export default function WalletInitialization() {
                     <td className={`p-3 font-mono text-2.5xs ${wallet.firstAddress ? 'text-success' : 'text-muted'}`}>
                       {wallet.firstAddress ? (
                         <div className="flex items-center gap-2">
-                          <span className="break-all">{truncateAddress(wallet.firstAddress)}</span>
+                          <span className="break-all text-xs">{truncateAddress(wallet.firstAddress)}</span>
                           <CopyButton text={wallet.firstAddress} label={`Copy address for ${wallet.metadata.friendlyName}`} className="text-muted" />
                         </div>
                       ) : (

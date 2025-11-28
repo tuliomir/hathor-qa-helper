@@ -10,6 +10,20 @@ import type { SessionTypes } from '@walletconnect/types';
 import { HATHOR_TESTNET_CHAIN } from '../constants/walletConnect';
 import { getOracleBuffer } from '../utils/betHelpers';
 
+export interface CreateTokenParams {
+  name: string;
+  symbol: string;
+  amount: string;
+  change_address: string;
+  create_mint: boolean;
+  mint_authority_address: string;
+  allow_external_mint_authority_address: boolean;
+  create_melt: boolean;
+  melt_authority_address: string;
+  allow_external_melt_authority_address: boolean;
+  data: string[];
+}
+
 export interface RpcHandlerDependencies {
   client: Client;  // WalletConnect client
   session: SessionTypes.Struct; // Active WalletConnect session
@@ -113,6 +127,79 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         return {
           request: requestParams,
           response: result,
+        };
+      } catch (error) {
+        // Attach request to error so UI can display it
+        const errorWithRequest = error as any;
+        errorWithRequest.requestParams = requestParams;
+        throw errorWithRequest;
+      }
+    },
+
+    /**
+     * Create Token
+     * Creates a new custom token with optional mint/melt authorities
+     */
+    getRpcCreateToken: async (params: CreateTokenParams) => {
+      if (!session || !client) {
+        throw new Error('WalletConnect session not available');
+      }
+
+      const invokeParams: any = {
+        network: DEFAULT_NETWORK,
+        name: params.name,
+        symbol: params.symbol,
+        amount: params.amount,
+        create_mint: params.create_mint,
+        create_melt: params.create_melt,
+      };
+
+      if (params.change_address && params.change_address.trim()) {
+        invokeParams.change_address = params.change_address;
+      }
+      if (params.create_mint && params.mint_authority_address && params.mint_authority_address.trim()) {
+        invokeParams.mint_authority_address = params.mint_authority_address;
+      }
+      if (params.create_mint) {
+        invokeParams.allow_external_mint_authority_address = params.allow_external_mint_authority_address;
+      }
+      if (params.create_melt && params.melt_authority_address && params.melt_authority_address.trim()) {
+        invokeParams.melt_authority_address = params.melt_authority_address;
+      }
+      if (params.create_melt) {
+        invokeParams.allow_external_melt_authority_address = params.allow_external_melt_authority_address;
+      }
+      if (params.data && params.data.length > 0) {
+        const filteredData = params.data.filter((d) => d.trim() !== '');
+        if (filteredData.length > 0) {
+          invokeParams.data = filteredData;
+        }
+      }
+
+      const requestParams = {
+        method: 'htr_createToken',
+        params: invokeParams,
+      };
+
+      try {
+        let response;
+
+        if (dryRun) {
+          // Dry run: don't actually call RPC
+          response = null;
+        } else {
+          // Make the RPC request via WalletConnect
+          response = await client.request({
+            topic: session.topic,
+            chainId: HATHOR_TESTNET_CHAIN,
+            request: requestParams,
+          });
+        }
+
+        // Return both request and response
+        return {
+          request: requestParams,
+          response,
         };
       } catch (error) {
         // Attach request to error so UI can display it
