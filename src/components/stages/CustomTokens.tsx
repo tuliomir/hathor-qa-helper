@@ -141,6 +141,9 @@ function WalletTokensDisplay({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [otherWalletAddress, setOtherWalletAddress] = useState<string | null>(null);
+  const [hasMeltAuthority, setHasMeltAuthority] = useState(false);
+  const [isMelting, setIsMelting] = useState(false);
+  const [meltError, setMeltError] = useState<string | null>(null);
 
   // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
   // Just reset selected token when wallet changes
@@ -219,6 +222,29 @@ function WalletTokensDisplay({
 
     deriveOtherWalletAddress();
   }, [wallet, isTestWallet, fundingWalletId, testWalletId, getAllWallets]);
+
+  // Check melt authority when selected token changes
+  useEffect(() => {
+    const checkMeltAuthority = async () => {
+      if (!wallet.instance || !selectedTokenUid || !isTestWallet) {
+        setHasMeltAuthority(false);
+        return;
+      }
+
+      try {
+        const meltAuthority = await wallet.instance.getMeltAuthority(selectedTokenUid, {
+          many: false,
+          only_available_utxos: true
+        });
+        setHasMeltAuthority(meltAuthority && meltAuthority.length > 0);
+      } catch (err) {
+        console.error('Failed to check melt authority:', err);
+        setHasMeltAuthority(false);
+      }
+    };
+
+    checkMeltAuthority();
+  }, [wallet.instance, selectedTokenUid, isTestWallet, refreshKey]);
 
   const handleTokenClick = (uid: string, name: string, symbol: string) => {
     setSelectedTokenUid(uid);
@@ -387,6 +413,82 @@ function WalletTokensDisplay({
     } catch (err) {
       // Error is already handled by the hook
       console.error('Transaction error:', err);
+    }
+  };
+
+  // Handler for melting tokens
+  const handleMeltTokens = async () => {
+    if (!selectedToken || !wallet.instance || !isTestWallet) {
+      return;
+    }
+
+    setMeltError(null);
+
+    try {
+      // Get current balance directly from wallet instance
+      const balanceData = await wallet.instance.getBalance(selectedToken.uid);
+      const balance = balanceData[0]?.balance?.unlocked || 0n;
+
+      if (balance === 0n) {
+        setMeltError('No tokens to melt');
+        return;
+      }
+
+      // Calculate maximum meltable amount (must be multiple of 100)
+      const balanceNum = Number(balance);
+      const maxMeltable = Math.floor(balanceNum / 100) * 100;
+
+      if (maxMeltable === 0) {
+        setMeltError('Balance must be at least 100 to melt tokens');
+        return;
+      }
+
+	    console.log({ balanceNum, maxMeltable, token: selectedToken.symbol });
+
+      // Confirm with user
+      const confirmed = window.confirm(
+        `Are you sure you want to melt ${maxMeltable} ${selectedToken.symbol} tokens?\n\n` +
+        `This operation is IRREVERSIBLE. The tokens will be converted back to HTR.`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setIsMelting(true);
+
+      // Get address 0 for change and new melt authority
+      const address0 = await wallet.instance.getAddressAtIndex(0);
+
+      // Execute melt transaction
+      const sendTx = await wallet.instance.meltTokensSendTransaction(
+        selectedToken.uid,
+        BigInt(maxMeltable),
+        {
+          pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+          changeAddress: address0,
+          meltAuthorityAddress: address0,
+          createAnotherMelt: true,
+        }
+      );
+
+      // Run the transaction
+      await sendTx.runFromMining();
+
+      // Refresh wallet data after successful melt
+      await Promise.all([
+        dispatch(refreshWalletTokens(wallet.metadata.id)).unwrap(),
+        dispatch(refreshWalletBalance(wallet.metadata.id)).unwrap(),
+      ]);
+      setRefreshKey((prev) => prev + 1);
+
+      setIsMelting(false);
+      alert(`Successfully melted ${maxMeltable} ${selectedToken.symbol} tokens!`);
+    } catch (err) {
+      setIsMelting(false);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setMeltError(`Failed to melt tokens: ${errorMessage}`);
+      console.error('Melt error:', err);
     }
   };
 
@@ -621,6 +723,75 @@ function WalletTokensDisplay({
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Melt Tokens Section - Only for Test Wallet */}
+          {isTestWallet && selectedToken && (
+            <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
+              <div className="mb-3 text-center">
+                <h3 className="text-lg font-bold m-0 text-red-900">
+                  Melt Tokens (Irreversible)
+                </h3>
+                <p className="text-sm text-red-700 mt-2 mb-0">
+                  Destroy tokens and convert them back to HTR
+                </p>
+              </div>
+
+              {/* Loading overlay for melting */}
+              {isMelting && (
+                <div className="mb-3 p-3 bg-yellow-100 border border-yellow-400 rounded text-center">
+                  <p className="m-0 text-yellow-900 font-semibold">Melting tokens in progress...</p>
+                </div>
+              )}
+
+              {/* Melt error display */}
+              {meltError && (
+                <div className="mb-3 p-3 bg-red-100 border border-red-400 rounded">
+                  <p className="m-0 text-red-900">{meltError}</p>
+                </div>
+              )}
+
+              {/* Melt authority check */}
+              {!hasMeltAuthority ? (
+                <div className="p-4 bg-white border border-red-300 rounded text-center">
+                  <p className="m-0 text-red-800">
+                    This wallet does not have melt authority for this token.
+                  </p>
+                  <p className="text-sm text-red-600 mt-2 mb-0">
+                    Only wallets with melt authority can destroy tokens.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-full p-4 bg-white border border-red-300 rounded">
+                    <p className="text-sm text-red-800 mb-2">
+                      <strong>Warning:</strong> Melting tokens is an irreversible operation.
+                    </p>
+                    <p className="text-sm text-red-700 mb-2">
+                      • Tokens can only be melted in multiples of 100
+                    </p>
+                    <p className="text-sm text-red-700 mb-2">
+                      • Melted tokens are converted back to HTR at a rate of 100 tokens = 1 HTR
+                    </p>
+                    <p className="text-sm text-red-700 mb-0">
+                      • Any melting below 100 tokens will cause the tokens to be burned without HTR return
+                    </p>
+                  </div>
+
+                  {/* Melt button */}
+                  <div className="flex items-center justify-center mt-3">
+                    <button
+                      type="button"
+                      onClick={handleMeltTokens}
+                      className="btn-primary px-4 py-2 bg-red-600 hover:bg-red-700"
+                      disabled={isMelting || isSending}
+                    >
+                      {isMelting ? 'Melting...' : `Melt ${selectedToken.symbol} Tokens`}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
