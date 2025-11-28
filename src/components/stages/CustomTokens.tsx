@@ -329,6 +329,13 @@ function WalletTokensDisplay({
       {walletTokens.length === 0 && (
         <div className="card-primary mb-7.5 text-center">
           <p className="m-0 text-muted">No custom tokens found for this wallet.</p>
+	        <button
+		        onClick={handleRefresh}
+		        disabled={isRefreshing}
+		        className="btn-primary mt-4 py-1.5 px-4 text-sm"
+	        >
+		        {isRefreshing ? 'Refreshing...' : 'Refresh'}
+	        </button>
         </div>
       )}
 
