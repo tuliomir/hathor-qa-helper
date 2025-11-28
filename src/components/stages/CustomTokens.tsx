@@ -24,6 +24,7 @@ interface Token {
   uid: string;
   name: string;
   symbol: string;
+  timestamp?: number;
 }
 
 // Hook for lazy-loading token balance
@@ -155,6 +156,8 @@ function WalletTokensDisplay({
   const [hasMeltAuthority, setHasMeltAuthority] = useState(false);
   const [isMelting, setIsMelting] = useState(false);
   const [meltError, setMeltError] = useState<string | null>(null);
+  const [hideZeroBalance, setHideZeroBalance] = useState(true);
+  const [tokenBalances, setTokenBalances] = useState<Map<string, bigint>>(new Map());
 
 	// Refresh the tokens when page is opened
 	useEffect(() => {
@@ -174,17 +177,60 @@ function WalletTokensDisplay({
         .filter((uid) => uid !== NATIVE_TOKEN_UID)
         .map((uid) => allTokens.find((t) => t.uid === uid))
         .filter((t): t is Token => t !== undefined)
+        .sort((a, b) => {
+          // Sort by timestamp (newer first), fallback to uid if no timestamp
+          if (a.timestamp && b.timestamp) {
+            return b.timestamp - a.timestamp;
+          }
+          return 0;
+        })
     : [];
+
+  // Load all token balances for filtering
+  useEffect(() => {
+    const loadAllBalances = async () => {
+      if (!wallet.instance || walletTokens.length === 0) {
+        setTokenBalances(new Map());
+        return;
+      }
+
+      const balances = new Map<string, bigint>();
+
+      await Promise.all(
+        walletTokens.map(async (token) => {
+          try {
+            const bal = await wallet.instance.getBalance(token.uid);
+            balances.set(token.uid, bal[0]?.balance?.unlocked || 0n);
+          } catch (err) {
+            console.error(`Failed to load balance for token ${token.uid}:`, err);
+            balances.set(token.uid, 0n);
+          }
+        })
+      );
+
+      setTokenBalances(balances);
+    };
+
+    loadAllBalances();
+  }, [wallet.instance, walletTokens.length, refreshKey]);
+
+  // Filter tokens based on zero balance checkbox
+  const filteredTokens = hideZeroBalance
+    ? walletTokens.filter((token) => {
+        const balance = tokenBalances.get(token.uid);
+        return balance === undefined || balance > 0n;
+      })
+    : walletTokens;
 
   // Auto-select first token when wallet changes or tokens load
   useEffect(() => {
-    if (walletTokens.length > 0 && !selectedTokenUid) {
-      const firstToken = walletTokens[0];
+    if (filteredTokens.length > 0 && !selectedTokenUid) {
+      const firstToken = filteredTokens[0];
       setSelectedTokenUid(firstToken.uid);
       const config = tokensUtils.getConfigurationString(firstToken.uid, firstToken.name, firstToken.symbol);
       setConfigString(config);
     }
-  }, [walletTokens.length, selectedTokenUid]);
+  }, [filteredTokens.length, selectedTokenUid]);
 
   // Derive address when index changes
   useEffect(() => {
@@ -361,7 +407,7 @@ function WalletTokensDisplay({
     }
   };
 
-  const selectedToken = walletTokens.find((t) => t.uid === selectedTokenUid);
+  const selectedToken = filteredTokens.find((t) => t.uid === selectedTokenUid);
 
   const getPaymentRequest = () => {
     if (!derivedAddress || !selectedToken) return '';
@@ -554,13 +600,26 @@ function WalletTokensDisplay({
         <div className="card-primary mb-7.5">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-bold m-0">Custom Tokens</h3>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="btn-primary py-1.5 px-4 text-sm"
-            >
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="form-control">
+                <label className="label cursor-pointer gap-2 p-0">
+                  <input
+                    type="checkbox"
+                    checked={hideZeroBalance}
+                    onChange={(e) => setHideZeroBalance(e.target.checked)}
+                    className="checkbox checkbox-primary checkbox-sm"
+                  />
+                  <span className="label-text text-sm">Hide zero-balance</span>
+                </label>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="btn-primary py-1.5 px-4 text-sm"
+              >
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -573,7 +632,7 @@ function WalletTokensDisplay({
                 </tr>
               </thead>
               <tbody>
-                {walletTokens.map((token) => (
+                {filteredTokens.map((token) => (
                   <TokenRow
                     key={token.uid}
                     token={token}
