@@ -9,6 +9,8 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { safeStringify } from '../../utils/betHelpers';
+import { useAppSelector } from '../../store/hooks.ts'
+import TxStatus from '../common/TxStatus.tsx'
 
 export interface RpcBetWithdrawCardProps {
   onExecute: () => Promise<any>;
@@ -61,6 +63,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
+	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
 
   // Live request building
   const [liveRequest, setLiveRequest] = useState<{ method: string; params: any } | null>(null);
@@ -456,6 +459,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
                 <span className="text-xs text-muted font-medium">Transaction Hash</span>
                 <div className="flex items-center gap-1">
                   <CopyButton text={resultData.response.hash} label="Copy TX hash" />
+	                <TxStatus hash={resultData.response.hash} walletId={testWalletId} />
                   <ExplorerLink hash={resultData.response.hash} />
                 </div>
               </div>

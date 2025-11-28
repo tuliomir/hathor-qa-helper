@@ -33,6 +33,7 @@ export const BetWithdrawStage: React.FC = () => {
   const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
   const latestNcId = betNanoContract.ncId;
 
+
   // Get the actual wallet instance
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
 

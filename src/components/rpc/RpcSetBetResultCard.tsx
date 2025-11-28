@@ -9,6 +9,8 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { safeStringify } from '../../utils/betHelpers';
+import { useAppSelector } from '../../store/hooks.ts'
+import TxStatus from '../common/TxStatus.tsx'
 
 export interface RpcSetBetResultCardProps {
   onExecute: () => Promise<any>;
@@ -66,6 +68,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
+	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
 
   // Live request building - calculate request on every input change
   const [liveRequest, setLiveRequest] = useState<{ method: string; params: any } | null>(null);
@@ -479,6 +482,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
                 <span className="text-xs text-muted font-medium">Transaction Hash</span>
                 <div className="flex items-center gap-1">
                   <CopyButton text={resultData.response.hash} label="Copy TX hash" />
+	                <TxStatus hash={resultData.response.hash} walletId={testWalletId} />
                   <ExplorerLink hash={resultData.response.hash} />
                 </div>
               </div>
@@ -528,31 +532,6 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
                   ) : (
                     <span className="text-sm text-muted italic">
                       Deriving oracle address from wallet...
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Oracle Signature Placeholder */}
-              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
-                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-yellow-800">
-                      Oracle Signature (Manual for now)
-                    </span>
-                    {oracleSignature && (
-                      <CopyButton text={oracleSignature} label="Copy" />
-                    )}
-                  </div>
-                </div>
-                <div className="px-3 py-2">
-                  {oracleSignature ? (
-                    <span className="text-sm font-mono text-yellow-900 break-all">
-                      {oracleSignature.slice(0, 50)}{oracleSignature.length > 50 ? '...' : ''}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted italic">
-                      Enter oracle signature above (will be auto-calculated in future)
                     </span>
                   )}
                 </div>
