@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import QRCode from 'react-qr-code';
 import { useAppSelector } from '../../store/hooks';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useToast } from '../../hooks/useToast';
@@ -23,6 +24,10 @@ interface WalletTransaction {
   ncCaller?: string;
   ncId?: string;
   ncMethod?: string;
+  headers?: {
+    method?: string;
+    [key: string]: any;
+  };
   // Keep raw data for console export
   raw: any;
 }
@@ -39,6 +44,7 @@ export default function TransactionHistory() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [qrModalTxHash, setQrModalTxHash] = useState<string | null>(null);
   const pageSize = 20;
 
   // Fetch transaction history from wallet
@@ -68,6 +74,7 @@ export default function TransactionHistory() {
             ncCaller: tx.nc_caller || tx.ncCaller,
             ncId: tx.nc_id || tx.ncId,
             ncMethod: tx.nc_method || tx.ncMethod,
+            headers: tx.headers,
             raw: tx, // Keep raw data for console export
           };
         });
@@ -102,7 +109,13 @@ export default function TransactionHistory() {
 
   // Determine transaction type
   function getTxType(tx: WalletTransaction): string {
-    if (tx.ncCaller || tx.ncId || tx.ncMethod) return 'Nano';
+    if (tx.ncCaller || tx.ncId || tx.ncMethod) {
+      // Check if it's a Nano Init transaction
+      if (tx.headers?.method === 'initialize') {
+        return 'Nano Init';
+      }
+      return 'Nano';
+    }
     if (tx.version === 2) return 'Token Creation';
     return 'Common';
   }
@@ -267,15 +280,55 @@ export default function TransactionHistory() {
                           {txType}
                         </td>
                         <td className="py-2 px-3 text-center">
-                          <a
-                            href={getExplorerUrl(tx.txId)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary hover:underline text-xs"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            View
-                          </a>
+                          <div className="flex items-center justify-center gap-2">
+                            {txType === 'Nano Init' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setQrModalTxHash(tx.txId);
+                                }}
+                                className="text-primary hover:text-primary-dark"
+                                title="Show QR Code"
+                                aria-label="Show QR Code"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="w-4 h-4"
+                                >
+                                  <rect x="3" y="3" width="7" height="7" />
+                                  <rect x="14" y="3" width="7" height="7" />
+                                  <rect x="3" y="14" width="7" height="7" />
+                                  <path d="M14 14h1" />
+                                  <path d="M15 14v1" />
+                                  <path d="M14 15h1" />
+                                  <path d="M19 14h1" />
+                                  <path d="M20 14v1" />
+                                  <path d="M19 15h1" />
+                                  <path d="M14 19h1" />
+                                  <path d="M15 19v1" />
+                                  <path d="M14 20h1" />
+                                  <path d="M19 19h1" />
+                                  <path d="M20 19v1" />
+                                  <path d="M19 20h1" />
+                                </svg>
+                              </button>
+                            )}
+                            <a
+                              href={getExplorerUrl(tx.txId)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary hover:underline text-xs"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -311,6 +364,38 @@ export default function TransactionHistory() {
           </>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {qrModalTxHash && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setQrModalTxHash(null)}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-sm mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold m-0">Transaction QR Code</h3>
+              <button
+                onClick={() => setQrModalTxHash(null)}
+                className="text-2xl leading-none text-muted hover:text-gray-900"
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-4 bg-white border-2 border-gray-300 rounded">
+                <QRCode value={qrModalTxHash} size={200} />
+              </div>
+              <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded text-center w-full">
+                {qrModalTxHash}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
