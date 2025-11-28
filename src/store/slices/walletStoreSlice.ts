@@ -13,18 +13,21 @@ import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+// @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { addToken } from './tokensSlice';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
 /**
  * Wallet event captured from HathorWallet event emitter
+ * BigInt values in data are converted to strings for Redux serializability
  */
 export interface WalletEvent {
   id: string; // Unique event ID
   eventType: 'new-tx' | 'update-tx' | 'state' | 'more-addresses-loaded';
   timestamp: number; // Unix timestamp in milliseconds
-  data: any; // Event payload from wallet-lib
+  data: any; // Event payload from wallet-lib (BigInt values serialized to strings)
 }
 
 /**
@@ -581,26 +584,46 @@ const walletStoreSlice = createSlice({
       }
     },
 
-    addWalletEvent: (
-      state,
-      action: PayloadAction<{
+    addWalletEvent: {
+      reducer: (
+        state,
+        action: PayloadAction<{
+          walletId: string;
+          eventType: WalletEvent['eventType'];
+          data: any;
+        }>
+      ) => {
+        const { walletId, eventType, data } = action.payload;
+        const walletInfo = state.wallets[walletId];
+
+        if (walletInfo) {
+          const event: WalletEvent = {
+            id: `${walletId}-${eventType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            eventType,
+            timestamp: Date.now(),
+            data,
+          };
+          walletInfo.events.push(event);
+        }
+      },
+      prepare: ({ walletId, eventType, data }: {
         walletId: string;
         eventType: WalletEvent['eventType'];
         data: any;
-      }>
-    ) => {
-      const { walletId, eventType, data } = action.payload;
-      const walletInfo = state.wallets[walletId];
+      }) => {
+        // Serialize BigInt values to strings for Redux storage
+        // JSONBigInt.stringify converts BigInt → JSON string
+        // JSONBigInt.parse converts back with BigInt values as strings
+        const serializedData = JSONBigInt.parse(JSONBigInt.stringify(data));
 
-      if (walletInfo) {
-        const event: WalletEvent = {
-          id: `${walletId}-${eventType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          eventType,
-          timestamp: Date.now(),
-          data,
+        return {
+          payload: {
+            walletId,
+            eventType,
+            data: serializedData,
+          },
         };
-        walletInfo.events.push(event);
-      }
+      },
     },
   },
 });
