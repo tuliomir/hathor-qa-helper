@@ -18,6 +18,7 @@ import { RpcBetDepositCard } from '../rpc/RpcBetDepositCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { NATIVE_TOKEN_UID, DEFAULT_NATIVE_TOKEN_CONFIG } from '@hathor/wallet-lib/lib/constants';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const BetDepositStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -173,16 +174,20 @@ export const BetDepositStage: React.FC = () => {
       );
       const duration = Date.now() - startTime;
 
+      // Serialize BigInt values to strings for Redux storage
+      const serializedRequest = JSONBigInt.parse(JSONBigInt.stringify(request));
+      const serializedResponse = JSONBigInt.parse(JSONBigInt.stringify(response));
+
       // Store request in Redux
       dispatch(setBetDepositRequest({
-        method: request.method,
-        params: request.params,
+        method: serializedRequest.method,
+        params: serializedRequest.params,
         isDryRun,
       }));
 
       // Store response in Redux with betChoice metadata
       dispatch(setBetDepositResponse({
-        response,
+        response: serializedResponse,
         duration,
         betChoice,
       }));
