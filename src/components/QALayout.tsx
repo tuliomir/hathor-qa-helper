@@ -73,17 +73,15 @@ export default function QALayout() {
     <div className="flex min-h-screen flex-col">
       {/* Fixed Header always visible */}
       <div className="fixed top-0 left-0 right-0 z-40 h-14 bg-gradient-to-r from-primary to-blue-700 text-white shadow-md">
-        <div className="px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            {showAnyWallet ? (
-              <>
-	              {shouldShowTestWallet && renderWalletInfo(testWallet, 'Test')}
-	              {shouldShowFundingWallet && renderWalletInfo(fundingWallet, 'Funding')}
-              </>
-            ) : (
-              <h2 className="text-lg font-bold m-0">QA Helper</h2>
-            )}
-          </div>
+        <div className="px-6 h-14 flex items-center justify-between w-full">
+          {showAnyWallet ? (
+            <>
+              {shouldShowTestWallet && renderWalletInfo(testWallet, 'Test')}
+              {shouldShowFundingWallet && renderWalletInfo(fundingWallet, 'Funding')}
+            </>
+          ) : (
+            <h2 className="text-lg font-bold m-0">QA Helper</h2>
+          )}
         </div>
       </div>
 
