@@ -16,6 +16,7 @@ import { formatBalance } from '../../utils/balanceUtils';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
+import { ExplorerLink } from '../common/ExplorerLink';
 
 type TabType = 'fund' | 'test';
 
@@ -81,12 +82,14 @@ function TokenRow({
   isSelected,
   onClick,
   refreshKey,
+  network,
 }: {
   token: Token;
   walletInstance: any | null;
   isSelected: boolean;
   onClick: () => void;
   refreshKey?: number;
+  network?: string;
 }) {
   const { balance, isLoading, error } = useTokenBalance(walletInstance, token.uid, refreshKey);
 
@@ -100,7 +103,15 @@ function TokenRow({
       <td className="py-2 px-3 font-semibold">{token.symbol}</td>
       <td className="py-2 px-3">{token.name}</td>
       <td className="py-2 px-3 font-mono text-2xs" title={token.uid}>
-        {truncateUid(token.uid)}
+        <div className="flex items-center gap-2">
+          <span>{truncateUid(token.uid)}</span>
+          <ExplorerLink
+            hash={token.uid}
+            specificPage="token_detail"
+            network={network as any}
+            className="!px-1 !py-0.5"
+          />
+        </div>
       </td>
       <td className="py-2 px-3 text-right">
         {isLoading ? (
@@ -570,6 +581,7 @@ function WalletTokensDisplay({
                     isSelected={selectedTokenUid === token.uid}
                     onClick={() => handleTokenClick(token.uid, token.name, token.symbol)}
                     refreshKey={refreshKey}
+                    network={wallet.metadata.network}
                   />
                 ))}
               </tbody>

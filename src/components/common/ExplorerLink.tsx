@@ -9,7 +9,7 @@ import { NETWORK_CONFIG, type NetworkType } from '../../constants/network';
 
 export interface ExplorerLinkProps {
   hash: string;
-  specificPage?: 'nc_detail';
+  specificPage?: 'nc_detail' | 'token_detail';
   network?: NetworkType;
   className?: string;
   children?: React.ReactNode;
@@ -25,9 +25,18 @@ export const ExplorerLink: React.FC<ExplorerLinkProps> = ({
   const baseUrl = NETWORK_CONFIG[network].explorerUrl;
 
   // Determine the path based on specificPage prop
-  const path = specificPage === 'nc_detail'
-    ? `nano_contract/detail/${hash}`
-    : `transaction/${hash}`;
+  let path: string;
+  switch (specificPage) {
+    case 'nc_detail':
+      path = `nano_contract/detail/${hash}`;
+      break;
+    case 'token_detail':
+      path = `token_detail/${hash}`;
+      break;
+    default:
+      path = `transaction/${hash}`;
+      break;
+  }
 
   const url = `${baseUrl}${path}`;
 
