@@ -121,10 +121,12 @@ function TokenRow({
 function WalletTokensDisplay({
   wallet,
   fundingWalletId,
+  testWalletId,
   isTestWallet
 }: {
   wallet: WalletInfo;
   fundingWalletId: string | null;
+  testWalletId: string | null;
   isTestWallet: boolean;
 }) {
   const dispatch = useAppDispatch();
@@ -138,6 +140,7 @@ function WalletTokensDisplay({
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [otherWalletAddress, setOtherWalletAddress] = useState<string | null>(null);
 
   // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
   // Just reset selected token when wallet changes
@@ -183,6 +186,39 @@ function WalletTokensDisplay({
 
     deriveAddress();
   }, [wallet, addressIndex]);
+
+  // Derive other wallet's address (at index 0)
+  useEffect(() => {
+    const deriveOtherWalletAddress = async () => {
+      // Determine which is the "other" wallet
+      const wallets = getAllWallets();
+
+      // If viewing test wallet, other is funding. If viewing funding, other is test.
+      const otherWalletId = isTestWallet ? fundingWalletId : testWalletId;
+
+      if (!otherWalletId) {
+        setOtherWalletAddress(null);
+        return;
+      }
+
+      const otherWallet = wallets.find((w) => w.metadata.id === otherWalletId && w.status === 'ready');
+
+      if (!otherWallet || !otherWallet.instance) {
+        setOtherWalletAddress(null);
+        return;
+      }
+
+      try {
+        const address = await otherWallet.instance.getAddressAtIndex(0);
+        setOtherWalletAddress(address);
+      } catch (err) {
+        console.error('Failed to derive other wallet address:', err);
+        setOtherWalletAddress(null);
+      }
+    };
+
+    deriveOtherWalletAddress();
+  }, [wallet, isTestWallet, fundingWalletId, testWalletId, getAllWallets]);
 
   const handleTokenClick = (uid: string, name: string, symbol: string) => {
     setSelectedTokenUid(uid);
@@ -296,6 +332,62 @@ function WalletTokensDisplay({
         symbol: selectedToken.symbol,
       }
     });
+  };
+
+  const getOtherWalletPaymentRequest = () => {
+    if (!otherWalletAddress || !selectedToken) return '';
+    return JSON.stringify({
+      address: `hathor:${otherWalletAddress}`,
+      amount: amount.toString(),
+      token: {
+        uid: selectedToken.uid,
+        name: selectedToken.name,
+        symbol: selectedToken.symbol,
+      }
+    });
+  };
+
+  // Send handler for sending to the other wallet
+  const handleSendToOtherWallet = async () => {
+    if (!otherWalletAddress || !selectedToken || !wallet.instance) {
+      return;
+    }
+
+    try {
+      // Get the first address of the current wallet for change
+      const currentWalletFirstAddress = await wallet.instance.getAddressAtIndex(0);
+
+      // Build the transaction template
+      const template = TransactionTemplateBuilder.new()
+        .addSetVarAction({ name: 'recipientAddr', value: otherWalletAddress })
+        .addSetVarAction({ name: 'changeAddr', value: currentWalletFirstAddress })
+        .addTokenOutput({
+          address: '{recipientAddr}',
+          amount: BigInt(amount),
+          token: selectedToken.uid
+        })
+        .addCompleteAction({
+          changeAddress: '{changeAddr}'
+        })
+        .build();
+
+      // Send the transaction using the centralized hook
+      await sendTransaction(
+        template,
+        {
+          fromWalletId: wallet.metadata.id,
+          fromWallet: wallet,
+          toAddress: otherWalletAddress,
+          amount,
+          tokenUid: selectedToken.uid,
+          tokenSymbol: selectedToken.symbol
+        },
+        WALLET_CONFIG.DEFAULT_PIN_CODE
+      );
+    } catch (err) {
+      // Error is already handled by the hook
+      console.error('Transaction error:', err);
+    }
   };
 
   return (
@@ -494,6 +586,43 @@ function WalletTokensDisplay({
               </div>
             </div>
           )}
+
+          {/* Send to Other Wallet Section */}
+          {otherWalletAddress && (
+            <div className="card-primary mb-7.5 bg-blue-50 border-2 border-blue-400">
+              <div className="mb-3 text-center">
+                <h3 className="text-lg font-bold m-0 text-blue-900">
+                  Send to {isTestWallet ? 'Funding' : 'Test'} Wallet
+                </h3>
+                <p className="text-sm text-blue-700 mt-2 mb-0">
+                  Payment request for {isTestWallet ? 'Funding' : 'Test'} Wallet (address at index 0)
+                </p>
+              </div>
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-4 bg-white border-2 border-blue-300 rounded">
+                  <QRCode value={getOtherWalletPaymentRequest()} size={200} />
+                </div>
+                <div className="flex items-center w-full">
+                  <p className="font-mono text-2xs break-all m-0 p-2 bg-white rounded w-full">
+                    {getOtherWalletPaymentRequest()}
+                  </p>
+                  <CopyButton text={getOtherWalletPaymentRequest()} label="Copy payment request" className="ml-2" />
+                </div>
+
+                {/* Send button to other wallet */}
+                <div className="flex items-center justify-center mt-3">
+                  <button
+                    type="button"
+                    onClick={handleSendToOtherWallet}
+                    className="btn-primary px-4 py-2 bg-blue-600 hover:bg-blue-700"
+                    disabled={isSending || !otherWalletAddress}
+                  >
+                    {isSending ? 'Sending...' : `Send to ${isTestWallet ? 'Funding' : 'Test'} Wallet`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </>
@@ -566,6 +695,7 @@ export default function CustomTokens() {
             <WalletTokensDisplay
               wallet={fundingWallet}
               fundingWalletId={fundingWalletId}
+              testWalletId={testWalletId}
               isTestWallet={false}
             />
           )}
@@ -574,6 +704,7 @@ export default function CustomTokens() {
             <WalletTokensDisplay
               wallet={testWallet}
               fundingWalletId={fundingWalletId}
+              testWalletId={testWalletId}
               isTestWallet={true}
             />
           )}
