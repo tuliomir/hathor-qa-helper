@@ -13,7 +13,6 @@ import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import { NETWORK_CONFIG, WALLET_CONFIG, type NetworkType } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-// @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { addToken } from './tokensSlice';
 

@@ -395,7 +395,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
      */
     getRpcSetBetResult: async (
       ncId: string,
-      oracle: string,
+      _oracle: string,
       result: string,
       oracleSignature: string,
       pushTx: boolean

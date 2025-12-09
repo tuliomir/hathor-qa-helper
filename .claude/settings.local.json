@@ -12,7 +12,9 @@
       "WebFetch(domain:daisyui.com)",
       "mcp__ide__getDiagnostics",
       "Bash(npx tsc:*)",
-      "Bash(yarn lint:fix:*)"
+      "Bash(yarn lint:fix:*)",
+      "Bash(grep:*)",
+      "Bash(bun run build:*)"
     ],
     "deny": [],
     "ask": []
