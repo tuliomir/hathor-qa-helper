@@ -17,7 +17,9 @@
       "Bash(bun run build:*)",
       "WebSearch",
       "Bash(tree:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(bun test)"
     ],
     "deny": [],
     "ask": []
