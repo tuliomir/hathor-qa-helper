@@ -1,73 +1,106 @@
-# React + TypeScript + Vite
+# Hathor QA Helper
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A comprehensive testing and quality assurance tool for the Hathor blockchain ecosystem clients. This web application enables developers and QA engineers to test Mobile and Desktop Wallets functionality, RPC methods, and nano contracts interactively.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Wallet Management
+- **Multi-wallet support** - Manage multiple wallets simultaneously (funding + test wallets)
+- **Wallet initialization** - Create wallet instances with seed phrases
+- **OCR integration** - Extract seed words from screenshots or camera captures
+- **Address validation** - Verify addresses from initialized wallets
+- **Custom tokens** - View and manage custom tokens with balances
+- **Transaction history** - Browse transaction records
 
-## React Compiler
+### RPC Integration (via WalletConnect)
+- **Get Balance** - Query token balances via RPC
+- **Sign with Address** - Test message signing functionality
+- **Create Token** - Create new custom tokens with mint/melt authorities
+- **Sign Oracle Data** - Sign data for nano contract oracles
+- **Dry Run Mode** - Test RPC calls without actual blockchain execution
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Nano Contract Testing (Betting)
+- **Initialize Bet** - Set up bet nano contracts with oracle and token configuration
+- **Place Bet** - Deposit funds into existing bet contracts
+- **Set Bet Result** - Oracle operation to determine bet outcomes
+- **Withdraw Prize** - Claim winnings from completed bets
 
-## Expanding the ESLint configuration
+### Monitoring
+- **Real-time event stream** - Monitor wallet events (new-tx, update-tx, state changes)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tech Stack
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **React 19** with TypeScript
+- **Vite** (rolldown-vite) for bundling
+- **Redux Toolkit** for state management
+- **Tailwind CSS** + **DaisyUI** for styling
+- **@hathor/wallet-lib** for blockchain integration
+- **WalletConnect v2** for mobile/desktop wallet connection
+- **Tesseract.js** for OCR functionality
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
+
+- Node.js 22+
+- Bun is recommended, yarn otherwise.
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/HathorNetwork/qa-helper.git
+cd qa-helper
+
+# Install dependencies
+bun install
+
+# Start development server
+bun run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app will be available at `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+bun run build
 ```
+
+### Linting
+
+```bash
+bun run lint
+bun run lint:fix
+```
+
+## Usage
+
+1. **Initialize a wallet** - Enter a seed phrase or use OCR to extract words from an image
+2. **Set wallet roles** - Designate wallets as "Funding" or "Test" for different operations
+3. **Connect via WalletConnect** - Establish connection with your mobile/desktop wallet
+4. **Run tests** - Navigate through stages in the sidebar to test different functionality
+5. **Monitor events** - Use the Tx Update Events stage to watch real-time wallet activity
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── stages/      # QA test stage components
+│   ├── rpc/         # RPC method test cards
+│   ├── common/      # Shared UI components
+│   └── ui/          # Reusable UI components
+├── store/
+│   ├── slices/      # Redux slices
+│   └── selectors/   # Memoized selectors
+├── hooks/           # Custom React hooks
+├── services/        # Business logic (RPC handlers, WalletConnect)
+├── utils/           # Helper functions
+├── constants/       # Configuration constants
+└── types/           # TypeScript definitions
+```
+
+## License
+
+MIT
