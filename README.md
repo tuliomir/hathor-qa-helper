@@ -2,6 +2,8 @@
 
 A comprehensive testing and quality assurance tool for the Hathor blockchain ecosystem clients. This web application enables developers and QA engineers to test Mobile and Desktop Wallets functionality, RPC methods, and nano contracts interactively.
 
+![Sample initial screen](docs/sample%20initial%20screen.png)
+
 ## Features
 
 ### Wallet Management
