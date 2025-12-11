@@ -130,6 +130,9 @@ export default function ImageZoomPan({
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || !image) return;
 
+    // Prevent drag-and-drop behavior
+    e.preventDefault();
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -152,6 +155,11 @@ export default function ImageZoomPan({
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || !image) return;
+
+    // Prevent drag-and-drop behavior when dragging
+    if (isDragging || isDrawingCrop) {
+      e.preventDefault();
+    }
 
     if (showCropControls && isDrawingCrop) {
       const canvas = canvasRef.current;
@@ -199,7 +207,9 @@ export default function ImageZoomPan({
 
   // Handle wheel zoom (including middle button)
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    // Prevent page scroll and event bubbling
     e.preventDefault();
+    e.stopPropagation();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setZoom((prev) => Math.max(minZoom, Math.min(prev * delta, maxZoom)));
   };

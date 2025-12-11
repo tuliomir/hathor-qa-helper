@@ -25,6 +25,7 @@ export default function OCRReferenceImage({
 
   // Handle wheel zoom (including middle button)
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // Prevent page scroll and event bubbling
     e.preventDefault();
     e.stopPropagation();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -34,6 +35,7 @@ export default function OCRReferenceImage({
   // Handle pan when zoomed
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (zoom > 1) {
+      e.preventDefault(); // Prevent drag-and-drop behavior
       e.stopPropagation();
       setIsDragging(true);
       setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -42,6 +44,7 @@ export default function OCRReferenceImage({
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isDragging) {
+      e.preventDefault(); // Prevent drag-and-drop behavior
       e.stopPropagation();
       setPan({
         x: e.clientX - dragStart.x,
@@ -91,10 +94,12 @@ export default function OCRReferenceImage({
             src={imageDataUrl}
             alt="OCR source"
             className="max-w-full max-h-[300px] object-contain"
+            draggable={false}
             style={{
               transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
               cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
               transformOrigin: 'center center',
+              userSelect: 'none',
             }}
             onError={(e) => {
               console.error('Failed to load OCR reference image');

@@ -145,8 +145,21 @@ export default function WalletInitialization() {
   };
 
   const handleSeedChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setSeedInput(e.target.value);
-    if (validationError) {
+    const newSeedInput = e.target.value;
+    setSeedInput(newSeedInput);
+
+    // Real-time validation for faster interaction
+    if (newSeedInput.trim()) {
+      const { valid, error, invalidWords: invalidWordsList } = treatSeedWords(newSeedInput);
+      if (!valid) {
+        setValidationError(error || 'Invalid seed phrase');
+        setInvalidWords(invalidWordsList || []);
+      } else {
+        setValidationError(null);
+        setInvalidWords([]);
+      }
+    } else {
+      // Clear validation when input is empty
       setValidationError(null);
       setInvalidWords([]);
     }
