@@ -63,6 +63,8 @@ bun run dev
 
 The app will be available at `http://localhost:5173`
 
+For interacting with WalletConnect features, run the [Hathor RPC Lib](https://github.com/HathorNetwork/hathor-rpc-lib)  `@hathor/snap` server locally or use a public instance.
+
 ### Build
 
 ```bash
