@@ -612,8 +612,9 @@ export default function WalletInitialization() {
             onChange={handleSeedChange}
             onPaste={handlePaste}
             placeholder="Enter your 24-word seed phrase separated by spaces, or paste an image with seed words..."
-            rows={4}
-            className={validationError ? 'input-error font-mono resize-y' : 'input font-mono resize-y'}
+            rows={3}
+            className={validationError ? 'input-error font-mono resize-y whitespace-pre-wrap break-words' : 'input font-mono resize-y whitespace-pre-wrap break-words'}
+            style={{ minHeight: '4.5rem' }}
           />
           <p className="text-muted text-xs mt-2 mb-0">
             💡 <strong>Tip:</strong> You can paste an image of your seed words here for automatic extraction using OCR.
