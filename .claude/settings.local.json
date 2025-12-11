@@ -14,7 +14,10 @@
       "Bash(npx tsc:*)",
       "Bash(yarn lint:fix:*)",
       "Bash(grep:*)",
-      "Bash(bun run build:*)"
+      "Bash(bun run build:*)",
+      "WebSearch",
+      "Bash(tree:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

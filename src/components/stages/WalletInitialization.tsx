@@ -12,6 +12,8 @@ import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
 import { setFundingWallet, setTestWallet } from '../../store/slices/walletSelectionSlice';
 import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
+import OCRReferenceImage from '../OCRReferenceImage';
+import OCRReferenceModal from '../OCRReferenceModal';
 import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
@@ -38,6 +40,10 @@ export default function WalletInitialization() {
   const [editingName, setEditingName] = useState('');
   const [defaultFundWalletId, setDefaultFundWalletId] = useState<string | null>(null);
   const [defaultTestWalletId, setDefaultTestWalletId] = useState<string | null>(null);
+
+  // OCR reference image state (stored in memory only, not persisted)
+  const [ocrSourceImageUrl, setOcrSourceImageUrl] = useState<string | null>(null);
+  const [showOcrReferenceModal, setShowOcrReferenceModal] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasAutoStartedRef = useRef(false);
@@ -131,6 +137,7 @@ export default function WalletInitialization() {
 
     setValidationError(null);
     setInvalidWords([]);
+    setOcrSourceImageUrl(null); // Clear OCR image on successful wallet addition
     addWallet({ friendlyName: walletName, seedWords: treatedWords, network });
     setSeedInput('');
     setWalletName('');
@@ -174,10 +181,12 @@ export default function WalletInitialization() {
       if (result.success) {
         setSeedInput(result.seedWords);
         setPastedImageUrl(null);
+        setOcrSourceImageUrl(imageDataUrl); // Save OCR source image in memory
         setValidationError(null);
       } else {
         setValidationError(result.error || 'Failed to extract seed words from image');
         setPastedImageUrl(null);
+        setOcrSourceImageUrl(null); // Clear on OCR failure
       }
     } finally {
       setIsProcessingOcr(false);
@@ -596,6 +605,30 @@ export default function WalletInitialization() {
           <p className="text-muted text-xs mt-2 mb-0">
             💡 <strong>Tip:</strong> You can paste an image of your seed words here for automatic extraction using OCR.
           </p>
+
+          {/* OCR Reference Section - Show when validation error exists AND OCR image available */}
+          {validationError && ocrSourceImageUrl && (
+            <div className="mt-4 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Left side: OCR Source Image */}
+              <div>
+                <h3 className="text-sm font-bold mb-2 text-muted">OCR Source Image</h3>
+                <OCRReferenceImage
+                  imageDataUrl={ocrSourceImageUrl}
+                  onExpand={() => setShowOcrReferenceModal(true)}
+                  onDismiss={() => setOcrSourceImageUrl(null)}
+                />
+              </div>
+
+              {/* Right side: Extracted Words */}
+              <div>
+                <h3 className="text-sm font-bold mb-2 text-muted">Extracted Seed Words</h3>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm font-mono break-words max-h-[300px] overflow-y-auto">
+                  {seedInput}
+                </div>
+              </div>
+            </div>
+          )}
+
           {validationError && (
             <div className="mt-1.5">
               <p className="text-danger text-sm m-0 mb-1.5">⚠️ {validationError}</p>
@@ -668,6 +701,12 @@ export default function WalletInitialization() {
 
       {showCamera && <CameraCapture onCapture={(url) => { setShowCamera(false); setPastedImageUrl(url); }} onCancel={() => setShowCamera(false)} />}
       {pastedImageUrl && <ImagePreview imageDataUrl={pastedImageUrl} onExtractText={handleExtractText} onCancel={() => setPastedImageUrl(null)} isProcessing={isProcessingOcr} />}
+      {showOcrReferenceModal && ocrSourceImageUrl && (
+        <OCRReferenceModal
+          imageDataUrl={ocrSourceImageUrl}
+          onClose={() => setShowOcrReferenceModal(false)}
+        />
+      )}
     </div>
   );
 }

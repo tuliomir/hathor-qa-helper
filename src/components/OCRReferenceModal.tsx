@@ -1,23 +1,31 @@
 /**
- * Image Preview Component
- * Displays pasted image with zoom, pan, and crop functionality for OCR processing
+ * OCR Reference Modal Component
+ * Full-screen viewer for OCR source image with zoom/pan (no crop functionality)
  */
 
+import { useEffect } from 'react';
 import ImageZoomPan from './ImageZoomPan';
 
-interface ImagePreviewProps {
+interface OCRReferenceModalProps {
   imageDataUrl: string;
-  onExtractText: (imageDataUrl: string) => void;
-  onCancel: () => void;
-  isProcessing: boolean;
+  onClose: () => void;
 }
 
-export default function ImagePreview({
+export default function OCRReferenceModal({
   imageDataUrl,
-  onExtractText,
-  onCancel,
-  isProcessing,
-}: ImagePreviewProps) {
+  onClose,
+}: OCRReferenceModalProps) {
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   return (
     <div
@@ -33,6 +41,7 @@ export default function ImagePreview({
         justifyContent: 'center',
         zIndex: 1000,
       }}
+      onClick={onClose}
     >
       <div
         style={{
@@ -45,6 +54,7 @@ export default function ImagePreview({
           flexDirection: 'column',
           gap: '15px',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           style={{
@@ -53,15 +63,13 @@ export default function ImagePreview({
             alignItems: 'center',
           }}
         >
-          <h2 style={{ margin: 0 }}>Preview and Crop Image</h2>
+          <h2 style={{ margin: 0 }}>OCR Reference Image</h2>
         </div>
 
-        {/* Use shared ImageZoomPan component with crop controls */}
+        {/* Use shared ImageZoomPan component without crop controls */}
         <ImageZoomPan
           imageDataUrl={imageDataUrl}
-          showCropControls={true}
-          onExtract={onExtractText}
-          isProcessing={isProcessing}
+          showCropControls={false}
           className="flex-1"
         />
 
@@ -73,8 +81,7 @@ export default function ImagePreview({
           }}
         >
           <button
-            onClick={onCancel}
-            disabled={isProcessing}
+            onClick={onClose}
             style={{
               padding: '10px 20px',
               fontSize: '14px',
@@ -82,23 +89,13 @@ export default function ImagePreview({
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
-              opacity: isProcessing ? 0.6 : 1,
+              cursor: 'pointer',
             }}
           >
-            Cancel
+            Close
           </button>
         </div>
       </div>
-
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
     </div>
   );
 }
