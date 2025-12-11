@@ -116,7 +116,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       try {
         const deadlineDate = new Date(deadline);
         timestamp = Math.floor(deadlineDate.getTime() / 1000);
-      } catch (error) {
+      } catch {
         // Invalid date, timestamp stays null
       }
     }
@@ -327,7 +327,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
 
       // Otherwise show formatted
       return renderFormattedResponse(parsedResult);
-    } catch (e) {
+    } catch {
       return (
         <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
           <pre className="text-sm font-mono">{String(result)}</pre>
@@ -812,7 +812,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                               </div>
                             );
                           }
-                        } catch (e) {
+                        } catch {
                           // Ignore parsing errors
                         }
                         return null;

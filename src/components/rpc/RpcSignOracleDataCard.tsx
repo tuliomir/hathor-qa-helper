@@ -166,7 +166,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
       } else if (parsedResult?.signedData && typeof parsedResult.signedData === 'string') {
         return parsedResult.signedData;
       }
-    } catch (e) {
+    } catch {
       // Ignore parsing errors
     }
     return null;
@@ -306,7 +306,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
       }
 
       return renderFormattedResponse(parsedResult);
-    } catch (e) {
+    } catch {
       return (
         <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
           <pre className="text-sm font-mono">{String(result)}</pre>
@@ -500,7 +500,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               </div>
             </div>
           );
-        } catch (e) {
+        } catch {
           return null;
         }
       })()}

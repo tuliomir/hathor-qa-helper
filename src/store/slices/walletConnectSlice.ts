@@ -302,6 +302,6 @@ export const selectWalletConnectFirstAddress = (state: { walletConnect: WalletCo
   if (!session) return '';
 
   const accountString = session.namespaces?.hathor?.accounts?.[0] || '::';
-  const [_, _network, addr] = accountString.split(':');
+  const [, , addr] = accountString.split(':');
   return addr || '';
 };

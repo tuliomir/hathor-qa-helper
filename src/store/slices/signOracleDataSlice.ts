@@ -66,7 +66,7 @@ const signOracleDataSlice = createSlice({
         } else if (parsedResponse?.signedData) {
           state.signedData = parsedResponse.signedData;
         }
-      } catch (e) {
+      } catch {
         // If extraction fails, signedData stays null
       }
     },

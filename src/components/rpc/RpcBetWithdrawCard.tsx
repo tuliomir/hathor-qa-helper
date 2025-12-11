@@ -294,7 +294,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
       }
 
       return renderFormattedResponse(parsedResult);
-    } catch (e) {
+    } catch {
       return (
         <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
           <pre className="text-sm font-mono">{String(resultData)}</pre>

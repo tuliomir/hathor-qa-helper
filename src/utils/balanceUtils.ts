@@ -23,7 +23,7 @@ export function formatBalance(
   if (typeof balance === 'string') {
     try {
       return numberUtils.prettyValue(BigInt(balance), decimalPlaces);
-    } catch (_e) {
+    } catch {
       // Fallback: attempt to parse as number if BigInt conversion fails
       return numberUtils.prettyValue(BigInt(Math.floor(Number(balance))), decimalPlaces);
     }

@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface CustomTokensState {
   // Add any state you need here later
 }
@@ -16,6 +17,7 @@ const customTokensSlice = createSlice({
   },
 });
 
-export const {} = customTokensSlice.actions;
+// Export actions when they are added
+// export const {} = customTokensSlice.actions;
 
 export default customTokensSlice.reducer;

@@ -19,7 +19,8 @@
       "Bash(tree:*)",
       "Bash(wc:*)",
       "Bash(find:*)",
-      "Bash(bun test)"
+      "Bash(bun test)",
+      "Bash(bun lint:*)"
     ],
     "deny": [],
     "ask": []

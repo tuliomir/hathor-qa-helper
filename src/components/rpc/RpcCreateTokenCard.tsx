@@ -552,7 +552,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
 
                             // Otherwise show raw
                             return renderRawJson(result);
-                          } catch (e) {
+                          } catch {
                             return renderRawJson(result);
                           }
                         })()}
