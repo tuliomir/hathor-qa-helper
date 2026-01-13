@@ -25,6 +25,7 @@ import betWithdrawReducer from './slices/betWithdrawSlice';
 import txUpdateEventsReducer from './slices/txUpdateEventsSlice';
 import navigationReducer from './slices/navigationSlice';
 import pushNotificationsReducer from './slices/pushNotificationsSlice';
+import walletInformationReducer from './slices/walletInformationSlice';
 
 export const store = configureStore({
   reducer: {
@@ -50,6 +51,7 @@ export const store = configureStore({
     txUpdateEvents: txUpdateEventsReducer,
     navigation: navigationReducer,
     pushNotifications: pushNotificationsReducer,
+    walletInformation: walletInformationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

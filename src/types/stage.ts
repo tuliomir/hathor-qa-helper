@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
 
 /**
  * Available stage groups
@@ -81,6 +81,12 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Connection',
         description: 'Connect to wallet via WalletConnect and configure RPC options',
         icon: '🔌',
+      },
+      {
+        id: 'rpc-basic-info',
+        title: 'Basic Information',
+        description: 'Test basic wallet information RPC methods',
+        icon: 'ℹ️',
       },
       {
         id: 'rpc-get-balance',

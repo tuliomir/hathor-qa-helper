@@ -2,17 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "Bash(yarn build)",
-      "Bash(yarn add:*)",
-      "Bash(yarn format:*)",
-      "Bash(yarn lint:*)",
-      "Bash(npm run build:*)",
-      "Bash(npm run lint)",
       "Bash(git add:*)",
       "WebFetch(domain:daisyui.com)",
       "mcp__ide__getDiagnostics",
       "Bash(npx tsc:*)",
-      "Bash(yarn lint:fix:*)",
       "Bash(grep:*)",
       "Bash(bun run build:*)",
       "WebSearch",
@@ -20,7 +13,10 @@
       "Bash(wc:*)",
       "Bash(find:*)",
       "Bash(bun test)",
-      "Bash(bun lint:*)"
+      "Bash(bun lint:*)",
+      "Bash(yarn install)",
+      "Bash(bun install)",
+      "Bash(bun run lint:*)"
     ],
     "deny": [],
     "ask": []
