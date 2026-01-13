@@ -20,16 +20,24 @@ export default function QALayout() {
   const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : undefined;
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
 
-  // Only show wallets that are connecting, syncing, or ready
-  const shouldShowFundingWallet = fundingWallet && ['connecting', 'syncing', 'ready'].includes(fundingWallet.status);
-  const shouldShowTestWallet = testWallet && ['connecting', 'syncing', 'ready'].includes(testWallet.status);
+  // Show wallets that are idle, connecting, syncing, ready, or have errors
+  const shouldShowFundingWallet = fundingWallet && ['idle', 'connecting', 'syncing', 'ready', 'error'].includes(fundingWallet.status);
+  const shouldShowTestWallet = testWallet && ['idle', 'connecting', 'syncing', 'ready', 'error'].includes(testWallet.status);
   const showAnyWallet = shouldShowFundingWallet || shouldShowTestWallet;
 
   const renderWalletInfo = (wallet: ReturnType<typeof getWallet>, label: string) => {
     if (!wallet) return null;
 
-    const isLoading = wallet.status === 'connecting' || wallet.status === 'syncing';
+    const isLoading = wallet.status === 'idle' || wallet.status === 'connecting' || wallet.status === 'syncing';
     const isReady = wallet.status === 'ready';
+    const isError = wallet.status === 'error';
+
+    const getLoadingText = () => {
+      if (wallet.status === 'idle') return 'Starting...';
+      if (wallet.status === 'connecting') return 'Connecting...';
+      if (wallet.status === 'syncing') return 'Syncing...';
+      return '';
+    };
 
     return (
       <div className="flex items-center gap-4 px-4 border-l border-white/20 first:border-l-0 first:pl-0">
@@ -43,7 +51,17 @@ export default function QALayout() {
 
         {isLoading && (
           <div className="text-xs bg-yellow-400/30 px-2 py-0.5 rounded">
-            {wallet.status === 'connecting' ? 'Connecting...' : 'Syncing...'}
+            {getLoadingText()}
+          </div>
+        )}
+
+        {isError && (
+          <div
+            className="text-xs bg-red-500/80 px-2 py-0.5 rounded cursor-pointer hover:bg-red-500 transition-colors"
+            onClick={() => setCurrentStage('wallet-initialization')}
+            title="Click to go to Wallet Initialization stage"
+          >
+            Error - Click to fix
           </div>
         )}
 
