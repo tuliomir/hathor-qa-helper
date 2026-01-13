@@ -3,6 +3,7 @@
  *
  * Tests basic information RPC calls:
  * - htr_getWalletInformation
+ * - htr_getConnectedNetwork
  */
 
 import React, { useMemo } from 'react';
@@ -13,8 +14,14 @@ import {
   setWalletInformationResponse,
   setWalletInformationError,
 } from '../../store/slices/walletInformationSlice';
+import {
+  setConnectedNetworkRequest,
+  setConnectedNetworkResponse,
+  setConnectedNetworkError,
+} from '../../store/slices/connectedNetworkSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcWalletInformationCard } from '../rpc/RpcWalletInformationCard';
+import { RpcConnectedNetworkCard } from '../rpc/RpcConnectedNetworkCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 
 export const BasicInfoStage: React.FC = () => {
@@ -25,6 +32,7 @@ export const BasicInfoStage: React.FC = () => {
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const walletInformationData = useSelector((state: RootState) => state.walletInformation);
+  const connectedNetworkData = useSelector((state: RootState) => state.connectedNetwork);
 
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
@@ -71,6 +79,46 @@ export const BasicInfoStage: React.FC = () => {
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       dispatch(setWalletInformationError({
+        error: errorMessage,
+        duration,
+      }));
+
+      throw error;
+    }
+  };
+
+  // Wrapper for onExecute that stores results in Redux
+  const handleExecuteConnectedNetwork = async () => {
+    if (!rpcHandlers) {
+      throw new Error('RPC handlers not initialized');
+    }
+
+    const startTime = Date.now();
+
+    try {
+      const { request, response } = await rpcHandlers.getRpcConnectedNetwork();
+      const duration = Date.now() - startTime;
+
+      // Store request in Redux
+      dispatch(setConnectedNetworkRequest({
+        method: request.method,
+        params: request.params,
+        isDryRun,
+      }));
+
+      // Store response in Redux
+      dispatch(setConnectedNetworkResponse({
+        response,
+        duration,
+      }));
+
+      return { request, response };
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      // Store error in Redux
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      dispatch(setConnectedNetworkError({
         error: errorMessage,
         duration,
       }));
@@ -129,11 +177,34 @@ export const BasicInfoStage: React.FC = () => {
             initialResponse={walletInformationData.rawResponse}
             initialError={walletInformationData.error}
           />
+
+          {/* Separator */}
+          <div className="my-10 border-t-2 border-gray-300 relative">
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-4 py-2">
+              <span className="text-sm font-bold text-muted uppercase tracking-wider">
+                Next RPC Method
+              </span>
+            </div>
+          </div>
+
+          {/* Connected Network Card */}
+          <h2 className="text-2xl font-bold mb-3">Get Connected Network</h2>
+          <p className="text-sm text-muted mb-4">
+            Retrieves the connected network information including genesis hash
+          </p>
+          <RpcConnectedNetworkCard
+            onExecute={handleExecuteConnectedNetwork}
+            disabled={false}
+            isDryRun={isDryRun}
+            initialRequest={connectedNetworkData.request}
+            initialResponse={connectedNetworkData.rawResponse}
+            initialError={connectedNetworkData.error}
+          />
         </>
       )}
 
       {/* Persisted Data Info */}
-      {walletInformationData.timestamp && (
+      {(walletInformationData.timestamp || connectedNetworkData.timestamp) && (
         <div className="card-primary mt-7.5 bg-green-50 border border-success">
           <div className="flex items-start gap-3">
             <svg
@@ -151,14 +222,19 @@ export const BasicInfoStage: React.FC = () => {
               />
             </svg>
             <div>
-              <p className="font-bold text-green-900 m-0">Request duration</p>
-              <p className="text-sm text-green-800 mt-1 mb-0">
+              <p className="font-bold text-green-900 m-0">Request durations</p>
+              <div className="text-sm text-green-800 mt-1 mb-0">
                 {walletInformationData.duration !== null && (
                   <span className="block mt-1">
-                    Last request took {walletInformationData.duration}ms
+                    Wallet Information: {walletInformationData.duration}ms
                   </span>
                 )}
-              </p>
+                {connectedNetworkData.duration !== null && (
+                  <span className="block mt-1">
+                    Connected Network: {connectedNetworkData.duration}ms
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

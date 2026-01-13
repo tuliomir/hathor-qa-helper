@@ -26,6 +26,7 @@ import txUpdateEventsReducer from './slices/txUpdateEventsSlice';
 import navigationReducer from './slices/navigationSlice';
 import pushNotificationsReducer from './slices/pushNotificationsSlice';
 import walletInformationReducer from './slices/walletInformationSlice';
+import connectedNetworkReducer from './slices/connectedNetworkSlice';
 
 export const store = configureStore({
   reducer: {
@@ -52,6 +53,7 @@ export const store = configureStore({
     navigation: navigationReducer,
     pushNotifications: pushNotificationsReducer,
     walletInformation: walletInformationReducer,
+    connectedNetwork: connectedNetworkReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
