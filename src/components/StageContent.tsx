@@ -21,6 +21,7 @@ import { SetBetResultStage } from './stages/SetBetResultStage';
 import { BetWithdrawStage } from './stages/BetWithdrawStage';
 import PushNotifications from './stages/PushNotifications';
 import { BasicInfoStage } from './stages/BasicInfoStage';
+import { GetAddressStage } from './stages/GetAddressStage';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -39,6 +40,7 @@ export default function StageContent() {
       {currentStage === 'tx-update-events' && <TxUpdateEvents />}
       {currentStage === 'rpc-connection' && <ConnectionStage />}
       {currentStage === 'rpc-basic-info' && <BasicInfoStage />}
+      {currentStage === 'rpc-get-address' && <GetAddressStage />}
       {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
       {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
       {currentStage === 'rpc-create-token' && <CreateTokenStage />}
