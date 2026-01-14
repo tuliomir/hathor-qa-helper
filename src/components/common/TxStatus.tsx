@@ -78,9 +78,9 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
   // Derive status from Redux event if available
   useEffect(() => {
     if (latestEvent?.data) {
-      console.log(`[TxStatus ${hash.slice(0, 8)}] Deriving status from Redux event:`, latestEvent.data);
+      // console.log(`[TxStatus ${hash.slice(0, 8)}] Deriving status from Redux event:`, latestEvent.data);
       const eventStatus = getTransactionStatus(latestEvent.data);
-      console.log(`[TxStatus ${hash.slice(0, 8)}] Status from event: ${eventStatus}`);
+      // console.log(`[TxStatus ${hash.slice(0, 8)}] Status from event: ${eventStatus}`);
       setStatus(eventStatus);
       return;
     }
@@ -93,14 +93,14 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
         // Only apply TTL to Unconfirmed transactions
         // Valid and Voided are cached indefinitely (only change via events)
         if (cached.status !== 'Unconfirmed') {
-          console.log(`[TxStatus ${hash.slice(0, 8)}] Using cached ${cached.status} (no TTL for confirmed txs)`);
+          // console.log(`[TxStatus ${hash.slice(0, 8)}] Using cached ${cached.status} (no TTL for confirmed txs)`);
           setStatus(cached.status);
           return;
         }
 
         // For Unconfirmed, check TTL
         if (Date.now() - cached.timestamp < UNCONFIRMED_CACHE_TTL) {
-          console.log(`[TxStatus ${hash.slice(0, 8)}] Using cached Unconfirmed (within TTL)`);
+          // console.log(`[TxStatus ${hash.slice(0, 8)}] Using cached Unconfirmed (within TTL)`);
           setStatus(cached.status);
           return;
         }
@@ -129,22 +129,22 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
       try {
         // Step 1: Try getTx() from wallet cache first (fast, no HTTP call)
         const txData = await walletInstance.getTx(hash);
-        console.log(`[TxStatus ${hash.slice(0, 8)}] getTx() from wallet cache:`, txData);
+        // console.log(`[TxStatus ${hash.slice(0, 8)}] getTx() from wallet cache:`, txData);
 
         // If wallet cache has first_block, the transaction is already confirmed
         // Use this cached data to avoid unnecessary HTTP calls
         if (txData && txData.first_block) {
-          console.log(`[TxStatus ${hash.slice(0, 8)}] Found first_block in wallet cache, using cached data`);
+          // console.log(`[TxStatus ${hash.slice(0, 8)}] Found first_block in wallet cache, using cached data`);
 
           const txStatus = getTransactionStatus({
             first_block: txData.first_block,
             is_voided: txData.is_voided,
           });
 
-          console.log(`[TxStatus ${hash.slice(0, 8)}] Status from wallet cache: ${txStatus}`, {
-            first_block: txData.first_block,
-            is_voided: txData.is_voided,
-          });
+          // console.log(`[TxStatus ${hash.slice(0, 8)}] Status from wallet cache: ${txStatus}`, {
+          //   first_block: txData.first_block,
+          //   is_voided: txData.is_voided,
+          // });
 
           // Cache the result
           txStatusCache.set(hash, {
@@ -158,9 +158,9 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
 
         // Step 2: No first_block in cache - transaction is unconfirmed
         // Fetch fresh data from full node to check for recent confirmation
-        console.log(`[TxStatus ${hash.slice(0, 8)}] No first_block in wallet cache, fetching from full node`);
+        // console.log(`[TxStatus ${hash.slice(0, 8)}] No first_block in wallet cache, fetching from full node`);
         const response = await walletInstance.getFullTxById(hash);
-        console.log(`[TxStatus ${hash.slice(0, 8)}] getFullTxById() response:`, response);
+        // console.log(`[TxStatus ${hash.slice(0, 8)}] getFullTxById() response:`, response);
 
         if (response.success && response.meta) {
           // Extract status from FullNodeMeta
@@ -174,11 +174,11 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
             is_voided: isVoided,
           });
 
-          console.log(`[TxStatus ${hash.slice(0, 8)}] Computed status from full node: ${txStatus}`, {
-            first_block: firstBlock,
-            voided_by: response.meta.voided_by,
-            is_voided: isVoided,
-          });
+          // console.log(`[TxStatus ${hash.slice(0, 8)}] Computed status from full node: ${txStatus}`, {
+          //   first_block: firstBlock,
+          //   voided_by: response.meta.voided_by,
+          //   is_voided: isVoided,
+          // });
 
           // Cache the result
           txStatusCache.set(hash, {
@@ -188,7 +188,7 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
 
           setStatus(txStatus);
         } else {
-          console.log(`[TxStatus ${hash.slice(0, 8)}] getFullTxById() failed:`, response);
+          console.error(`[TxStatus ${hash.slice(0, 8)}] getFullTxById() failed:`, response);
           setStatus(null);
         }
       } catch (err) {
