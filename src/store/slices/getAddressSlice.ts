@@ -29,6 +29,9 @@ export interface GetAddressState {
   // Form state
   requestType: AddressRequestType;
   indexValue: number;
+  // Validation state
+  validationStatus: 'pending' | 'validating' | 'match' | 'mismatch' | null;
+  localAddress: string | null;
 }
 
 const initialState: GetAddressState = {
@@ -41,6 +44,8 @@ const initialState: GetAddressState = {
   isDryRun: false,
   requestType: 'first_empty',
   indexValue: 0,
+  validationStatus: null,
+  localAddress: null,
 };
 
 const getAddressSlice = createSlice({
@@ -66,6 +71,7 @@ const getAddressSlice = createSlice({
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
+      state.validationStatus = 'pending'; // Start as pending validation
 
       // Parse the response into structured format
       try {
@@ -97,6 +103,15 @@ const getAddressSlice = createSlice({
     setIndexValue: (state, action: PayloadAction<number>) => {
       state.indexValue = action.payload;
     },
+    setValidationStatus: (
+      state,
+      action: PayloadAction<{ status: 'pending' | 'validating' | 'match' | 'mismatch'; localAddress?: string }>
+    ) => {
+      state.validationStatus = action.payload.status;
+      if (action.payload.localAddress !== undefined) {
+        state.localAddress = action.payload.localAddress;
+      }
+    },
     clearGetAddressData: (state) => {
       state.request = null;
       state.response = null;
@@ -105,6 +120,8 @@ const getAddressSlice = createSlice({
       state.timestamp = null;
       state.duration = null;
       state.isDryRun = false;
+      state.validationStatus = null;
+      state.localAddress = null;
     },
   },
 });
@@ -115,6 +132,7 @@ export const {
   setGetAddressError,
   setRequestType,
   setIndexValue,
+  setValidationStatus,
   clearGetAddressData,
 } = getAddressSlice.actions;
 
