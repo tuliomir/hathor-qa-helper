@@ -1051,30 +1051,44 @@ export default function PushNotifications() {
           </div>
 
           {/* Return Tokens Section */}
-          {sentTokens.length > 0 && (
-            <div className="mb-7.5">
-              <h2 className="text-2xl font-bold mb-4">Return Tokens</h2>
-              <div className="card bg-blue-50 border-2 border-blue-400">
-                <div className="card-body">
-                  <h3 className="card-title text-blue-900">Tokens Sent This Session</h3>
-                  <div className="overflow-x-auto mb-4">
-                    <table className="table table-sm w-full">
-                      <thead>
-                        <tr>
-                          <th>Token</th>
-                          <th>Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {sentTokens.map((token, idx) => (
-                          <tr key={idx}>
-                            <td className="font-bold">{token.tokenSymbol}</td>
-                            <td>{token.amount}</td>
+          {sentTokens.length > 0 && (() => {
+            // Group tokens by token ID and sum amounts
+            const tokenGroups = sentTokens.reduce((acc, token) => {
+              const existing = acc.get(token.tokenId);
+              if (existing) {
+                existing.amount = (BigInt(existing.amount) + BigInt(token.amount)).toString();
+              } else {
+                acc.set(token.tokenId, { ...token });
+              }
+              return acc;
+            }, new Map<string, typeof sentTokens[0]>());
+
+            const groupedTokens = Array.from(tokenGroups.values());
+
+            return (
+              <div className="mb-7.5">
+                <h2 className="text-2xl font-bold mb-4">Return Tokens</h2>
+                <div className="card bg-blue-50 border-2 border-blue-400">
+                  <div className="card-body">
+                    <h3 className="card-title text-blue-900">Tokens Sent This Session</h3>
+                    <div className="overflow-x-auto mb-4">
+                      <table className="table table-sm w-full">
+                        <thead>
+                          <tr>
+                            <th>Token</th>
+                            <th>Total Amount</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {groupedTokens.map((token, idx) => (
+                            <tr key={idx}>
+                              <td className="font-bold">{token.tokenSymbol}</td>
+                              <td>{token.amount}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   <button
                     onClick={handleReturnAllTokens}
                     disabled={isSending}
@@ -1085,7 +1099,8 @@ export default function PushNotifications() {
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
         </>
       )}
 
