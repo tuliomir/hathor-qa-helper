@@ -19,6 +19,7 @@ import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { WALLET_CONFIG } from '../../constants/network';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import Select from '../common/Select';
+import ConfigurationStringModal from '../common/ConfigurationStringModal';
 
 interface Token {
   uid: string;
@@ -48,6 +49,8 @@ export default function PushNotifications() {
   const [token2Amount, setToken2Amount] = useState<string>('');
   const [token3Amount, setToken3Amount] = useState<string>('');
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [configModalToken, setConfigModalToken] = useState<Token | null>(null);
 
   // Check if both wallets are ready and on mainnet
   const fundingReady = fundingWallet?.status === 'ready';
@@ -131,6 +134,21 @@ export default function PushNotifications() {
     const randomAmount = Math.floor(Math.random() * maxAmount) + 1;
 
     return randomAmount.toString();
+  };
+
+  // Helper function to open configuration modal for a token
+  const handleOpenConfigModal = (tokenUid: string) => {
+    const token = fundTokens.find((t) => t.uid === tokenUid);
+    if (token) {
+      setConfigModalToken(token);
+      setIsConfigModalOpen(true);
+    }
+  };
+
+  // Helper function to close configuration modal
+  const handleCloseConfigModal = () => {
+    setIsConfigModalOpen(false);
+    setConfigModalToken(null);
   };
 
   // Auto-select tokens and generate amounts when fundTokens changes
@@ -649,22 +667,33 @@ export default function PushNotifications() {
                       <label className="label">
                         <span className="label-text font-bold">Select Token:</span>
                       </label>
-                      <Select
-                        value={selectedToken1}
-                        onChange={(e) => {
-                          const newToken = e.target.value;
-                          setSelectedToken1(newToken);
-                          if (newToken) setToken1Amount(generateRandomAmount(newToken));
-                        }}
-                        className="w-full"
-                      >
-                        <option value="">-- Select a token --</option>
-                        {fundTokens.map((token) => (
-                          <option key={token.uid} value={token.uid}>
-                            {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                          </option>
-                        ))}
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedToken1}
+                          onChange={(e) => {
+                            const newToken = e.target.value;
+                            setSelectedToken1(newToken);
+                            if (newToken) setToken1Amount(generateRandomAmount(newToken));
+                          }}
+                          className="flex-1"
+                        >
+                          <option value="">-- Select a token --</option>
+                          {fundTokens.map((token) => (
+                            <option key={token.uid} value={token.uid}>
+                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                            </option>
+                          ))}
+                        </Select>
+                        {selectedToken1 && (
+                          <button
+                            onClick={() => handleOpenConfigModal(selectedToken1)}
+                            className="btn btn-ghost btn-sm px-3"
+                            title="View Configuration String"
+                          >
+                            🔗
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {selectedToken1 && (
@@ -718,22 +747,33 @@ export default function PushNotifications() {
                       <label className="label">
                         <span className="label-text font-bold">Select First Token:</span>
                       </label>
-                      <Select
-                        value={selectedToken1}
-                        onChange={(e) => {
-                          const newToken = e.target.value;
-                          setSelectedToken1(newToken);
-                          if (newToken) setToken1Amount(generateRandomAmount(newToken));
-                        }}
-                        className="w-full"
-                      >
-                        <option value="">-- Select first token --</option>
-                        {fundTokens.map((token) => (
-                          <option key={token.uid} value={token.uid}>
-                            {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                          </option>
-                        ))}
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedToken1}
+                          onChange={(e) => {
+                            const newToken = e.target.value;
+                            setSelectedToken1(newToken);
+                            if (newToken) setToken1Amount(generateRandomAmount(newToken));
+                          }}
+                          className="flex-1"
+                        >
+                          <option value="">-- Select first token --</option>
+                          {fundTokens.map((token) => (
+                            <option key={token.uid} value={token.uid}>
+                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                            </option>
+                          ))}
+                        </Select>
+                        {selectedToken1 && (
+                          <button
+                            onClick={() => handleOpenConfigModal(selectedToken1)}
+                            className="btn btn-ghost btn-sm px-3"
+                            title="View Configuration String"
+                          >
+                            🔗
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {selectedToken1 && (
@@ -759,24 +799,35 @@ export default function PushNotifications() {
                       <label className="label">
                         <span className="label-text font-bold">Select Second Token:</span>
                       </label>
-                      <Select
-                        value={selectedToken2}
-                        onChange={(e) => {
-                          const newToken = e.target.value;
-                          setSelectedToken2(newToken);
-                          if (newToken) setToken2Amount(generateRandomAmount(newToken));
-                        }}
-                        className="w-full"
-                      >
-                        <option value="">-- Select second token --</option>
-                        {fundTokens
-                          .filter((token) => token.uid !== selectedToken1)
-                          .map((token) => (
-                            <option key={token.uid} value={token.uid}>
-                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                            </option>
-                          ))}
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedToken2}
+                          onChange={(e) => {
+                            const newToken = e.target.value;
+                            setSelectedToken2(newToken);
+                            if (newToken) setToken2Amount(generateRandomAmount(newToken));
+                          }}
+                          className="flex-1"
+                        >
+                          <option value="">-- Select second token --</option>
+                          {fundTokens
+                            .filter((token) => token.uid !== selectedToken1)
+                            .map((token) => (
+                              <option key={token.uid} value={token.uid}>
+                                {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                              </option>
+                            ))}
+                        </Select>
+                        {selectedToken2 && (
+                          <button
+                            onClick={() => handleOpenConfigModal(selectedToken2)}
+                            className="btn btn-ghost btn-sm px-3"
+                            title="View Configuration String"
+                          >
+                            🔗
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {selectedToken2 && (
@@ -830,22 +881,33 @@ export default function PushNotifications() {
                       <label className="label">
                         <span className="label-text font-bold">Select First Token:</span>
                       </label>
-                      <Select
-                        value={selectedToken1}
-                        onChange={(e) => {
-                          const newToken = e.target.value;
-                          setSelectedToken1(newToken);
-                          if (newToken) setToken1Amount(generateRandomAmount(newToken));
-                        }}
-                        className="w-full"
-                      >
-                        <option value="">-- Select first token --</option>
-                        {fundTokens.map((token) => (
-                          <option key={token.uid} value={token.uid}>
-                            {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                          </option>
-                        ))}
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedToken1}
+                          onChange={(e) => {
+                            const newToken = e.target.value;
+                            setSelectedToken1(newToken);
+                            if (newToken) setToken1Amount(generateRandomAmount(newToken));
+                          }}
+                          className="flex-1"
+                        >
+                          <option value="">-- Select first token --</option>
+                          {fundTokens.map((token) => (
+                            <option key={token.uid} value={token.uid}>
+                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                            </option>
+                          ))}
+                        </Select>
+                        {selectedToken1 && (
+                          <button
+                            onClick={() => handleOpenConfigModal(selectedToken1)}
+                            className="btn btn-ghost btn-sm px-3"
+                            title="View Configuration String"
+                          >
+                            🔗
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {selectedToken1 && (
@@ -871,24 +933,35 @@ export default function PushNotifications() {
                       <label className="label">
                         <span className="label-text font-bold">Select Second Token:</span>
                       </label>
-                      <Select
-                        value={selectedToken2}
-                        onChange={(e) => {
-                          const newToken = e.target.value;
-                          setSelectedToken2(newToken);
-                          if (newToken) setToken2Amount(generateRandomAmount(newToken));
-                        }}
-                        className="w-full"
-                      >
-                        <option value="">-- Select second token --</option>
-                        {fundTokens
-                          .filter((token) => token.uid !== selectedToken1)
-                          .map((token) => (
-                            <option key={token.uid} value={token.uid}>
-                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                            </option>
-                          ))}
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedToken2}
+                          onChange={(e) => {
+                            const newToken = e.target.value;
+                            setSelectedToken2(newToken);
+                            if (newToken) setToken2Amount(generateRandomAmount(newToken));
+                          }}
+                          className="flex-1"
+                        >
+                          <option value="">-- Select second token --</option>
+                          {fundTokens
+                            .filter((token) => token.uid !== selectedToken1)
+                            .map((token) => (
+                              <option key={token.uid} value={token.uid}>
+                                {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                              </option>
+                            ))}
+                        </Select>
+                        {selectedToken2 && (
+                          <button
+                            onClick={() => handleOpenConfigModal(selectedToken2)}
+                            className="btn btn-ghost btn-sm px-3"
+                            title="View Configuration String"
+                          >
+                            🔗
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {selectedToken2 && (
@@ -914,24 +987,35 @@ export default function PushNotifications() {
                       <label className="label">
                         <span className="label-text font-bold">Select Third Token:</span>
                       </label>
-                      <Select
-                        value={selectedToken3}
-                        onChange={(e) => {
-                          const newToken = e.target.value;
-                          setSelectedToken3(newToken);
-                          if (newToken) setToken3Amount(generateRandomAmount(newToken));
-                        }}
-                        className="w-full"
-                      >
-                        <option value="">-- Select third token --</option>
-                        {fundTokens
-                          .filter((token) => token.uid !== selectedToken1 && token.uid !== selectedToken2)
-                          .map((token) => (
-                            <option key={token.uid} value={token.uid}>
-                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                            </option>
-                          ))}
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select
+                          value={selectedToken3}
+                          onChange={(e) => {
+                            const newToken = e.target.value;
+                            setSelectedToken3(newToken);
+                            if (newToken) setToken3Amount(generateRandomAmount(newToken));
+                          }}
+                          className="flex-1"
+                        >
+                          <option value="">-- Select third token --</option>
+                          {fundTokens
+                            .filter((token) => token.uid !== selectedToken1 && token.uid !== selectedToken2)
+                            .map((token) => (
+                              <option key={token.uid} value={token.uid}>
+                                {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                              </option>
+                            ))}
+                        </Select>
+                        {selectedToken3 && (
+                          <button
+                            onClick={() => handleOpenConfigModal(selectedToken3)}
+                            className="btn btn-ghost btn-sm px-3"
+                            title="View Configuration String"
+                          >
+                            🔗
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {selectedToken3 && (
@@ -1003,6 +1087,17 @@ export default function PushNotifications() {
             </div>
           )}
         </>
+      )}
+
+      {/* Configuration String Modal */}
+      {configModalToken && (
+        <ConfigurationStringModal
+          isOpen={isConfigModalOpen}
+          onClose={handleCloseConfigModal}
+          tokenUid={configModalToken.uid}
+          tokenName={configModalToken.name}
+          tokenSymbol={configModalToken.symbol}
+        />
       )}
     </div>
   );
