@@ -3,7 +3,7 @@ import { SendTransaction } from '@hathor/wallet-lib';
 import { useAppDispatch } from '../store/hooks';
 import { addTransaction } from '../store/slices/transactionHistorySlice';
 import { useToast } from './useToast';
-import { NETWORK_CONFIG, DEFAULT_NETWORK } from '../constants/network';
+import { NETWORK_CONFIG } from '../constants/network';
 import type { WalletInfo } from '../types/walletStore';
 
 export interface TransactionMetadata {
@@ -78,8 +78,8 @@ export function useSendTransaction() {
         );
       }
 
-      // Get explorer URL for the network
-      const explorerUrl = NETWORK_CONFIG[DEFAULT_NETWORK].explorerUrl;
+      // Get explorer URL for the network (use the actual wallet's network)
+      const explorerUrl = NETWORK_CONFIG[fromWallet.metadata.network].explorerUrl;
       const txUrl = `${explorerUrl}transaction/${tx.hash}`;
 
       // Show toast with a link and longer duration (20s)
