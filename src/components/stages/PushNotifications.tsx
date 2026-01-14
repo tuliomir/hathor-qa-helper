@@ -43,6 +43,10 @@ export default function PushNotifications() {
   const [fundTokens, setFundTokens] = useState<Token[]>([]);
   const [selectedToken1, setSelectedToken1] = useState<string>('');
   const [selectedToken2, setSelectedToken2] = useState<string>('');
+  const [selectedToken3, setSelectedToken3] = useState<string>('');
+  const [token1Amount, setToken1Amount] = useState<string>('');
+  const [token2Amount, setToken2Amount] = useState<string>('');
+  const [token3Amount, setToken3Amount] = useState<string>('');
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
 
   // Check if both wallets are ready and on mainnet
@@ -96,6 +100,13 @@ export default function PushNotifications() {
           (t): t is Token => t !== null && t.balance > 0n
         );
 
+        // Sort tokens by balance ascending (lowest first)
+        validTokens.sort((a, b) => {
+          if (a.balance < b.balance) return -1;
+          if (a.balance > b.balance) return 1;
+          return 0;
+        });
+
         setFundTokens(validTokens);
       } catch (err) {
         console.error('Failed to load funding wallet tokens:', err);
@@ -107,6 +118,44 @@ export default function PushNotifications() {
 
     loadFundingWalletTokens();
   }, [fundingWallet, fundingReady, allTokens]);
+
+  // Helper function to generate random amount for a token
+  const generateRandomAmount = (tokenUid: string): string => {
+    const token = fundTokens.find((t) => t.uid === tokenUid);
+    if (!token) return '1';
+
+    // Calculate max as min(10, token balance)
+    const maxAmount = token.balance < 10n ? Number(token.balance) : 10;
+
+    // Generate random value between 1 and maxAmount (inclusive)
+    const randomAmount = Math.floor(Math.random() * maxAmount) + 1;
+
+    return randomAmount.toString();
+  };
+
+  // Auto-select tokens and generate amounts when fundTokens changes
+  useEffect(() => {
+    if (fundTokens.length > 0) {
+      // Auto-select first token
+      const token1 = fundTokens[0]?.uid || '';
+      setSelectedToken1(token1);
+      if (token1) setToken1Amount(generateRandomAmount(token1));
+    }
+
+    if (fundTokens.length > 1) {
+      // Auto-select second token
+      const token2 = fundTokens[1]?.uid || '';
+      setSelectedToken2(token2);
+      if (token2) setToken2Amount(generateRandomAmount(token2));
+    }
+
+    if (fundTokens.length > 2) {
+      // Auto-select third token
+      const token3 = fundTokens[2]?.uid || '';
+      setSelectedToken3(token3);
+      if (token3) setToken3Amount(generateRandomAmount(token3));
+    }
+  }, [fundTokens]);
 
   const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkType, status: string) => {
     const newNetwork: NetworkType = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
@@ -244,6 +293,9 @@ export default function PushNotifications() {
       const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
       const fundWalletAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
+      // Parse amount from state
+      const amount1 = BigInt(parseFloat(token1Amount) || 1);
+
       const template = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
         .addSetVarAction({ name: 'changeAddr', value: fundWalletAddress })
@@ -254,7 +306,7 @@ export default function PushNotifications() {
         })
         .addTokenOutput({
           address: '{recipientAddr}',
-          amount: 1n,
+          amount: amount1,
           token: selectedToken1,
         })
         .addCompleteAction({
@@ -288,7 +340,7 @@ export default function PushNotifications() {
         addSentToken({
           tokenId: selectedToken1,
           tokenSymbol: fundTokens.find((t) => t.uid === selectedToken1)?.symbol || 'Token',
-          amount: '1',
+          amount: token1Amount,
           timestamp: Date.now(),
         })
       );
@@ -304,6 +356,10 @@ export default function PushNotifications() {
       const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
       const fundWalletAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
+      // Parse amounts from state
+      const amount1 = BigInt(parseFloat(token1Amount) || 1);
+      const amount2 = BigInt(parseFloat(token2Amount) || 1);
+
       const template = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
         .addSetVarAction({ name: 'changeAddr', value: fundWalletAddress })
@@ -314,12 +370,12 @@ export default function PushNotifications() {
         })
         .addTokenOutput({
           address: '{recipientAddr}',
-          amount: 1n,
+          amount: amount1,
           token: selectedToken1,
         })
         .addTokenOutput({
           address: '{recipientAddr}',
-          amount: 1n,
+          amount: amount2,
           token: selectedToken2,
         })
         .addCompleteAction({
@@ -353,7 +409,7 @@ export default function PushNotifications() {
         addSentToken({
           tokenId: selectedToken1,
           tokenSymbol: fundTokens.find((t) => t.uid === selectedToken1)?.symbol || 'Token',
-          amount: '1',
+          amount: token1Amount,
           timestamp: Date.now(),
         })
       );
@@ -361,12 +417,103 @@ export default function PushNotifications() {
         addSentToken({
           tokenId: selectedToken2,
           tokenSymbol: fundTokens.find((t) => t.uid === selectedToken2)?.symbol || 'Token',
-          amount: '1',
+          amount: token2Amount,
           timestamp: Date.now(),
         })
       );
     } catch (err) {
       console.error('Failed to send 1 HTR + 2 Tokens:', err);
+    }
+  };
+
+  const handleSend1HTRPlus3Tokens = async () => {
+    if (!fundingWallet?.instance || !testWallet?.instance || !selectedToken1 || !selectedToken2 || !selectedToken3) return;
+
+    try {
+      const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
+      const fundWalletAddress = await fundingWallet.instance.getAddressAtIndex(0);
+
+      // Parse amounts from state
+      const amount1 = BigInt(parseFloat(token1Amount) || 1);
+      const amount2 = BigInt(parseFloat(token2Amount) || 1);
+      const amount3 = BigInt(parseFloat(token3Amount) || 1);
+
+      const template = TransactionTemplateBuilder.new()
+        .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
+        .addSetVarAction({ name: 'changeAddr', value: fundWalletAddress })
+        .addTokenOutput({
+          address: '{recipientAddr}',
+          amount: 1n,
+          token: NATIVE_TOKEN_UID,
+        })
+        .addTokenOutput({
+          address: '{recipientAddr}',
+          amount: amount1,
+          token: selectedToken1,
+        })
+        .addTokenOutput({
+          address: '{recipientAddr}',
+          amount: amount2,
+          token: selectedToken2,
+        })
+        .addTokenOutput({
+          address: '{recipientAddr}',
+          amount: amount3,
+          token: selectedToken3,
+        })
+        .addCompleteAction({
+          changeAddress: '{changeAddr}',
+        })
+        .build();
+
+      await sendTransaction(
+        template,
+        {
+          fromWalletId: fundingWallet.metadata.id,
+          fromWallet: fundingWallet,
+          toAddress: testWalletAddress,
+          amount: 1,
+          tokenUid: selectedToken1,
+          tokenSymbol: fundTokens.find((t) => t.uid === selectedToken1)?.symbol || 'Token',
+        },
+        WALLET_CONFIG.DEFAULT_PIN_CODE
+      );
+
+      // Track sent tokens
+      dispatch(
+        addSentToken({
+          tokenId: NATIVE_TOKEN_UID,
+          tokenSymbol: 'HTR',
+          amount: '1',
+          timestamp: Date.now(),
+        })
+      );
+      dispatch(
+        addSentToken({
+          tokenId: selectedToken1,
+          tokenSymbol: fundTokens.find((t) => t.uid === selectedToken1)?.symbol || 'Token',
+          amount: token1Amount,
+          timestamp: Date.now(),
+        })
+      );
+      dispatch(
+        addSentToken({
+          tokenId: selectedToken2,
+          tokenSymbol: fundTokens.find((t) => t.uid === selectedToken2)?.symbol || 'Token',
+          amount: token2Amount,
+          timestamp: Date.now(),
+        })
+      );
+      dispatch(
+        addSentToken({
+          tokenId: selectedToken3,
+          tokenSymbol: fundTokens.find((t) => t.uid === selectedToken3)?.symbol || 'Token',
+          amount: token3Amount,
+          timestamp: Date.now(),
+        })
+      );
+    } catch (err) {
+      console.error('Failed to send 1 HTR + 3 Tokens:', err);
     }
   };
 
@@ -498,13 +645,17 @@ export default function PushNotifications() {
                   </div>
                 ) : (
                   <>
-                    <div className="form-control mb-4">
+                    <div className="form-control mb-3">
                       <label className="label">
                         <span className="label-text font-bold">Select Token:</span>
                       </label>
                       <Select
                         value={selectedToken1}
-                        onChange={(e) => setSelectedToken1(e.target.value)}
+                        onChange={(e) => {
+                          const newToken = e.target.value;
+                          setSelectedToken1(newToken);
+                          if (newToken) setToken1Amount(generateRandomAmount(newToken));
+                        }}
                         className="w-full"
                       >
                         <option value="">-- Select a token --</option>
@@ -515,9 +666,29 @@ export default function PushNotifications() {
                         ))}
                       </Select>
                     </div>
+
+                    {selectedToken1 && (
+                      <div className="form-control mb-4">
+                        <label className="label">
+                          <span className="label-text font-bold">Amount:</span>
+                          <span className="label-text-alt text-muted">
+                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken1)?.balance || 0n)}
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          value={token1Amount}
+                          onChange={(e) => setToken1Amount(e.target.value)}
+                          placeholder="Amount"
+                          className="input"
+                          min="1"
+                        />
+                      </div>
+                    )}
+
                     <button
                       onClick={handleSend1HTRPlus1Token}
-                      disabled={isSending || !selectedToken1}
+                      disabled={isSending || !selectedToken1 || !token1Amount || parseFloat(token1Amount) <= 0}
                       className="btn btn-primary w-full"
                     >
                       {isSending ? 'Sending...' : 'Send 1 HTR + 1 Token'}
@@ -549,7 +720,11 @@ export default function PushNotifications() {
                       </label>
                       <Select
                         value={selectedToken1}
-                        onChange={(e) => setSelectedToken1(e.target.value)}
+                        onChange={(e) => {
+                          const newToken = e.target.value;
+                          setSelectedToken1(newToken);
+                          if (newToken) setToken1Amount(generateRandomAmount(newToken));
+                        }}
                         className="w-full"
                       >
                         <option value="">-- Select first token --</option>
@@ -561,13 +736,36 @@ export default function PushNotifications() {
                       </Select>
                     </div>
 
-                    <div className="form-control mb-4">
+                    {selectedToken1 && (
+                      <div className="form-control mb-3">
+                        <label className="label">
+                          <span className="label-text font-bold">Amount for First Token:</span>
+                          <span className="label-text-alt text-muted">
+                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken1)?.balance || 0n)}
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          value={token1Amount}
+                          onChange={(e) => setToken1Amount(e.target.value)}
+                          placeholder="Amount"
+                          className="input"
+                          min="1"
+                        />
+                      </div>
+                    )}
+
+                    <div className="form-control mb-3">
                       <label className="label">
                         <span className="label-text font-bold">Select Second Token:</span>
                       </label>
                       <Select
                         value={selectedToken2}
-                        onChange={(e) => setSelectedToken2(e.target.value)}
+                        onChange={(e) => {
+                          const newToken = e.target.value;
+                          setSelectedToken2(newToken);
+                          if (newToken) setToken2Amount(generateRandomAmount(newToken));
+                        }}
                         className="w-full"
                       >
                         <option value="">-- Select second token --</option>
@@ -581,12 +779,186 @@ export default function PushNotifications() {
                       </Select>
                     </div>
 
+                    {selectedToken2 && (
+                      <div className="form-control mb-4">
+                        <label className="label">
+                          <span className="label-text font-bold">Amount for Second Token:</span>
+                          <span className="label-text-alt text-muted">
+                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken2)?.balance || 0n)}
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          value={token2Amount}
+                          onChange={(e) => setToken2Amount(e.target.value)}
+                          placeholder="Amount"
+                          className="input"
+                          min="1"
+                        />
+                      </div>
+                    )}
+
                     <button
                       onClick={handleSend1HTRPlus2Tokens}
-                      disabled={isSending || !selectedToken1 || !selectedToken2}
+                      disabled={isSending || !selectedToken1 || !selectedToken2 || !token1Amount || !token2Amount || parseFloat(token1Amount) <= 0 || parseFloat(token2Amount) <= 0}
                       className="btn btn-primary w-full"
                     >
                       {isSending ? 'Sending...' : 'Send 1 HTR + 2 Tokens'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Send 1 HTR + 3 Custom Tokens */}
+            <div className="card bg-white shadow-md mb-4">
+              <div className="card-body">
+                <h3 className="card-title">Send 1 HTR + 3 Custom Tokens</h3>
+                <p className="text-sm text-muted mb-4">
+                  Send 1 HTR and 3 different custom tokens in a single transaction.
+                </p>
+
+                {isLoadingTokens ? (
+                  <div className="text-sm text-muted mb-4">Loading tokens...</div>
+                ) : fundTokens.length < 3 ? (
+                  <div className="alert alert-info mb-4">
+                    <p className="m-0 text-sm">At least 3 custom tokens with balance required in funding wallet.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="form-control mb-3">
+                      <label className="label">
+                        <span className="label-text font-bold">Select First Token:</span>
+                      </label>
+                      <Select
+                        value={selectedToken1}
+                        onChange={(e) => {
+                          const newToken = e.target.value;
+                          setSelectedToken1(newToken);
+                          if (newToken) setToken1Amount(generateRandomAmount(newToken));
+                        }}
+                        className="w-full"
+                      >
+                        <option value="">-- Select first token --</option>
+                        {fundTokens.map((token) => (
+                          <option key={token.uid} value={token.uid}>
+                            {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    {selectedToken1 && (
+                      <div className="form-control mb-3">
+                        <label className="label">
+                          <span className="label-text font-bold">Amount for First Token:</span>
+                          <span className="label-text-alt text-muted">
+                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken1)?.balance || 0n)}
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          value={token1Amount}
+                          onChange={(e) => setToken1Amount(e.target.value)}
+                          placeholder="Amount"
+                          className="input"
+                          min="1"
+                        />
+                      </div>
+                    )}
+
+                    <div className="form-control mb-3">
+                      <label className="label">
+                        <span className="label-text font-bold">Select Second Token:</span>
+                      </label>
+                      <Select
+                        value={selectedToken2}
+                        onChange={(e) => {
+                          const newToken = e.target.value;
+                          setSelectedToken2(newToken);
+                          if (newToken) setToken2Amount(generateRandomAmount(newToken));
+                        }}
+                        className="w-full"
+                      >
+                        <option value="">-- Select second token --</option>
+                        {fundTokens
+                          .filter((token) => token.uid !== selectedToken1)
+                          .map((token) => (
+                            <option key={token.uid} value={token.uid}>
+                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                            </option>
+                          ))}
+                      </Select>
+                    </div>
+
+                    {selectedToken2 && (
+                      <div className="form-control mb-3">
+                        <label className="label">
+                          <span className="label-text font-bold">Amount for Second Token:</span>
+                          <span className="label-text-alt text-muted">
+                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken2)?.balance || 0n)}
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          value={token2Amount}
+                          onChange={(e) => setToken2Amount(e.target.value)}
+                          placeholder="Amount"
+                          className="input"
+                          min="1"
+                        />
+                      </div>
+                    )}
+
+                    <div className="form-control mb-3">
+                      <label className="label">
+                        <span className="label-text font-bold">Select Third Token:</span>
+                      </label>
+                      <Select
+                        value={selectedToken3}
+                        onChange={(e) => {
+                          const newToken = e.target.value;
+                          setSelectedToken3(newToken);
+                          if (newToken) setToken3Amount(generateRandomAmount(newToken));
+                        }}
+                        className="w-full"
+                      >
+                        <option value="">-- Select third token --</option>
+                        {fundTokens
+                          .filter((token) => token.uid !== selectedToken1 && token.uid !== selectedToken2)
+                          .map((token) => (
+                            <option key={token.uid} value={token.uid}>
+                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                            </option>
+                          ))}
+                      </Select>
+                    </div>
+
+                    {selectedToken3 && (
+                      <div className="form-control mb-4">
+                        <label className="label">
+                          <span className="label-text font-bold">Amount for Third Token:</span>
+                          <span className="label-text-alt text-muted">
+                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken3)?.balance || 0n)}
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          value={token3Amount}
+                          onChange={(e) => setToken3Amount(e.target.value)}
+                          placeholder="Amount"
+                          className="input"
+                          min="1"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleSend1HTRPlus3Tokens}
+                      disabled={isSending || !selectedToken1 || !selectedToken2 || !selectedToken3 || !token1Amount || !token2Amount || !token3Amount || parseFloat(token1Amount) <= 0 || parseFloat(token2Amount) <= 0 || parseFloat(token3Amount) <= 0}
+                      className="btn btn-primary w-full"
+                    >
+                      {isSending ? 'Sending...' : 'Send 1 HTR + 3 Tokens'}
                     </button>
                   </>
                 )}
