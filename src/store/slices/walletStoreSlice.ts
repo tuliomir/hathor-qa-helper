@@ -3,7 +3,7 @@
  * Manages wallet instances and metadata with LocalStorage persistence
  */
 
-import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector, type PayloadAction } from '@reduxjs/toolkit';
 import type { WalletMetadata } from '../../types/walletStore';
 import type { WalletStatus } from '../../types/wallet';
 import type { RootState } from '../index';
@@ -668,41 +668,55 @@ export const selectWalletEvents = (state: RootState, walletId: string): WalletEv
 
 /**
  * Get all events across all wallets (useful for global event monitoring)
+ * MEMOIZED: Returns same reference if wallet events haven't changed
  */
-export const selectAllWalletEvents = (state: RootState): Array<WalletEvent & { walletId: string }> => {
-  const allEvents: Array<WalletEvent & { walletId: string }> = [];
+export const selectAllWalletEvents = createSelector(
+  [(state: RootState) => state.walletStore.wallets],
+  (wallets) => {
+    const allEvents: Array<WalletEvent & { walletId: string }> = [];
 
-  Object.entries(state.walletStore.wallets).forEach(([walletId, walletInfo]) => {
-    walletInfo.events.forEach((event) => {
-      allEvents.push({ ...event, walletId });
+    Object.entries(wallets).forEach(([walletId, walletInfo]) => {
+      walletInfo.events.forEach((event) => {
+        allEvents.push({ ...event, walletId });
+      });
     });
-  });
 
-  // Sort by timestamp, most recent first
-  return allEvents.sort((a, b) => b.timestamp - a.timestamp);
-};
+    // Sort by timestamp, most recent first
+    return allEvents.sort((a, b) => b.timestamp - a.timestamp);
+  }
+);
 
 /**
  * Get all events that involve a specific transaction hash
  * Searches for tx_id or txId in the event data (handles both naming conventions)
+ * MEMOIZED: Returns same reference if events haven't changed
  */
-export const selectEventsByTxHash = (state: RootState, txHash: string): Array<WalletEvent & { walletId: string }> => {
-  const allEvents = selectAllWalletEvents(state);
-
-  return allEvents.filter((event) => {
-    // Check if the event data contains this transaction hash
-    if (event.data && typeof event.data === 'object') {
-      const eventTxId = event.data.tx_id ?? event.data.txId;
-      return eventTxId === txHash;
-    }
-    return false;
-  });
-};
+export const selectEventsByTxHash = createSelector(
+  [
+    (state: RootState) => selectAllWalletEvents(state),
+    (_state: RootState, txHash: string) => txHash,
+  ],
+  (allEvents, txHash) => {
+    return allEvents.filter((event) => {
+      // Check if the event data contains this transaction hash
+      if (event.data && typeof event.data === 'object') {
+        const eventTxId = event.data.tx_id ?? event.data.txId;
+        return eventTxId === txHash;
+      }
+      return false;
+    });
+  }
+);
 
 /**
  * Get the latest event for a specific transaction hash
+ * MEMOIZED: Returns same reference if events haven't changed
  */
-export const selectLatestEventForTx = (state: RootState, txHash: string): (WalletEvent & { walletId: string }) | null => {
-  const events = selectEventsByTxHash(state, txHash);
-  return events.length > 0 ? events[0] : null;
-};
+export const selectLatestEventForTx = createSelector(
+  [
+    (state: RootState, txHash: string) => selectEventsByTxHash(state, txHash),
+  ],
+  (events) => {
+    return events.length > 0 ? events[0] : null;
+  }
+);
