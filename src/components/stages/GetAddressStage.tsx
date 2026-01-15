@@ -14,6 +14,7 @@ import {
   setRequestType,
   setIndexValue,
   setValidationStatus,
+  clearGetAddressData,
   type AddressRequestType,
 } from '../../store/slices/getAddressSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
@@ -53,6 +54,9 @@ export const GetAddressStage: React.FC = () => {
     if (!rpcHandlers) {
       throw new Error('RPC handlers not initialized');
     }
+
+    // Clear previous request/response/validation data
+    dispatch(clearGetAddressData());
 
     const startTime = Date.now();
 
