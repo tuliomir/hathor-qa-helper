@@ -41,17 +41,17 @@ React + TypeScript app for testing Hathor wallet functionality, RPC methods, and
 
 ```bash
 # Install dependencies
-yarn install
+bun install
 
 # Start dev server (localhost:5173)
-yarn dev
+bun dev
 
 # Build for production
-yarn build
+bun build
 
 # Lint & format
-yarn lint:fix
-yarn format
+bun lint:fix
+bun format
 ```
 
 ## Project Structure
@@ -133,12 +133,12 @@ const status = getTransactionStatus({
 
 ## Scripts Reference
 
-| Command | Purpose |
-|---------|---------|
-| `yarn dev` | Start dev server |
-| `yarn build` | Production build |
-| `yarn preview` | Preview production build |
-| `yarn lint` | Run ESLint |
-| `yarn lint:fix` | Fix lint issues |
-| `yarn format` | Format with Prettier |
-| `yarn format:check` | Check formatting |
+| Command            | Purpose                  |
+|--------------------|--------------------------|
+| `bun dev`          | Start dev server         |
+| `bun build`        | Production build         |
+| `bun preview`      | Preview production build |
+| `bun lint`         | Run ESLint               |
+| `bun lint:fix`     | Fix lint issues          |
+| `bun format`       | Format with Prettier     |
+| `bun format:check` | Check formatting         |
