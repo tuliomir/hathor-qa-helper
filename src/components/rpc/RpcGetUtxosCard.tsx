@@ -7,7 +7,9 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
+import { ExplorerLink } from '../common/ExplorerLink';
 import type { UtxoData } from '../../store/slices/getUtxosSlice';
+import { DEFAULT_NETWORK, type NetworkType } from '../../constants/network';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -24,6 +26,7 @@ export interface RpcGetUtxosCardProps {
   onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
+  network?: NetworkType;
   // Persisted data from Redux
   initialRequest?: { method: string; params: unknown } | null;
   initialResponse?: unknown | null;
@@ -34,6 +37,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
   onExecute,
   disabled = false,
   isDryRun = false,
+  network = DEFAULT_NETWORK,
   initialRequest = null,
   initialResponse = null,
   initialError = null,
@@ -185,8 +189,13 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
                           <p className="font-mono font-semibold mt-1 mb-0">{utxo.amount}</p>
                         </div>
                         <div className="col-span-2">
-                          <span className="text-muted">TX ID:</span>
-                          <p className="font-mono text-2xs break-all mt-1 mb-0">{utxo.tx_id}</p>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <span className="text-muted">TX ID:</span>
+                              <p className="font-mono text-2xs break-all mt-1 mb-0">{utxo.tx_id}</p>
+                            </div>
+                            <ExplorerLink hash={utxo.tx_id} network={network} />
+                          </div>
                         </div>
                         <div>
                           <span className="text-muted">Index:</span>

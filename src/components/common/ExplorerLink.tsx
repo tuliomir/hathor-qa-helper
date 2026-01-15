@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { NETWORK_CONFIG, type NetworkType } from '../../constants/network';
+import { DEFAULT_NETWORK, NETWORK_CONFIG, type NetworkType } from '../../constants/network';
 
 export interface ExplorerLinkProps {
   hash: string;
@@ -18,7 +18,7 @@ export interface ExplorerLinkProps {
 export const ExplorerLink: React.FC<ExplorerLinkProps> = ({
   hash,
   specificPage,
-  network = 'TESTNET',
+  network = DEFAULT_NETWORK,
   className = '',
   children,
 }) => {

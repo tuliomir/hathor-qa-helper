@@ -379,6 +379,7 @@ export const GetUtxosStage: React.FC = () => {
             onExecute={handleExecuteGetUtxos}
             disabled={false}
             isDryRun={isDryRun}
+            network={testWallet.metadata.network}
             initialRequest={getUtxosData.request}
             initialResponse={getUtxosData.rawResponse}
             initialError={getUtxosData.error}
