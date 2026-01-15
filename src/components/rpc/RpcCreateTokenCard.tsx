@@ -4,16 +4,19 @@
  * Card component for testing htr_createToken RPC method
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import CopyButton from '../common/CopyButton';
+import { ExplorerLink } from '../common/ExplorerLink';
 import { useToast } from '../../hooks/useToast';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
+import type { NetworkType } from '../../constants/network';
 
 export interface RpcCreateTokenCardProps {
   onExecute: (params: CreateTokenParams) => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   walletAddress?: string | null;
+  network?: NetworkType;
   initialRequest?: { method: string; params: unknown } | null;
   initialResponse?: unknown | null;
   initialError?: string | null;
@@ -24,6 +27,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   disabled = false,
   isDryRun = false,
   walletAddress = null,
+  network,
   initialRequest = null,
   initialResponse = null,
   initialError = null,
@@ -156,24 +160,33 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   // Check if response is createToken response format
-  const isCreateTokenResponse = (data: unknown): data is { type?: number; response?: { hash?: string; tx?: unknown }; hash?: string; tx?: unknown } => {
-    // Check if it's the full response with type field
-    if (data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 1 && 'response' in data) {
+  const isCreateTokenResponse = (data: unknown): data is { type?: number; response?: { hash?: string; inputs?: unknown[]; outputs?: unknown[] } } => {
+    // Check if it's the full response with type field and response object
+    if (data && typeof data === 'object' && 'type' in data && 'response' in data) {
       const response = (data as { response?: unknown }).response;
-      return !!(response && typeof response === 'object' && 'hash' in response && 'tx' in response);
+      // Create token transactions have type 6 and response with hash, inputs, outputs
+      return !!(response && typeof response === 'object' && 'hash' in response);
     }
-    // Or if it's just the response data directly
-    return !!(data && typeof data === 'object' && 'hash' in data && 'tx' in data);
+    return false;
   };
 
   // Render formatted response
   const renderFormattedResponse = (parsedResult: unknown) => {
-    // Extract the actual response data (handle both formats)
-    const responseData = ((parsedResult as { response?: unknown }).response || parsedResult) as { hash?: string; tx?: { tokens?: string[] } };
+    // Extract the actual response data - the response object itself contains the transaction data
+    const responseData = (parsedResult as { response?: unknown }).response as {
+      hash?: string;
+      name?: string;
+      symbol?: string;
+      inputs?: unknown[];
+      outputs?: unknown[];
+    };
 
-    if (!responseData.hash || !responseData.tx) {
+    if (!responseData || !responseData.hash) {
       return renderRawJson(result);
     }
+
+    // For create token transactions, the token UID is the transaction hash itself
+    const tokenUid = responseData.hash;
 
     return (
       <div className="space-y-3">
@@ -183,20 +196,49 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
             <span className="text-sm font-semibold text-green-800">Transaction Hash</span>
           </div>
           <div className="px-3 py-2">
-            <span className="text-sm font-mono text-gray-700 break-all">{responseData.hash}</span>
+            <div className="flex items-start gap-2 flex-wrap">
+              <span className="text-sm font-mono text-gray-700 break-all flex-1">{responseData.hash}</span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <CopyButton text={responseData.hash} label="Copy Tx Id" />
+                {network && <ExplorerLink hash={responseData.hash} network={network} />}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Token UID */}
-        {responseData.tx?.tokens && responseData.tx.tokens.length > 0 && (
+        {/* Token UID - For create token transactions, this is the same as the transaction hash */}
+        <div className="bg-white border border-green-200 rounded overflow-hidden">
+          <div className="bg-green-100 px-3 py-2 border-b border-green-200">
+            <span className="text-sm font-semibold text-green-800">Token UID</span>
+          </div>
+          <div className="px-3 py-2">
+            <div className="flex items-start gap-2 flex-wrap">
+              <span className="text-sm font-mono text-gray-700 break-all flex-1">{tokenUid}</span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <CopyButton text={tokenUid} label="Copy Token UID" />
+                {network && <ExplorerLink hash={tokenUid} specificPage="token_detail" network={network} />}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Token Info */}
+        {(responseData.name || responseData.symbol) && (
           <div className="bg-white border border-green-200 rounded overflow-hidden">
             <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Token UID</span>
+              <span className="text-sm font-semibold text-green-800">Token Details</span>
             </div>
-            <div className="px-3 py-2">
-              <span className="text-sm font-mono text-gray-700 break-all">
-                {responseData.tx.tokens[0]}
-              </span>
+            <div className="px-3 py-2 space-y-1">
+              {responseData.name && (
+                <div className="text-sm">
+                  <span className="font-semibold">Name:</span> {responseData.name}
+                </div>
+              )}
+              {responseData.symbol && (
+                <div className="text-sm">
+                  <span className="font-semibold">Symbol:</span> {responseData.symbol}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -208,7 +250,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           </div>
           <div className="max-h-64 overflow-y-auto px-3 py-2">
             <pre className="text-xs font-mono text-gray-700 text-left">
-              {safeStringify(responseData.tx, 2) as string}
+              {safeStringify(responseData, 2) as string}
             </pre>
           </div>
         </div>

@@ -4,19 +4,19 @@
  * Tests htr_createToken RPC call with Redux state persistence
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
 import {
-  setCreateTokenRequest,
-  setCreateTokenResponse,
-  setCreateTokenError,
+	setCreateTokenError,
+	setCreateTokenRequest,
+	setCreateTokenResponse,
 } from '../../store/slices/createTokenSlice';
-import { refreshWalletTokens, refreshWalletBalance } from '../../store/slices/walletStoreSlice';
-import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
+import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
+import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { RpcCreateTokenCard } from '../rpc/RpcCreateTokenCard';
-import { createRpcHandlers } from '../../services/rpcHandlers';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
+import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
@@ -201,12 +201,13 @@ export const CreateTokenStage: React.FC = () => {
       )}
 
       {/* CreateToken Card */}
-      {isConnected && !addressMismatch && rpcHandlers && (
+      {isConnected && !addressMismatch && rpcHandlers && testWallet && (
         <RpcCreateTokenCard
           onExecute={handleExecuteCreateToken}
           disabled={false}
           isDryRun={isDryRun}
           walletAddress={testWalletAddress}
+          network={testWallet.metadata.network}
           initialRequest={createTokenData.request}
           initialResponse={createTokenData.rawResponse}
           initialError={createTokenData.error}

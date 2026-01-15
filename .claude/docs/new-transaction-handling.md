@@ -21,3 +21,5 @@ If the transaction is related to nano contracts, it's important to know when its
 	<ExplorerLink hash={txHash} />
 </div>
 ```
+
+If there is a new custom token being created, also add an explorer button to the token details page, by passing the `specificPage = token_detail`.
