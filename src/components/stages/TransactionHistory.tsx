@@ -26,10 +26,10 @@ interface WalletTransaction {
   ncMethod?: string;
   headers?: {
     method?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   // Keep raw data for console export
-  raw: any;
+  raw: unknown;
 }
 
 export default function TransactionHistory() {
@@ -63,7 +63,7 @@ export default function TransactionHistory() {
         console.log('First transaction sample:', txHistory[0]);
 
         // Extract the fields we need
-        const simplifiedTxs: WalletTransaction[] = txHistory.map((tx: any) => {
+        const simplifiedTxs: WalletTransaction[] = txHistory.map((tx: unknown) => {
           return {
             txId: tx.tx_id || tx.txId || 'unknown',
             timestamp: (tx.timestamp || 0) * 1000, // Convert to milliseconds

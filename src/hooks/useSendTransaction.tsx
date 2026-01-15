@@ -34,7 +34,7 @@ export function useSendTransaction() {
    * @returns Promise that resolves when transaction is sent successfully
    */
   const sendTransaction = async (
-    template: any,
+    template: unknown,
     metadata: TransactionMetadata,
     pinCode: string
   ): Promise<void> => {

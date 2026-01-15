@@ -10,7 +10,7 @@ import { useToast } from '../../hooks/useToast';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
 
 export interface RpcCreateTokenCardProps {
-  onExecute: (params: CreateTokenParams) => Promise<{ request: any; response: any }>;
+  onExecute: (params: CreateTokenParams) => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   walletAddress?: string | null;
@@ -32,9 +32,9 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
 
   // Component state
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(initialResponse);
+  const [result, setResult] = useState<unknown>(initialResponse);
   const [error, setError] = useState<string | null>(initialError);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(initialRequest);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(initialRequest);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
@@ -127,14 +127,14 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
         isDryRun ? 'Request generated (not sent to RPC)' : 'Token created successfully',
         'success'
       );
-    } catch (err: any) {
-      const errorMessage = err.message || 'An error occurred';
+    } catch (err: unknown) {
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
       // Capture request params from error if available
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
@@ -147,7 +147,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Safe stringify helper for BigInt
-  const safeStringify = (obj: any, spaces = 0): string => {
+  const safeStringify = (obj: unknown, spaces = 0): string => {
     return JSON.stringify(
       obj,
       (_, value) => (typeof value === 'bigint' ? value.toString() : value),
@@ -156,7 +156,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   // Check if response is createToken response format
-  const isCreateTokenResponse = (data: any): boolean => {
+  const isCreateTokenResponse = (data: unknown): boolean => {
     // Check if it's the full response with type field
     if (data && data.type === 1 && data.response) {
       const response = data.response;
@@ -167,7 +167,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   // Render formatted response
-  const renderFormattedResponse = (parsedResult: any) => {
+  const renderFormattedResponse = (parsedResult: unknown) => {
     // Extract the actual response data (handle both formats)
     const responseData = parsedResult.response || parsedResult;
 
@@ -217,7 +217,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   // Render raw JSON
-  const renderRawJson = (data: any) => {
+  const renderRawJson = (data: unknown) => {
     return (
       <div className="bg-white border border-green-200 rounded p-3 overflow-auto max-h-64">
         <pre className="text-sm font-mono text-gray-700 text-left">

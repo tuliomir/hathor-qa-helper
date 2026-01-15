@@ -11,7 +11,7 @@ import CopyButton from '../common/CopyButton';
 /**
  * Helper function to safely stringify objects containing BigInt values
  */
-const safeStringify = (obj: any, space?: number): string => {
+const safeStringify = (obj: unknown, space?: number): string => {
   return JSON.stringify(
     obj,
     (_, value) => (typeof value === 'bigint' ? value.toString() : value),
@@ -20,12 +20,12 @@ const safeStringify = (obj: any, space?: number): string => {
 };
 
 export interface RpcConnectedNetworkCardProps {
-  onExecute: () => Promise<any>;
+  onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   // Persisted data from Redux
-  initialRequest?: { method: string; params: any } | null;
-  initialResponse?: any | null;
+  initialRequest?: { method: string; params: unknown } | null;
+  initialResponse?: unknown | null;
   initialError?: string | null;
 }
 
@@ -38,9 +38,9 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(false);
   const { showToast } = useToast();
@@ -83,22 +83,22 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
         isDryRun ? 'Request generated (not sent to RPC)' : 'Connected network retrieved successfully',
         'success'
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = err.message || 'An error occurred';
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
       // Capture request params from error if available
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
       console.error(`[RPC Error] Connected Network`, {
         message: errorMessage,
         error: err,
-        requestParams: err.requestParams,
+        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
       });
 
       showToast(errorMessage, 'error');
@@ -110,8 +110,8 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
   const hasResult = result !== null || error !== null;
 
   // Check if result is a connected network response
-  const isConnectedNetworkResponse = (data: any) => {
-    return data && data.type === 4 && data.response;
+  const isConnectedNetworkResponse = (data: unknown): data is { type: number; response: unknown } => {
+    return !!data && typeof data === 'object' && 'type' in data && data.type === 4 && 'response' in data;
   };
 
   // Render result

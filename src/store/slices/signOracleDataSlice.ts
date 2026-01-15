@@ -8,9 +8,9 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
 interface SignOracleDataState {
-  request: { method: string; params: any } | null;
-  response: any | null;
-  rawResponse: any | null;
+  request: { method: string; params: unknown } | null;
+  response: unknown | null;
+  rawResponse: unknown | null;
   error: string | null;
   timestamp: number | null;
   duration: number | null;
@@ -43,7 +43,7 @@ const signOracleDataSlice = createSlice({
   reducers: {
     setSignOracleDataRequest: (
       state,
-      action: PayloadAction<{ method: string; params: any; isDryRun: boolean }>
+      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
     ) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
@@ -51,7 +51,7 @@ const signOracleDataSlice = createSlice({
     },
     setSignOracleDataResponse: (
       state,
-      action: PayloadAction<{ response: any; duration: number }>
+      action: PayloadAction<{ response: unknown; duration: number }>
     ) => {
       state.response = action.payload.response;
       state.rawResponse = action.payload.response;

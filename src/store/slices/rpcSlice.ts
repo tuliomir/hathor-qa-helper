@@ -12,9 +12,9 @@ export interface RpcHistoryEntry {
   method: string; // RPC method name
   request: {
     method: string;
-    params: any;
+    params: unknown;
   };
-  response: any | null; // Response from RPC server (null if dry run or error)
+  response: unknown | null; // Response from RPC server (null if dry run or error)
   error: string | null; // Error message if RPC failed
   dryRun: boolean; // Was this a dry run?
   duration?: number; // Time taken for the RPC call (ms)

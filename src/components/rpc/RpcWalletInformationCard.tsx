@@ -11,7 +11,7 @@ import CopyButton from '../common/CopyButton';
 /**
  * Helper function to safely stringify objects containing BigInt values
  */
-const safeStringify = (obj: any, space?: number): string => {
+const safeStringify = (obj: unknown, space?: number): string => {
   return JSON.stringify(
     obj,
     (_, value) => (typeof value === 'bigint' ? value.toString() : value),
@@ -20,12 +20,12 @@ const safeStringify = (obj: any, space?: number): string => {
 };
 
 export interface RpcWalletInformationCardProps {
-  onExecute: () => Promise<any>;
+  onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   // Persisted data from Redux
-  initialRequest?: { method: string; params: any } | null;
-  initialResponse?: any | null;
+  initialRequest?: { method: string; params: unknown } | null;
+  initialResponse?: unknown | null;
   initialError?: string | null;
 }
 
@@ -38,9 +38,9 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(false);
   const { showToast } = useToast();
@@ -83,15 +83,15 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
         isDryRun ? 'Request generated (not sent to RPC)' : 'Wallet information retrieved successfully',
         'success'
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = err.message || 'An error occurred';
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
       // Capture request params from error if available
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
@@ -110,7 +110,7 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
   const hasResult = result !== null || error !== null;
 
   // Check if result is a wallet information response
-  const isWalletInfoResponse = (data: any) => {
+  const isWalletInfoResponse = (data: unknown) => {
     return data && data.type === 12 && data.response;
   };
 

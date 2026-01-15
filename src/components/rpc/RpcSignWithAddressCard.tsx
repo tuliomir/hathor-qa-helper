@@ -11,7 +11,7 @@ import CopyButton from '../common/CopyButton';
 /**
  * Helper function to safely stringify objects containing BigInt values
  */
-const safeStringify = (obj: any, space?: number): string => {
+const safeStringify = (obj: unknown, space?: number): string => {
   return JSON.stringify(
     obj,
     (_, value) => (typeof value === 'bigint' ? value.toString() : value),
@@ -20,12 +20,12 @@ const safeStringify = (obj: any, space?: number): string => {
 };
 
 export interface RpcSignWithAddressCardProps {
-  onExecute: (message: string, addressIndex: number) => Promise<any>;
+  onExecute: (message: string, addressIndex: number) => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   // Persisted data from Redux
-  initialRequest?: { method: string; params: any } | null;
-  initialResponse?: any | null;
+  initialRequest?: { method: string; params: unknown } | null;
+  initialResponse?: unknown | null;
   initialError?: string | null;
 }
 
@@ -38,9 +38,9 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
@@ -104,15 +104,15 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
         isDryRun ? 'Request generated (not sent to RPC)' : 'Message signed successfully',
         'success'
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = err.message || 'An error occurred';
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
       // Capture request params from error if available
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
@@ -131,7 +131,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result has the expected signature response structure
-  const isSignatureResponse = (data: any) => {
+  const isSignatureResponse = (data: unknown) => {
     // Check if it's the full response with type field
     if (data && data.type === 1 && data.response) {
       const response = data.response;
@@ -142,7 +142,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   };
 
   // Render formatted signature response
-  const renderFormattedResponse = (parsedResult: any) => {
+  const renderFormattedResponse = (parsedResult: unknown) => {
     if (!isSignatureResponse(parsedResult)) {
       return null;
     }
@@ -217,7 +217,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   };
 
   // Render raw JSON view
-  const renderRawJson = (data: any) => {
+  const renderRawJson = (data: unknown) => {
     try {
       const parsedResult = typeof data === 'string' ? JSON.parse(data) : data;
       const entries = Object.entries(parsedResult);
@@ -238,7 +238,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
           ))}
         </div>
       );
-    } catch (e) {
+    } catch {
       return (
         <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
           <pre className="text-sm font-mono">{String(data)}</pre>
@@ -447,7 +447,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
 
                           // Otherwise show raw
                           return renderRawJson(result);
-                        } catch (e) {
+                        } catch {
                           return renderRawJson(result);
                         }
                       })()}

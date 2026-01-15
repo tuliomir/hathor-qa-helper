@@ -17,7 +17,9 @@
       "Bash(bun install)",
       "Bash(bun run lint:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(bun run build:*)",
+      "Bash(bun lint:fix:*)"
     ],
     "deny": [],
     "ask": []

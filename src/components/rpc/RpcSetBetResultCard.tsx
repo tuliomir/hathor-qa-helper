@@ -13,7 +13,7 @@ import { useAppSelector } from '../../store/hooks.ts'
 import TxStatus from '../common/TxStatus.tsx'
 
 export interface RpcSetBetResultCardProps {
-  onExecute: () => Promise<any>;
+  onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   ncId: string;
@@ -32,8 +32,8 @@ export interface RpcSetBetResultCardProps {
   // Navigation callback to Sign Oracle Data
   onNavigateToSignOracleData: () => void;
   // Persisted data from Redux
-  initialRequest?: { method: string; params: any } | null;
-  initialResponse?: any | null;
+  initialRequest?: { method: string; params: unknown } | null;
+  initialResponse?: unknown | null;
   initialError?: string | null;
 }
 
@@ -60,9 +60,9 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [resultData, setResultData] = useState<any>(null);
+  const [resultData, setResultData] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
@@ -71,7 +71,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
 	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
 
   // Live request building - calculate request on every input change
-  const [liveRequest, setLiveRequest] = useState<{ method: string; params: any } | null>(null);
+  const [liveRequest, setLiveRequest] = useState<{ method: string; params: unknown } | null>(null);
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -148,15 +148,15 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
         isDryRun ? 'Request generated (not sent to RPC)' : 'Result set successfully',
         'success'
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = err.message || 'An error occurred';
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
       // Capture request params from error if available
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
@@ -175,12 +175,12 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   const hasResult = resultData !== null || error !== null;
 
   // Helper to check if an object is a Buffer
-  const isBuffer = (obj: any): boolean => {
+  const isBuffer = (obj: unknown): boolean => {
     return obj && typeof obj === 'object' && obj.type === 'Buffer' && Array.isArray(obj.data);
   };
 
   // Helper to render Buffer in a compact way
-  const renderBuffer = (buffer: any) => {
+  const renderBuffer = (buffer: { type?: string; data?: number[] }) => {
     const dataLength = buffer.data?.length || 0;
     const preview = buffer.data?.slice(0, 8).join(', ') || '';
     return (
@@ -196,7 +196,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   };
 
   // Render raw JSON view
-  const renderRawJson = (data: any) => {
+  const renderRawJson = (data: unknown) => {
     return (
       <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50 text-left">
         <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 text-left">
@@ -207,13 +207,13 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   };
 
   // Render formatted response for set bet result
-  const renderFormattedResponse = (data: any) => {
+  const renderFormattedResponse = (data: unknown) => {
     if (!data || typeof data !== 'object') {
       return <div className="text-sm text-muted italic p-3">Invalid response data</div>;
     }
 
     // Helper to render a single field
-    const renderField = (key: string, value: any, depth: number = 0): React.ReactElement => {
+    const renderField = (key: string, value: unknown, depth: number = 0): React.ReactElement => {
       const indent = depth * 12;
 
       // Handle Buffer objects

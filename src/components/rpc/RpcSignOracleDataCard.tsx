@@ -10,7 +10,7 @@ import CopyButton from '../common/CopyButton';
 import { safeStringify } from '../../utils/betHelpers';
 
 export interface RpcSignOracleDataCardProps {
-  onExecute: () => Promise<any>;
+  onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   ncId: string;
@@ -23,8 +23,8 @@ export interface RpcSignOracleDataCardProps {
   setData: (value: string) => void;
   onSendToSetBetResult?: (signedData: string) => void; // Callback to send signature back
   // Persisted data from Redux
-  initialRequest?: { method: string; params: any } | null;
-  initialResponse?: any | null;
+  initialRequest?: { method: string; params: unknown } | null;
+  initialResponse?: unknown | null;
   initialError?: string | null;
 }
 
@@ -46,9 +46,9 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(true);
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
@@ -56,7 +56,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   const { showToast } = useToast();
 
   // Live request building
-  const [liveRequest, setLiveRequest] = useState<{ method: string; params: any } | null>(null);
+  const [liveRequest, setLiveRequest] = useState<{ method: string; params: unknown } | null>(null);
 
   // Load persisted data from Redux
   useEffect(() => {
@@ -129,14 +129,14 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
         isDryRun ? 'Request generated (not sent to RPC)' : 'Data signed successfully',
         'success'
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = err.message || 'An error occurred';
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
@@ -186,12 +186,12 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   const signedData = getSignedData();
 
   // Helper to check if an object is a Buffer
-  const isBuffer = (obj: any): boolean => {
+  const isBuffer = (obj: unknown): boolean => {
     return obj && typeof obj === 'object' && obj.type === 'Buffer' && Array.isArray(obj.data);
   };
 
   // Helper to render Buffer in a compact way
-  const renderBuffer = (buffer: any) => {
+  const renderBuffer = (buffer: { type?: string; data?: number[] }) => {
     const dataLength = buffer.data?.length || 0;
     const preview = buffer.data?.slice(0, 8).join(', ') || '';
     return (
@@ -207,7 +207,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   };
 
   // Render raw JSON view
-  const renderRawJson = (data: any) => {
+  const renderRawJson = (data: unknown) => {
     return (
       <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50 text-left">
         <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 text-left">
@@ -218,12 +218,12 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   };
 
   // Render formatted response
-  const renderFormattedResponse = (data: any) => {
+  const renderFormattedResponse = (data: unknown) => {
     if (!data || typeof data !== 'object') {
       return <div className="text-sm text-muted italic p-3">Invalid response data</div>;
     }
 
-    const renderField = (key: string, value: any, depth: number = 0): React.ReactElement => {
+    const renderField = (key: string, value: unknown, depth: number = 0): React.ReactElement => {
       const indent = depth * 12;
 
       if (isBuffer(value)) {

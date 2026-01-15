@@ -165,9 +165,9 @@ export const BetInitializeStage: React.FC = () => {
       }));
 
       // Store the nano contract ID for use in other stages
-      if ((response as any)?.response?.hash) {
+      if (response && typeof response === 'object' && 'response' in response && response.response && typeof response.response === 'object' && 'hash' in response.response) {
         dispatch(setBetNanoContractId({
-          ncId: (response as any).response.hash,
+          ncId: (response.response as { hash: string }).hash,
           blueprintId,
           token,
         }));

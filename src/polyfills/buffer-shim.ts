@@ -8,7 +8,7 @@
 
 // Get the Buffer from globalThis (provided by the nodePolyfills plugin)
 // Using globalThis instead of global for better browser compatibility
-const BufferGlobal = (globalThis as any).Buffer;
+const BufferGlobal = (globalThis as { Buffer: BufferConstructor }).Buffer;
 
 // Named export (for imports like: import { Buffer } from 'buffer')
 export const Buffer = BufferGlobal;

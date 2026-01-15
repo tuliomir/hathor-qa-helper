@@ -13,7 +13,7 @@ import type { AddressRequestType } from '../../store/slices/getAddressSlice';
 /**
  * Helper function to safely stringify objects containing BigInt values
  */
-const safeStringify = (obj: any, space?: number): string => {
+const safeStringify = (obj: unknown, space?: number): string => {
   return JSON.stringify(
     obj,
     (_, value) => (typeof value === 'bigint' ? value.toString() : value),
@@ -22,7 +22,7 @@ const safeStringify = (obj: any, space?: number): string => {
 };
 
 export interface RpcGetAddressCardProps {
-  onExecute: (type: AddressRequestType, index?: number) => Promise<any>;
+  onExecute: (type: AddressRequestType, index?: number) => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
   requestType: AddressRequestType;
@@ -30,8 +30,8 @@ export interface RpcGetAddressCardProps {
   onRequestTypeChange: (type: AddressRequestType) => void;
   onIndexValueChange: (index: number) => void;
   // Persisted data from Redux
-  initialRequest?: { method: string; params: any } | null;
-  initialResponse?: any | null;
+  initialRequest?: { method: string; params: unknown } | null;
+  initialResponse?: unknown | null;
   initialError?: string | null;
 }
 
@@ -48,9 +48,9 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(false);
   const { showToast } = useToast();
@@ -96,15 +96,15 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
         isDryRun ? 'Request generated (not sent to RPC)' : 'Address retrieved successfully',
         'success'
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = err.message || 'An error occurred';
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
       // Capture request params from error if available
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
@@ -123,7 +123,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result is a get address response
-  const isGetAddressResponse = (data: any) => {
+  const isGetAddressResponse = (data: unknown) => {
     return data && data.type === 2 && data.response;
   };
 

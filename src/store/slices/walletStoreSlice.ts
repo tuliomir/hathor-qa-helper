@@ -26,7 +26,7 @@ export interface WalletEvent {
   id: string; // Unique event ID
   eventType: 'new-tx' | 'update-tx' | 'state' | 'more-addresses-loaded';
   timestamp: number; // Unix timestamp in milliseconds
-  data: any; // Event payload from wallet-lib (BigInt values serialized to strings)
+  data: unknown; // Event payload from wallet-lib (BigInt values serialized to strings)
 }
 
 /**
@@ -102,7 +102,7 @@ export const walletInstancesMap = new Map<string, HathorWallet | null>();
 /**
  * Global map to store event handlers for each wallet (for cleanup)
  */
-const walletEventHandlers = new Map<string, Record<string, (...args: any[]) => void>>();
+const walletEventHandlers = new Map<string, Record<string, (...args: unknown[]) => void>>();
 
 /**
  * Async Thunk: Start a wallet
@@ -210,7 +210,7 @@ export const startWallet = createAsyncThunk(
 
           // Extract token info and store in Redux
           if (txData.success && txData.txTokens) {
-            const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
+            const tokenInfo = txData.txTokens.find((t: { tokenId: string; tokenName?: string; tokenSymbol?: string }) => t.tokenId === uid);
             if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
               dispatch(addToken({
                 uid,
@@ -228,7 +228,7 @@ export const startWallet = createAsyncThunk(
 
       // Set up event listeners for all wallet events
       // Handler for 'new-tx' event
-      const handleNewTx = async (tx: any) => {
+      const handleNewTx = async (tx: unknown) => {
         console.log('New transaction received:', tx);
 
         // Store event in Redux
@@ -239,7 +239,7 @@ export const startWallet = createAsyncThunk(
         }));
 
         // Check if the transaction has tokenName and tokenSymbol (custom token transaction)
-        if (tx.tokenName && tx.tokenSymbol) {
+        if (tx && typeof tx === 'object' && 'tokenName' in tx && 'tokenSymbol' in tx) {
           console.log('Custom token transaction detected, refreshing tokens');
           // Refresh custom tokens for this wallet (with caching)
           dispatch(refreshWalletTokens(walletId));
@@ -250,7 +250,7 @@ export const startWallet = createAsyncThunk(
       };
 
       // Handler for 'update-tx' event
-      const handleUpdateTx = async (tx: any) => {
+      const handleUpdateTx = async (tx: unknown) => {
         console.log('Transaction update received:', tx);
 
         // Store event in Redux
@@ -265,7 +265,7 @@ export const startWallet = createAsyncThunk(
       };
 
       // Handler for 'state' event
-      const handleState = (state: any) => {
+      const handleState = (state: unknown) => {
         console.log('Wallet state changed:', state);
 
         // Store event in Redux
@@ -277,7 +277,7 @@ export const startWallet = createAsyncThunk(
       };
 
       // Handler for 'more-addresses-loaded' event
-      const handleMoreAddressesLoaded = (data: any) => {
+      const handleMoreAddressesLoaded = (data: unknown) => {
         console.log('More addresses loaded:', data);
 
         // Store event in Redux
@@ -395,7 +395,7 @@ export const refreshWalletTokens = createAsyncThunk(
 
           // Extract token info and store in Redux
           if (txData.success && txData.txTokens) {
-            const tokenInfo = txData.txTokens.find((t: any) => t.tokenId === uid);
+            const tokenInfo = txData.txTokens.find((t: { tokenId: string; tokenName?: string; tokenSymbol?: string }) => t.tokenId === uid);
             if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
               dispatch(addToken({
                 uid,
@@ -602,7 +602,7 @@ const walletStoreSlice = createSlice({
         action: PayloadAction<{
           walletId: string;
           eventType: WalletEvent['eventType'];
-          data: any;
+          data: unknown;
         }>
       ) => {
         const { walletId, eventType, data } = action.payload;
@@ -621,7 +621,7 @@ const walletStoreSlice = createSlice({
       prepare: ({ walletId, eventType, data }: {
         walletId: string;
         eventType: WalletEvent['eventType'];
-        data: any;
+        data: unknown;
       }) => {
         // Serialize BigInt values to strings for Redux storage
         // JSONBigInt.stringify converts BigInt → JSON string

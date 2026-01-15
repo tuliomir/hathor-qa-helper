@@ -28,11 +28,11 @@ export function didYouMean(invalidWord: string, validWordSet: string[] = Mnemoni
 	// Normalize validWordSet into an array of lowercase strings
 	let wordList: string[] = [];
 	if (Array.isArray(validWordSet)) {
-		wordList = (validWordSet as any[])
+		wordList = (validWordSet as unknown[])
 			.map(w => (typeof w === 'string' ? w.toLowerCase() : String(w).toLowerCase()));
 	} else if (validWordSet && typeof validWordSet === 'object') {
-		wordList = Object.values(validWordSet as any)
-			.filter(v => typeof v === 'string')
+		wordList = Object.values(validWordSet as Record<string, unknown>)
+			.filter((v): v is string => typeof v === 'string')
 			.map(v => v.toLowerCase());
 	}
 

@@ -11,7 +11,7 @@ import CopyButton from '../common/CopyButton';
 /**
  * Helper function to safely stringify objects containing BigInt values
  */
-const safeStringify = (obj: any, space?: number): string => {
+const safeStringify = (obj: unknown, space?: number): string => {
   return JSON.stringify(
     obj,
     (_, value) => (typeof value === 'bigint' ? value.toString() : value),
@@ -20,15 +20,15 @@ const safeStringify = (obj: any, space?: number): string => {
 };
 
 export interface RpcGetBalanceCardProps {
-  onExecute: () => Promise<any>;
+  onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   tokens: Array<{ uid: string; name: string; symbol: string }>;
   isDryRun?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   // Persisted data from Redux
-  initialRequest?: { method: string; params: any } | null;
-  initialResponse?: any | null;
+  initialRequest?: { method: string; params: unknown } | null;
+  initialResponse?: unknown | null;
   initialError?: string | null;
 }
 
@@ -44,9 +44,9 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   initialError = null,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: any } | null>(null);
+  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [requestExpanded, setRequestExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
@@ -90,15 +90,15 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
         isDryRun ? 'Request generated (not sent to RPC)' : 'Get Balance executed successfully',
         'success'
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = err.message || 'An error occurred';
+      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
       setError(errorMessage);
       setExpanded(true);
 
       // Capture request params from error if available
-      if (err.requestParams) {
-        setRequestInfo(err.requestParams);
+      if (err && typeof err === 'object' && 'requestParams' in err) {
+        setRequestInfo(err.requestParams as { method: string; params: unknown });
         setRequestExpanded(true);
       }
 
@@ -117,12 +117,12 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result is a balance response
-  const isBalanceResponse = (data: any) => {
+  const isBalanceResponse = (data: unknown) => {
     return data && data.type === 3 && Array.isArray(data.response);
   };
 
   // Render raw JSON view
-  const renderRawJson = (data: any) => {
+  const renderRawJson = (data: unknown) => {
     return (
       <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50">
         <pre className="text-sm font-mono text-left whitespace-pre-wrap break-words m-0">
@@ -154,7 +154,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
 
         return (
           <div className="space-y-4">
-            {balances.map((item: any, idx: number) => (
+            {balances.map((item: { token: { uid: string; name: string; symbol: string }; balance: { unlocked: string; locked: string }; tokenAuthorities?: { mint: boolean; melt: boolean } }, idx: number) => (
               <div key={idx} className="border border-gray-300 rounded overflow-hidden">
                 {/* Token Header */}
                 <div className="bg-primary/10 px-4 py-3 border-b border-gray-300">

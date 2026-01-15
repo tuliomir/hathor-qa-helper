@@ -17,6 +17,7 @@ import { useSendTransaction } from '../../hooks/useSendTransaction';
 import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 import { ExplorerLink } from '../common/ExplorerLink';
+import type { NetworkType } from '../../constants/network';
 
 type TabType = 'fund' | 'test';
 
@@ -28,7 +29,7 @@ interface Token {
 }
 
 // Hook for lazy-loading token balance
-function useTokenBalance(walletInstance: any | null, tokenUid: string, refreshKey?: number) {
+function useTokenBalance(walletInstance: unknown | null, tokenUid: string, refreshKey?: number) {
   const [balance, setBalance] = useState<bigint | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +47,7 @@ function useTokenBalance(walletInstance: any | null, tokenUid: string, refreshKe
       setError(null);
 
       try {
-        const bal = await walletInstance.getBalance(tokenUid);
+        const bal = await (walletInstance as { getBalance: (tokenUid: string) => Promise<Array<{ balance?: { unlocked?: bigint } }>> }).getBalance(tokenUid);
         if (isMounted) {
           setBalance(bal[0]?.balance?.unlocked || 0n);
           setIsLoading(false);
@@ -86,7 +87,7 @@ function TokenRow({
   network,
 }: {
   token: Token;
-  walletInstance: any | null;
+  walletInstance: unknown | null;
   isSelected: boolean;
   onClick: () => void;
   refreshKey?: number;
@@ -109,7 +110,7 @@ function TokenRow({
           <ExplorerLink
             hash={token.uid}
             specificPage="token_detail"
-            network={network as any}
+            network={network as NetworkType}
             className="!px-1 !py-0.5"
           />
         </div>

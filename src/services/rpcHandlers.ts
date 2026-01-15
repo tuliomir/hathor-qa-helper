@@ -79,7 +79,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -124,7 +124,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -140,7 +140,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       }
 
       // Build request params based on type
-      const params: any = {
+      const params: { network: string; type: string; index?: number } = {
         network: DEFAULT_NETWORK,
         type,
       };
@@ -180,7 +180,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -229,7 +229,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -276,7 +276,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -291,7 +291,20 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         throw new Error('WalletConnect session not available');
       }
 
-      const invokeParams: any = {
+      const invokeParams: {
+        network: string;
+        name: string;
+        symbol: string;
+        amount: string;
+        create_mint: boolean;
+        create_melt: boolean;
+        change_address?: string;
+        mint_authority_address?: string;
+        allow_external_mint_authority_address?: boolean;
+        melt_authority_address?: string;
+        allow_external_melt_authority_address?: boolean;
+        data?: string[];
+      } = {
         network: DEFAULT_NETWORK,
         name: params.name,
         symbol: params.symbol,
@@ -349,7 +362,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -376,7 +389,15 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       // Convert Date to unix timestamp (seconds)
       const timestamp = Math.floor(deadline.getTime() / 1000);
 
-      const invokeParams: any = {
+      const invokeParams: {
+        network: string;
+        method: string;
+        blueprint_id: string;
+        actions: unknown[];
+        args: (string | number)[];
+        push_tx: boolean;
+        nc_id: string | null;
+      } = {
         network: DEFAULT_NETWORK,
         method: 'initialize',
         blueprint_id: blueprintId,
@@ -413,7 +434,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -478,7 +499,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -529,7 +550,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         console.error('Failed to sign oracle data:', error);
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -591,7 +612,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
@@ -656,7 +677,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         };
       } catch (error) {
         // Attach request to error so UI can display it
-        const errorWithRequest = error as any;
+        const errorWithRequest = error as { requestParams?: unknown };
         errorWithRequest.requestParams = requestParams;
         throw errorWithRequest;
       }
