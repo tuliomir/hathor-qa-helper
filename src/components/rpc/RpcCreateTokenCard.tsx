@@ -118,7 +118,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
       const { request, response } = await onExecute(params);
 
       // Store request and response separately
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -156,20 +156,20 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   // Check if response is createToken response format
-  const isCreateTokenResponse = (data: unknown): boolean => {
+  const isCreateTokenResponse = (data: unknown): data is { type?: number; response?: { hash?: string; tx?: unknown }; hash?: string; tx?: unknown } => {
     // Check if it's the full response with type field
-    if (data && data.type === 1 && data.response) {
-      const response = data.response;
-      return response.hash && response.tx;
+    if (data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 1 && 'response' in data) {
+      const response = (data as { response?: unknown }).response;
+      return !!(response && typeof response === 'object' && 'hash' in response && 'tx' in response);
     }
     // Or if it's just the response data directly
-    return data && data.hash && data.tx;
+    return !!(data && typeof data === 'object' && 'hash' in data && 'tx' in data);
   };
 
   // Render formatted response
   const renderFormattedResponse = (parsedResult: unknown) => {
     // Extract the actual response data (handle both formats)
-    const responseData = parsedResult.response || parsedResult;
+    const responseData = ((parsedResult as { response?: unknown }).response || parsedResult) as { hash?: string; tx?: { tokens?: string[] } };
 
     if (!responseData.hash || !responseData.tx) {
       return renderRawJson(result);
@@ -208,7 +208,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           </div>
           <div className="max-h-64 overflow-y-auto px-3 py-2">
             <pre className="text-xs font-mono text-gray-700 text-left">
-              {safeStringify(responseData.tx, 2)}
+              {safeStringify(responseData.tx, 2) as string}
             </pre>
           </div>
         </div>
@@ -221,7 +221,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
     return (
       <div className="bg-white border border-green-200 rounded p-3 overflow-auto max-h-64">
         <pre className="text-sm font-mono text-gray-700 text-left">
-          {safeStringify(data, 2)}
+          {safeStringify(data, 2) as string}
         </pre>
       </div>
     );
@@ -467,7 +467,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
                     </div>
                     <div className="px-3 py-2 max-h-64 overflow-y-auto">
                       <pre className="text-sm font-mono text-blue-900 text-left">
-                        {safeStringify(requestInfo.params, 2)}
+                        {safeStringify(requestInfo.params, 2) as string}
                       </pre>
                     </div>
                   </div>
@@ -490,15 +490,15 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
                 {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
               </button>
               <div className="flex items-center gap-2">
-                {result && isCreateTokenResponse(typeof result === 'string' ? JSON.parse(result) : result) && (
+                {(result && isCreateTokenResponse(typeof result === 'string' ? JSON.parse(result) : result)) ? (
                   <button
                     onClick={() => setShowRawResponse(!showRawResponse)}
                     className="btn-secondary py-1.5 px-3 text-sm"
                   >
                     {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                   </button>
-                )}
-                <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
+                ) : null}
+                <CopyButton text={result ? safeStringify(result, 2) as string : error || ''} label="Copy response" />
               </div>
             </div>
 

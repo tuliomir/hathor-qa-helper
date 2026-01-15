@@ -60,7 +60,7 @@ const signOracleDataSlice = createSlice({
 
       // Extract signed data from response for convenience
       try {
-        const parsedResponse = action.payload.response;
+        const parsedResponse = action.payload.response as { response?: { signedData?: string }; signedData?: string };
         if (parsedResponse?.response?.signedData) {
           state.signedData = parsedResponse.response.signedData;
         } else if (parsedResponse?.signedData) {

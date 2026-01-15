@@ -48,7 +48,8 @@ export default function TxUpdateEvents() {
   // Handles both tx_id and txId naming conventions
   function getTxHash(event: WalletEvent & { walletId: string }): string | undefined {
     if (event.eventType === 'new-tx' || event.eventType === 'update-tx') {
-      return event.data?.tx_id ?? event.data?.txId;
+      const data = event.data as { tx_id?: string; txId?: string };
+      return data?.tx_id ?? data?.txId;
     }
     return undefined;
   }

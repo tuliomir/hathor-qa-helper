@@ -64,17 +64,18 @@ export default function TransactionHistory() {
 
         // Extract the fields we need
         const simplifiedTxs: WalletTransaction[] = txHistory.map((tx: unknown) => {
+          const txData = tx as { tx_id?: string; txId?: string; timestamp?: number; balance?: number; first_block?: string; firstBlock?: string; voided?: boolean; version?: number; nc_caller?: string; ncCaller?: string; nc_id?: string; ncId?: string; nc_method?: string; ncMethod?: string; headers?: unknown };
           return {
-            txId: tx.tx_id || tx.txId || 'unknown',
-            timestamp: (tx.timestamp || 0) * 1000, // Convert to milliseconds
-            balance: tx.balance || 0,
-            firstBlock: tx.first_block || tx.firstBlock,
-            voided: tx.voided || false,
-            version: tx.version,
-            ncCaller: tx.nc_caller || tx.ncCaller,
-            ncId: tx.nc_id || tx.ncId,
-            ncMethod: tx.nc_method || tx.ncMethod,
-            headers: tx.headers,
+            txId: txData.tx_id || txData.txId || 'unknown',
+            timestamp: (txData.timestamp || 0) * 1000, // Convert to milliseconds
+            balance: txData.balance || 0,
+            firstBlock: txData.first_block || txData.firstBlock,
+            voided: txData.voided || false,
+            version: txData.version,
+            ncCaller: txData.nc_caller || txData.ncCaller,
+            ncId: txData.nc_id || txData.ncId,
+            ncMethod: txData.nc_method || txData.ncMethod,
+            headers: txData.headers,
             raw: tx, // Keep raw data for console export
           };
         });

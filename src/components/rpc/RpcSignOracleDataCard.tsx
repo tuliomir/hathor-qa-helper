@@ -117,7 +117,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
     try {
       const { request, response } = await onExecute();
 
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -143,7 +143,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
       console.error(`[RPC Error] Sign Oracle Data`, {
         message: errorMessage,
         error: err,
-        requestParams: err.requestParams,
+        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
       });
 
       showToast(errorMessage, 'error');
@@ -186,8 +186,8 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   const signedData = getSignedData();
 
   // Helper to check if an object is a Buffer
-  const isBuffer = (obj: unknown): boolean => {
-    return obj && typeof obj === 'object' && obj.type === 'Buffer' && Array.isArray(obj.data);
+  const isBuffer = (obj: unknown): obj is { type: string; data: number[] } => {
+    return !!(obj && typeof obj === 'object' && 'type' in obj && (obj as { type?: string }).type === 'Buffer' && 'data' in obj && Array.isArray((obj as { data?: unknown }).data));
   };
 
   // Helper to render Buffer in a compact way
@@ -211,7 +211,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
     return (
       <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50 text-left">
         <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 text-left">
-          {safeStringify(data, 2)}
+          {safeStringify(data, 2) as string}
         </pre>
       </div>
     );
@@ -563,7 +563,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request {requestInfo ? '(Sent)' : '(Preview)'}
             </button>
-            <CopyButton text={safeStringify(liveRequest, 2)} label="Copy request" />
+            <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
           </div>
 
           {requestExpanded && (
@@ -588,7 +588,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
                   </div>
                   <div className="px-3 py-2 max-h-64 overflow-y-auto">
                     <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
-                      {safeStringify(liveRequest.params, 2)}
+                      {safeStringify(liveRequest.params, 2) as string}
                     </pre>
                   </div>
                 </div>
@@ -610,16 +610,16 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {result && !error && (
+              {(result && !error) ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
                 >
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
-              )}
+              ) : null}
               <CopyButton
-                text={result ? safeStringify(result, 2) : error || ''}
+                text={result ? safeStringify(result, 2) as string : error || ''}
                 label="Copy response"
               />
             </div>

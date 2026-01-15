@@ -235,7 +235,7 @@ export const startWallet = createAsyncThunk(
         dispatch(addWalletEvent({
           walletId,
           eventType: 'new-tx',
-          data: tx,
+          data: tx as { tx_id?: string; txId?: string; tokenName?: string; tokenSymbol?: string },
         }));
 
         // Check if the transaction has tokenName and tokenSymbol (custom token transaction)
@@ -700,7 +700,8 @@ export const selectEventsByTxHash = createSelector(
     return allEvents.filter((event) => {
       // Check if the event data contains this transaction hash
       if (event.data && typeof event.data === 'object') {
-        const eventTxId = event.data.tx_id ?? event.data.txId;
+        const eventData = event.data as { tx_id?: string; txId?: string };
+        const eventTxId = eventData.tx_id ?? eventData.txId;
         return eventTxId === txHash;
       }
       return false;

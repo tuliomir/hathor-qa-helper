@@ -92,7 +92,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
       const { request, response } = await onExecute(message, index);
 
       // Store request and response separately
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -119,7 +119,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
       console.error(`[RPC Error] Sign with Address`, {
         message: errorMessage,
         error: err,
-        requestParams: err.requestParams,
+        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
       });
 
       showToast(errorMessage, 'error');
@@ -131,14 +131,14 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result has the expected signature response structure
-  const isSignatureResponse = (data: unknown) => {
+  const isSignatureResponse = (data: unknown): data is { type?: number; response?: { message?: string; signature?: string; address?: string }; message?: string; signature?: string; address?: string } => {
     // Check if it's the full response with type field
-    if (data && data.type === 1 && data.response) {
-      const response = data.response;
-      return response.message && response.signature && response.address;
+    if (data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 1 && 'response' in data) {
+      const response = (data as { response?: unknown }).response;
+      return !!(response && typeof response === 'object' && 'message' in response && 'signature' in response && 'address' in response);
     }
     // Or if it's just the response data directly
-    return data && data.message && data.signature && data.address;
+    return !!(data && typeof data === 'object' && 'message' in data && 'signature' in data && 'address' in data);
   };
 
   // Render formatted signature response
@@ -148,7 +148,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
     }
 
     // Extract the actual response data (handle both formats)
-    const responseData = parsedResult.response || parsedResult;
+    const responseData = ((parsedResult as { response?: unknown }).response || parsedResult) as { message?: string; signature?: string; address?: { address?: string; index?: number; addressPath?: string } };
 
     return (
       <div className="bg-green-50 border border-green-300 rounded p-4 mb-4">
@@ -181,7 +181,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <div className="text-xs text-muted font-semibold">Signature</div>
-              <CopyButton text={responseData.signature} label="Copy signature" />
+              <CopyButton text={responseData.signature || ''} label="Copy signature" />
             </div>
             <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
               {responseData.signature}
@@ -195,18 +195,18 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
               <div className="bg-white border border-green-200 rounded p-2">
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-xs text-muted">Address</div>
-                  <CopyButton text={responseData.address.address} label="Copy address" />
+                  <CopyButton text={responseData.address?.address || ''} label="Copy address" />
                 </div>
-                <div className="font-mono text-xs break-all">{responseData.address.address}</div>
+                <div className="font-mono text-xs break-all">{responseData.address?.address}</div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white border border-green-200 rounded p-2">
                   <div className="text-xs text-muted mb-1">Index</div>
-                  <div className="font-mono text-sm">{responseData.address.index}</div>
+                  <div className="font-mono text-sm">{responseData.address?.index}</div>
                 </div>
                 <div className="bg-white border border-green-200 rounded p-2">
                   <div className="text-xs text-muted mb-1">Address Path</div>
-                  <div className="font-mono text-xs">{responseData.address.addressPath}</div>
+                  <div className="font-mono text-xs">{responseData.address?.addressPath}</div>
                 </div>
               </div>
             </div>
@@ -220,7 +220,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   const renderRawJson = (data: unknown) => {
     try {
       const parsedResult = typeof data === 'string' ? JSON.parse(data) : data;
-      const entries = Object.entries(parsedResult);
+      const entries = Object.entries(parsedResult as Record<string, unknown>);
 
       return (
         <div className="space-y-3">
@@ -342,7 +342,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
                   </div>
                   <div className="px-3 py-2 max-h-64 overflow-y-auto">
                     <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
-                      {safeStringify(requestInfo.params, 2)}
+                      {safeStringify(requestInfo.params, 2) as string}
                     </pre>
                   </div>
                 </div>
@@ -364,15 +364,15 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {result && isSignatureResponse(typeof result === 'string' ? JSON.parse(result) : result) && (
+              {(result && isSignatureResponse(typeof result === 'string' ? JSON.parse(result) : result)) ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
                 >
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
-              )}
-              <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
+              ) : null}
+              <CopyButton text={result ? safeStringify(result, 2) as string : error || ''} label="Copy response" />
             </div>
           </div>
 

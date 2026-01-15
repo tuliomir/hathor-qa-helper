@@ -149,7 +149,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
       const { request, response } = await onExecute();
 
       // Store request and response separately
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -176,7 +176,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
       console.error(`[RPC Error] Place Bet`, {
         message: errorMessage,
         error: err,
-        requestParams: err.requestParams,
+        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
       });
 
       showToast(errorMessage, 'error');
@@ -188,8 +188,8 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Helper to check if an object is a Buffer
-  const isBuffer = (obj: unknown): boolean => {
-    return obj && typeof obj === 'object' && obj.type === 'Buffer' && Array.isArray(obj.data);
+  const isBuffer = (obj: unknown): obj is { type: string; data: number[] } => {
+    return !!(obj && typeof obj === 'object' && 'type' in obj && (obj as { type?: string }).type === 'Buffer' && 'data' in obj && Array.isArray((obj as { data?: unknown }).data));
   };
 
   // Helper to render Buffer in a compact way
@@ -522,7 +522,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
       </div>
 
       {/* Transaction Hash Display (if available) */}
-      {result?.response?.hash && (
+      {(result as { response?: { hash?: string } })?.response?.hash && (
         <div className="card-primary mb-7.5">
           <div className="bg-green-50 border border-green-300 rounded p-4">
             <div className="flex items-center gap-2 text-green-700 mb-3">
@@ -544,13 +544,13 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs text-muted font-medium">Transaction Hash</span>
                 <div className="flex items-center gap-1">
-                  <CopyButton text={result.response.hash} label="Copy TX hash" />
-	                <TxStatus hash={result.response.hash} walletId={testWalletId} />
-                  <ExplorerLink hash={result.response.hash} />
+                  <CopyButton text={(result as { response: { hash: string } }).response.hash} label="Copy TX hash" />
+	                <TxStatus hash={(result as { response: { hash: string } }).response.hash} walletId={testWalletId} />
+                  <ExplorerLink hash={(result as { response: { hash: string } }).response.hash} />
                 </div>
               </div>
               <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-all">
-                {result.response.hash}
+                {(result as { response: { hash: string } }).response.hash}
               </div>
             </div>
           </div>
@@ -615,7 +615,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request {requestInfo ? '(Sent)' : '(Preview)'}
             </button>
-            <CopyButton text={safeStringify(liveRequest, 2)} label="Copy request" />
+            <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
           </div>
 
           {requestExpanded && (
@@ -640,7 +640,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
                   </div>
                   <div className="px-3 py-2 max-h-64 overflow-y-auto">
                     <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
-                      {safeStringify(liveRequest.params, 2)}
+                      {safeStringify(liveRequest.params, 2) as string}
                     </pre>
                   </div>
                 </div>
@@ -662,16 +662,16 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {result && !error && (
+              {(result && !error) ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
                 >
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
-              )}
+              ) : null}
               <CopyButton
-                text={result ? safeStringify(result, 2) : error || ''}
+                text={result ? safeStringify(result, 2) as string : error || ''}
                 label="Copy response"
               />
             </div>

@@ -78,7 +78,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
       const { request, response } = await onExecute();
 
       // Store request and response separately
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -105,7 +105,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
       console.error(`[RPC Error] Get Balance`, {
         message: errorMessage,
         error: err,
-        requestParams: err.requestParams,
+        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
       });
 
       showToast(errorMessage, 'error');
@@ -117,8 +117,8 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result is a balance response
-  const isBalanceResponse = (data: unknown) => {
-    return data && data.type === 3 && Array.isArray(data.response);
+  const isBalanceResponse = (data: unknown): data is { type: number; response: unknown[] } => {
+    return !!(data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 3 && 'response' in data && Array.isArray((data as { response?: unknown }).response));
   };
 
   // Render raw JSON view
@@ -146,7 +146,18 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
 
       // Special handling for balance response
       if (isBalanceResponse(parsedResult)) {
-        const balances = parsedResult.response;
+        const balances = parsedResult.response as Array<{
+          token: { uid: string; id?: string; name: string; symbol: string };
+          balance: { unlocked: string; locked: string };
+          transactions?: number;
+          lockExpires?: number;
+          tokenAuthorities?: {
+            unlocked?: { mint: number; melt: number };
+            locked?: { mint: number; melt: number };
+            mint: boolean;
+            melt: boolean;
+          };
+        }>;
 
         if (balances.length === 0) {
           return <div className="text-sm text-muted italic p-3">No balance data</div>;
@@ -154,7 +165,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
 
         return (
           <div className="space-y-4">
-            {balances.map((item: { token: { uid: string; name: string; symbol: string }; balance: { unlocked: string; locked: string }; tokenAuthorities?: { mint: boolean; melt: boolean } }, idx: number) => (
+            {balances.map((item, idx: number) => (
               <div key={idx} className="border border-gray-300 rounded overflow-hidden">
                 {/* Token Header */}
                 <div className="bg-primary/10 px-4 py-3 border-b border-gray-300">
@@ -434,16 +445,16 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {result && isBalanceResponse(typeof result === 'string' ? JSON.parse(result) : result) && (
+              {(result && isBalanceResponse(typeof result === 'string' ? JSON.parse(result) : result)) ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
                 >
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
-              )}
+              ) : null}
               <CopyButton
-                text={result ? safeStringify(result, 2) : error || ''}
+                text={result ? safeStringify(result, 2) as string : error || ''}
                 label="Copy response"
               />
             </div>

@@ -71,7 +71,7 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
       const { request, response } = await onExecute();
 
       // Store request and response separately
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -123,7 +123,7 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
 
       // Special handling for connected network response
       if (isConnectedNetworkResponse(parsedResult)) {
-        const info = parsedResult.response;
+        const info = parsedResult.response as { network?: string; genesisHash?: string };
 
         return (
           <div className="space-y-3">

@@ -71,7 +71,7 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
       const { request, response } = await onExecute();
 
       // Store request and response separately
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -98,7 +98,7 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
       console.error(`[RPC Error] Wallet Information`, {
         message: errorMessage,
         error: err,
-        requestParams: err.requestParams,
+        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
       });
 
       showToast(errorMessage, 'error');
@@ -110,8 +110,8 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
   const hasResult = result !== null || error !== null;
 
   // Check if result is a wallet information response
-  const isWalletInfoResponse = (data: unknown) => {
-    return data && data.type === 12 && data.response;
+  const isWalletInfoResponse = (data: unknown): data is { type: number; response: unknown } => {
+    return !!(data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 12 && 'response' in data);
   };
 
   // Render result
@@ -123,7 +123,7 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
 
       // Special handling for wallet information response
       if (isWalletInfoResponse(parsedResult)) {
-        const info = parsedResult.response;
+        const info = parsedResult.response as { network?: string; address?: string };
 
         return (
           <div className="space-y-3">
@@ -141,10 +141,10 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
             <div className="bg-white border border-gray-300 rounded overflow-hidden">
               <div className="bg-gray-100 px-3 py-2 border-b border-gray-300 flex items-center justify-between">
                 <span className="text-sm font-semibold text-primary">address0</span>
-                <CopyButton text={info.address0 || ''} label="Copy" />
+                <CopyButton text={info.address || ''} label="Copy" />
               </div>
               <div className="px-3 py-2">
-                <span className="text-sm font-mono break-all">{info.address0 || 'N/A'}</span>
+                <span className="text-sm font-mono break-all">{info.address || 'N/A'}</span>
               </div>
             </div>
           </div>

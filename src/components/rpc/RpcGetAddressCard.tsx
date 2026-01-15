@@ -84,7 +84,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
       );
 
       // Store request and response separately
-      setRequestInfo(request);
+      setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
       setRequestExpanded(true);
       setExpanded(true);
@@ -111,7 +111,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
       console.error(`[RPC Error] Get Address`, {
         message: errorMessage,
         error: err,
-        requestParams: err.requestParams,
+        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
       });
 
       showToast(errorMessage, 'error');
@@ -123,8 +123,8 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result is a get address response
-  const isGetAddressResponse = (data: unknown) => {
-    return data && data.type === 2 && data.response;
+  const isGetAddressResponse = (data: unknown): data is { type: number; response: unknown } => {
+    return !!(data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 2 && 'response' in data);
   };
 
   // Render result
@@ -136,7 +136,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
 
       // Special handling for get address response
       if (isGetAddressResponse(parsedResult)) {
-        const info = parsedResult.response;
+        const info = parsedResult.response as { address?: string; index?: number; addressPath?: string };
 
         return (
           <div className="space-y-3">
