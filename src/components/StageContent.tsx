@@ -12,6 +12,7 @@ import TransactionHistory from './stages/TransactionHistory';
 import TxUpdateEvents from './stages/TxUpdateEvents';
 import { ConnectionStage } from './stages/ConnectionStage';
 import { GetBalanceStage } from './stages/GetBalanceStage';
+import { GetUtxosStage } from './stages/GetUtxosStage';
 import { SignWithAddressStage } from './stages/SignWithAddressStage';
 import { CreateTokenStage } from './stages/CreateTokenStage';
 import { SignOracleDataStage } from './stages/SignOracleDataStage';
@@ -42,6 +43,7 @@ export default function StageContent() {
       {currentStage === 'rpc-basic-info' && <BasicInfoStage />}
       {currentStage === 'rpc-get-address' && <GetAddressStage />}
       {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
+      {currentStage === 'rpc-get-utxos' && <GetUtxosStage />}
       {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
       {currentStage === 'rpc-create-token' && <CreateTokenStage />}
       {currentStage === 'rpc-sign-oracle-data' && <SignOracleDataStage />}

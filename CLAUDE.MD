@@ -136,7 +136,7 @@ const status = getTransactionStatus({
 | Command            | Purpose                  |
 |--------------------|--------------------------|
 | `bun dev`          | Start dev server         |
-| `bun build`        | Production build         |
+| `bun run build`    | Production build         |
 | `bun preview`      | Preview production build |
 | `bun lint`         | Run ESLint               |
 | `bun lint:fix`     | Fix lint issues          |

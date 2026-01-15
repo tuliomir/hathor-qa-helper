@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
 
 /**
  * Available stage groups
@@ -99,6 +99,12 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Get Balance',
         description: 'Test htr_getBalance RPC method to query token balances',
         icon: '💰',
+      },
+      {
+        id: 'rpc-get-utxos',
+        title: 'Get UTXOs',
+        description: 'Retrieve unspent transaction outputs for a specific token',
+        icon: '📦',
       },
       {
         id: 'rpc-sign-with-address',
