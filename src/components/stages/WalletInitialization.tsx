@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder } from 'react-icons/md';
+import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder, MdQrCode } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
@@ -20,6 +20,7 @@ import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
 import NetworkSwapButton from '../common/NetworkSwapButton';
 import Select from '../common/Select';
+import SeedPhraseModal from '../common/SeedPhraseModal';
 import type { NetworkType } from '../../constants/network';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
@@ -44,6 +45,9 @@ export default function WalletInitialization() {
   // OCR reference image state (stored in memory only, not persisted)
   const [ocrSourceImageUrl, setOcrSourceImageUrl] = useState<string | null>(null);
   const [showOcrReferenceModal, setShowOcrReferenceModal] = useState(false);
+
+  // Seed phrase modal state
+  const [seedModalWalletId, setSeedModalWalletId] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasAutoStartedRef = useRef(false);
@@ -400,6 +404,14 @@ export default function WalletInitialization() {
                           {firstNWords(wallet.metadata.seedWords, 3)}
                         </span>
                         <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} className="text-muted" />
+                        <button
+                          onClick={() => setSeedModalWalletId(wallet.metadata.id)}
+                          title="Show QR Code"
+                          aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
+                          className="text-muted hover:text-primary transition-colors"
+                        >
+                          <MdQrCode size={16} />
+                        </button>
                       </div>
                     </td>
                     <td className="p-3">
@@ -719,6 +731,14 @@ export default function WalletInitialization() {
         <OCRReferenceModal
           imageDataUrl={ocrSourceImageUrl}
           onClose={() => setShowOcrReferenceModal(false)}
+        />
+      )}
+      {seedModalWalletId && (
+        <SeedPhraseModal
+          isOpen={!!seedModalWalletId}
+          onClose={() => setSeedModalWalletId(null)}
+          seedPhrase={wallets.find(w => w.metadata.id === seedModalWalletId)?.metadata.seedWords || ''}
+          walletName={wallets.find(w => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
         />
       )}
     </div>
