@@ -17,6 +17,7 @@ import getBalanceReducer from './slices/getBalanceSlice';
 import signWithAddressReducer from './slices/signWithAddressSlice';
 import signOracleDataReducer from './slices/signOracleDataSlice';
 import createTokenReducer from './slices/createTokenSlice';
+import sendTransactionReducer from './slices/sendTransactionSlice';
 import betNanoContractReducer from './slices/betNanoContractSlice';
 import betInitializeReducer from './slices/betInitializeSlice';
 import betDepositReducer from './slices/betDepositSlice';
@@ -46,6 +47,7 @@ export const store = configureStore({
     signWithAddress: signWithAddressReducer,
     signOracleData: signOracleDataReducer,
     createToken: createTokenReducer,
+    sendTransaction: sendTransactionReducer,
     betNanoContract: betNanoContractReducer,
     betInitialize: betInitializeReducer,
     betDeposit: betDepositReducer,

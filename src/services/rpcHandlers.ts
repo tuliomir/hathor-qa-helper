@@ -437,6 +437,59 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
     },
 
     /**
+     * Send Transaction
+     * Sends a transaction with one or more outputs
+     */
+    getRpcSendTransaction: async (
+      outputs: Array<{ address: string; value: string; token: string }>,
+      pushTx: boolean
+    ) => {
+      if (!session || !client) {
+        throw new Error('WalletConnect session not available');
+      }
+
+      const requestParams = {
+        method: 'htr_sendTransaction',
+        params: {
+          network: DEFAULT_NETWORK,
+          push_tx: pushTx,
+          outputs: outputs.map(output => ({
+            address: output.address,
+            value: output.value,
+            token: output.token,
+          })),
+        },
+      };
+
+      try {
+        let response;
+
+        if (dryRun) {
+          // Dry run: don't actually call RPC
+          response = null;
+        } else {
+          // Make the RPC request via WalletConnect
+          response = await client.request({
+            topic: session.topic,
+            chainId: HATHOR_TESTNET_CHAIN,
+            request: requestParams,
+          });
+        }
+
+        // Return both request and response
+        return {
+          request: requestParams,
+          response,
+        };
+      } catch (error) {
+        // Attach request to error so UI can display it
+        const errorWithRequest = error as { requestParams?: unknown };
+        errorWithRequest.requestParams = requestParams;
+        throw errorWithRequest;
+      }
+    },
+
+    /**
      * Initialize Bet
      * Initialize a new bet nano contract
      */

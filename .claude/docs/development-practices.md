@@ -1,13 +1,14 @@
 # Development Practices
 
 ## Git
-- Add new files immediately: `git add path/to/file.ts`
+- Add all new files at the end of the session: `git add path/to/file.ts`
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
 
 ## Code Quality
 - TypeScript: Avoid `any`, use `@ts-expect-error` for untyped libs
-- Pre-commit: `yarn build && yarn lint && yarn format:check`
-- Auto-fix: `yarn lint:fix && yarn format`
+- When `unknown` is necessary, cast the type at usage time
+- Pre-commit: `bun format:check && bun lint && bun run build`
+- Auto-fix: `bun lint:fix && bun format`
 
 ## State Management
 - **Always use Redux** for global state (not Context API)
@@ -38,7 +39,7 @@
 ## Security
 - No sensitive data in commits
 - Use env vars for config
-- Run `yarn audit` periodically
+- Run `bun audit` periodically
 
 ## Documentation
 - Optimize Claude documentation for token usage, while maintaining clarity

@@ -15,6 +15,7 @@ import { GetBalanceStage } from './stages/GetBalanceStage';
 import { GetUtxosStage } from './stages/GetUtxosStage';
 import { SignWithAddressStage } from './stages/SignWithAddressStage';
 import { CreateTokenStage } from './stages/CreateTokenStage';
+import { SendTransactionStage } from './stages/SendTransactionStage';
 import { SignOracleDataStage } from './stages/SignOracleDataStage';
 import { BetInitializeStage } from './stages/BetInitializeStage';
 import { BetDepositStage } from './stages/BetDepositStage';
@@ -46,6 +47,7 @@ export default function StageContent() {
       {currentStage === 'rpc-get-utxos' && <GetUtxosStage />}
       {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
       {currentStage === 'rpc-create-token' && <CreateTokenStage />}
+      {currentStage === 'rpc-send-transaction' && <SendTransactionStage />}
       {currentStage === 'rpc-sign-oracle-data' && <SignOracleDataStage />}
       {currentStage === 'rpc-bet-initialize' && <BetInitializeStage />}
       {currentStage === 'rpc-bet-deposit' && <BetDepositStage />}

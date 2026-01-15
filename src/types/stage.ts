@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
 
 /**
  * Available stage groups
@@ -117,6 +117,12 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Create Token',
         description: 'Create a new custom token with mint/melt authorities',
         icon: '🪙',
+      },
+      {
+        id: 'rpc-send-transaction',
+        title: 'Send Transaction',
+        description: 'Send a transaction with one or more outputs',
+        icon: '📤',
       },
       {
         id: 'rpc-sign-oracle-data',
