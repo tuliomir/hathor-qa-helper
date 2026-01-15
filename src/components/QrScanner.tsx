@@ -38,31 +38,45 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
     const codeReader = new BrowserQRCodeReader();
     codeReaderRef.current = codeReader;
 
+    let scanningActive = true;
+
     video.onloadedmetadata = () => {
       video.play().then(() => {
         console.log('Video playing, starting QR detection');
 
         // Start continuous QR code detection
         const scanFrame = () => {
-          if (!videoRef.current || hasScanned) return;
+          if (!videoRef.current || hasScanned || !scanningActive) return;
 
           codeReader.decodeOnceFromVideoElement(videoRef.current)
             .then((result) => {
-              if (result && !hasScanned) {
+              if (result && !hasScanned && scanningActive) {
                 console.log('QR Code scanned:', result.getText());
                 setHasScanned(true);
+                scanningActive = false;
+
+                // Stop camera immediately after successful scan
+                if (streamRef.current) {
+                  streamRef.current.getTracks().forEach((track) => {
+                    track.stop();
+                    console.log('Track stopped after scan:', track.kind);
+                  });
+                }
+
                 onScan(result.getText());
-              } else {
+              } else if (scanningActive && !hasScanned) {
                 // Continue scanning if no result or already scanned
                 setTimeout(scanFrame, 100);
               }
             })
             .catch((err) => {
               // Continue scanning on error (usually means no QR code in view)
-              if (err.name !== 'NotFoundException' && !hasScanned) {
+              if (err.name !== 'NotFoundException' && !hasScanned && scanningActive) {
                 console.error('Decode error:', err);
               }
-              setTimeout(scanFrame, 100);
+              if (scanningActive && !hasScanned) {
+                setTimeout(scanFrame, 100);
+              }
             });
         };
 
@@ -73,6 +87,11 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
     };
 
     setIsLoading(false);
+
+    // Cleanup function for this effect
+    return () => {
+      scanningActive = false;
+    };
   }, [stream, onScan, hasScanned]);
 
   // Initialize camera
@@ -164,13 +183,25 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
     };
   }, [facingMode]);
 
+  const stopCamera = () => {
+    // Stop all media tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+        console.log('Track stopped:', track.kind);
+      });
+      streamRef.current = null;
+    }
+    setStream(null);
+  };
+
   const handleFlipCamera = () => {
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
     setHasScanned(false);
   };
 
   const handleClose = () => {
-    // Cleanup is handled by useEffect cleanup
+    stopCamera();
     onCancel();
   };
 
