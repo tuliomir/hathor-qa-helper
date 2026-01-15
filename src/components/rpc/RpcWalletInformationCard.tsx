@@ -123,7 +123,7 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
 
       // Special handling for wallet information response
       if (isWalletInfoResponse(parsedResult)) {
-        const info = parsedResult.response as { network?: string; address?: string };
+        const info = parsedResult.response as { network?: string; address0?: string };
 
         return (
           <div className="space-y-3">
@@ -141,10 +141,10 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
             <div className="bg-white border border-gray-300 rounded overflow-hidden">
               <div className="bg-gray-100 px-3 py-2 border-b border-gray-300 flex items-center justify-between">
                 <span className="text-sm font-semibold text-primary">address0</span>
-                <CopyButton text={info.address || ''} label="Copy" />
+                <CopyButton text={info.address0 || ''} label="Copy" />
               </div>
               <div className="px-3 py-2">
-                <span className="text-sm font-mono break-all">{info.address || 'N/A'}</span>
+                <span className="text-sm font-mono break-all">{info.address0 || 'N/A'}</span>
               </div>
             </div>
           </div>
