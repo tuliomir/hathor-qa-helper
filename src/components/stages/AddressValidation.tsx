@@ -17,6 +17,7 @@ import { WALLET_CONFIG } from '../../constants/network.ts'
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib'
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import * as React from 'react'
+import QrScanner from '../QrScanner';
 
 type TabType = 'funding' | 'test';
 
@@ -321,6 +322,15 @@ export default function AddressValidation() {
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
 
   const [activeTab, setActiveTab] = useState<TabType>('test');
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [scanResult, setScanResult] = useState<{
+    scannedAddress: string;
+    isValid: boolean;
+    belongsToWallet: boolean;
+    addressIndex?: number;
+    error?: string;
+  } | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
 
   const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
   const testWallet = wallets.find((w) => w.metadata.id === testWalletId && w.status === 'ready');
@@ -333,6 +343,82 @@ export default function AddressValidation() {
     dispatch(setAmount(amount));
   };
 
+  const handleQrScan = async (data: string) => {
+    setShowQrScanner(false);
+    setIsValidating(true);
+    setScanResult(null);
+
+    try {
+      // Parse the QR code data - expected format: hathor:{address}
+      const hathorPrefix = 'hathor:';
+      if (!data.startsWith(hathorPrefix)) {
+        setScanResult({
+          scannedAddress: data,
+          isValid: false,
+          belongsToWallet: false,
+          error: 'Invalid QR code format. Expected format: hathor:{address}',
+        });
+        setIsValidating(false);
+        return;
+      }
+
+      const scannedAddress = data.substring(hathorPrefix.length);
+
+      // Get the current wallet based on active tab
+      const currentWallet = activeTab === 'funding' ? fundingWallet : testWallet;
+
+      if (!currentWallet || !currentWallet.instance) {
+        setScanResult({
+          scannedAddress,
+          isValid: true,
+          belongsToWallet: false,
+          error: 'No wallet selected or wallet not ready',
+        });
+        setIsValidating(false);
+        return;
+      }
+
+      // Check if address belongs to this wallet by deriving addresses
+      // We'll check up to index 100 (reasonable limit for most wallets)
+      const maxIndexToCheck = 100;
+      let foundIndex: number | undefined;
+
+      for (let i = 0; i <= maxIndexToCheck; i++) {
+        const derivedAddress = await currentWallet.instance.getAddressAtIndex(i);
+        if (derivedAddress === scannedAddress) {
+          foundIndex = i;
+          break;
+        }
+      }
+
+      if (foundIndex !== undefined) {
+        setScanResult({
+          scannedAddress,
+          isValid: true,
+          belongsToWallet: true,
+          addressIndex: foundIndex,
+        });
+      } else {
+        setScanResult({
+          scannedAddress,
+          isValid: true,
+          belongsToWallet: false,
+          error: `Address not found in the first ${maxIndexToCheck + 1} addresses of this wallet`,
+        });
+      }
+    } catch (error) {
+      console.error('Error validating address:', error);
+      setScanResult({
+        scannedAddress: data,
+        isValid: false,
+        belongsToWallet: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
   const noWalletsSelected = !fundingWallet && !testWallet;
 
   return (
@@ -341,6 +427,23 @@ export default function AddressValidation() {
       <p className="text-muted mb-7.5">
         View and share wallet addresses through QR codes for the funding and test wallets.
       </p>
+
+      {/* QR Code Scanner Button */}
+      {!noWalletsSelected && (
+        <div className="card-primary mb-7.5">
+          <h3 className="text-lg font-bold mb-3">Scan Device Address</h3>
+          <p className="text-sm text-muted mb-4">
+            Use your camera to scan a QR code from a physical device and verify if the address belongs to the currently selected wallet.
+          </p>
+          <button
+            onClick={() => setShowQrScanner(true)}
+            className="btn-primary px-4 py-2"
+            disabled={isValidating}
+          >
+            {isValidating ? 'Validating...' : 'Read Device Address QR Code'}
+          </button>
+        </div>
+      )}
 
       {noWalletsSelected ? (
         <div className="p-10 text-center border-2 border-dashed border-warning rounded-lg bg-yellow-50 text-yellow-800">
@@ -404,6 +507,183 @@ export default function AddressValidation() {
               fundingWalletId={fundingWalletId}
             />
           )}
+        </>
+      )}
+
+      {/* QR Scanner Modal */}
+      {showQrScanner && (
+        <QrScanner
+          onScan={handleQrScan}
+          onCancel={() => setShowQrScanner(false)}
+        />
+      )}
+
+      {/* Validation Results Modal */}
+      {scanResult && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setScanResult(null)}
+          />
+
+          {/* Modal */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold m-0">Scan Results</h2>
+                <button
+                  onClick={() => setScanResult(null)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                {/* Scanned Address */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold mb-2">Scanned Address</h3>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-xs break-all m-0 p-3 bg-gray-100 rounded flex-1">
+                      {scanResult.scannedAddress}
+                    </p>
+                    <CopyButton text={scanResult.scannedAddress} label="Copy" className="flex-shrink-0" />
+                  </div>
+                </div>
+
+                {/* Validation Status */}
+                {scanResult.isValid ? (
+                  <div className={`p-4 rounded mb-4 ${
+                    scanResult.belongsToWallet
+                      ? 'bg-green-50 border border-success'
+                      : 'bg-yellow-50 border border-warning'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className={`h-6 w-6 flex-shrink-0 ${
+                          scanResult.belongsToWallet ? 'text-success' : 'text-warning'
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        {scanResult.belongsToWallet ? (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        ) : (
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        )}
+                      </svg>
+                      <div className="flex-1">
+                        <p className={`font-bold m-0 ${
+                          scanResult.belongsToWallet ? 'text-green-900' : 'text-yellow-900'
+                        }`}>
+                          {scanResult.belongsToWallet
+                            ? 'Address belongs to this wallet!'
+                            : 'Address does not belong to this wallet'}
+                        </p>
+                        {scanResult.belongsToWallet && scanResult.addressIndex !== undefined ? (
+                          <p className="text-sm mt-2 mb-0 text-green-800">
+                            This address was found at index <strong>{scanResult.addressIndex}</strong> in the {activeTab === 'funding' ? 'funding' : 'test'} wallet.
+                          </p>
+                        ) : scanResult.error ? (
+                          <p className="text-sm mt-2 mb-0 text-yellow-800">
+                            {scanResult.error}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-red-50 border border-danger rounded mb-4">
+                    <div className="flex items-start gap-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-danger flex-shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="font-bold text-red-900 m-0">Invalid QR Code</p>
+                        {scanResult.error && (
+                          <p className="text-sm text-red-800 mt-2 mb-0">
+                            {scanResult.error}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Instructions */}
+                <div className="p-4 bg-blue-50 border border-info rounded">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 text-info flex-shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm text-blue-900 m-0">
+                        The scanner checks the first 100 addresses of the currently selected wallet.
+                        If your address has a higher index, it may not be found.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+                <button
+                  onClick={() => setScanResult(null)}
+                  className="btn btn-ghost px-6 py-2"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setScanResult(null);
+                    setShowQrScanner(true);
+                  }}
+                  className="btn-primary px-6 py-2"
+                >
+                  Scan Another
+                </button>
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>
