@@ -4,21 +4,22 @@
  * Tests htr_getUtxos RPC call with token selection and filters
  */
 
-import React, { useMemo, useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
 import {
-  setGetUtxosRequest,
-  setGetUtxosResponse,
+  clearGetUtxosData,
   setGetUtxosError,
   setGetUtxosFormData,
-  clearGetUtxosData,
+  setGetUtxosRequest,
+  setGetUtxosResponse,
 } from '../../store/slices/getUtxosSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcGetUtxosCard } from '../rpc/RpcGetUtxosCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import Select from '../common/Select';
 
 interface Token {
   uid: string;
@@ -264,11 +265,10 @@ export const GetUtxosStage: React.FC = () => {
             <label htmlFor="token-select" className="block mb-1.5 font-bold">
               Token:
             </label>
-            <select
+            <Select
               id="token-select"
               value={tokenUid}
               onChange={(e) => setTokenUid(e.target.value)}
-              className="input"
               disabled={isLoadingTokens || availableTokens.length === 0}
             >
               {isLoadingTokens ? (
@@ -282,7 +282,7 @@ export const GetUtxosStage: React.FC = () => {
                   </option>
                 ))
               )}
-            </select>
+            </Select>
             <p className="text-muted text-xs mt-1.5 mb-0">
               Select the token to query UTXOs for (only tokens with non-zero balance are shown)
             </p>
