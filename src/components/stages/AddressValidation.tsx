@@ -43,6 +43,7 @@ function WalletAddressDisplay({
   const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFetchingFirstEmpty, setIsFetchingFirstEmpty] = useState(false);
 	// TODO: add setSelectedToken as soon as we have custom token feature implemented
 	const [selectedToken] = useState<{ uid: string; name: string; symbol: string }>({
 		uid: NATIVE_TOKEN_UID,
@@ -93,6 +94,24 @@ function WalletAddressDisplay({
     const parsed = parseInt(val, 10);
     if (!isNaN(parsed) && parsed >= 0) {
       onIndexChange(parsed);
+    }
+  };
+
+  const handleGetFirstEmpty = async () => {
+    if (!wallet || !wallet.instance) {
+      return;
+    }
+
+    setIsFetchingFirstEmpty(true);
+    setError(null);
+
+    try {
+      const currentAddress = await wallet.instance.getCurrentAddress();
+      onIndexChange(currentAddress.index);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get first empty address');
+    } finally {
+      setIsFetchingFirstEmpty(false);
     }
   };
 
@@ -199,15 +218,25 @@ function WalletAddressDisplay({
         <label htmlFor="address-index" className="block mb-1.5 font-bold">
           Address Index:
         </label>
-        <input
-          id="address-index"
-          type="number"
-          min={0}
-          step={1}
-          value={addressIndex}
-          onChange={handleIndexChange}
-          className="input"
-        />
+        <div className="flex gap-2 items-start">
+          <input
+            id="address-index"
+            type="number"
+            min={0}
+            step={1}
+            value={addressIndex}
+            onChange={handleIndexChange}
+            className="input flex-1"
+          />
+          <button
+            type="button"
+            onClick={handleGetFirstEmpty}
+            disabled={isFetchingFirstEmpty || !wallet || !wallet.instance}
+            className="btn-primary px-3 py-2 whitespace-nowrap"
+          >
+            {isFetchingFirstEmpty ? 'Loading...' : 'Get First Empty'}
+          </button>
+        </div>
         <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
       </div>
 
