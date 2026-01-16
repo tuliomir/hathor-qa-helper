@@ -3,7 +3,8 @@
  * Validates addresses using initialized wallets from the global store
  */
 
-import { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -16,7 +17,6 @@ import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-li
 import { WALLET_CONFIG } from '../../constants/network.ts'
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib'
 import { useSendTransaction } from '../../hooks/useSendTransaction';
-import * as React from 'react'
 import QrScanner from '../QrScanner';
 
 type TabType = 'funding' | 'test';
@@ -113,6 +113,11 @@ function WalletAddressDisplay({
     } finally {
       setIsFetchingFirstEmpty(false);
     }
+  };
+
+  const handleGetAddr0 = () => {
+    onIndexChange(0);
+    setError(null);
   };
 
   // Send handler for the "Send from Fund Wallet" button
@@ -228,6 +233,14 @@ function WalletAddressDisplay({
             onChange={handleIndexChange}
             className="input flex-1"
           />
+          <button
+            type="button"
+            onClick={handleGetAddr0}
+            disabled={!wallet || !wallet.instance}
+            className="btn-secondary px-3 py-2 whitespace-nowrap"
+          >
+            Get Addr0
+          </button>
           <button
             type="button"
             onClick={handleGetFirstEmpty}
