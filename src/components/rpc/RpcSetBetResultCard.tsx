@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
+import DryRunCheckbox from '../common/DryRunCheckbox';
 import { safeStringify } from '../../utils/betHelpers';
 import { useAppSelector } from '../../store/hooks.ts'
 import TxStatus from '../common/TxStatus.tsx'
@@ -451,7 +452,8 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex items-center gap-4">
+          <DryRunCheckbox />
           <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
             {loading ? 'Setting Result...' : 'Set Result'}
           </button>

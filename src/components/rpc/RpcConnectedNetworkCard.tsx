@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
+import DryRunCheckbox from '../common/DryRunCheckbox';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -183,9 +184,12 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
                 : 'Send htr_getConnectedNetwork request to RPC server'}
             </p>
           </div>
-          <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
-            {loading ? 'Loading...' : 'Execute'}
-          </button>
+          <div className="flex items-center gap-4">
+            <DryRunCheckbox />
+            <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
+              {loading ? 'Loading...' : 'Execute'}
+            </button>
+          </div>
         </div>
       </div>
 

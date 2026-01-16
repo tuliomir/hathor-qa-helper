@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
+import DryRunCheckbox from '../common/DryRunCheckbox';
 import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
@@ -500,7 +501,8 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex items-center gap-4">
+          <DryRunCheckbox />
           <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
             {loading ? 'Initializing...' : 'Initialize Bet'}
           </button>
