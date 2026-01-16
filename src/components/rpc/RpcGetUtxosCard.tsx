@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
+import DryRunCheckbox from '../common/DryRunCheckbox';
 import type { UtxoData } from '../../store/slices/getUtxosSlice';
 import { DEFAULT_NETWORK, type NetworkType } from '../../constants/network';
 
@@ -257,9 +258,12 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
                 : 'Send htr_getUtxos request to RPC server'}
             </p>
           </div>
-          <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
-            {loading ? 'Loading...' : 'Execute'}
-          </button>
+          <div className="flex items-center gap-4">
+            <DryRunCheckbox />
+            <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
+              {loading ? 'Loading...' : 'Execute'}
+            </button>
+          </div>
         </div>
       </div>
 

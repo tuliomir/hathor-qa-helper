@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { useToast } from '../../hooks/useToast';
+import DryRunCheckbox from '../common/DryRunCheckbox';
 import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
 import type { NetworkType } from '../../constants/network';
 import Select from '../common/Select';
@@ -575,7 +576,8 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
         </div>
 
         {/* Execute Button */}
-        <div className="flex gap-2 justify-end">
+        <div className="flex items-center gap-4 justify-end">
+          <DryRunCheckbox />
           <button
             onClick={handleExecute}
             disabled={loading || disabled}

@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { useToast } from '../../hooks/useToast';
+import DryRunCheckbox from '../common/DryRunCheckbox';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
 import type { NetworkType } from '../../constants/network';
 
@@ -511,7 +512,8 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
         </div>
 
         {/* Execute Button */}
-        <div className="flex gap-2 justify-end">
+        <div className="flex items-center gap-4 justify-end">
+          <DryRunCheckbox />
           <button
             onClick={handleExecute}
             disabled={loading || disabled}
