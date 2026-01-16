@@ -34,6 +34,7 @@ export interface TransactionData {
     decodedScript?: {
       address?: { base58: string };
       timelock?: number | null;
+      data?: string;
     };
   }>;
   version?: number;
@@ -229,19 +230,37 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
               </span>
             </div>
             <div className="px-3 py-2 space-y-2 max-h-48 overflow-y-auto">
-              {tx.outputs.map((output, idx) => (
-                <div key={idx} className="text-xs border-b border-gray-200 last:border-0 pb-2">
-                  <div className="font-semibold mb-1">Output {idx}</div>
-                  <div><strong>Value:</strong> {output.value}</div>
-                  <div><strong>Token Data:</strong> {output.tokenData}</div>
-                  {output.decodedScript?.address?.base58 && (
-                    <div><strong>Address:</strong> {output.decodedScript.address.base58}</div>
-                  )}
-                  {output.decodedScript?.timelock !== undefined && output.decodedScript.timelock !== null && (
-                    <div><strong>Timelock:</strong> {output.decodedScript.timelock}</div>
-                  )}
-                </div>
-              ))}
+              {tx.outputs.map((output, idx) => {
+                const isDataOutput = output.decodedScript?.data !== undefined;
+                return (
+                  <div key={idx} className="text-xs border-b border-gray-200 last:border-0 pb-2">
+                    <div className="font-semibold mb-1">
+                      Output {idx}
+                      {isDataOutput && (
+                        <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 rounded">
+                          DATA
+                        </span>
+                      )}
+                    </div>
+                    <div><strong>Value:</strong> {output.value}</div>
+                    <div><strong>Token Data:</strong> {output.tokenData}</div>
+                    {output.decodedScript?.address?.base58 && (
+                      <div><strong>Address:</strong> {output.decodedScript.address.base58}</div>
+                    )}
+                    {output.decodedScript?.data !== undefined && (
+                      <div className="mt-1">
+                        <strong>Data:</strong>
+                        <pre className="mt-1 p-2 bg-purple-50 border border-purple-200 rounded text-xs font-mono whitespace-pre-wrap break-all">
+                          {output.decodedScript.data}
+                        </pre>
+                      </div>
+                    )}
+                    {output.decodedScript?.timelock !== undefined && output.decodedScript.timelock !== null && (
+                      <div><strong>Timelock:</strong> {output.decodedScript.timelock}</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
