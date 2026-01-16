@@ -9,11 +9,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
 import {
-	clearSendTransactionData,
-	setSendTransactionError,
-	setSendTransactionFormData,
-	setSendTransactionRequest,
-	setSendTransactionResponse,
+  clearSendTransactionData,
+  setSendTransactionError,
+  setSendTransactionFormData,
+  setSendTransactionRequest,
+  setSendTransactionResponse,
 } from '../../store/slices/sendTransactionSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcSendTransactionCard } from '../rpc/RpcSendTransactionCard';
@@ -36,12 +36,14 @@ export const SendTransactionStage: React.FC = () => {
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
+  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const sendTransactionData = useSelector((state: RootState) => state.sendTransaction);
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
 
-  // Get the actual wallet instance
+  // Get the actual wallet instances
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
+  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
 
   // Local state for available tokens
   const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
@@ -203,6 +205,7 @@ export const SendTransactionStage: React.FC = () => {
           isDryRun={isDryRun}
           network={testWallet.metadata.network}
           testWallet={testWallet.instance}
+          fundingWallet={fundingWallet?.instance || null}
           availableTokens={availableTokens}
           isLoadingTokens={isLoadingTokens}
           initialRequest={sendTransactionData.request}

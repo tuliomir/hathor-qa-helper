@@ -21,7 +21,10 @@
       "Bash(bun run build:*)",
       "Bash(bun lint:fix:*)"
     ],
-    "deny": [],
+    "deny": [
+      "npm:*",
+      "yarn:*"
+    ],
     "ask": []
   }
 }

@@ -16,6 +16,7 @@ export interface RpcCreateTokenCardProps {
   disabled?: boolean;
   isDryRun?: boolean;
   walletAddress?: string | null;
+  fundingWalletAddress?: string | null;
   network?: NetworkType;
   initialRequest?: { method: string; params: unknown } | null;
   initialResponse?: unknown | null;
@@ -27,6 +28,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   disabled = false,
   isDryRun = false,
   walletAddress = null,
+  fundingWalletAddress = null,
   network,
   initialRequest = null,
   initialResponse = null,
@@ -81,10 +83,17 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
     }
   }, [initialRequest, initialResponse, initialError]);
 
-  // Helper to populate address field
+  // Helper to populate address field from test wallet
   const populateAddress = (field: 'change_address' | 'mint_authority_address' | 'melt_authority_address') => {
     if (walletAddress) {
       setParams({ ...params, [field]: walletAddress });
+    }
+  };
+
+  // Helper to populate address field from funding wallet
+  const populateExternalAddress = (field: 'change_address' | 'mint_authority_address' | 'melt_authority_address') => {
+    if (fundingWalletAddress) {
+      setParams({ ...params, [field]: fundingWalletAddress });
     }
   };
 
@@ -323,22 +332,33 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           {/* Change Address */}
           <div className="space-y-2">
             <label className="block text-sm font-medium mb-1">Change Address (optional)</label>
-            <div className="flex items-center gap-2">
+            <div>
               <input
                 value={params.change_address}
                 onChange={(e) => handleFieldChange('change_address', e.target.value)}
                 placeholder="Change address"
-                className="input flex-1"
+                className="input w-full"
               />
-              <button
-                type="button"
-                onClick={() => populateAddress('change_address')}
-                disabled={!walletAddress}
-                className="btn-secondary py-2 px-3 text-sm whitespace-nowrap"
-                title="Populate with address 0"
-              >
-                Use Addr 0
-              </button>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => populateAddress('change_address')}
+                  disabled={!walletAddress}
+                  className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                  title="Populate with address 0 from test wallet"
+                >
+                  Use Addr0
+                </button>
+                <button
+                  type="button"
+                  onClick={() => populateExternalAddress('change_address')}
+                  disabled={!fundingWalletAddress}
+                  className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                  title="Populate with address 0 from funding wallet"
+                >
+                  Use external addr
+                </button>
+              </div>
             </div>
           </div>
 
@@ -356,22 +376,33 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
             </div>
             {params.create_mint && (
               <>
-                <div className="flex items-center gap-2">
+                <div>
                   <input
                     value={params.mint_authority_address}
                     onChange={(e) => handleFieldChange('mint_authority_address', e.target.value)}
                     placeholder="Mint Authority Address (optional)"
-                    className="input flex-1"
+                    className="input w-full"
                   />
-                  <button
-                    type="button"
-                    onClick={() => populateAddress('mint_authority_address')}
-                    disabled={!walletAddress}
-                    className="btn-secondary py-2 px-3 text-sm whitespace-nowrap"
-                    title="Populate with address 0"
-                  >
-                    Use Addr 0
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => populateAddress('mint_authority_address')}
+                      disabled={!walletAddress}
+                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                      title="Populate with address 0 from test wallet"
+                    >
+                      Use Addr0
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => populateExternalAddress('mint_authority_address')}
+                      disabled={!fundingWalletAddress}
+                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                      title="Populate with address 0 from funding wallet"
+                    >
+                      Use external addr
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -402,22 +433,33 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
             </div>
             {params.create_melt && (
               <>
-                <div className="flex items-center gap-2">
+                <div>
                   <input
                     value={params.melt_authority_address}
                     onChange={(e) => handleFieldChange('melt_authority_address', e.target.value)}
                     placeholder="Melt Authority Address (optional)"
-                    className="input flex-1"
+                    className="input w-full"
                   />
-                  <button
-                    type="button"
-                    onClick={() => populateAddress('melt_authority_address')}
-                    disabled={!walletAddress}
-                    className="btn-secondary py-2 px-3 text-sm whitespace-nowrap"
-                    title="Populate with address 0"
-                  >
-                    Use Addr 0
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => populateAddress('melt_authority_address')}
+                      disabled={!walletAddress}
+                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                      title="Populate with address 0 from test wallet"
+                    >
+                      Use Addr0
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => populateExternalAddress('melt_authority_address')}
+                      disabled={!fundingWalletAddress}
+                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                      title="Populate with address 0 from funding wallet"
+                    >
+                      Use external addr
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input

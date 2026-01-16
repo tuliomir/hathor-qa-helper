@@ -8,9 +8,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-	setCreateTokenError,
-	setCreateTokenRequest,
-	setCreateTokenResponse,
+  setCreateTokenError,
+  setCreateTokenRequest,
+  setCreateTokenResponse,
 } from '../../store/slices/createTokenSlice';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
@@ -28,15 +28,18 @@ export const CreateTokenStage: React.FC = () => {
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
+  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const createTokenData = useSelector((state: RootState) => state.createToken);
 
-  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
+  // Get the actual wallet instances (not from Redux, from walletInstancesMap)
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
+  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
+  const [fundingWalletAddress, setFundingWalletAddress] = useState<string | null>(null);
 
   // Get test wallet address at index 0
   useEffect(() => {
@@ -56,6 +59,25 @@ export const CreateTokenStage: React.FC = () => {
 
     getAddress();
   }, [testWallet]);
+
+  // Get funding wallet address at index 0
+  useEffect(() => {
+    const getAddress = async () => {
+      if (fundingWallet?.instance) {
+        try {
+          const address = await fundingWallet.instance.getAddressAtIndex(0);
+          setFundingWalletAddress(address);
+        } catch (error) {
+          console.error('Failed to get funding wallet address:', error);
+          setFundingWalletAddress(null);
+        }
+      } else {
+        setFundingWalletAddress(null);
+      }
+    };
+
+    getAddress();
+  }, [fundingWallet]);
 
   // Check if connected address matches test wallet address at index 0
   const addressMismatch = useMemo(() => {
@@ -207,6 +229,7 @@ export const CreateTokenStage: React.FC = () => {
           disabled={false}
           isDryRun={isDryRun}
           walletAddress={testWalletAddress}
+          fundingWalletAddress={fundingWalletAddress}
           network={testWallet.metadata.network}
           initialRequest={createTokenData.request}
           initialResponse={createTokenData.rawResponse}

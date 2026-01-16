@@ -26,6 +26,7 @@ export interface RpcSendTransactionCardProps {
   isDryRun?: boolean;
   network: NetworkType;
   testWallet?: HathorWallet | null;
+  fundingWallet?: HathorWallet | null;
   availableTokens: Token[];
   isLoadingTokens: boolean;
   initialRequest?: { method: string; params: unknown } | null;
@@ -43,6 +44,7 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
   isDryRun = false,
   network,
   testWallet = null,
+  fundingWallet = null,
   availableTokens,
   isLoadingTokens,
   initialRequest = null,
@@ -128,6 +130,25 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
     } catch (error) {
       console.error('Failed to get address:', error);
       showToast('Failed to get address from wallet', 'error');
+    }
+  };
+
+  // Populate address from funding wallet
+  const handleSelectExternalAddr = async (index: number) => {
+    if (!fundingWallet) {
+      showToast('Funding wallet not available', 'error');
+      return;
+    }
+
+    try {
+      const address = await fundingWallet.getAddressAtIndex(0);
+      const newOutputs = [...outputs];
+      newOutputs[index] = { ...newOutputs[index], address };
+      setOutputs(newOutputs);
+      showToast('External address populated', 'success');
+    } catch (error) {
+      console.error('Failed to get external address:', error);
+      showToast('Failed to get address from funding wallet', 'error');
     }
   };
 
@@ -491,22 +512,33 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div>
                       <input
                         value={output.address}
                         onChange={(e) => handleOutputChange(index, 'address', e.target.value)}
                         placeholder="Address (base58)"
-                        className="input flex-1"
+                        className="input w-full"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleSelectAddress0(index)}
-                        disabled={!testWallet}
-                        className="btn-secondary py-2 px-3 text-sm whitespace-nowrap"
-                        title="Populate with address 0 from test wallet"
-                      >
-                        Select address 0
-                      </button>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectAddress0(index)}
+                          disabled={!testWallet}
+                          className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                          title="Populate with address 0 from test wallet"
+                        >
+                          Use Addr0
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectExternalAddr(index)}
+                          disabled={!fundingWallet}
+                          className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                          title="Populate with address 0 from funding wallet"
+                        >
+                          Use external addr
+                        </button>
+                      </div>
                     </div>
                     <input
                       value={output.value}
