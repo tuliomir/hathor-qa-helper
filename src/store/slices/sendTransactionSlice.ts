@@ -7,10 +7,16 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
+export type SendTransactionOutputType = 'token' | 'data';
+
 export interface SendTransactionOutput {
-  address: string;
-  value: string;
-  token: string; // Token UID (default '00' for HTR)
+  type: SendTransactionOutputType;
+  // Token output fields
+  address?: string;
+  value?: string;
+  token?: string; // Token UID (default '00' for HTR)
+  // Data output fields
+  data?: string; // Max 255 characters
 }
 
 export interface SendTransactionFormData {
@@ -43,7 +49,7 @@ const initialState: SendTransactionState = {
   isDryRun: false,
   formData: {
     pushTx: false,
-    outputs: [{ address: '', value: '', token: '00' }],
+    outputs: [{ type: 'token', address: '', value: '', token: '00' }],
   },
 };
 

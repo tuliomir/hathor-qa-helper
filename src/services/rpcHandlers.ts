@@ -438,10 +438,10 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
 
     /**
      * Send Transaction
-     * Sends a transaction with one or more outputs
+     * Sends a transaction with one or more outputs (token or data)
      */
     getRpcSendTransaction: async (
-      outputs: Array<{ address: string; value: string; token: string }>,
+      outputs: Array<{ type?: 'token' | 'data'; address?: string; value?: string; token?: string; data?: string }>,
       pushTx: boolean
     ) => {
       if (!session || !client) {
@@ -453,11 +453,17 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         params: {
           network: DEFAULT_NETWORK,
           push_tx: pushTx,
-          outputs: outputs.map(output => ({
-            address: output.address,
-            value: output.value,
-            token: output.token,
-          })),
+          outputs: outputs.map(output => {
+            if (output.type === 'data') {
+              return { data: output.data };
+            }
+            // Default to token output
+            return {
+              address: output.address,
+              value: output.value,
+              token: output.token,
+            };
+          }),
         },
       };
 

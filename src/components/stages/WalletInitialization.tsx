@@ -4,8 +4,8 @@
  * Wallets persist globally across all stages
  */
 
-import { useState, useRef, useEffect } from 'react';
-import { MdPlayArrow, MdStop, MdEdit, MdDelete, MdCamera, MdStar, MdStarBorder, MdQrCode } from 'react-icons/md';
+import { useEffect, useRef, useState } from 'react';
+import { MdCamera, MdDelete, MdEdit, MdPlayArrow, MdQrCode, MdStar, MdStarBorder, MdStop } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
@@ -14,7 +14,7 @@ import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
 import OCRReferenceImage from '../OCRReferenceImage';
 import OCRReferenceModal from '../OCRReferenceModal';
-import { treatSeedWords, didYouMean } from '../../utils/walletUtils';
+import { didYouMean, treatSeedWords } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
@@ -723,6 +723,12 @@ export default function WalletInitialization() {
         >
           Add Wallet
         </button>
+      </div>
+
+      <div className="card-primary mb-7.5">
+        <ul>
+          <li>Link to the official docs: <a href="https://docs.hathor.network/" target="_blank">Official Docs</a></li>
+        </ul>
       </div>
 
       {showCamera && <CameraCapture onCapture={(url) => { setShowCamera(false); setPastedImageUrl(url); }} onCancel={() => setShowCamera(false)} />}

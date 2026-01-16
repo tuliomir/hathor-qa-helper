@@ -10,7 +10,7 @@ import { useToast } from '../../hooks/useToast';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
-import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
+import type { SendTransactionOutput, SendTransactionOutputType } from '../../store/slices/sendTransactionSlice';
 import type { NetworkType } from '../../constants/network';
 import Select from '../common/Select';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
@@ -68,10 +68,12 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
   const [pushTx, setPushTx] = useState(initialFormData?.pushTx ?? false);
   const [outputs, setOutputs] = useState<SendTransactionOutput[]>(
     initialFormData?.outputs?.map(o => ({
-      address: o.address,
-      value: o.value,
-      token: o.token || '00'
-    })) ?? [{ address: '', value: '', token: '00' }]
+      type: o.type || 'token',
+      address: o.address || '',
+      value: o.value || '',
+      token: o.token || '00',
+      data: o.data || '',
+    })) ?? [{ type: 'token', address: '', value: '', token: '00', data: '' }]
   );
 
   // Sync with initial values from Redux
@@ -96,7 +98,7 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
       showToast('Maximum 255 outputs allowed', 'error');
       return;
     }
-    setOutputs([...outputs, { address: '', value: '', token: '00' }]);
+    setOutputs([...outputs, { type: 'token', address: '', value: '', token: '00', data: '' }]);
   };
 
   // Remove output
@@ -109,9 +111,16 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
   };
 
   // Update output
-  const handleOutputChange = (index: number, field: 'address' | 'value' | 'token', value: string) => {
+  const handleOutputChange = (index: number, field: 'address' | 'value' | 'token' | 'data', value: string) => {
     const newOutputs = [...outputs];
     newOutputs[index] = { ...newOutputs[index], [field]: value };
+    setOutputs(newOutputs);
+  };
+
+  // Update output type
+  const handleOutputTypeChange = (index: number, type: SendTransactionOutputType) => {
+    const newOutputs = [...outputs];
+    newOutputs[index] = { ...newOutputs[index], type };
     setOutputs(newOutputs);
   };
 
@@ -155,9 +164,22 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
 
   const handleExecute = async () => {
     // Validation
-    if (outputs.some(o => !o.address || !o.value)) {
-      showToast('All outputs must have an address and value', 'error');
-      return;
+    for (const output of outputs) {
+      if (output.type === 'token') {
+        if (!output.address || !output.value) {
+          showToast('Token outputs must have an address and value', 'error');
+          return;
+        }
+      } else if (output.type === 'data') {
+        if (!output.data || output.data.trim() === '') {
+          showToast('Data outputs must have data content', 'error');
+          return;
+        }
+        if (output.data.length > 255) {
+          showToast('Data output exceeds maximum length of 255 characters', 'error');
+          return;
+        }
+      }
     }
 
     setLoading(true);
@@ -277,61 +299,118 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
                     )}
                   </div>
                   <div className="space-y-2">
+                    {/* Output Type Selector */}
                     <div>
-                      <input
-                        value={output.address}
-                        onChange={(e) => handleOutputChange(index, 'address', e.target.value)}
-                        placeholder="Address (base58)"
-                        className="input w-full"
-                      />
-                      <div className="flex gap-2 mt-2">
+                      <label className="block mb-1 text-xs font-medium text-muted">Output Type:</label>
+                      <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => handleSelectAddress0(index)}
-                          disabled={!testWallet}
-                          className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                          title="Populate with address 0 from test wallet"
+                          onClick={() => handleOutputTypeChange(index, 'token')}
+                          className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
+                            output.type === 'token'
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
                         >
-                          Use Addr0
+                          Token
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleSelectExternalAddr(index)}
-                          disabled={!fundingWallet}
-                          className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                          title="Populate with address 0 from funding wallet"
+                          onClick={() => handleOutputTypeChange(index, 'data')}
+                          className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
+                            output.type === 'data'
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
                         >
-                          Use external addr
+                          Data
                         </button>
                       </div>
                     </div>
-                    <input
-                      value={output.value}
-                      onChange={(e) => handleOutputChange(index, 'value', e.target.value)}
-                      placeholder="Amount (in tokens)"
-                      className="input"
-                      type="number"
-                    />
-                    <div>
-                      <label className="block mb-1 text-xs font-medium text-muted">Token:</label>
-                      <Select
-                        value={output.token}
-                        onChange={(e) => handleOutputChange(index, 'token', e.target.value)}
-                        disabled={isLoadingTokens || availableTokens.length === 0}
-                      >
-                        {isLoadingTokens ? (
-                          <option>Loading tokens...</option>
-                        ) : availableTokens.length === 0 ? (
-                          <option>No tokens available</option>
-                        ) : (
-                          availableTokens.map((token) => (
-                            <option key={token.uid} value={token.uid}>
-                              {token.symbol} - {token.name}
-                            </option>
-                          ))
-                        )}
-                      </Select>
-                    </div>
+
+                    {/* Token Output Fields */}
+                    {output.type === 'token' && (
+                      <>
+                        <div>
+                          <input
+                            value={output.address || ''}
+                            onChange={(e) => handleOutputChange(index, 'address', e.target.value)}
+                            placeholder="Address (base58)"
+                            className="input w-full"
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleSelectAddress0(index)}
+                              disabled={!testWallet}
+                              className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                              title="Populate with address 0 from test wallet"
+                            >
+                              Use Addr0
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSelectExternalAddr(index)}
+                              disabled={!fundingWallet}
+                              className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                              title="Populate with address 0 from funding wallet"
+                            >
+                              Use external addr
+                            </button>
+                          </div>
+                        </div>
+                        <input
+                          value={output.value || ''}
+                          onChange={(e) => handleOutputChange(index, 'value', e.target.value)}
+                          placeholder="Amount (in tokens)"
+                          className="input"
+                          type="number"
+                        />
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-muted">Token:</label>
+                          <Select
+                            value={output.token || '00'}
+                            onChange={(e) => handleOutputChange(index, 'token', e.target.value)}
+                            disabled={isLoadingTokens || availableTokens.length === 0}
+                          >
+                            {isLoadingTokens ? (
+                              <option>Loading tokens...</option>
+                            ) : availableTokens.length === 0 ? (
+                              <option>No tokens available</option>
+                            ) : (
+                              availableTokens.map((token) => (
+                                <option key={token.uid} value={token.uid}>
+                                  {token.symbol} - {token.name}
+                                </option>
+                              ))
+                            )}
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Data Output Fields */}
+                    {output.type === 'data' && (
+                      <div>
+                        <label className="block mb-1 text-xs font-medium text-muted">
+                          Data String ({output.data?.length || 0}/255):
+                        </label>
+                        <textarea
+                          value={output.data || ''}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 255) {
+                              handleOutputChange(index, 'data', e.target.value);
+                            }
+                          }}
+                          placeholder="Enter data string (max 255 characters)"
+                          className="input w-full min-h-[80px] resize-y"
+                          maxLength={255}
+                        />
+                        <p className="text-xs text-muted mt-1">
+                          Data outputs store arbitrary string data on the blockchain
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
