@@ -30,6 +30,7 @@ import walletInformationReducer from './slices/walletInformationSlice';
 import connectedNetworkReducer from './slices/connectedNetworkSlice';
 import getAddressReducer from './slices/getAddressSlice';
 import getUtxosReducer from './slices/getUtxosSlice';
+import rawRpcReducer from './slices/rawRpcSlice';
 
 export const store = configureStore({
   reducer: {
@@ -60,6 +61,7 @@ export const store = configureStore({
     connectedNetwork: connectedNetworkReducer,
     getAddress: getAddressReducer,
     getUtxos: getUtxosReducer,
+    rawRpc: rawRpcReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

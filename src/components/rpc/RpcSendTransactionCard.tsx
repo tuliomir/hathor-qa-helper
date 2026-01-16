@@ -9,6 +9,7 @@ import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { useToast } from '../../hooks/useToast';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
 import type { NetworkType } from '../../constants/network';
 import Select from '../common/Select';
@@ -597,7 +598,10 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
               >
                 {requestExpanded ? '▼' : '▶'} Request
               </button>
-              <CopyButton text={safeStringify(requestInfo, 2)} label="Copy request" />
+              <div className="flex items-center gap-3">
+                <SendToRawEditorButton requestJson={safeStringify(requestInfo, 2)} />
+                <CopyButton text={safeStringify(requestInfo, 2)} label="Copy request" />
+              </div>
             </div>
 
             {requestExpanded && (

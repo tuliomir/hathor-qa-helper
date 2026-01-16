@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import { safeStringify } from '../../utils/betHelpers';
 
 export interface RpcSignOracleDataCardProps {
@@ -565,7 +566,10 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request {requestInfo ? '(Sent)' : '(Preview)'}
             </button>
-            <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
+            <div className="flex items-center gap-3">
+              <SendToRawEditorButton requestJson={safeStringify(liveRequest, 2) as string} />
+              <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
+            </div>
           </div>
 
           {requestExpanded && (

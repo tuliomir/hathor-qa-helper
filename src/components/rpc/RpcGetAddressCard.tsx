@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import Select from '../common/Select';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import type { AddressRequestType } from '../../store/slices/getAddressSlice';
 
 /**
@@ -271,10 +272,13 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request
             </button>
-            <CopyButton
-              text={safeStringify(requestInfo, 2)}
-              label="Copy request"
-            />
+            <div className="flex items-center gap-3">
+              <SendToRawEditorButton requestJson={safeStringify(requestInfo, 2)} />
+              <CopyButton
+                text={safeStringify(requestInfo, 2)}
+                label="Copy request"
+              />
+            </div>
           </div>
 
           {requestExpanded && (

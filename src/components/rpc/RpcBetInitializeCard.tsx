@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
@@ -656,7 +657,10 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request {requestInfo ? '(Sent)' : '(Preview)'}
             </button>
-            <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
+            <div className="flex items-center gap-3">
+              <SendToRawEditorButton requestJson={safeStringify(liveRequest, 2) as string} />
+              <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
+            </div>
           </div>
 
           {requestExpanded && (

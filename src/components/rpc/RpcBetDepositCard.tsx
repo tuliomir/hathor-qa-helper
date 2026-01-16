@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import { safeStringify } from '../../utils/betHelpers';
 import TxStatus from '../common/TxStatus.tsx'
 import { useAppSelector } from '../../store/hooks.ts'
@@ -617,7 +618,10 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request {requestInfo ? '(Sent)' : '(Preview)'}
             </button>
-            <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
+            <div className="flex items-center gap-3">
+              <SendToRawEditorButton requestJson={safeStringify(liveRequest, 2) as string} />
+              <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
+            </div>
           </div>
 
           {requestExpanded && (

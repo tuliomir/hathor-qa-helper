@@ -21,6 +21,11 @@ interface NavigationState {
     result: string | null;
     oracleSignature: string | null;
   };
+
+  // Data for Raw RPC Editor stage (from any RPC card)
+  rawRpcEditor: {
+    requestJson: string | null;
+  };
 }
 
 const initialState: NavigationState = {
@@ -34,6 +39,9 @@ const initialState: NavigationState = {
     addressIndex: null,
     result: null,
     oracleSignature: null,
+  },
+  rawRpcEditor: {
+    requestJson: null,
   },
 };
 
@@ -81,6 +89,19 @@ const navigationSlice = createSlice({
       state.setBetResult.result = null;
       state.setBetResult.oracleSignature = null;
     },
+
+    // Navigate to Raw RPC Editor with request JSON
+    navigateToRawRpcEditor: (
+      state,
+      action: PayloadAction<{ requestJson: string }>
+    ) => {
+      state.rawRpcEditor.requestJson = action.payload.requestJson;
+    },
+
+    // Clear Raw RPC Editor navigation data
+    clearRawRpcEditorNavigation: (state) => {
+      state.rawRpcEditor.requestJson = null;
+    },
   },
 });
 
@@ -89,6 +110,8 @@ export const {
   clearSignOracleDataNavigation,
   navigateToSetBetResult,
   clearSetBetResultNavigation,
+  navigateToRawRpcEditor,
+  clearRawRpcEditorNavigation,
 } = navigationSlice.actions;
 
 export default navigationSlice.reducer;

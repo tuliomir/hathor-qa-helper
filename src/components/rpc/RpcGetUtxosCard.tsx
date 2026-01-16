@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import type { UtxoData } from '../../store/slices/getUtxosSlice';
 import { DEFAULT_NETWORK, type NetworkType } from '../../constants/network';
 
@@ -278,10 +279,13 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request
             </button>
-            <CopyButton
-              text={safeStringify(requestInfo, 2)}
-              label="Copy request"
-            />
+            <div className="flex items-center gap-3">
+              <SendToRawEditorButton requestJson={safeStringify(requestInfo, 2)} />
+              <CopyButton
+                text={safeStringify(requestInfo, 2)}
+                label="Copy request"
+              />
+            </div>
           </div>
 
           {requestExpanded && (

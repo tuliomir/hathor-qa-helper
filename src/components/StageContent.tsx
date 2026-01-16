@@ -24,6 +24,7 @@ import { BetWithdrawStage } from './stages/BetWithdrawStage';
 import PushNotifications from './stages/PushNotifications';
 import { BasicInfoStage } from './stages/BasicInfoStage';
 import { GetAddressStage } from './stages/GetAddressStage';
+import { RawRpcEditorStage } from './stages/RawRpcEditorStage';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -49,6 +50,7 @@ export default function StageContent() {
       {currentStage === 'rpc-create-token' && <CreateTokenStage />}
       {currentStage === 'rpc-send-transaction' && <SendTransactionStage />}
       {currentStage === 'rpc-sign-oracle-data' && <SignOracleDataStage />}
+      {currentStage === 'rpc-raw-editor' && <RawRpcEditorStage />}
       {currentStage === 'rpc-bet-initialize' && <BetInitializeStage />}
       {currentStage === 'rpc-bet-deposit' && <BetDepositStage />}
       {currentStage === 'rpc-set-bet-result' && <SetBetResultStage />}

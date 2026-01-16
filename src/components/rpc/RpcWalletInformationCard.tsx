@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import SendToRawEditorButton from '../common/SendToRawEditorButton';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -202,10 +203,13 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
               <span>{requestExpanded ? '▼' : '▶'}</span>
               Request
             </button>
-            <CopyButton
-              text={safeStringify(requestInfo, 2)}
-              label="Copy request"
-            />
+            <div className="flex items-center gap-3">
+              <SendToRawEditorButton requestJson={safeStringify(requestInfo, 2)} />
+              <CopyButton
+                text={safeStringify(requestInfo, 2)}
+                label="Copy request"
+              />
+            </div>
           </div>
 
           {requestExpanded && (
