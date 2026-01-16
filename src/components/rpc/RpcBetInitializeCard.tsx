@@ -4,13 +4,14 @@
  * Card for testing bet initialization via RPC call
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
-import { safeStringify, getOracleBuffer } from '../../utils/betHelpers';
+import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
+import { getOracleBuffer, safeStringify } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
 import { formatTimeUntil } from '../../utils/valuesUtils.ts'
@@ -201,27 +202,6 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
 
   const hasResult = result !== null || error !== null;
 
-  // Helper to check if an object is a Buffer
-  const isBuffer = (obj: unknown): obj is { type: string; data: number[] } => {
-    return !!(obj && typeof obj === 'object' && 'type' in obj && (obj as { type?: string }).type === 'Buffer' && 'data' in obj && Array.isArray((obj as { data?: unknown }).data));
-  };
-
-  // Helper to render Buffer in a compact way
-  const renderBuffer = (buffer: { type?: string; data?: number[] }) => {
-    const dataLength = buffer.data?.length || 0;
-    const preview = buffer.data?.slice(0, 8).join(', ') || '';
-    return (
-      <div className="text-sm">
-        <span className="text-muted">Buffer({dataLength} bytes)</span>
-        {dataLength > 0 && (
-          <span className="text-xs text-muted ml-2">
-            [{preview}{dataLength > 8 ? '...' : ''}]
-          </span>
-        )}
-      </div>
-    );
-  };
-
   // Render raw JSON view
   const renderRawJson = (data: unknown) => {
     return (
@@ -229,88 +209,6 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
         <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 text-left">
           {safeStringify(data, 2) as string}
         </pre>
-      </div>
-    );
-  };
-
-  // Render formatted response for bet initialize
-  const renderFormattedResponse = (data: unknown) => {
-    if (!data || typeof data !== 'object') {
-      return <div className="text-sm text-muted italic p-3">Invalid response data</div>;
-    }
-
-    // Helper to render a single field
-    const renderField = (key: string, value: unknown, depth: number = 0): React.ReactElement => {
-      const indent = depth * 12;
-
-      // Handle Buffer objects
-      if (isBuffer(value)) {
-        return (
-          <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
-            <span className="text-sm font-semibold text-primary">{key}: </span>
-            {renderBuffer(value)}
-          </div>
-        );
-      }
-
-      // Handle arrays
-      if (Array.isArray(value)) {
-        if (value.length === 0) {
-          return (
-            <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
-              <span className="text-sm font-semibold text-primary">{key}: </span>
-              <span className="text-sm text-muted italic">[]</span>
-            </div>
-          );
-        }
-
-        return (
-          <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
-            <div className="text-sm font-semibold text-primary mb-1">{key}:</div>
-            <div className="ml-4 space-y-1">
-              {value.map((item, idx) => (
-                <div key={idx}>
-                  {typeof item === 'object' && item !== null ? (
-                    <div className="border-l-2 border-gray-300 pl-3">
-                      {Object.entries(item).map(([k, v]) => renderField(k, v, depth + 1))}
-                    </div>
-                  ) : (
-                    <div className="text-sm">
-                      <span className="text-muted">[{idx}]: </span>
-                      <span className="font-mono">{String(item)}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      }
-
-      // Handle nested objects
-      if (typeof value === 'object' && value !== null) {
-        return (
-          <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
-            <div className="text-sm font-semibold text-primary mb-1">{key}:</div>
-            <div className="ml-4 border-l-2 border-gray-300 pl-3">
-              {Object.entries(value).map(([k, v]) => renderField(k, v, depth + 1))}
-            </div>
-          </div>
-        );
-      }
-
-      // Handle primitives
-      return (
-        <div key={key} className="py-2" style={{ paddingLeft: `${indent}px` }}>
-          <span className="text-sm font-semibold text-primary">{key}: </span>
-          <span className="text-sm font-mono">{String(value)}</span>
-        </div>
-      );
-    };
-
-    return (
-      <div className="border border-gray-300 rounded p-4 overflow-auto max-h-96 bg-white text-left">
-        {Object.entries(data).map(([key, value]) => renderField(key, value))}
       </div>
     );
   };
@@ -327,8 +225,16 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
         return renderRawJson(parsedResult);
       }
 
-      // Otherwise show formatted
-      return renderFormattedResponse(parsedResult);
+      // Use the TransactionResponseDisplay component for formatted view
+      return (
+        <TransactionResponseDisplay
+          response={parsedResult}
+          network="TESTNET"
+          showNcFields={true}
+          hashLabel="Nano Contract ID"
+          hashExplorerPage="nc_detail"
+        />
+      );
     } catch {
       return (
         <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
