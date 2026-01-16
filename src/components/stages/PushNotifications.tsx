@@ -3,20 +3,20 @@
  * Tests push notification functionality by sending tokens to test wallet
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet, updateNetwork } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import NetworkSwapButton from '../common/NetworkSwapButton';
 import type { NetworkType } from '../../constants/network';
+import { WALLET_CONFIG } from '../../constants/network';
 import type { WalletInfo } from '../../types/walletStore';
-import { MdWarning } from 'react-icons/md';
+import { MdQrCode, MdWarning } from 'react-icons/md';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { addSentToken, clearSentTokens } from '../../store/slices/pushNotificationsSlice';
 import Loading from '../common/Loading';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
-import { WALLET_CONFIG } from '../../constants/network';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import Select from '../common/Select';
 import ConfigurationStringModal from '../common/ConfigurationStringModal';
@@ -688,9 +688,9 @@ export default function PushNotifications() {
                           <button
                             onClick={() => handleOpenConfigModal(selectedToken1)}
                             className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String"
+                            title="View Configuration String QR Code"
                           >
-                            🔗
+                            <MdQrCode size={18} />
                           </button>
                         )}
                       </div>
@@ -768,9 +768,9 @@ export default function PushNotifications() {
                           <button
                             onClick={() => handleOpenConfigModal(selectedToken1)}
                             className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String"
+                            title="View Configuration String QR Code"
                           >
-                            🔗
+                            <MdQrCode size={18} />
                           </button>
                         )}
                       </div>
@@ -822,9 +822,9 @@ export default function PushNotifications() {
                           <button
                             onClick={() => handleOpenConfigModal(selectedToken2)}
                             className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String"
+                            title="View Configuration String QR Code"
                           >
-                            🔗
+                            <MdQrCode size={18} />
                           </button>
                         )}
                       </div>
@@ -902,9 +902,9 @@ export default function PushNotifications() {
                           <button
                             onClick={() => handleOpenConfigModal(selectedToken1)}
                             className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String"
+                            title="View Configuration String QR Code"
                           >
-                            🔗
+                            <MdQrCode size={18} />
                           </button>
                         )}
                       </div>
@@ -956,9 +956,9 @@ export default function PushNotifications() {
                           <button
                             onClick={() => handleOpenConfigModal(selectedToken2)}
                             className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String"
+                            title="View Configuration String QR Code"
                           >
-                            🔗
+                            <MdQrCode size={18} />
                           </button>
                         )}
                       </div>
@@ -1010,9 +1010,9 @@ export default function PushNotifications() {
                           <button
                             onClick={() => handleOpenConfigModal(selectedToken3)}
                             className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String"
+                            title="View Configuration String QR Code"
                           >
-                            🔗
+                            <MdQrCode size={18} />
                           </button>
                         )}
                       </div>
