@@ -25,6 +25,7 @@ import PushNotifications from './stages/PushNotifications';
 import { BasicInfoStage } from './stages/BasicInfoStage';
 import { GetAddressStage } from './stages/GetAddressStage';
 import { RawRpcEditorStage } from './stages/RawRpcEditorStage';
+import TestWalletCleanup from './stages/TestWalletCleanup';
 
 export default function StageContent() {
   const { currentStage } = useStage();
@@ -56,6 +57,7 @@ export default function StageContent() {
       {currentStage === 'rpc-set-bet-result' && <SetBetResultStage />}
       {currentStage === 'rpc-bet-withdraw' && <BetWithdrawStage />}
       {currentStage === 'push-notifications' && <PushNotifications />}
+      {currentStage === 'test-wallet-cleanup' && <TestWalletCleanup />}
     </div>
   );
 }

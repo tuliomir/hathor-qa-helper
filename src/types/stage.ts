@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications' | 'test-wallet-cleanup';
 
 /**
  * Available stage groups
@@ -195,6 +195,12 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Tx Update Events',
         description: 'Monitor real-time wallet events (new-tx, update-tx, state, etc.)',
         icon: '📡',
+      },
+      {
+        id: 'test-wallet-cleanup',
+        title: 'Test Wallet Cleanup',
+        description: 'Melt all tokens and return HTR to funding wallet',
+        icon: '🧹',
       },
     ],
   },
