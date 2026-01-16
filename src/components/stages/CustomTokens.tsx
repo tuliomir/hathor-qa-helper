@@ -3,21 +3,21 @@
  * Displays custom tokens for wallets from the global store
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { tokensUtils, TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import CopyButton from '../common/CopyButton';
-import { refreshWalletTokens, refreshWalletBalance } from '../../store/slices/walletStoreSlice';
+import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
+import type { NetworkType } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 import { ExplorerLink } from '../common/ExplorerLink';
-import type { NetworkType } from '../../constants/network';
 
 type TabType = 'fund' | 'test';
 
@@ -159,6 +159,7 @@ function WalletTokensDisplay({
   const [meltError, setMeltError] = useState<string | null>(null);
   const [hideZeroBalance, setHideZeroBalance] = useState(true);
   const [tokenBalances, setTokenBalances] = useState<Map<string, bigint>>(new Map());
+  const [isFetchingFirstEmpty, setIsFetchingFirstEmpty] = useState(false);
 
 	// Refresh the tokens when page is opened
 	useEffect(() => {
@@ -334,6 +335,29 @@ function WalletTokensDisplay({
     } else if (e.target.value === '') {
       setAmount(1);
     }
+  };
+
+  const handleGetFirstEmpty = async () => {
+    if (!wallet || !wallet.instance) {
+      return;
+    }
+
+    setIsFetchingFirstEmpty(true);
+    setMeltError(null);
+
+    try {
+      const currentAddress = await wallet.instance.getCurrentAddress();
+      setAddressIndex(currentAddress.index);
+    } catch (err) {
+      setMeltError(err instanceof Error ? err.message : 'Failed to get first empty address');
+    } finally {
+      setIsFetchingFirstEmpty(false);
+    }
+  };
+
+  const handleGetAddr0 = () => {
+    setAddressIndex(0);
+    setMeltError(null);
   };
 
   const handleRefresh = async () => {
@@ -700,15 +724,33 @@ function WalletTokensDisplay({
             <label htmlFor="address-index" className="block mb-1.5 font-bold">
               Address Index:
             </label>
-            <input
-              id="address-index"
-              type="number"
-              min={0}
-              step={1}
-              value={addressIndex}
-              onChange={handleAddressIndexChange}
-              className="input"
-            />
+            <div className="flex gap-2 items-start">
+              <input
+                id="address-index"
+                type="number"
+                min={0}
+                step={1}
+                value={addressIndex}
+                onChange={handleAddressIndexChange}
+                className="input flex-1"
+              />
+              <button
+                type="button"
+                onClick={handleGetAddr0}
+                disabled={!wallet || !wallet.instance}
+                className="btn-secondary px-3 py-2 whitespace-nowrap"
+              >
+                Get Addr0
+              </button>
+              <button
+                type="button"
+                onClick={handleGetFirstEmpty}
+                disabled={isFetchingFirstEmpty || !wallet || !wallet.instance}
+                className="btn-primary px-3 py-2 whitespace-nowrap"
+              >
+                {isFetchingFirstEmpty ? 'Loading...' : 'Get First Empty'}
+              </button>
+            </div>
             <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
           </div>
 
