@@ -19,7 +19,9 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(bun run build:*)",
-      "Bash(bun lint:fix:*)"
+      "Bash(bun lint:fix:*)",
+      "Bash(bun add:*)",
+      "Bash(timeout 10 bun dev:*)"
     ],
     "deny": [
       "Npm:*",

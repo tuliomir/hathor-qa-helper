@@ -31,6 +31,7 @@ import connectedNetworkReducer from './slices/connectedNetworkSlice';
 import getAddressReducer from './slices/getAddressSlice';
 import getUtxosReducer from './slices/getUtxosSlice';
 import rawRpcReducer from './slices/rawRpcSlice';
+import mobileQAProgressReducer from './slices/mobileQAProgressSlice';
 
 export const store = configureStore({
   reducer: {
@@ -62,6 +63,7 @@ export const store = configureStore({
     getAddress: getAddressReducer,
     getUtxos: getUtxosReducer,
     rawRpc: rawRpcReducer,
+    mobileQAProgress: mobileQAProgressReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
