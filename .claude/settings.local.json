@@ -22,8 +22,8 @@
       "Bash(bun lint:fix:*)"
     ],
     "deny": [
-      "npm:*",
-      "yarn:*"
+      "Npm:*",
+      "Yarn:*"
     ],
     "ask": []
   }
