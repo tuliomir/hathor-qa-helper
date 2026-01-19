@@ -81,6 +81,9 @@ export default function TestWalletCleanup() {
   }
   const [returnTxStatuses, setReturnTxStatuses] = useState<ReturnTxStatus[]>([]);
 
+  // Track retrieve-from-funding transaction statuses
+  const [isRetrieving, setIsRetrieving] = useState<string | null>(null); // tokenUid being retrieved
+
   const testReady = testWallet?.status === 'ready';
   const fundingReady = fundingWallet?.status === 'ready';
 
@@ -243,6 +246,76 @@ export default function TestWalletCleanup() {
       }
     }
     return false; // Timed out waiting for confirmation
+  };
+
+  // Handler to retrieve tokens from Funding Wallet back to Test Wallet
+  const handleRetrieveFromFunding = async (tokenUid: string, tokenSymbol: string, amount: number) => {
+    if (!fundingWallet?.instance || !testWallet?.instance || !fundingReady || !testReady) {
+      setErrors((prev) => [...prev, 'Both wallets must be ready to retrieve tokens']);
+      return;
+    }
+
+    setIsRetrieving(tokenUid);
+
+    try {
+      // Get destination address in Test Wallet
+      const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
+      const fundingWalletAddress = await fundingWallet.instance.getAddressAtIndex(0);
+
+      // Build transaction to send tokens FROM Funding Wallet TO Test Wallet
+      const template = TransactionTemplateBuilder.new()
+        .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
+        .addSetVarAction({ name: 'changeAddr', value: fundingWalletAddress })
+        .addTokenOutput({
+          address: '{recipientAddr}',
+          amount: BigInt(amount),
+          token: tokenUid,
+        })
+        .addCompleteAction({
+          changeAddress: '{changeAddr}',
+        })
+        .build();
+
+      const tx = await fundingWallet.instance.buildTxTemplate(template, {
+        signTx: true,
+        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+      });
+
+      const { SendTransaction } = await import('@hathor/wallet-lib');
+      const sendTx = new SendTransaction({
+        storage: fundingWallet.instance.storage,
+        transaction: tx,
+      });
+
+      const txResponse = await sendTx.runFromMining();
+      const txHash = txResponse?.hash || tx.hash;
+
+      if (txHash) {
+        // Wait for confirmation
+        const confirmed = await waitForTxConfirmation(txHash, fundingWallet.instance);
+
+        if (confirmed) {
+          // Refresh both wallets
+          await Promise.all([
+            dispatch(refreshWalletTokens(testWallet.metadata.id)).unwrap(),
+            dispatch(refreshWalletBalance(testWallet.metadata.id)).unwrap(),
+            dispatch(refreshWalletTokens(fundingWallet.metadata.id)).unwrap(),
+            dispatch(refreshWalletBalance(fundingWallet.metadata.id)).unwrap(),
+          ]);
+
+          // Reload preview data to show updated state
+          await loadPreviewData();
+        } else {
+          setErrors((prev) => [...prev, `Timeout waiting for ${tokenSymbol} retrieve confirmation`]);
+        }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setErrors((prev) => [...prev, `Failed to retrieve ${tokenSymbol}: ${errorMessage}`]);
+      console.error(`Failed to retrieve ${tokenSymbol}:`, err);
+    } finally {
+      setIsRetrieving(null);
+    }
   };
 
   const handleExecuteCleanup = async () => {
@@ -586,7 +659,9 @@ export default function TestWalletCleanup() {
 
   return (
     <div className="max-w-300 mx-auto">
-      {(isExecuting || isSending) && <Loading overlay message={executionStep || 'Processing...'} />}
+      {(isExecuting || isSending || isRetrieving) && (
+        <Loading overlay message={isRetrieving ? 'Retrieving tokens from Funding Wallet...' : (executionStep || 'Processing...')} />
+      )}
 
       <h1 className="mt-0 text-3xl font-bold">Test Wallet Cleanup</h1>
       <p className="text-muted mb-7.5">
@@ -846,37 +921,53 @@ export default function TestWalletCleanup() {
                           External Addresses:
                         </div>
                         <div className="space-y-2">
-                          {token.tokenFlow!.addressFlows.map((flow, idx) => (
-                            <div key={idx} className="bg-amber-50 rounded px-2 py-1.5 text-xs">
-                              <div className="flex justify-between items-start">
-                                <div className="font-mono" title={flow.address}>
-                                  {flow.address.slice(0, 14)}...{flow.address.slice(-8)}
-                                </div>
-                                <div className="text-right">
-                                  <span className="font-semibold text-amber-800">Net: {flow.netBalance}</span>
-                                  <span className="text-amber-600 ml-2">
-                                    (sent {flow.totalSent}, recv {flow.totalReceived})
-                                  </span>
-                                </div>
-                              </div>
-                              {flow.walletId && (
-                                <div className="text-amber-600 mt-1">
-                                  <span className="font-semibold">Wallet:</span> {getWalletFriendlyName(flow.walletId)}
-                                </div>
-                              )}
-                              {flow.unspentOutputs.length > 0 && (
-                                <div className="text-amber-500 mt-1">
-                                  <span className="font-semibold">Unspent:</span>{' '}
-                                  {flow.unspentOutputs.map((utxo, i) => (
-                                    <span key={i} className="font-mono" title={utxo.txId}>
-                                      {i > 0 && ', '}
-                                      {utxo.txId.slice(0, 8)}:{utxo.outputIndex} ({utxo.amount})
+                          {token.tokenFlow!.addressFlows.map((flow, idx) => {
+                            const isFundingWallet = flow.walletId === fundingWalletId;
+                            const canRetrieve = isFundingWallet && fundingReady && !isRetrieving;
+
+                            return (
+                              <div key={idx} className="bg-amber-50 rounded px-2 py-1.5 text-xs">
+                                <div className="flex justify-between items-start">
+                                  <div className="font-mono" title={flow.address}>
+                                    {flow.address.slice(0, 14)}...{flow.address.slice(-8)}
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="font-semibold text-amber-800">Net: {flow.netBalance}</span>
+                                    <span className="text-amber-600 ml-2">
+                                      (sent {flow.totalSent}, recv {flow.totalReceived})
                                     </span>
-                                  ))}
+                                  </div>
                                 </div>
-                              )}
-                            </div>
-                          ))}
+                                {flow.walletId && (
+                                  <div className="flex justify-between items-center mt-1">
+                                    <div className="text-amber-600">
+                                      <span className="font-semibold">Wallet:</span> {getWalletFriendlyName(flow.walletId)}
+                                    </div>
+                                    {isFundingWallet && (
+                                      <button
+                                        onClick={() => handleRetrieveFromFunding(token.uid, token.symbol, flow.netBalance)}
+                                        disabled={!canRetrieve}
+                                        className="ml-2 px-2 py-0.5 text-xs font-semibold rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {isRetrieving === token.uid ? 'Retrieving...' : 'Retrieve'}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {flow.unspentOutputs.length > 0 && (
+                                  <div className="text-amber-500 mt-1">
+                                    <span className="font-semibold">Unspent:</span>{' '}
+                                    {flow.unspentOutputs.map((utxo, i) => (
+                                      <span key={i} className="font-mono" title={utxo.txId}>
+                                        {i > 0 && ', '}
+                                        {utxo.txId.slice(0, 8)}:{utxo.outputIndex} ({utxo.amount})
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
