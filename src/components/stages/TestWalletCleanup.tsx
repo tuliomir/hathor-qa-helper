@@ -25,6 +25,16 @@ interface TokenToMelt {
   // For tokens that can't be melted, track the original sender
   originalSender?: string;
   canReturnToSender: boolean;
+  // For tokens sent elsewhere (has authority but missing tokens), track destination
+  tokenDestination?: TokenTrackingResult;
+}
+
+// Result of tracking token flow
+interface TokenTrackingResult {
+  address: string;
+  txId: string;
+  // Scenario: 'incoming' = tokens came from this address, 'outgoing' = tokens went to this address
+  direction: 'incoming' | 'outgoing';
 }
 
 // Type for full transaction data from getFullTxById
@@ -53,20 +63,28 @@ interface FullTxData {
 }
 
 /**
- * Finds the original sender address for a token by analyzing transaction history.
- * This helps return tokens to their sender when we can't melt them.
+ * Tracks token flow by analyzing transaction history.
+ *
+ * Two scenarios are supported:
+ * 1. 'incoming' - Find where tokens came FROM (search TX inputs)
+ *    Used when: wallet has no melt authority, needs to return tokens to sender
+ *
+ * 2. 'outgoing' - Find where tokens WENT TO (search TX outputs)
+ *    Used when: wallet has melt authority but not enough tokens (some test sent them elsewhere)
  *
  * @param walletInstance - The wallet instance to query
- * @param tokenUid - The token UID to find the sender for
+ * @param tokenUid - The token UID to track
  * @param walletAddresses - Set of addresses owned by this wallet
- * @returns The sender address if found, null otherwise
+ * @param searchDirection - 'incoming' to find sender, 'outgoing' to find destination
+ * @returns TokenTrackingResult with address and txId, or null if not found
  */
-async function findOriginalSenderForToken(
+async function trackTokenFlow(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   walletInstance: any,
   tokenUid: string,
-  walletAddresses: Set<string>
-): Promise<string | null> {
+  walletAddresses: Set<string>,
+  searchDirection: 'incoming' | 'outgoing'
+): Promise<TokenTrackingResult | null> {
   try {
     // Get transaction history
     const txHistory = await walletInstance.getTxHistory();
@@ -77,7 +95,6 @@ async function findOriginalSenderForToken(
         (b.timestamp || 0) - (a.timestamp || 0)
     );
 
-    // Check each transaction to find one that deposited this token to the wallet
     for (const tx of sortedHistory) {
       const txId = tx.tx_id || tx.txId;
       if (!txId) continue;
@@ -90,45 +107,71 @@ async function findOriginalSenderForToken(
         const fullTx = response.tx as FullTxData;
 
         // Check if this transaction involves the target token
-        // tokens array contains custom token UIDs (index 0 in token_data means HTR)
         const tokenIndex = fullTx.tokens?.indexOf(tokenUid);
         if (tokenIndex === undefined || tokenIndex === -1) continue;
 
         // token_data is 1-indexed for custom tokens (0 = HTR, 1 = first custom token, etc.)
         const expectedTokenData = tokenIndex + 1;
 
-        // Check if any output sent this token TO the wallet
-        const outputToWallet = fullTx.outputs?.find(
-          (output) =>
-            output.token_data === expectedTokenData &&
-            output.decoded?.address &&
-            walletAddresses.has(output.decoded.address)
-        );
+        if (searchDirection === 'incoming') {
+          // Looking for transactions where tokens came INTO the wallet
+          // Find outputs that sent tokens TO our wallet, then get the sender from inputs
+          const outputToWallet = fullTx.outputs?.find(
+            (output) =>
+              output.token_data === expectedTokenData &&
+              output.decoded?.address &&
+              walletAddresses.has(output.decoded.address)
+          );
 
-        if (!outputToWallet) continue;
+          if (!outputToWallet) continue;
 
-        // Found a transaction that deposited this token to the wallet
-        // Now find the sender (input address that is NOT owned by this wallet)
-        for (const input of fullTx.inputs || []) {
-          const inputAddress = input.decoded?.address;
-          if (inputAddress && !walletAddresses.has(inputAddress)) {
+          // Found a deposit - look for sender in inputs (external address)
+          for (const input of fullTx.inputs || []) {
+            const inputAddress = input.decoded?.address;
+            if (inputAddress && !walletAddresses.has(inputAddress)) {
+              console.log(
+                `[Cleanup] Found incoming source for token ${tokenUid.slice(0, 8)}: ${inputAddress.slice(0, 12)}... (tx: ${txId.slice(0, 8)}...)`
+              );
+              return { address: inputAddress, txId, direction: 'incoming' };
+            }
+          }
+        } else {
+          // searchDirection === 'outgoing'
+          // Looking for transactions where tokens went OUT FROM the wallet
+          // Find inputs from our wallet, then get destination from outputs
+
+          // Check if any input came FROM our wallet for this token
+          // Note: inputs don't have token_data directly, we need to check if this tx
+          // has outputs going to external addresses with this token
+          const outputToExternal = fullTx.outputs?.find(
+            (output) =>
+              output.token_data === expectedTokenData &&
+              output.decoded?.address &&
+              !walletAddresses.has(output.decoded.address)
+          );
+
+          if (!outputToExternal) continue;
+
+          // Found an output going to an external address
+          const destinationAddress = outputToExternal.decoded?.address;
+          if (destinationAddress) {
             console.log(
-              `[Cleanup] Found original sender for token ${tokenUid.slice(0, 8)}: ${inputAddress.slice(0, 12)}... (tx: ${txId.slice(0, 8)}...)`
+              `[Cleanup] Found outgoing destination for token ${tokenUid.slice(0, 8)}: ${destinationAddress.slice(0, 12)}... (tx: ${txId.slice(0, 8)}...)`
             );
-            return inputAddress;
+            return { address: destinationAddress, txId, direction: 'outgoing' };
           }
         }
       } catch (err) {
-        // Skip transactions we can't fetch
         console.warn(`[Cleanup] Could not fetch tx ${txId.slice(0, 8)}:`, err);
-        continue;
       }
     }
 
-    console.log(`[Cleanup] No external sender found for token ${tokenUid.slice(0, 8)}`);
+    console.log(
+      `[Cleanup] No ${searchDirection} address found for token ${tokenUid.slice(0, 8)}`
+    );
     return null;
   } catch (err) {
-    console.error(`[Cleanup] Error finding sender for token ${tokenUid}:`, err);
+    console.error(`[Cleanup] Error tracking token ${tokenUid}:`, err);
     return null;
   }
 }
@@ -237,20 +280,39 @@ export default function TestWalletCleanup() {
             // Determine if this token can be fully cleaned up
             const canMeltAll = hasMeltAuthority && meltableAmount > 0 && remainder === 0;
 
-            // For tokens that can't be fully melted, try to find the original sender
+            // Track token flow for tokens that can't be fully melted
             let originalSender: string | undefined;
             let canReturnToSender = false;
+            let tokenDestination: TokenTrackingResult | undefined;
 
             if (!canMeltAll && balanceNum > 0) {
-              // Token can't be fully cleaned - try to find original sender
-              const sender = await findOriginalSenderForToken(
-                testWallet.instance,
-                uid,
-                walletAddresses
-              );
-              if (sender) {
-                originalSender = sender;
-                canReturnToSender = true;
+              if (!hasMeltAuthority) {
+                // Scenario 1: No melt authority - find where tokens came FROM (return to sender)
+                const tracking = await trackTokenFlow(
+                  testWallet.instance,
+                  uid,
+                  walletAddresses,
+                  'incoming'
+                );
+                if (tracking) {
+                  originalSender = tracking.address;
+                  canReturnToSender = true;
+                  tokenDestination = tracking;
+                }
+              } else if (hasMeltAuthority && (meltableAmount === 0 || remainder > 0)) {
+                // Scenario 2: Has melt authority but not enough tokens
+                // This means some test sent tokens elsewhere - find where they WENT
+                const tracking = await trackTokenFlow(
+                  testWallet.instance,
+                  uid,
+                  walletAddresses,
+                  'outgoing'
+                );
+                if (tracking) {
+                  tokenDestination = tracking;
+                  // Note: We don't set canReturnToSender here because we're not returning,
+                  // we're tracking where missing tokens went so engineer can retrieve them
+                }
               }
             }
 
@@ -264,7 +326,8 @@ export default function TestWalletCleanup() {
               hasMeltAuthority,
               originalSender,
               canReturnToSender,
-            };
+              tokenDestination,
+            } as TokenToMelt;
           } catch (err) {
             console.error(`Failed to load data for token ${uid}:`, err);
             return null;
@@ -272,7 +335,7 @@ export default function TestWalletCleanup() {
         })
       );
 
-      // Filter out nulls
+      // Filter out nulls and set state
       const validTokens = tokensData.filter((t): t is TokenToMelt => t !== null);
       setTokensToMelt(validTokens);
     } catch (err) {
@@ -886,7 +949,7 @@ export default function TestWalletCleanup() {
                       <th className="text-left py-2 px-3 font-bold text-cyan-900">Token</th>
                       <th className="text-right py-2 px-3 font-bold text-cyan-900">Amount</th>
                       <th className="text-left py-2 px-3 font-bold text-cyan-900">Return To</th>
-                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Reason</th>
+                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Source TX</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -896,9 +959,7 @@ export default function TestWalletCleanup() {
                         const returnAmount = !token.hasMeltAuthority
                           ? Number(token.balance)
                           : token.remainder;
-                        const reason = !token.hasMeltAuthority
-                          ? 'No melt authority'
-                          : 'Remainder after melting';
+                        const sourceTxId = token.tokenDestination?.txId;
 
                         return (
                           <tr key={token.uid} className="border-b border-cyan-200">
@@ -909,10 +970,10 @@ export default function TestWalletCleanup() {
                               {returnAmount}
                             </td>
                             <td className="py-2 px-3 font-mono text-xs text-cyan-700" title={token.originalSender}>
-                              {token.originalSender?.slice(0, 12)}...{token.originalSender?.slice(-8)}
+                              {token.originalSender?.slice(0, 12)}...{token.originalSender?.slice(-6)}
                             </td>
-                            <td className="py-2 px-3 text-cyan-700 text-xs">
-                              {reason}
+                            <td className="py-2 px-3 font-mono text-xs text-cyan-600" title={sourceTxId}>
+                              {sourceTxId ? `${sourceTxId.slice(0, 12)}...` : '-'}
                             </td>
                           </tr>
                         );
@@ -923,12 +984,12 @@ export default function TestWalletCleanup() {
             </div>
           )}
 
-          {/* Tokens Remaining After Cleanup (truly remaining - can't be returned) */}
+          {/* Tokens Remaining After Cleanup (can't be returned automatically) */}
           {tokensRemaining.filter((t) => !t.canReturnToSender).length > 0 && (
             <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
-              <h2 className="text-xl font-bold mb-2 text-orange-900">Tokens Remaining After Cleanup</h2>
+              <h2 className="text-xl font-bold mb-2 text-orange-900">Tokens Requiring Manual Action</h2>
               <p className="text-sm text-orange-800 mb-4">
-                The following tokens cannot be melted and no original sender was found. They will remain in the Test Wallet:
+                The following tokens cannot be automatically cleaned up. Use the tracking info below to locate them with external tools:
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -937,6 +998,7 @@ export default function TestWalletCleanup() {
                       <th className="text-left py-2 px-3 font-bold text-orange-900">Token</th>
                       <th className="text-right py-2 px-3 font-bold text-orange-900">Remaining</th>
                       <th className="text-left py-2 px-3 font-bold text-orange-900">Reason</th>
+                      <th className="text-left py-2 px-3 font-bold text-orange-900">Tracking Info</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -947,15 +1009,19 @@ export default function TestWalletCleanup() {
                         let remainingAmount = 0;
 
                         if (!token.hasMeltAuthority) {
-                          reason = 'No melt authority (sender unknown)';
+                          reason = 'No melt authority';
                           remainingAmount = Number(token.balance);
                         } else if (token.meltableAmount === 0) {
-                          reason = 'Balance below 100 (sender unknown)';
+                          reason = 'Balance below 100';
                           remainingAmount = Number(token.balance);
                         } else if (token.remainder > 0) {
-                          reason = 'Remainder after melting (sender unknown)';
+                          reason = 'Remainder after melting';
                           remainingAmount = token.remainder;
                         }
+
+                        // Show tracking info if available
+                        const tracking = token.tokenDestination;
+                        const hasTracking = tracking && tracking.direction === 'outgoing';
 
                         return (
                           <tr key={token.uid} className="border-b border-orange-200">
@@ -967,6 +1033,26 @@ export default function TestWalletCleanup() {
                             </td>
                             <td className="py-2 px-3 text-orange-700 text-xs">
                               {reason}
+                            </td>
+                            <td className="py-2 px-3 text-xs">
+                              {hasTracking ? (
+                                <div className="flex flex-col gap-1">
+                                  <div className="text-orange-800">
+                                    <span className="font-semibold">Sent to:</span>{' '}
+                                    <span className="font-mono" title={tracking.address}>
+                                      {tracking.address.slice(0, 12)}...{tracking.address.slice(-6)}
+                                    </span>
+                                  </div>
+                                  <div className="text-orange-600">
+                                    <span className="font-semibold">TX:</span>{' '}
+                                    <span className="font-mono" title={tracking.txId}>
+                                      {tracking.txId.slice(0, 12)}...
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-orange-500 italic">Not found</span>
+                              )}
                             </td>
                           </tr>
                         );
