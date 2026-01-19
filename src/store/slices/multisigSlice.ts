@@ -475,11 +475,9 @@ const multisigSlice = createSlice({
 export const {
   updateParticipantStatus,
   updateParticipantBalance,
-  setSelectedParticipant,
   setNetwork,
   setTransactionStep,
   setTransactionHex,
-  setSelectedSigners,
   toggleSigner,
   addCollectedSignature,
   setTransactionError,

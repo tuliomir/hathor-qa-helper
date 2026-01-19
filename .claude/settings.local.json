@@ -24,7 +24,8 @@
       "Bash(bun lint:fix:*)",
       "Bash(bun add:*)",
       "Bash(timeout 10 bun dev:*)",
-      "Bash(bun eslint:*)"
+      "Bash(bun eslint:*)",
+      "Bash(bun test:*)"
     ],
     "deny": [
       "Npm:*",

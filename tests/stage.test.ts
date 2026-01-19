@@ -3,16 +3,8 @@
  * Tests stage configuration, groups, and helper functions
  */
 
-import { describe, test, expect } from 'bun:test';
-import {
-  STAGE_GROUPS,
-  STAGES,
-  getGroupForStage,
-  type StageId,
-  type GroupId,
-  type Stage,
-  type StageGroup,
-} from '../src/types/stage';
+import { describe, expect, test } from 'bun:test';
+import { getGroupForStage, type Stage, STAGE_GROUPS, type StageGroup, type StageId, STAGES, } from '../src/types/stage';
 
 describe('stage types', () => {
   describe('STAGE_GROUPS', () => {
@@ -44,6 +36,12 @@ describe('stage types', () => {
       const auditing = STAGE_GROUPS.find((g) => g.id === 'auditing');
       expect(auditing).toBeDefined();
       expect(auditing!.title).toBe('Auditing');
+    });
+
+    test('contains multisig group', () => {
+      const multisig = STAGE_GROUPS.find((g) => g.id === 'multisig');
+      expect(multisig).toBeDefined();
+      expect(multisig!.title).toBe('MultiSig');
     });
 
     test('all groups have required properties', () => {
@@ -116,6 +114,11 @@ describe('stage types', () => {
       expect(group).toBe('auditing');
     });
 
+    test('returns correct group for multisig-wallet-management', () => {
+      const group = getGroupForStage('multisig-wallet-management');
+      expect(group).toBe('multisig');
+    });
+
     test('returns null for invalid stage id', () => {
       const group = getGroupForStage('invalid-stage' as StageId);
       expect(group).toBeNull();
@@ -160,6 +163,7 @@ describe('stage types', () => {
       'rpc-create-token',
       'rpc-bet-initialize',
       'transaction-history',
+      'multisig-wallet-management',
     ];
 
     expectedStages.forEach((stageId) => {
