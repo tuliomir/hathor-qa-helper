@@ -10,7 +10,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { clearDeepLink, selectDeepLinkToastId, setDeepLink, showDeepLinkModal, } from '../store/slices/deepLinkSlice';
 import { addToast, removeToast } from '../store/slices/toastSlice';
 
-const DEEP_LINK_TOAST_DURATION = 30000; // 30 seconds
+const DEEP_LINK_TOAST_DURATION = 3000; // 3 seconds
 
 export function useDeepLinkCallback() {
   const dispatch = useAppDispatch();
