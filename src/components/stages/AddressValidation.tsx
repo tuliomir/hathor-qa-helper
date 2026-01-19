@@ -18,8 +18,29 @@ import { WALLET_CONFIG } from '../../constants/network.ts'
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib'
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import QrScanner from '../QrScanner';
+import { getAddressRecord } from '../../services/addressDatabase';
+import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
 
 type TabType = 'funding' | 'test';
+
+/**
+ * Result category for address lookup
+ * - current-wallet: Address belongs to the currently active wallet (green)
+ * - other-active-wallet: Address belongs to the other active wallet (blue)
+ * - known-wallet: Address belongs to another known wallet in the database (yellow)
+ * - unknown: Address not found in the database (gray)
+ * - error: Parsing or validation error (red)
+ */
+type AddressLookupCategory = 'current-wallet' | 'other-active-wallet' | 'known-wallet' | 'unknown' | 'error';
+
+interface AddressLookupResult {
+  address: string;
+  category: AddressLookupCategory;
+  walletId?: string;
+  walletName?: string;
+  addressIndex?: number;
+  error?: string;
+}
 
 // Component for displaying wallet address information
 function WalletAddressDisplay({
@@ -365,14 +386,9 @@ export default function AddressValidation() {
 
   const [activeTab, setActiveTab] = useState<TabType>('test');
   const [showQrScanner, setShowQrScanner] = useState(false);
-  const [scanResult, setScanResult] = useState<{
-    scannedAddress: string;
-    isValid: boolean;
-    belongsToWallet: boolean;
-    addressIndex?: number;
-    error?: string;
-  } | null>(null);
+  const [lookupResult, setLookupResult] = useState<AddressLookupResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [addressInput, setAddressInput] = useState('');
 
   const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
   const testWallet = wallets.find((w) => w.metadata.id === testWalletId && w.status === 'ready');
@@ -385,79 +401,137 @@ export default function AddressValidation() {
     dispatch(setAmount(amount));
   };
 
-  const handleQrScan = async (data: string) => {
-    setShowQrScanner(false);
+  /**
+   * Look up an address to determine which wallet it belongs to
+   */
+  const lookupAddress = async (address: string) => {
     setIsValidating(true);
-    setScanResult(null);
+    setLookupResult(null);
 
     try {
-      // Parse the QR code data - expected format: hathor:{address}
+      // Strip hathor: prefix if present
       const hathorPrefix = 'hathor:';
-      if (!data.startsWith(hathorPrefix)) {
-        setScanResult({
-          scannedAddress: data,
-          isValid: false,
-          belongsToWallet: false,
-          error: 'Invalid QR code format. Expected format: hathor:{address}',
+      const cleanAddress = address.startsWith(hathorPrefix)
+        ? address.substring(hathorPrefix.length)
+        : address.trim();
+
+      if (!cleanAddress) {
+        setLookupResult({
+          address: address,
+          category: 'error',
+          error: 'Please enter an address',
         });
         setIsValidating(false);
         return;
       }
 
-      const scannedAddress = data.substring(hathorPrefix.length);
+      // Get the current and other active wallet IDs
+      const currentWalletId = activeTab === 'funding' ? fundingWalletId : testWalletId;
+      const otherWalletId = activeTab === 'funding' ? testWalletId : fundingWalletId;
 
-      // Get the current wallet based on active tab
-      const currentWallet = activeTab === 'funding' ? fundingWallet : testWallet;
+      // Look up the address in the database
+      const record = await getAddressRecord(cleanAddress);
 
-      if (!currentWallet || !currentWallet.instance) {
-        setScanResult({
-          scannedAddress,
-          isValid: true,
-          belongsToWallet: false,
-          error: 'No wallet selected or wallet not ready',
+      if (!record) {
+        // Address not found in database
+        setLookupResult({
+          address: cleanAddress,
+          category: 'unknown',
         });
         setIsValidating(false);
         return;
       }
 
-      // Check if address belongs to this wallet by deriving addresses
-      // We'll check up to index 100 (reasonable limit for most wallets)
-      const maxIndexToCheck = 100;
-      let foundIndex: number | undefined;
+      // Found in database - determine category
+      const { walletId, index } = record;
 
-      for (let i = 0; i <= maxIndexToCheck; i++) {
-        const derivedAddress = await currentWallet.instance.getAddressAtIndex(i);
-        if (derivedAddress === scannedAddress) {
-          foundIndex = i;
-          break;
+      // Check if the wallet still exists
+      const wallet = wallets.find((w) => w.metadata.id === walletId);
+      if (!wallet) {
+        // Wallet was deleted - treat as unknown
+        setLookupResult({
+          address: cleanAddress,
+          category: 'unknown',
+        });
+        setIsValidating(false);
+        return;
+      }
+
+      // Determine the address index
+      let addressIndex = index ?? undefined;
+
+      // If index is not in the database, try to get it from the wallet instance
+      if (addressIndex === undefined && wallet.status === 'ready') {
+        const instance = walletInstancesMap.get(walletId);
+        if (instance) {
+          try {
+            const indexResult = await instance.getAddressIndex(cleanAddress);
+            if (indexResult !== null && indexResult !== undefined) {
+              addressIndex = indexResult;
+            }
+          } catch (err) {
+            // Ignore errors - index will remain undefined
+            console.debug('Could not get address index:', err);
+          }
         }
       }
 
-      if (foundIndex !== undefined) {
-        setScanResult({
-          scannedAddress,
-          isValid: true,
-          belongsToWallet: true,
-          addressIndex: foundIndex,
+      // Categorize the result
+      if (walletId === currentWalletId) {
+        // Belongs to current wallet (green)
+        setLookupResult({
+          address: cleanAddress,
+          category: 'current-wallet',
+          walletId,
+          walletName: wallet.metadata.friendlyName,
+          addressIndex,
+        });
+      } else if (walletId === otherWalletId) {
+        // Belongs to other active wallet (blue)
+        setLookupResult({
+          address: cleanAddress,
+          category: 'other-active-wallet',
+          walletId,
+          walletName: wallet.metadata.friendlyName,
+          addressIndex,
         });
       } else {
-        setScanResult({
-          scannedAddress,
-          isValid: true,
-          belongsToWallet: false,
-          error: `Address not found in the first ${maxIndexToCheck + 1} addresses of this wallet`,
+        // Belongs to another known wallet (yellow)
+        setLookupResult({
+          address: cleanAddress,
+          category: 'known-wallet',
+          walletId,
+          walletName: wallet.metadata.friendlyName,
+          addressIndex,
         });
       }
     } catch (error) {
-      console.error('Error validating address:', error);
-      setScanResult({
-        scannedAddress: data,
-        isValid: false,
-        belongsToWallet: false,
+      console.error('Error looking up address:', error);
+      setLookupResult({
+        address: address,
+        category: 'error',
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     } finally {
       setIsValidating(false);
+    }
+  };
+
+  const handleQrScan = (data: string) => {
+    setShowQrScanner(false);
+    lookupAddress(data);
+  };
+
+  const handleAddressInputSubmit = () => {
+    if (addressInput.trim()) {
+      lookupAddress(addressInput);
+    }
+  };
+
+  const handleUseInTest = () => {
+    if (lookupResult?.category === 'current-wallet' && lookupResult.addressIndex !== undefined) {
+      dispatch(setAddressIndex(lookupResult.addressIndex));
+      setLookupResult(null);
     }
   };
 
@@ -470,20 +544,50 @@ export default function AddressValidation() {
         View and share wallet addresses through QR codes for the funding and test wallets.
       </p>
 
-      {/* QR Code Scanner Button */}
+      {/* Address Lookup Section */}
       {!noWalletsSelected && (
         <div className="card-primary mb-7.5">
-          <h3 className="text-lg font-bold mb-3">Scan Device Address</h3>
+          <h3 className="text-lg font-bold mb-3">Address Lookup</h3>
           <p className="text-sm text-muted mb-4">
-            Use your camera to scan a QR code from a physical device and verify if the address belongs to the currently selected wallet.
+            Enter an address or scan a QR code to find out which wallet it belongs to.
           </p>
-          <button
-            onClick={() => setShowQrScanner(true)}
-            className="btn-primary px-4 py-2"
-            disabled={isValidating}
-          >
-            {isValidating ? 'Validating...' : 'Read Device Address QR Code'}
-          </button>
+
+          {/* Text Input */}
+          <div className="mb-4">
+            <label htmlFor="address-lookup-input" className="block mb-1.5 font-bold text-sm">
+              Paste Address:
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="address-lookup-input"
+                type="text"
+                value={addressInput}
+                onChange={(e) => setAddressInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddressInputSubmit()}
+                placeholder="Enter a Hathor address..."
+                className="input flex-1 font-mono text-sm"
+                disabled={isValidating}
+              />
+              <button
+                onClick={handleAddressInputSubmit}
+                className="btn-primary px-4 py-2 whitespace-nowrap"
+                disabled={isValidating || !addressInput.trim()}
+              >
+                {isValidating ? 'Looking up...' : 'Look Up'}
+              </button>
+            </div>
+          </div>
+
+          {/* QR Scanner Button */}
+          <div className="border-t border-gray-200 pt-4">
+            <button
+              onClick={() => setShowQrScanner(true)}
+              className="btn-secondary px-4 py-2"
+              disabled={isValidating}
+            >
+              {isValidating ? 'Looking up...' : 'Scan QR Code'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -560,13 +664,13 @@ export default function AddressValidation() {
         />
       )}
 
-      {/* Validation Results Modal */}
-      {scanResult && (
+      {/* Address Lookup Results Modal */}
+      {lookupResult && (
         <>
           {/* Backdrop */}
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setScanResult(null)}
+            onClick={() => setLookupResult(null)}
           />
 
           {/* Modal */}
@@ -574,9 +678,9 @@ export default function AddressValidation() {
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-2xl font-bold m-0">Scan Results</h2>
+                <h2 className="text-2xl font-bold m-0">Address Lookup Result</h2>
                 <button
-                  onClick={() => setScanResult(null)}
+                  onClick={() => setLookupResult(null)}
                   className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
                   aria-label="Close"
                 >
@@ -586,76 +690,149 @@ export default function AddressValidation() {
 
               {/* Content */}
               <div className="p-6">
-                {/* Scanned Address */}
+                {/* Address Display */}
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold mb-2">Scanned Address</h3>
+                  <h3 className="text-lg font-bold mb-2">Address</h3>
                   <div className="flex items-center gap-2">
                     <p className="font-mono text-xs break-all m-0 p-3 bg-gray-100 rounded flex-1">
-                      {scanResult.scannedAddress}
+                      {lookupResult.address}
                     </p>
-                    <CopyButton text={scanResult.scannedAddress} label="Copy" className="flex-shrink-0" />
+                    <CopyButton text={lookupResult.address} label="Copy" className="flex-shrink-0" />
                   </div>
                 </div>
 
-                {/* Validation Status */}
-                {scanResult.isValid ? (
-                  <div className={`p-4 rounded mb-4 ${
-                    scanResult.belongsToWallet
-                      ? 'bg-green-50 border border-success'
-                      : 'bg-yellow-50 border border-warning'
-                  }`}>
+                {/* Result Status - Color coded based on category */}
+                {lookupResult.category === 'current-wallet' && (
+                  <div className="p-4 rounded mb-4 bg-green-50 border border-success">
                     <div className="flex items-start gap-3">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className={`h-6 w-6 flex-shrink-0 ${
-                          scanResult.belongsToWallet ? 'text-success' : 'text-warning'
-                        }`}
+                        className="h-6 w-6 flex-shrink-0 text-success"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
                       >
-                        {scanResult.belongsToWallet ? (
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        ) : (
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        )}
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <div className="flex-1">
-                        <p className={`font-bold m-0 ${
-                          scanResult.belongsToWallet ? 'text-green-900' : 'text-yellow-900'
-                        }`}>
-                          {scanResult.belongsToWallet
-                            ? 'Address belongs to this wallet!'
-                            : 'Address does not belong to this wallet'}
+                        <p className="font-bold m-0 text-green-900">
+                          Belongs to current wallet
                         </p>
-                        {scanResult.belongsToWallet && scanResult.addressIndex !== undefined ? (
-                          <p className="text-sm mt-2 mb-0 text-green-800">
-                            This address was found at index <strong>{scanResult.addressIndex}</strong> in the {activeTab === 'funding' ? 'funding' : 'test'} wallet.
-                          </p>
-                        ) : scanResult.error ? (
-                          <p className="text-sm mt-2 mb-0 text-yellow-800">
-                            {scanResult.error}
-                          </p>
-                        ) : null}
+                        <p className="text-sm mt-2 mb-0 text-green-800">
+                          This address belongs to <strong>{lookupResult.walletName}</strong>
+                          {lookupResult.addressIndex !== undefined && (
+                            <> at index <strong>{lookupResult.addressIndex}</strong></>
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-4 bg-red-50 border border-danger rounded mb-4">
+                )}
+
+                {lookupResult.category === 'other-active-wallet' && (
+                  <div className="p-4 rounded mb-4 bg-blue-50 border border-info">
                     <div className="flex items-start gap-3">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-danger flex-shrink-0"
+                        className="h-6 w-6 flex-shrink-0 text-info"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="font-bold m-0 text-blue-900">
+                          Belongs to other active wallet
+                        </p>
+                        <p className="text-sm mt-2 mb-0 text-blue-800">
+                          This address belongs to <strong>{lookupResult.walletName}</strong>
+                          {lookupResult.addressIndex !== undefined && (
+                            <> at index <strong>{lookupResult.addressIndex}</strong></>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {lookupResult.category === 'known-wallet' && (
+                  <div className="p-4 rounded mb-4 bg-yellow-50 border border-warning">
+                    <div className="flex items-start gap-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 flex-shrink-0 text-warning"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="font-bold m-0 text-yellow-900">
+                          Belongs to another wallet
+                        </p>
+                        <p className="text-sm mt-2 mb-0 text-yellow-800">
+                          This address belongs to <strong>{lookupResult.walletName}</strong>
+                          {lookupResult.addressIndex !== undefined && (
+                            <> at index <strong>{lookupResult.addressIndex}</strong></>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {lookupResult.category === 'unknown' && (
+                  <div className="p-4 rounded mb-4 bg-gray-100 border border-gray-300">
+                    <div className="flex items-start gap-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 flex-shrink-0 text-gray-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div className="flex-1">
+                        <p className="font-bold m-0 text-gray-700">
+                          Unknown address
+                        </p>
+                        <p className="text-sm mt-2 mb-0 text-gray-600">
+                          This address is not found in any known wallet.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {lookupResult.category === 'error' && (
+                  <div className="p-4 rounded mb-4 bg-red-50 border border-danger">
+                    <div className="flex items-start gap-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 flex-shrink-0 text-danger"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -668,61 +845,48 @@ export default function AddressValidation() {
                         />
                       </svg>
                       <div className="flex-1">
-                        <p className="font-bold text-red-900 m-0">Invalid QR Code</p>
-                        {scanResult.error && (
-                          <p className="text-sm text-red-800 mt-2 mb-0">
-                            {scanResult.error}
+                        <p className="font-bold m-0 text-red-900">Error</p>
+                        {lookupResult.error && (
+                          <p className="text-sm mt-2 mb-0 text-red-800">
+                            {lookupResult.error}
                           </p>
                         )}
                       </div>
                     </div>
                   </div>
                 )}
-
-                {/* Instructions */}
-                <div className="p-4 bg-blue-50 border border-info rounded">
-                  <div className="flex items-start gap-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-info flex-shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div className="flex-1">
-                      <p className="text-sm text-blue-900 m-0">
-                        The scanner checks the first 100 addresses of the currently selected wallet.
-                        If your address has a higher index, it may not be found.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-                <button
-                  onClick={() => setScanResult(null)}
-                  className="btn btn-ghost px-6 py-2"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    setScanResult(null);
-                    setShowQrScanner(true);
-                  }}
-                  className="btn-primary px-6 py-2"
-                >
-                  Scan Another
-                </button>
+              <div className="flex items-center justify-between p-6 border-t border-gray-200">
+                <div>
+                  {/* "Use this in the test below" button - only for current-wallet with known index */}
+                  {lookupResult.category === 'current-wallet' && lookupResult.addressIndex !== undefined && (
+                    <button
+                      onClick={handleUseInTest}
+                      className="btn-success px-4 py-2"
+                    >
+                      Use this in the test below
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setLookupResult(null)}
+                    className="btn btn-ghost px-6 py-2"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLookupResult(null);
+                      setShowQrScanner(true);
+                    }}
+                    className="btn-secondary px-6 py-2"
+                  >
+                    Scan Another
+                  </button>
+                </div>
               </div>
             </div>
           </div>

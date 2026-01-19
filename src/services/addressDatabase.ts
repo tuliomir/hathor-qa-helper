@@ -184,6 +184,24 @@ export async function findWalletByAddress(address: string): Promise<string | nul
 }
 
 /**
+ * Get the full address record for an address
+ * Returns all stored information including index and discovery timestamp
+ *
+ * @param address - The address to look up
+ * @returns The full AddressRecord if found, null otherwise
+ */
+export async function getAddressRecord(address: string): Promise<AddressRecord | null> {
+  try {
+    const database = await openAddressDatabase();
+    const record = await database.get(STORE_NAME, address);
+    return record ?? null;
+  } catch (error) {
+    console.error('[AddressDB] Failed to get address record:', error);
+    return null;
+  }
+}
+
+/**
  * Get all addresses stored for a specific wallet
  *
  * @param walletId - The wallet ID to get addresses for
