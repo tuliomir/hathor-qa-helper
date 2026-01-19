@@ -4,21 +4,22 @@
  * Tests htr_sendNanoContractTx (set_result) RPC call with Redux state persistence
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
 import {
-  setSetBetResultRequest,
-  setSetBetResultResponse,
-  setSetBetResultError,
-  setSetBetResultFormData,
+	setSetBetResultError,
+	setSetBetResultFormData,
+	setSetBetResultRequest,
+	setSetBetResultResponse,
 } from '../../store/slices/setBetResultSlice';
-import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import { navigateToSignOracleData, clearSetBetResultNavigation } from '../../store/slices/navigationSlice';
+import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
+import { clearSetBetResultNavigation, navigateToSignOracleData } from '../../store/slices/navigationSlice';
 import { RpcSetBetResultCard } from '../rpc/RpcSetBetResultCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useStage } from '../../hooks/useStage';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 
 export const SetBetResultStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -139,6 +140,9 @@ export const SetBetResultStage: React.FC = () => {
     return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
   }, [isConnected, connectedAddress, testWalletAddress]);
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -150,8 +154,9 @@ export const SetBetResultStage: React.FC = () => {
       session: walletConnect.session,
       balanceTokens: [],
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteSetBetResult = async () => {
@@ -175,6 +180,9 @@ export const SetBetResultStage: React.FC = () => {
       );
       const duration = Date.now() - startTime;
 
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
+
       // Store request in Redux
       dispatch(setSetBetResultRequest({
         method: request.method,
@@ -191,6 +199,9 @@ export const SetBetResultStage: React.FC = () => {
       return { request, response };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

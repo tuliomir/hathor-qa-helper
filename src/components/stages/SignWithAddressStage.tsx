@@ -4,17 +4,18 @@
  * Tests htr_signWithAddress RPC call with Redux state persistence
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
 import {
-  setSignWithAddressRequest,
-  setSignWithAddressResponse,
-  setSignWithAddressError,
+	setSignWithAddressError,
+	setSignWithAddressRequest,
+	setSignWithAddressResponse,
 } from '../../store/slices/signWithAddressSlice';
-import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
+import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { RpcSignWithAddressCard } from '../rpc/RpcSignWithAddressCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 
 export const SignWithAddressStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -61,6 +62,9 @@ export const SignWithAddressStage: React.FC = () => {
     return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
   }, [isConnected, connectedAddress, testWalletAddress]);
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -71,8 +75,9 @@ export const SignWithAddressStage: React.FC = () => {
       client: walletConnect.client,
       session: walletConnect.session,
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteSignWithAddress = async (message: string, addressIndex: number) => {
@@ -85,6 +90,9 @@ export const SignWithAddressStage: React.FC = () => {
     try {
       const { request, response } = await rpcHandlers.getRpcSignWithAddress(message, addressIndex);
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
 
       // Store request in Redux
       dispatch(setSignWithAddressRequest({
@@ -102,6 +110,9 @@ export const SignWithAddressStage: React.FC = () => {
       return { request, response };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

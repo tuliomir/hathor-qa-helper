@@ -167,6 +167,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           result = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Get Address');
+          }
+
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
@@ -216,6 +222,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           result = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Get Balance');
+          }
+
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
@@ -284,6 +296,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           result = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Get UTXOs');
+          }
+
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
@@ -331,6 +349,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           result = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Sign Message');
+          }
+
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
@@ -482,6 +506,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           response = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Send Transaction');
+          }
+
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
@@ -554,6 +584,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           response = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Initialize Bet');
+          }
+
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
@@ -619,6 +655,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           response = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Place Bet');
+          }
+
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
@@ -671,6 +713,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           response = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Sign Oracle Data');
+          }
+
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
@@ -732,6 +780,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           response = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Set Bet Result');
+          }
+
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
@@ -797,6 +851,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           response = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Withdraw Prize');
+          }
+
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,

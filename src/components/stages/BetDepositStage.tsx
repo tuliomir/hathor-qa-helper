@@ -4,20 +4,21 @@
  * Tests htr_sendNanoContractTx (bet/deposit) RPC call with Redux state persistence
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
 import {
-  setBetDepositRequest,
-  setBetDepositResponse,
   setBetDepositError,
   setBetDepositFormData,
+  setBetDepositRequest,
+  setBetDepositResponse,
 } from '../../store/slices/betDepositSlice';
-import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
+import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { RpcBetDepositCard } from '../rpc/RpcBetDepositCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { NATIVE_TOKEN_UID, DEFAULT_NATIVE_TOKEN_CONFIG } from '@hathor/wallet-lib/lib/constants';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const BetDepositStage: React.FC = () => {
@@ -136,6 +137,9 @@ export const BetDepositStage: React.FC = () => {
     return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
   }, [isConnected, connectedAddress, testWalletAddress]);
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -147,8 +151,9 @@ export const BetDepositStage: React.FC = () => {
       session: walletConnect.session,
       balanceTokens: [],
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteBetDeposit = async () => {
@@ -174,6 +179,9 @@ export const BetDepositStage: React.FC = () => {
       );
       const duration = Date.now() - startTime;
 
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
+
       // Serialize BigInt values to strings for Redux storage
       const serializedRequest = JSONBigInt.parse(JSONBigInt.stringify(request));
       const serializedResponse = JSONBigInt.parse(JSONBigInt.stringify(response));
@@ -195,6 +203,9 @@ export const BetDepositStage: React.FC = () => {
       return { request, response };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

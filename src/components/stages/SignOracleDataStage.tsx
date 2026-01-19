@@ -4,21 +4,22 @@
  * Tests htr_signOracleData RPC call with Redux state persistence
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
 import {
-  setSignOracleDataRequest,
-  setSignOracleDataResponse,
-  setSignOracleDataError,
-  setSignOracleDataFormData,
+	setSignOracleDataError,
+	setSignOracleDataFormData,
+	setSignOracleDataRequest,
+	setSignOracleDataResponse,
 } from '../../store/slices/signOracleDataSlice';
-import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import { navigateToSetBetResult, clearSignOracleDataNavigation } from '../../store/slices/navigationSlice';
+import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
+import { clearSignOracleDataNavigation, navigateToSetBetResult } from '../../store/slices/navigationSlice';
 import { RpcSignOracleDataCard } from '../rpc/RpcSignOracleDataCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useStage } from '../../hooks/useStage';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 
 export const SignOracleDataStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -125,6 +126,9 @@ export const SignOracleDataStage: React.FC = () => {
     return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
   }, [isConnected, connectedAddress, testWalletAddress]);
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -136,8 +140,9 @@ export const SignOracleDataStage: React.FC = () => {
       session: walletConnect.session,
       balanceTokens: [],
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteSignOracleData = async () => {
@@ -159,6 +164,9 @@ export const SignOracleDataStage: React.FC = () => {
       );
       const duration = Date.now() - startTime;
 
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
+
       // Store request in Redux
       dispatch(setSignOracleDataRequest({
         method: request.method,
@@ -175,6 +183,9 @@ export const SignOracleDataStage: React.FC = () => {
       return { request, response };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

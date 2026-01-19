@@ -4,20 +4,17 @@
  * Tests htr_getBalance RPC call with Redux state persistence
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
-import {
-  setGetBalanceRequest,
-  setGetBalanceResponse,
-  setGetBalanceError,
-} from '../../store/slices/getBalanceSlice';
-import { selectWalletConnectFirstAddress, selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import { refreshWalletTokens, refreshWalletBalance } from '../../store/slices/walletStoreSlice';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
+import { setGetBalanceError, setGetBalanceRequest, setGetBalanceResponse, } from '../../store/slices/getBalanceSlice';
+import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
+import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { RpcGetBalanceCard } from '../rpc/RpcGetBalanceCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useToast } from '../../hooks/useToast';
-import { NATIVE_TOKEN_UID, DEFAULT_NATIVE_TOKEN_CONFIG } from '@hathor/wallet-lib/lib/constants';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const GetBalanceStage: React.FC = () => {
@@ -93,6 +90,9 @@ export const GetBalanceStage: React.FC = () => {
   // Get token UIDs for RPC call
   const tokenUids = useMemo(() => walletTokens.map((t) => t.uid), [walletTokens]);
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   const handleRefreshTokens = async () => {
     if (!testWalletId || isRefreshing) return;
 
@@ -122,8 +122,9 @@ export const GetBalanceStage: React.FC = () => {
       session: walletConnect.session,
       balanceTokens: tokenUids,
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, tokenUids, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, tokenUids, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteGetBalance = async () => {
@@ -136,6 +137,9 @@ export const GetBalanceStage: React.FC = () => {
     try {
       const { request, response } = await rpcHandlers.getRpcBalance();
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
 
       // Store request in Redux
       dispatch(setGetBalanceRequest({
@@ -156,6 +160,9 @@ export const GetBalanceStage: React.FC = () => {
       return { request, response };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

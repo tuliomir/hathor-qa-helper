@@ -9,16 +9,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
 import {
-  clearSendTransactionData,
-  setSendTransactionError,
-  setSendTransactionFormData,
-  setSendTransactionRequest,
-  setSendTransactionResponse,
+	clearSendTransactionData,
+	setSendTransactionError,
+	setSendTransactionFormData,
+	setSendTransactionRequest,
+	setSendTransactionResponse,
 } from '../../store/slices/sendTransactionSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcSendTransactionCard } from '../rpc/RpcSendTransactionCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
@@ -95,6 +96,9 @@ export const SendTransactionStage: React.FC = () => {
     loadTokens();
   }, [testWallet, allTokens]);
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -105,8 +109,9 @@ export const SendTransactionStage: React.FC = () => {
       client: walletConnect.client,
       session: walletConnect.session,
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Save form data to Redux whenever it changes in the card
   useEffect(() => {
@@ -131,6 +136,9 @@ export const SendTransactionStage: React.FC = () => {
       const { request, response } = await rpcHandlers.getRpcSendTransaction(outputs, pushTx);
       const duration = Date.now() - startTime;
 
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
+
       // Convert BigInt to strings for Redux serialization
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
@@ -150,6 +158,9 @@ export const SendTransactionStage: React.FC = () => {
       return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

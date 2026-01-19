@@ -4,22 +4,21 @@
  * Tests htr_createToken RPC call with Redux state persistence
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-	setCreateTokenError,
-	setCreateTokenRequest,
-	setCreateTokenResponse,
+  setCreateTokenError,
+  setCreateTokenRequest,
+  setCreateTokenResponse,
 } from '../../store/slices/createTokenSlice';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
-import { setDeepLink } from '../../store/slices/deepLinkSlice';
-import { addToast } from '../../store/slices/toastSlice';
 import { RpcCreateTokenCard } from '../rpc/RpcCreateTokenCard';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const CreateTokenStage: React.FC = () => {
@@ -88,22 +87,8 @@ export const CreateTokenStage: React.FC = () => {
     return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
   }, [isConnected, connectedAddress, testWalletAddress]);
 
-  // Callback for showing deep link QR code
-  const handleDeepLinkAvailable = useCallback(
-    (url: string, title: string) => {
-      dispatch(setDeepLink({ url, title }));
-      dispatch(
-        addToast({
-          id: `deeplink-toast-${Date.now()}`,
-          message: 'Deep link available. Click to show QR code.',
-          type: 'info',
-          duration: 30000, // 30 seconds
-          actionType: 'showDeepLinkModal',
-        })
-      );
-    },
-    [dispatch]
-  );
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
 
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
@@ -115,9 +100,9 @@ export const CreateTokenStage: React.FC = () => {
       client: walletConnect.client,
       session: walletConnect.session,
       dryRun: isDryRun,
-      onDeepLinkAvailable: handleDeepLinkAvailable,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun, handleDeepLinkAvailable]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteCreateToken = async (params: CreateTokenParams) => {
@@ -130,6 +115,9 @@ export const CreateTokenStage: React.FC = () => {
     try {
       const { request, response } = await rpcHandlers.getRpcCreateToken(params);
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
 
       // Convert BigInt to strings for Redux serialization
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
@@ -165,6 +153,9 @@ export const CreateTokenStage: React.FC = () => {
       return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -9,21 +9,26 @@ interface DeepLinkState {
   isModalOpen: boolean;
   deepLinkUrl: string | null;
   title: string;
+  toastId: string | null; // Track toast ID for cleanup
 }
 
 const initialState: DeepLinkState = {
   isModalOpen: false,
   deepLinkUrl: null,
   title: 'Scan QR Code',
+  toastId: null,
 };
 
 const deepLinkSlice = createSlice({
   name: 'deepLink',
   initialState,
   reducers: {
-    setDeepLink: (state, action: PayloadAction<{ url: string; title?: string }>) => {
+    setDeepLink: (state, action: PayloadAction<{ url: string; title?: string; toastId?: string }>) => {
       state.deepLinkUrl = action.payload.url;
       state.title = action.payload.title || 'Scan QR Code';
+      if (action.payload.toastId) {
+        state.toastId = action.payload.toastId;
+      }
     },
     showDeepLinkModal: (state) => {
       state.isModalOpen = true;
@@ -35,6 +40,7 @@ const deepLinkSlice = createSlice({
       state.isModalOpen = false;
       state.deepLinkUrl = null;
       state.title = 'Scan QR Code';
+      state.toastId = null;
     },
   },
 });
@@ -53,3 +59,6 @@ export const selectDeepLinkUrl = (state: { deepLink: DeepLinkState }) =>
 
 export const selectDeepLinkTitle = (state: { deepLink: DeepLinkState }) =>
   state.deepLink.title;
+
+export const selectDeepLinkToastId = (state: { deepLink: DeepLinkState }) =>
+  state.deepLink.toastId;

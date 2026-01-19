@@ -6,11 +6,13 @@
 import QRCode from 'react-qr-code';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
-	hideDeepLinkModal,
-	selectDeepLinkModalOpen,
-	selectDeepLinkTitle,
-	selectDeepLinkUrl,
+  clearDeepLink,
+  selectDeepLinkModalOpen,
+  selectDeepLinkTitle,
+  selectDeepLinkToastId,
+  selectDeepLinkUrl,
 } from '../../store/slices/deepLinkSlice';
+import { removeToast } from '../../store/slices/toastSlice';
 import CopyButton from './CopyButton';
 
 export default function DeepLinkModal() {
@@ -18,11 +20,17 @@ export default function DeepLinkModal() {
   const isOpen = useAppSelector(selectDeepLinkModalOpen);
   const deepLinkUrl = useAppSelector(selectDeepLinkUrl);
   const title = useAppSelector(selectDeepLinkTitle);
+  const toastId = useAppSelector(selectDeepLinkToastId);
 
   if (!isOpen || !deepLinkUrl) return null;
 
   const handleClose = () => {
-    dispatch(hideDeepLinkModal());
+    // Remove the associated toast if it exists
+    if (toastId) {
+      dispatch(removeToast(toastId));
+    }
+    // Clear all deep link state
+    dispatch(clearDeepLink());
   };
 
   return (

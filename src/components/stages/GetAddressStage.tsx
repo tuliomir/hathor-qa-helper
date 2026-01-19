@@ -4,23 +4,24 @@
  * Tests htr_getAddress RPC call with different request types
  */
 
-import React, { useMemo, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React, { useEffect, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import type { AppDispatch, RootState } from '../../store';
 import {
-  setGetAddressRequest,
-  setGetAddressResponse,
-  setGetAddressError,
-  setRequestType,
-  setIndexValue,
-  setValidationStatus,
-  clearGetAddressData,
-  type AddressRequestType,
+	type AddressRequestType,
+	clearGetAddressData,
+	setGetAddressError,
+	setGetAddressRequest,
+	setGetAddressResponse,
+	setIndexValue,
+	setRequestType,
+	setValidationStatus,
 } from '../../store/slices/getAddressSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcGetAddressCard } from '../rpc/RpcGetAddressCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 
 export const GetAddressStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -36,6 +37,9 @@ export const GetAddressStage: React.FC = () => {
   // Get the test wallet instance for validation
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -46,8 +50,9 @@ export const GetAddressStage: React.FC = () => {
       client: walletConnect.client,
       session: walletConnect.session,
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteGetAddress = async (type: AddressRequestType, index?: number) => {
@@ -63,6 +68,9 @@ export const GetAddressStage: React.FC = () => {
     try {
       const { request, response } = await rpcHandlers.getRpcGetAddress(type, index);
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
 
       // Store request in Redux
       dispatch(setGetAddressRequest({
@@ -80,6 +88,9 @@ export const GetAddressStage: React.FC = () => {
       return { request, response };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

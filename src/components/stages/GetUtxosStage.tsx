@@ -8,16 +8,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-  clearGetUtxosData,
-  setGetUtxosError,
-  setGetUtxosFormData,
-  setGetUtxosRequest,
-  setGetUtxosResponse,
+	clearGetUtxosData,
+	setGetUtxosError,
+	setGetUtxosFormData,
+	setGetUtxosRequest,
+	setGetUtxosResponse,
 } from '../../store/slices/getUtxosSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcGetUtxosCard } from '../rpc/RpcGetUtxosCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import Select from '../common/Select';
 
@@ -125,6 +126,9 @@ export const GetUtxosStage: React.FC = () => {
     );
   }, [tokenUid, maxUtxos, amountSmallerThan, amountBiggerThan, dispatch]);
 
+  // Deep link callback and cleanup for RPC requests
+  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -135,8 +139,9 @@ export const GetUtxosStage: React.FC = () => {
       client: walletConnect.client,
       session: walletConnect.session,
       dryRun: isDryRun,
+      onDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteGetUtxos = async () => {
@@ -158,6 +163,9 @@ export const GetUtxosStage: React.FC = () => {
       );
       const duration = Date.now() - startTime;
 
+      // Clear deep link notification after RPC response
+      clearDeepLinkNotification();
+
       // Store request in Redux
       dispatch(
         setGetUtxosRequest({
@@ -178,6 +186,9 @@ export const GetUtxosStage: React.FC = () => {
       return { request, response };
     } catch (error) {
       const duration = Date.now() - startTime;
+
+      // Clear deep link notification on error too
+      clearDeepLinkNotification();
 
       // Store error in Redux
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
