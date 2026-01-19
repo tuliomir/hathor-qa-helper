@@ -1,5 +1,11 @@
 # Development Practices
 
+## Package Management
+- **Always use bun** (not npm or yarn)
+  - Install: `bun add <package>` or `bun add -d <package>` for dev deps
+  - Run scripts: `bun <script>` (e.g., `bun test`, `bun build`)
+  - Execute: `bunx <command>` instead of `npx`
+
 ## Git
 - Add all new files at the end of the session: `git add path/to/file.ts`
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`

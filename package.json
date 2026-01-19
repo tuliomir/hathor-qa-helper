@@ -27,6 +27,7 @@
     "bitcore-mnemonic": "8.25.10",
     "buffer": "^6.0.3",
     "date-fns": "^4.1.0",
+    "idb": "^8.0.3",
     "react": "^19.1.1",
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.1.1",

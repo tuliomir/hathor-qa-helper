@@ -25,11 +25,12 @@
       "Bash(bun add:*)",
       "Bash(timeout 10 bun dev:*)",
       "Bash(bun eslint:*)",
-      "Bash(bun test:*)"
+      "Bash(bun test:*)",
+      "mcp__plugin_context7_context7__resolve-library-id"
     ],
     "deny": [
-      "Npm:*",
-      "Yarn:*"
+      "Bash(npm *)",
+      "Bash(yarn *)"
     ],
     "ask": []
   }

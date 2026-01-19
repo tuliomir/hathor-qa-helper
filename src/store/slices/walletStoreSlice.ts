@@ -3,18 +3,24 @@
  * Manages wallet instances and metadata with LocalStorage persistence
  */
 
-import { createSlice, createAsyncThunk, createSelector, type PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { WalletMetadata } from '../../types/walletStore';
 import type { WalletStatus } from '../../types/wallet';
 import type { RootState } from '../index';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
-import { NETWORK_CONFIG, WALLET_CONFIG, type NetworkType } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { addToken } from './tokensSlice';
+import {
+  deleteAddressesForWallet,
+  storeAddresses,
+  storeAddressesFromTransaction,
+} from '../../services/addressDatabase';
+import type { AddressEntry } from '../../types/addressDatabase';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
@@ -177,6 +183,23 @@ export const startWallet = createAsyncThunk(
       // Get the first address
       const firstAddress = await walletInstance.getAddressAtIndex(0);
 
+      // Populate address database with all known addresses (fire-and-forget)
+      // Note: getAllAddresses() is an async generator, not a Promise
+      (async () => {
+        try {
+          const addressEntries: AddressEntry[] = [];
+          for await (const addr of walletInstance.getAllAddresses()) {
+            addressEntries.push({
+              address: addr.address,
+              index: addr.index,
+            });
+          }
+          await storeAddresses(walletId, addressEntries);
+        } catch (err) {
+          console.error('[AddressDB] Failed to populate initial addresses:', err);
+        }
+      })();
+
       // Get the selected token UID from state
       const state = getState() as RootState;
       const selectedTokenUid = state.tokens.selectedTokenUid;
@@ -238,6 +261,9 @@ export const startWallet = createAsyncThunk(
           data: tx as { tx_id?: string; txId?: string; tokenName?: string; tokenSymbol?: string },
         }));
 
+        // Store addresses from transaction (fire-and-forget)
+        storeAddressesFromTransaction(walletId, tx).catch(console.error);
+
         // Check if the transaction has tokenName and tokenSymbol (custom token transaction)
         if (tx && typeof tx === 'object' && 'tokenName' in tx && 'tokenSymbol' in tx) {
           console.log('Custom token transaction detected, refreshing tokens');
@@ -259,6 +285,9 @@ export const startWallet = createAsyncThunk(
           eventType: 'update-tx',
           data: tx,
         }));
+
+        // Store addresses from transaction (fire-and-forget)
+        storeAddressesFromTransaction(walletId, tx).catch(console.error);
 
         // Refresh balance on transaction updates
         dispatch(refreshWalletBalance(walletId));
@@ -286,6 +315,16 @@ export const startWallet = createAsyncThunk(
           eventType: 'more-addresses-loaded',
           data,
         }));
+
+        // Store newly loaded addresses (fire-and-forget)
+        if (data && typeof data === 'object' && 'addresses' in data) {
+          const addressData = data as { addresses: Array<{ address: string; index: number }> };
+          const addressEntries: AddressEntry[] = addressData.addresses.map((a) => ({
+            address: a.address,
+            index: a.index,
+          }));
+          storeAddresses(walletId, addressEntries).catch(console.error);
+        }
       };
 
       // Register all event listeners
@@ -493,6 +532,9 @@ const walletStoreSlice = createSlice({
         instance.stop().catch(console.error);
         walletInstancesMap.delete(id);
       }
+
+      // Clean up addresses from IndexedDB (fire-and-forget)
+      deleteAddressesForWallet(id).catch(console.error);
 
       delete state.wallets[id];
 
