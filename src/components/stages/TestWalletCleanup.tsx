@@ -22,6 +22,115 @@ interface TokenToMelt {
   meltableAmount: number;
   remainder: number;
   hasMeltAuthority: boolean;
+  // For tokens that can't be melted, track the original sender
+  originalSender?: string;
+  canReturnToSender: boolean;
+}
+
+// Type for full transaction data from getFullTxById
+interface FullTxOutput {
+  value: number;
+  token_data: number;
+  decoded?: {
+    address?: string;
+  };
+}
+
+interface FullTxInput {
+  tx_id: string;
+  index: number;
+  decoded?: {
+    address?: string;
+  };
+}
+
+interface FullTxData {
+  tx_id: string;
+  timestamp: number;
+  inputs: FullTxInput[];
+  outputs: FullTxOutput[];
+  tokens: string[];
+}
+
+/**
+ * Finds the original sender address for a token by analyzing transaction history.
+ * This helps return tokens to their sender when we can't melt them.
+ *
+ * @param walletInstance - The wallet instance to query
+ * @param tokenUid - The token UID to find the sender for
+ * @param walletAddresses - Set of addresses owned by this wallet
+ * @returns The sender address if found, null otherwise
+ */
+async function findOriginalSenderForToken(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  walletInstance: any,
+  tokenUid: string,
+  walletAddresses: Set<string>
+): Promise<string | null> {
+  try {
+    // Get transaction history
+    const txHistory = await walletInstance.getTxHistory();
+
+    // Sort by timestamp descending to find the most recent transaction first
+    const sortedHistory = [...txHistory].sort(
+      (a: { timestamp?: number }, b: { timestamp?: number }) =>
+        (b.timestamp || 0) - (a.timestamp || 0)
+    );
+
+    // Check each transaction to find one that deposited this token to the wallet
+    for (const tx of sortedHistory) {
+      const txId = tx.tx_id || tx.txId;
+      if (!txId) continue;
+
+      try {
+        // Get full transaction details
+        const response = await walletInstance.getFullTxById(txId);
+        if (!response.success || !response.tx) continue;
+
+        const fullTx = response.tx as FullTxData;
+
+        // Check if this transaction involves the target token
+        // tokens array contains custom token UIDs (index 0 in token_data means HTR)
+        const tokenIndex = fullTx.tokens?.indexOf(tokenUid);
+        if (tokenIndex === undefined || tokenIndex === -1) continue;
+
+        // token_data is 1-indexed for custom tokens (0 = HTR, 1 = first custom token, etc.)
+        const expectedTokenData = tokenIndex + 1;
+
+        // Check if any output sent this token TO the wallet
+        const outputToWallet = fullTx.outputs?.find(
+          (output) =>
+            output.token_data === expectedTokenData &&
+            output.decoded?.address &&
+            walletAddresses.has(output.decoded.address)
+        );
+
+        if (!outputToWallet) continue;
+
+        // Found a transaction that deposited this token to the wallet
+        // Now find the sender (input address that is NOT owned by this wallet)
+        for (const input of fullTx.inputs || []) {
+          const inputAddress = input.decoded?.address;
+          if (inputAddress && !walletAddresses.has(inputAddress)) {
+            console.log(
+              `[Cleanup] Found original sender for token ${tokenUid.slice(0, 8)}: ${inputAddress.slice(0, 12)}... (tx: ${txId.slice(0, 8)}...)`
+            );
+            return inputAddress;
+          }
+        }
+      } catch (err) {
+        // Skip transactions we can't fetch
+        console.warn(`[Cleanup] Could not fetch tx ${txId.slice(0, 8)}:`, err);
+        continue;
+      }
+    }
+
+    console.log(`[Cleanup] No external sender found for token ${tokenUid.slice(0, 8)}`);
+    return null;
+  } catch (err) {
+    console.error(`[Cleanup] Error finding sender for token ${tokenUid}:`, err);
+    return null;
+  }
 }
 
 export default function TestWalletCleanup() {
@@ -52,7 +161,17 @@ export default function TestWalletCleanup() {
     status: 'pending' | 'confirming' | 'confirmed' | 'failed';
   }
   const [meltTxStatuses, setMeltTxStatuses] = useState<MeltTxStatus[]>([]);
-  const [cleanupPhase, setCleanupPhase] = useState<'idle' | 'melting' | 'confirming' | 'transferring' | 'done'>('idle');
+  const [cleanupPhase, setCleanupPhase] = useState<'idle' | 'melting' | 'confirming' | 'returning' | 'transferring' | 'done'>('idle');
+
+  // Track return-to-sender transaction statuses
+  interface ReturnTxStatus {
+    tokenSymbol: string;
+    toAddress: string;
+    amount: number;
+    txHash: string;
+    status: 'pending' | 'confirming' | 'confirmed' | 'failed';
+  }
+  const [returnTxStatuses, setReturnTxStatuses] = useState<ReturnTxStatus[]>([]);
 
   const testReady = testWallet?.status === 'ready';
   const fundingReady = fundingWallet?.status === 'ready';
@@ -74,6 +193,19 @@ export default function TestWalletCleanup() {
       const htrBalanceData = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
       const htrBal = htrBalanceData[0]?.balance?.unlocked || 0n;
       setHtrBalance(htrBal);
+
+      // Collect all wallet addresses for sender lookup
+      const walletAddresses = new Set<string>();
+      try {
+        for await (const addr of testWallet.instance.getAllAddresses()) {
+          walletAddresses.add(addr.address);
+        }
+      } catch (err) {
+        console.warn('[Cleanup] Could not collect all wallet addresses:', err);
+        // At minimum, add address 0
+        const addr0 = await testWallet.instance.getAddressAtIndex(0);
+        walletAddresses.add(addr0);
+      }
 
       // Get custom tokens (exclude native HTR)
       const customTokenUids = testWallet.tokenUids?.filter((uid) => uid !== NATIVE_TOKEN_UID) || [];
@@ -102,6 +234,26 @@ export default function TestWalletCleanup() {
             const meltableAmount = Math.floor(balanceNum / 100) * 100;
             const remainder = balanceNum - meltableAmount;
 
+            // Determine if this token can be fully cleaned up
+            const canMeltAll = hasMeltAuthority && meltableAmount > 0 && remainder === 0;
+
+            // For tokens that can't be fully melted, try to find the original sender
+            let originalSender: string | undefined;
+            let canReturnToSender = false;
+
+            if (!canMeltAll && balanceNum > 0) {
+              // Token can't be fully cleaned - try to find original sender
+              const sender = await findOriginalSenderForToken(
+                testWallet.instance,
+                uid,
+                walletAddresses
+              );
+              if (sender) {
+                originalSender = sender;
+                canReturnToSender = true;
+              }
+            }
+
             return {
               uid,
               symbol: tokenInfo.symbol,
@@ -110,6 +262,8 @@ export default function TestWalletCleanup() {
               meltableAmount,
               remainder,
               hasMeltAuthority,
+              originalSender,
+              canReturnToSender,
             };
           } catch (err) {
             console.error(`Failed to load data for token ${uid}:`, err);
@@ -198,6 +352,7 @@ export default function TestWalletCleanup() {
     setErrors([]);
     setCompleted(false);
     setMeltTxStatuses([]);
+    setReturnTxStatuses([]);
     setCleanupPhase('melting');
     const newErrors: string[] = [];
     const meltTxHashes: { tokenSymbol: string; txHash: string }[] = [];
@@ -279,6 +434,116 @@ export default function TestWalletCleanup() {
         }
 
         // Small additional delay to ensure wallet state is fully updated
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      // Step 2.5: Return tokens that can't be melted to their original senders
+      const tokensToReturn = tokensToMelt.filter(
+        (t) => t.canReturnToSender && t.originalSender
+      );
+
+      if (tokensToReturn.length > 0) {
+        setCleanupPhase('returning');
+        setReturnTxStatuses([]);
+
+        for (let i = 0; i < tokensToReturn.length; i++) {
+          const token = tokensToReturn[i];
+          if (!token.originalSender) continue;
+
+          // Calculate amount to return:
+          // - If no melt authority: return full balance
+          // - If has melt authority but remainder: return only the remainder
+          const amountToReturn = !token.hasMeltAuthority
+            ? Number(token.balance)
+            : token.remainder;
+
+          if (amountToReturn <= 0) continue;
+
+          setExecutionStep(
+            `Returning ${amountToReturn} ${token.symbol} to sender (${i + 1}/${tokensToReturn.length})...`
+          );
+
+          try {
+            const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
+
+            const template = TransactionTemplateBuilder.new()
+              .addSetVarAction({ name: 'recipientAddr', value: token.originalSender })
+              .addSetVarAction({ name: 'changeAddr', value: testWalletAddress })
+              .addTokenOutput({
+                address: '{recipientAddr}',
+                amount: BigInt(amountToReturn),
+                token: token.uid,
+              })
+              .addCompleteAction({
+                changeAddress: '{changeAddr}',
+              })
+              .build();
+
+            const tx = await testWallet.instance.buildTxTemplate(template, {
+              signTx: true,
+              pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+            });
+
+            const { SendTransaction } = await import('@hathor/wallet-lib');
+            const sendTx = new SendTransaction({
+              storage: testWallet.instance.storage,
+              transaction: tx,
+            });
+
+            const txResponse = await sendTx.runFromMining();
+            const txHash = txResponse?.hash || tx.hash;
+
+            if (txHash) {
+              setReturnTxStatuses((prev) => [
+                ...prev,
+                {
+                  tokenSymbol: token.symbol,
+                  toAddress: token.originalSender!,
+                  amount: amountToReturn,
+                  txHash,
+                  status: 'pending',
+                },
+              ]);
+
+              // Wait for confirmation
+              setReturnTxStatuses((prev) =>
+                prev.map((t) =>
+                  t.txHash === txHash ? { ...t, status: 'confirming' } : t
+                )
+              );
+
+              const confirmed = await waitForTxConfirmation(txHash, testWallet.instance);
+
+              setReturnTxStatuses((prev) =>
+                prev.map((t) =>
+                  t.txHash === txHash
+                    ? { ...t, status: confirmed ? 'confirmed' : 'failed' }
+                    : t
+                )
+              );
+
+              if (!confirmed) {
+                newErrors.push(`Timeout waiting for ${token.symbol} return confirmation`);
+              }
+            }
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            newErrors.push(`Failed to return ${token.symbol} to sender: ${errorMessage}`);
+            console.error(`Failed to return ${token.symbol}:`, err);
+            setReturnTxStatuses((prev) => [
+              ...prev,
+              {
+                tokenSymbol: token.symbol,
+                toAddress: token.originalSender!,
+                amount: amountToReturn,
+                txHash: '',
+                status: 'failed',
+              },
+            ]);
+          }
+        }
+
+        // Small delay after returns
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
@@ -381,6 +646,7 @@ export default function TestWalletCleanup() {
               meltableAmount,
               remainder,
               hasMeltAuthority,
+              canReturnToSender: false, // Don't re-lookup after cleanup
             };
           } catch {
             return null;
@@ -402,8 +668,9 @@ export default function TestWalletCleanup() {
   };
 
   const hasTokensToMelt = tokensToMelt.some((t) => t.hasMeltAuthority && t.meltableAmount > 0);
+  const hasTokensToReturn = tokensToMelt.some((t) => t.canReturnToSender);
   const hasHtrToTransfer = htrBalance > 0n;
-  const canExecute = (hasTokensToMelt || hasHtrToTransfer) && !isExecuting && !isLoading;
+  const canExecute = (hasTokensToMelt || hasTokensToReturn || hasHtrToTransfer) && !isExecuting && !isLoading;
 
   // Calculate estimated HTR from melting (100 tokens = 1 HTR)
   const totalMeltableTokens = tokensToMelt
@@ -437,6 +704,7 @@ export default function TestWalletCleanup() {
             </p>
             <ul className="mt-2 mb-0 text-yellow-800">
               <li>Melt all custom tokens (in multiples of 100)</li>
+              <li>Return unmeltable tokens to their original sender (if found)</li>
               <li>Transfer all resulting HTR to the Funding Wallet (address 0)</li>
             </ul>
           </div>
@@ -505,49 +773,69 @@ export default function TestWalletCleanup() {
                       <th className="text-right py-2 px-3 font-bold">Will Melt</th>
                       <th className="text-right py-2 px-3 font-bold">Remainder</th>
                       <th className="text-center py-2 px-3 font-bold">Has Authority</th>
+                      <th className="text-center py-2 px-3 font-bold">Return to Sender</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {tokensToMelt.map((token) => (
-                      <tr key={token.uid} className="border-b border-gray-200">
-                        <td className="py-2 px-3">
-                          <span className="font-semibold">{token.symbol}</span>
-                          <span className="text-muted text-xs ml-2">({token.name})</span>
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {formatBalance(token.balance)}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {token.hasMeltAuthority ? (
-                            token.meltableAmount > 0 ? (
-                              <span className="text-green-700">{token.meltableAmount}</span>
+                    {tokensToMelt.map((token) => {
+                      // Calculate amount that will be returned to sender
+                      const returnAmount = token.canReturnToSender
+                        ? (!token.hasMeltAuthority ? Number(token.balance) : token.remainder)
+                        : 0;
+
+                      return (
+                        <tr key={token.uid} className="border-b border-gray-200">
+                          <td className="py-2 px-3">
+                            <span className="font-semibold">{token.symbol}</span>
+                            <span className="text-muted text-xs ml-2">({token.name})</span>
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono">
+                            {formatBalance(token.balance)}
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono">
+                            {token.hasMeltAuthority ? (
+                              token.meltableAmount > 0 ? (
+                                <span className="text-green-700">{token.meltableAmount}</span>
+                              ) : (
+                                <span className="text-muted">0</span>
+                              )
                             ) : (
-                              <span className="text-muted">0</span>
-                            )
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {token.hasMeltAuthority ? (
-                            token.remainder > 0 ? (
-                              <span className="text-orange-600">{token.remainder}</span>
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono">
+                            {token.hasMeltAuthority ? (
+                              token.remainder > 0 ? (
+                                <span className="text-orange-600">{token.remainder}</span>
+                              ) : (
+                                <span className="text-muted">0</span>
+                              )
                             ) : (
-                              <span className="text-muted">0</span>
-                            )
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-center">
-                          {token.hasMeltAuthority ? (
-                            <span className="badge badge-success badge-sm">Yes</span>
-                          ) : (
-                            <span className="badge badge-error badge-sm">No (skip)</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            {token.hasMeltAuthority ? (
+                              <span className="badge badge-success badge-sm">Yes</span>
+                            ) : (
+                              <span className="badge badge-error badge-sm">No</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            {token.canReturnToSender && returnAmount > 0 ? (
+                              <div className="flex flex-col items-center">
+                                <span className="badge badge-info badge-sm mb-1">{returnAmount}</span>
+                                <span className="text-2xs text-muted" title={token.originalSender}>
+                                  {token.originalSender?.slice(0, 8)}...
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -584,12 +872,63 @@ export default function TestWalletCleanup() {
             </div>
           </div>
 
-          {/* Tokens Remaining After Cleanup */}
-          {tokensRemaining.length > 0 && (
+          {/* Tokens to Return to Sender */}
+          {tokensToMelt.some((t) => t.canReturnToSender) && (
+            <div className="card-primary mb-7.5 bg-cyan-50 border-2 border-cyan-400">
+              <h2 className="text-xl font-bold mb-2 text-cyan-900">Tokens to Return to Sender</h2>
+              <p className="text-sm text-cyan-800 mb-4">
+                The following tokens will be returned to the address that originally sent them:
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-cyan-300">
+                    <tr>
+                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Token</th>
+                      <th className="text-right py-2 px-3 font-bold text-cyan-900">Amount</th>
+                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Return To</th>
+                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tokensToMelt
+                      .filter((t) => t.canReturnToSender && t.originalSender)
+                      .map((token) => {
+                        const returnAmount = !token.hasMeltAuthority
+                          ? Number(token.balance)
+                          : token.remainder;
+                        const reason = !token.hasMeltAuthority
+                          ? 'No melt authority'
+                          : 'Remainder after melting';
+
+                        return (
+                          <tr key={token.uid} className="border-b border-cyan-200">
+                            <td className="py-2 px-3">
+                              <span className="font-semibold">{token.symbol}</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-cyan-700">
+                              {returnAmount}
+                            </td>
+                            <td className="py-2 px-3 font-mono text-xs text-cyan-700" title={token.originalSender}>
+                              {token.originalSender?.slice(0, 12)}...{token.originalSender?.slice(-8)}
+                            </td>
+                            <td className="py-2 px-3 text-cyan-700 text-xs">
+                              {reason}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Tokens Remaining After Cleanup (truly remaining - can't be returned) */}
+          {tokensRemaining.filter((t) => !t.canReturnToSender).length > 0 && (
             <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
               <h2 className="text-xl font-bold mb-2 text-orange-900">Tokens Remaining After Cleanup</h2>
               <p className="text-sm text-orange-800 mb-4">
-                The following tokens will remain in the Test Wallet after cleanup. These require manual cleanup later:
+                The following tokens cannot be melted and no original sender was found. They will remain in the Test Wallet:
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -601,35 +940,37 @@ export default function TestWalletCleanup() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tokensRemaining.map((token) => {
-                      let reason = '';
-                      let remainingAmount = 0;
+                    {tokensRemaining
+                      .filter((t) => !t.canReturnToSender)
+                      .map((token) => {
+                        let reason = '';
+                        let remainingAmount = 0;
 
-                      if (!token.hasMeltAuthority) {
-                        reason = 'No melt authority';
-                        remainingAmount = Number(token.balance);
-                      } else if (token.meltableAmount === 0) {
-                        reason = 'Balance below 100 (cannot melt)';
-                        remainingAmount = Number(token.balance);
-                      } else if (token.remainder > 0) {
-                        reason = 'Remainder after melting';
-                        remainingAmount = token.remainder;
-                      }
+                        if (!token.hasMeltAuthority) {
+                          reason = 'No melt authority (sender unknown)';
+                          remainingAmount = Number(token.balance);
+                        } else if (token.meltableAmount === 0) {
+                          reason = 'Balance below 100 (sender unknown)';
+                          remainingAmount = Number(token.balance);
+                        } else if (token.remainder > 0) {
+                          reason = 'Remainder after melting (sender unknown)';
+                          remainingAmount = token.remainder;
+                        }
 
-                      return (
-                        <tr key={token.uid} className="border-b border-orange-200">
-                          <td className="py-2 px-3">
-                            <span className="font-semibold">{token.symbol}</span>
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono text-orange-700">
-                            {remainingAmount}
-                          </td>
-                          <td className="py-2 px-3 text-orange-700 text-xs">
-                            {reason}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        return (
+                          <tr key={token.uid} className="border-b border-orange-200">
+                            <td className="py-2 px-3">
+                              <span className="font-semibold">{token.symbol}</span>
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-orange-700">
+                              {remainingAmount}
+                            </td>
+                            <td className="py-2 px-3 text-orange-700 text-xs">
+                              {reason}
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -637,7 +978,7 @@ export default function TestWalletCleanup() {
           )}
 
           {/* Cleanup Status - shown during execution */}
-          {(isExecuting || (cleanupPhase !== 'idle' && meltTxStatuses.length > 0)) && (
+          {(isExecuting || (cleanupPhase !== 'idle' && (meltTxStatuses.length > 0 || returnTxStatuses.length > 0))) && (
             <div className="card-primary mb-7.5 bg-purple-50 border-2 border-purple-400">
               <h2 className="text-xl font-bold mb-4 text-purple-900">Cleanup Status</h2>
 
@@ -648,11 +989,13 @@ export default function TestWalletCleanup() {
                   <span className={`badge ${
                     cleanupPhase === 'melting' ? 'badge-warning' :
                     cleanupPhase === 'confirming' ? 'badge-info' :
+                    cleanupPhase === 'returning' ? 'badge-secondary' :
                     cleanupPhase === 'transferring' ? 'badge-primary' :
                     cleanupPhase === 'done' ? 'badge-success' : 'badge-ghost'
                   }`}>
                     {cleanupPhase === 'melting' && 'Melting Tokens'}
                     {cleanupPhase === 'confirming' && 'Waiting for Confirmations'}
+                    {cleanupPhase === 'returning' && 'Returning Tokens to Senders'}
                     {cleanupPhase === 'transferring' && 'Transferring HTR'}
                     {cleanupPhase === 'done' && 'Completed'}
                     {cleanupPhase === 'idle' && 'Idle'}
@@ -671,6 +1014,43 @@ export default function TestWalletCleanup() {
                     {meltTxStatuses.map((tx, idx) => (
                       <div key={idx} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2">
                         <span className="font-semibold">{tx.tokenSymbol}</span>
+                        <div className="flex items-center gap-2">
+                          {tx.txHash && (
+                            <span className="font-mono text-xs text-gray-500">
+                              {tx.txHash.slice(0, 8)}...
+                            </span>
+                          )}
+                          <span className={`badge badge-sm ${
+                            tx.status === 'pending' ? 'badge-warning' :
+                            tx.status === 'confirming' ? 'badge-info' :
+                            tx.status === 'confirmed' ? 'badge-success' :
+                            'badge-error'
+                          }`}>
+                            {tx.status === 'pending' && 'Pending'}
+                            {tx.status === 'confirming' && 'Confirming...'}
+                            {tx.status === 'confirmed' && 'Confirmed'}
+                            {tx.status === 'failed' && 'Failed'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Return to Sender Transactions Status */}
+              {returnTxStatuses.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-bold text-purple-800 mb-2">Return to Sender Transactions:</h3>
+                  <div className="space-y-1">
+                    {returnTxStatuses.map((tx, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2">
+                        <div className="flex flex-col">
+                          <span className="font-semibold">{tx.tokenSymbol}</span>
+                          <span className="text-2xs text-muted" title={tx.toAddress}>
+                            {tx.amount} to {tx.toAddress.slice(0, 8)}...
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           {tx.txHash && (
                             <span className="font-mono text-xs text-gray-500">
@@ -730,7 +1110,7 @@ export default function TestWalletCleanup() {
             </button>
             {!canExecute && !isExecuting && !isLoading && (
               <p className="text-sm text-muted text-center mt-2 mb-0">
-                {!hasTokensToMelt && !hasHtrToTransfer
+                {!hasTokensToMelt && !hasTokensToReturn && !hasHtrToTransfer
                   ? 'Nothing to clean up.'
                   : 'Cannot execute cleanup.'}
               </p>
