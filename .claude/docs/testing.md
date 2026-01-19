@@ -55,6 +55,7 @@ Test Redux reducers and actions:
 - **stageSlice.test.ts**: Stage navigation, scroll position management
 - **toastSlice.test.ts**: Toast notification state (add/remove)
 - **navigationSlice.test.ts**: Cross-stage navigation data
+- **multisigSlice.test.ts**: Multisig wallet management, transaction flow, memoized selectors
 
 ### Configuration Tests (`tests/*.test.ts`)
 
@@ -120,6 +121,42 @@ describe('myConfig constants', () => {
 });
 ```
 
+### Testing Memoized Selectors
+
+When testing selectors that use `createSelector` for memoization, create a mock `RootState`:
+
+```typescript
+import { describe, test, expect } from 'bun:test';
+import reducer, { selectItems, selectFilteredItems } from '../src/store/slices/mySlice';
+import type { RootState } from '../src/store';
+
+// Helper to create mock RootState with slice state
+const createMockRootState = (sliceState: ReturnType<typeof reducer>): RootState => ({
+  mySlice: sliceState,
+} as RootState);
+
+describe('selectors', () => {
+  test('selectItems returns array of items', () => {
+    const state = reducer(undefined, { type: 'unknown' });
+    const rootState = createMockRootState(state);
+    const items = selectItems(rootState);
+
+    expect(Array.isArray(items)).toBe(true);
+  });
+
+  test('selectFilteredItems filters correctly', () => {
+    let state = reducer(undefined, { type: 'unknown' });
+    state = reducer(state, addItem({ status: 'ready' }));
+    state = reducer(state, addItem({ status: 'pending' }));
+
+    const rootState = createMockRootState(state);
+    const readyItems = selectFilteredItems(rootState);
+
+    expect(readyItems.every((item) => item.status === 'ready')).toBe(true);
+  });
+});
+```
+
 ## Test Patterns
 
 ### 1. Arrange-Act-Assert
@@ -173,16 +210,63 @@ test('all groups have required properties', () => {
 });
 ```
 
+### 4. Workflow/Flow Simulation
+
+Test complete workflows by chaining multiple reducer actions:
+
+```typescript
+describe('transaction flow simulation', () => {
+  test('complete flow from idle to complete', () => {
+    let state = getInitialState();
+
+    // Setup: mark participants ready
+    state = reducer(state, updateStatus({ id: 'p1', status: 'ready' }));
+    state = reducer(state, updateStatus({ id: 'p2', status: 'ready' }));
+
+    // Select signers
+    state = reducer(state, toggleSigner('p1'));
+    state = reducer(state, toggleSigner('p2'));
+    expect(state.selectedSigners.length).toBe(2);
+
+    // Create transaction
+    state = reducer(state, setStep('creating'));
+    state = reducer(state, setTxHex('0001020304'));
+    state = reducer(state, setStep('signing'));
+
+    // Collect signatures
+    state = reducer(state, addSignature({ id: 'p1', sig: 'sig1' }));
+    state = reducer(state, addSignature({ id: 'p2', sig: 'sig2' }));
+    expect(state.signatures.length).toBe(2);
+
+    // Complete
+    state = reducer(state, setResult({ hash: 'txhash' }));
+    state = reducer(state, setStep('complete'));
+
+    expect(state.step).toBe('complete');
+    expect(state.result?.hash).toBe('txhash');
+  });
+
+  test('flow with error handling', () => {
+    let state = getInitialState();
+    state = reducer(state, setStep('creating'));
+    state = reducer(state, setError('Insufficient funds'));
+
+    expect(state.step).toBe('error');
+    expect(state.error).toBe('Insufficient funds');
+  });
+});
+```
+
 ## Coverage
 
 The current test suite covers:
 
-| Category | Modules Tested | Coverage Level |
-|----------|----------------|----------------|
-| Utilities | 5 modules | Core functions |
-| Redux Slices | 3 slices | Full reducer coverage |
-| Constants | 2 modules | All exported values |
-| Types | 1 module | Functions + structures |
+| Category       | Modules Tested | Coverage Level            |
+|----------------|----------------|---------------------------|
+| Utilities      | 5 modules      | Core functions            |
+| Redux Slices   | 4 slices       | Reducers + selectors      |
+| Constants      | 2 modules      | All exported values       |
+| Types          | 1 module       | Functions + structures    |
 
 ## Expanding Tests
 
