@@ -5,12 +5,12 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications' | 'test-wallet-cleanup';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management';
 
 /**
  * Available stage groups
  */
-export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'push-notifications' | 'auditing';
+export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig';
 
 /**
  * Stage configuration
@@ -201,6 +201,18 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Test Wallet Cleanup',
         description: 'Melt all tokens and return HTR to funding wallet',
         icon: '🧹',
+      },
+    ],
+  },
+  {
+    id: 'multisig',
+    title: 'MultiSig',
+    stages: [
+      {
+        id: 'multisig-wallet-management',
+        title: 'MultiSig Wallets',
+        description: 'Manage multisig participant wallets and send transactions',
+        icon: '🔐',
       },
     ],
   },
