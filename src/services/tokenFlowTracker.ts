@@ -14,6 +14,7 @@
 
 import type { AddressTokenFlow, TokenFlowResult, UnspentOutput, } from '../types/tokenFlowTracker';
 import { findWalletByAddress } from './addressDatabase';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 // Transaction types matching IHistoryTx from wallet-lib
 interface HistoryOutput {
@@ -46,11 +47,14 @@ interface HistoryTx {
 
 // Internal tracking structure for each address
 interface AddressTracker {
-  sent: number;
-  received: number;
+  sent: bigint;
+  received: bigint;
   // Potential unspent outputs: key = "txId:outputIndex"
   potentialUnspent: Map<string, UnspentOutput>;
 }
+
+// Set to true to enable verbose debug logging
+const DEBUG = true;
 
 /**
  * Tracks token flow for a specific token across all transactions.
@@ -68,6 +72,18 @@ export async function trackTokenFlow(
   const errors: string[] = [];
   const addressTrackers = new Map<string, AddressTracker>();
   const spentOutputs = new Set<string>(); // "txId:outputIndex" format
+
+  const debugLog = (msg: string, data?: unknown) => {
+    if (DEBUG) {
+      if (data !== undefined) {
+        console.log(`[TokenFlow DEBUG] ${msg}`, data);
+      } else {
+        console.log(`[TokenFlow DEBUG] ${msg}`);
+      }
+    }
+  };
+
+  debugLog(`Starting tracking for token: ${tokenUid}`);
 
   try {
     // Step 1: Collect all wallet addresses
@@ -87,32 +103,70 @@ export async function trackTokenFlow(
       }
     }
 
-    // Step 2: Get transaction history and sort chronologically (oldest first)
-    const txHistory = await walletInstance.getTxHistory();
+    debugLog(`Collected ${walletAddresses.size} wallet addresses`);
+    if (DEBUG && walletAddresses.size <= 10) {
+      debugLog('Wallet addresses:', [...walletAddresses]);
+    }
+
+    // Step 2: Get transaction history for this specific token and sort chronologically (oldest first)
+    // Pass token_id to getTxHistory to get only transactions involving this token
+    const txHistory = await walletInstance.getTxHistory({ token_id: tokenUid });
+    debugLog(`Got ${txHistory.length} transactions from history for token ${tokenUid.slice(0, 8)}`);
+
     const sortedHistory = [...txHistory].sort(
       (a: { timestamp?: number }, b: { timestamp?: number }) =>
         (a.timestamp || 0) - (b.timestamp || 0)
     );
 
     // Step 3: Process each transaction
+    let txProcessed = 0;
+    let txWithToken = 0;
+
     for (const tx of sortedHistory) {
       const txId = tx.tx_id || tx.txId;
       if (!txId) continue;
 
       try {
         const fullTx = (await walletInstance.getTx(txId)) as HistoryTx | null;
-        if (!fullTx) continue;
+        if (!fullTx) {
+          debugLog(`TX ${txId.slice(0, 8)}: getTx returned null`);
+          continue;
+        }
 
-        // Check if this transaction involves the target token
-        const tokenIndex = fullTx.tokens?.indexOf(tokenUid);
-        if (tokenIndex === undefined || tokenIndex === -1) continue;
+        txProcessed++;
 
-        // token_data is 1-indexed for custom tokens (0 = HTR)
-        const expectedTokenData = tokenIndex + 1;
+        // Debug: Log full transaction structure for first transaction to understand the data format
+        if (DEBUG && txProcessed === 1) {
+          debugLog(`TX ${txId.slice(0, 8)}: Full transaction structure:`, JSONBigInt.stringify(fullTx, 2).slice(0, 2000));
+          debugLog(`TX ${txId.slice(0, 8)}: Keys on fullTx:`, Object.keys(fullTx));
+        }
+
+        // Debug: Log first few transactions
+        if (DEBUG && txProcessed <= 3) {
+          // Also log first output to see its structure
+          if (fullTx.outputs?.[0]) {
+            debugLog(`TX ${txId.slice(0, 8)}: First output structure:`, JSONBigInt.stringify(fullTx.outputs[0]));
+          }
+        }
+
+        // Since we queried getTxHistory with token_id filter, all transactions involve our token
+        // Match inputs/outputs by checking the 'token' property equals our tokenUid
+        txWithToken++;
+
+        // Helper to check if an input/output belongs to our token
+        const matchesToken = (item: { token_data: number; token?: string }) => {
+          return item.token === tokenUid;
+        };
+
+        debugLog(`TX ${txId.slice(0, 8)}: Processing transaction`);
 
         // Process inputs - mark outputs as spent and track received amounts
         for (const input of fullTx.inputs || []) {
-          if (input.token_data !== expectedTokenData) continue;
+          const inputWithToken = input as HistoryInput & { token?: string };
+          if (DEBUG) {
+            debugLog(`TX ${txId.slice(0, 8)}: Input token_data=${input.token_data}, token=${inputWithToken.token}, addr=${input.decoded?.address?.slice(0, 12)}`);
+          }
+          if (!matchesToken(inputWithToken)) continue;
 
           // Mark the referenced output as spent
           const spentKey = `${input.tx_id}:${input.index}`;
@@ -120,37 +174,57 @@ export async function trackTokenFlow(
 
           // If input is from an EXTERNAL address, this means tokens are coming BACK to wallet
           const inputAddress = input.decoded?.address;
-          if (inputAddress && !walletAddresses.has(inputAddress)) {
+          const isExternal = inputAddress && !walletAddresses.has(inputAddress);
+          debugLog(`TX ${txId.slice(0, 8)}: Input from ${inputAddress?.slice(0, 12)}, isExternal=${isExternal}, value=${input.value}`);
+
+          if (isExternal) {
             const tracker = getOrCreateTracker(addressTrackers, inputAddress);
-            tracker.received += input.value;
+            tracker.received += BigInt(input.value);
+            debugLog(`TX ${txId.slice(0, 8)}: Recorded RECEIVED ${input.value} from ${inputAddress.slice(0, 12)}`);
           }
         }
 
         // Process outputs - track sent amounts and potential unspent outputs
         for (let outputIndex = 0; outputIndex < (fullTx.outputs?.length || 0); outputIndex++) {
           const output = fullTx.outputs[outputIndex];
-          if (output.token_data !== expectedTokenData) continue;
+          const outputWithToken = output as HistoryOutput & { token?: string };
+          if (DEBUG) {
+            debugLog(`TX ${txId.slice(0, 8)}: Output[${outputIndex}] token_data=${output.token_data}, token=${outputWithToken.token}, addr=${output.decoded?.address?.slice(0, 12)}`);
+          }
+          if (!matchesToken(outputWithToken)) continue;
 
           const outputAddress = output.decoded?.address;
           if (!outputAddress) continue;
 
           // If output is to an EXTERNAL address, tokens are going OUT
-          if (!walletAddresses.has(outputAddress)) {
+          const isExternal = !walletAddresses.has(outputAddress);
+          debugLog(`TX ${txId.slice(0, 8)}: Output to ${outputAddress.slice(0, 12)}, isExternal=${isExternal}, value=${output.value}`);
+
+          if (isExternal) {
             const tracker = getOrCreateTracker(addressTrackers, outputAddress);
-            tracker.sent += output.value;
+            tracker.sent += BigInt(output.value);
 
             // Track as potential unspent output
             const outputKey = `${txId}:${outputIndex}`;
             tracker.potentialUnspent.set(outputKey, {
               txId,
               outputIndex,
-              amount: output.value,
+              amount: Number(output.value),
             });
+            debugLog(`TX ${txId.slice(0, 8)}: Recorded SENT ${output.value} to ${outputAddress.slice(0, 12)}`);
           }
         }
       } catch (err) {
         console.warn(`[TokenFlow] Could not process tx ${txId.slice(0, 8)}:`, err);
       }
+    }
+
+    debugLog(`Processed ${txProcessed} transactions, ${txWithToken} contained the target token`);
+    debugLog(`Address trackers count: ${addressTrackers.size}`);
+
+    // Debug: Show all tracked addresses
+    for (const [address, tracker] of addressTrackers) {
+      debugLog(`Address ${address.slice(0, 12)}: sent=${tracker.sent}, received=${tracker.received}, net=${tracker.sent - tracker.received}`);
     }
 
     // Step 4: Build results - filter spent outputs and calculate net balances
@@ -165,10 +239,11 @@ export async function trackTokenFlow(
         }
       }
 
-      const netBalance = tracker.sent - tracker.received;
+      const netBalanceBigInt = tracker.sent - tracker.received;
+      debugLog(`Address ${address.slice(0, 12)}: netBalance=${netBalanceBigInt}, unspentOutputs=${unspentOutputs.length}`);
 
       // Only include addresses with positive net balance (they still hold tokens)
-      if (netBalance > 0) {
+      if (netBalanceBigInt > 0n) {
         // Look up wallet ID from address database
         let walletId: string | undefined;
         try {
@@ -180,11 +255,12 @@ export async function trackTokenFlow(
           // Non-critical: continue without wallet ID
         }
 
+        // Convert BigInt to number for the result (token amounts should fit in Number)
         addressFlows.push({
           address,
-          netBalance,
-          totalSent: tracker.sent,
-          totalReceived: tracker.received,
+          netBalance: Number(netBalanceBigInt),
+          totalSent: Number(tracker.sent),
+          totalReceived: Number(tracker.received),
           unspentOutputs,
           walletId,
         });
@@ -234,8 +310,8 @@ function getOrCreateTracker(
   let tracker = trackers.get(address);
   if (!tracker) {
     tracker = {
-      sent: 0,
-      received: 0,
+      sent: 0n,
+      received: 0n,
       potentialUnspent: new Map(),
     };
     trackers.set(address, tracker);
