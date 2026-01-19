@@ -7,35 +7,45 @@
  */
 
 import { useState } from 'react';
-import { MdCheckCircle, MdError, MdPending, MdPlayArrow, MdRefresh, MdStop } from 'react-icons/md';
+import { MdCheckCircle, MdError, MdPending, MdPlayArrow, MdRefresh, MdSend, MdStop } from 'react-icons/md';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
-	assembleAndSendTransaction,
-	collectSignature,
-	createMultisigTransaction,
-	multisigWalletInstancesMap,
-	refreshParticipantBalance,
-	resetTransaction,
-	selectParticipants,
-	selectReadyParticipants,
-	selectTransaction,
-	startMultisigParticipant,
-	stopMultisigParticipant,
-	toggleSigner,
+  assembleAndSendTransaction,
+  collectSignature,
+  createMultisigTransaction,
+  multisigWalletInstancesMap,
+  refreshParticipantBalance,
+  resetTransaction,
+  selectMultisigNetwork,
+  selectParticipants,
+  selectReadyParticipants,
+  selectTransaction,
+  setNetwork,
+  startMultisigParticipant,
+  stopMultisigParticipant,
+  toggleSigner,
 } from '../../store/slices/multisigSlice';
 import { MULTISIG_CONFIG, MULTISIG_MIN_SIGNATURES } from '../../constants/multisig';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
 import { NETWORK_CONFIG } from '../../constants/network';
+import { useWalletStore } from '../../hooks/useWalletStore';
 
 export default function MultisigWalletManagement() {
   const dispatch = useAppDispatch();
+  const { getWallet } = useWalletStore();
 
   // Redux state
   const participants = useAppSelector(selectParticipants);
   const readyParticipants = useAppSelector(selectReadyParticipants);
   const transaction = useAppSelector(selectTransaction);
-  const network = useAppSelector((state) => state.multisig.network);
+  const network = useAppSelector(selectMultisigNetwork);
+
+  // Get funding and test wallet info for quick address fill
+  const fundingWalletId = useAppSelector((state) => state.walletSelection.fundingWalletId);
+  const testWalletId = useAppSelector((state) => state.walletSelection.testWalletId);
+  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
   // Local form state
   const [destination, setDestination] = useState('');
@@ -159,6 +169,28 @@ export default function MultisigWalletManagement() {
     setAmount('');
   };
 
+  const handleNetworkSwitch = async () => {
+    const newNetwork = network === 'TESTNET' ? 'MAINNET' : 'TESTNET';
+
+    // Stop all running wallets first
+    const runningParticipants = participants.filter((p) => p.status === 'ready' || p.status === 'connecting' || p.status === 'syncing');
+    for (const p of runningParticipants) {
+      try {
+        await dispatch(stopMultisigParticipant(p.id)).unwrap();
+      } catch (error) {
+        console.error(`Failed to stop participant ${p.id}:`, error);
+      }
+    }
+
+    // Reset any ongoing transaction
+    dispatch(resetTransaction());
+    setDestination('');
+    setAmount('');
+
+    // Switch network
+    dispatch(setNetwork(newNetwork));
+  };
+
   // Helper functions
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -227,28 +259,45 @@ export default function MultisigWalletManagement() {
 
       {/* Configuration Info */}
       <div className="card-primary mb-7.5 bg-blue-50 border border-info">
-        <div className="flex items-start gap-3">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-info flex-shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <div>
-            <p className="font-bold text-blue-900 m-0">MultiSig Configuration</p>
-            <p className="text-sm text-blue-800 mt-1 mb-0">
-              This is a <strong>{MULTISIG_MIN_SIGNATURES}-of-{MULTISIG_CONFIG.seeds.length}</strong>{' '}
-              multisig wallet. At least {MULTISIG_MIN_SIGNATURES} participants must sign each
-              transaction.
-            </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-info flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <p className="font-bold text-blue-900 m-0">MultiSig Configuration</p>
+              <p className="text-sm text-blue-800 mt-1 mb-0">
+                This is a <strong>{MULTISIG_MIN_SIGNATURES}-of-{MULTISIG_CONFIG.seeds.length}</strong>{' '}
+                multisig wallet. At least {MULTISIG_MIN_SIGNATURES} participants must sign each
+                transaction.
+              </p>
+            </div>
+          </div>
+          {/* Network Toggle */}
+          <div className="flex flex-col items-end gap-1">
+            <span className={`text-xs font-bold px-2 py-1 rounded ${
+              network === 'TESTNET' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
+            }`}>
+              {network}
+            </span>
+            <button
+              onClick={handleNetworkSwitch}
+              className="text-xs text-info hover:underline"
+              title={`Switch to ${network === 'TESTNET' ? 'Mainnet' : 'Testnet'}`}
+            >
+              Switch to {network === 'TESTNET' ? 'Mainnet' : 'Testnet'}
+            </button>
           </div>
         </div>
       </div>
@@ -439,6 +488,31 @@ export default function MultisigWalletManagement() {
             disabled={transaction.step !== 'idle'}
             className="input font-mono"
           />
+          {/* Quick fill buttons */}
+          {transaction.step === 'idle' && (fundingWallet?.firstAddress || testWallet?.firstAddress) && (
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {fundingWallet?.firstAddress && (
+                <button
+                  type="button"
+                  onClick={() => setDestination(fundingWallet.firstAddress!)}
+                  className="btn-secondary text-xs"
+                  title={fundingWallet.firstAddress}
+                >
+                  Funding Wallet ({fundingWallet.metadata.friendlyName})
+                </button>
+              )}
+              {testWallet?.firstAddress && (
+                <button
+                  type="button"
+                  onClick={() => setDestination(testWallet.firstAddress!)}
+                  className="btn-secondary text-xs"
+                  title={testWallet.firstAddress}
+                >
+                  Test Wallet ({testWallet.metadata.friendlyName})
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="mb-4">
@@ -561,13 +635,21 @@ export default function MultisigWalletManagement() {
           <button
             onClick={handleAssembleAndSend}
             disabled={!canAssembleAndSend || isSending}
-            className={`w-full btn text-base font-bold mb-4 ${
+            className={`w-full btn text-base font-bold mb-4 flex items-center justify-center gap-2 ${
               canAssembleAndSend && !isSending ? 'btn-success' : 'btn-secondary cursor-not-allowed'
             }`}
           >
-            {isSending
-              ? 'Assembling & Sending...'
-              : `Assemble & Send (${transaction.collectedSignatures.length}/${MULTISIG_MIN_SIGNATURES} signatures)`}
+            {isSending ? (
+              <>
+                <MdPending className="animate-spin" />
+                Assembling & Sending...
+              </>
+            ) : (
+              <>
+                <MdSend />
+                Assemble & Send ({transaction.collectedSignatures.length}/{MULTISIG_MIN_SIGNATURES} signatures)
+              </>
+            )}
           </button>
         )}
 

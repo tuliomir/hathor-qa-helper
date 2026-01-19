@@ -4,7 +4,7 @@
  * Manages multisig participant wallets and transaction state
  */
 
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
@@ -490,32 +490,23 @@ export const {
 export default multisigSlice.reducer;
 
 /**
- * Selectors
+ * Selectors (memoized to prevent unnecessary rerenders)
  */
-export const selectParticipants = (state: RootState) =>
-  Object.values(state.multisig.participants);
+const selectParticipantsRecord = (state: RootState) => state.multisig.participants;
 
-export const selectReadyParticipants = (state: RootState) =>
-  selectParticipants(state).filter((p) => p.status === 'ready');
+export const selectParticipants = createSelector(
+  [selectParticipantsRecord],
+  (participants) => Object.values(participants)
+);
+
+export const selectReadyParticipants = createSelector(
+  [selectParticipants],
+  (participants) => participants.filter((p) => p.status === 'ready')
+);
 
 export const selectSelectedSigners = (state: RootState) =>
   state.multisig.transaction.selectedSigners;
 
 export const selectTransaction = (state: RootState) => state.multisig.transaction;
 
-export const selectCanSign = (state: RootState) => {
-  const { step, selectedSigners } = state.multisig.transaction;
-  const readyParticipants = selectReadyParticipants(state);
-
-  return (
-    step === 'signing' &&
-    selectedSigners.length >= MULTISIG_CONFIG.numSignatures &&
-    selectedSigners.every((id) => readyParticipants.some((p) => p.id === id))
-  );
-};
-
-export const selectCanAssemble = (state: RootState) => {
-  const { step, collectedSignatures } = state.multisig.transaction;
-
-  return step === 'signing' && collectedSignatures.length >= MULTISIG_CONFIG.numSignatures;
-};
+export const selectMultisigNetwork = (state: RootState) => state.multisig.network;
