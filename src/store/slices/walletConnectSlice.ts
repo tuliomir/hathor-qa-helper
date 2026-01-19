@@ -4,12 +4,14 @@
  * Manages WalletConnect client, session, and connection state
  */
 
-import { createSlice, type PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type Client from '@walletconnect/sign-client';
-import type { SessionTypes, PairingTypes } from '@walletconnect/types';
+import type { PairingTypes, SessionTypes } from '@walletconnect/types';
 import { getSdkError } from '@walletconnect/utils';
 import { WalletConnectModal } from '@walletconnect/modal';
-import { initializeClient } from '../../services/walletConnectClient';
+import { generateHathorWalletConnectionDeepLink, initializeClient } from '../../services/walletConnectClient';
+import { setDeepLink, showDeepLinkModal } from './deepLinkSlice';
+import { addToast } from './toastSlice';
 import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
 
 interface WalletConnectState {
@@ -112,7 +114,7 @@ export const connectWalletConnect = createAsyncThunk<
   SessionTypes.Struct,
   { pairing?: { topic: string } } | undefined,
   { state: { walletConnect: WalletConnectState } }
->('walletConnect/connect', async (params, { getState }) => {
+>('walletConnect/connect', async (params, { getState, dispatch }) => {
   const { client, session } = getState().walletConnect;
 
   if (!client) {
@@ -167,6 +169,23 @@ export const connectWalletConnect = createAsyncThunk<
       uri,
       standaloneChains,
     });
+
+    // Generate deep link and show modal immediately for mobile users to scan QR code
+    // Both modals (WalletConnect and DeepLink) need to be visible:
+    // - WalletConnect modal handles the web3 connection flow
+    // - DeepLink modal provides the QR code for mobile devices to open Hathor Wallet
+    const deepLinkUrl = generateHathorWalletConnectionDeepLink(uri);
+    dispatch(setDeepLink({ url: deepLinkUrl, title: 'Connect to Hathor Wallet' }));
+    dispatch(showDeepLinkModal());
+    dispatch(
+      addToast({
+        id: `deeplink-toast-${Date.now()}`,
+        message: 'Deep link available. Click to show QR code.',
+        type: 'info',
+        duration: 30000, // 30 seconds
+        actionType: 'showDeepLinkModal',
+      })
+    );
   }
 
   try {

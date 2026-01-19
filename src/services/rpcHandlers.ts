@@ -9,6 +9,7 @@ import type Client from '@walletconnect/sign-client';
 import type { SessionTypes } from '@walletconnect/types';
 import { HATHOR_TESTNET_CHAIN } from '../constants/walletConnect';
 import { getOracleBuffer } from '../utils/betHelpers';
+import { generateHathorWalletRequestDeepLink } from './walletConnectClient';
 
 export interface CreateTokenParams {
   name: string;
@@ -29,6 +30,7 @@ export interface RpcHandlerDependencies {
   session: SessionTypes.Struct; // Active WalletConnect session
   balanceTokens?: string[];
   dryRun?: boolean;  // If true, skip actual RPC call
+  onDeepLinkAvailable?: (url: string, title: string) => void;  // Callback when a deep link needs to be shown
 }
 
 const DEFAULT_NETWORK = 'testnet';
@@ -37,7 +39,7 @@ const DEFAULT_NETWORK = 'testnet';
  * Create RPC handler functions
  */
 export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
-  const { client, session, balanceTokens = ['00'], dryRun = false } = deps;
+  const { client, session, balanceTokens = ['00'], dryRun = false, onDeepLinkAvailable } = deps;
 
   return {
     /**
@@ -415,6 +417,12 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Dry run: don't actually call RPC
           response = null;
         } else {
+          // Generate deep link for mobile users to approve the request
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Approve Token Creation');
+          }
+
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,

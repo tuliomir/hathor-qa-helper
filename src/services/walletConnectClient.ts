@@ -10,6 +10,7 @@ import {
   DEFAULT_LOGGER,
   DEFAULT_PROJECT_ID,
   DEFAULT_RELAY_URL,
+  HATHOR_WALLET_DEEP_LINK_SCHEME,
 } from '../constants/walletConnect';
 
 let client: Client | null = null;
@@ -52,4 +53,23 @@ export function getClient(): Client {
     throw new Error('WalletConnect client is not initialized');
   }
   return client;
+}
+
+/**
+ * Generate a deep link URL for connecting to Hathor Wallet via WalletConnect
+ * @param wcUri The WalletConnect URI
+ * @returns The deep link URL for the Hathor Wallet
+ */
+export function generateHathorWalletConnectionDeepLink(wcUri: string): string {
+  return `${HATHOR_WALLET_DEEP_LINK_SCHEME}://wc?uri=${encodeURIComponent(wcUri)}`;
+}
+
+/**
+ * Generate a deep link URL for a WalletConnect request
+ * @param sessionTopic The WalletConnect session topic
+ * @returns The deep link URL for the Hathor Wallet
+ */
+export function generateHathorWalletRequestDeepLink(sessionTopic: string): string {
+  const wcUri = `wc:${sessionTopic}@2`;
+  return `${HATHOR_WALLET_DEEP_LINK_SCHEME}://wc?uri=${encodeURIComponent(wcUri)}`;
 }

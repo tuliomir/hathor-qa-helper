@@ -7,10 +7,14 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+// Action types that can be triggered when a toast is clicked
+export type ToastActionType = 'showDeepLinkModal';
+
 // Centralized options type for toasts (duration in milliseconds)
 export type ToastOptions = {
   duration?: number;
   link?: ToastLink;
+  actionType?: ToastActionType; // Action to dispatch when toast is clicked
 };
 
 export interface ToastLink {
@@ -24,6 +28,7 @@ export interface Toast {
   type: ToastType;
   duration?: number; // optional duration in milliseconds
   link?: ToastLink; // optional link to display after the message
+  actionType?: ToastActionType; // optional action to dispatch when clicked
 }
 
 interface ToastState {

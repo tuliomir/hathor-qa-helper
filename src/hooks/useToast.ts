@@ -10,8 +10,9 @@ export function useToast() {
       const id = `toast-${Date.now()}-${Math.random()}`;
       const duration = options?.duration;
       const link = options?.link;
+      const actionType = options?.actionType;
 
-      dispatch(addToast({ id, message, type, duration, link }));
+      dispatch(addToast({ id, message, type, duration, link, actionType }));
 
       // Auto-remove toast after duration or default 2000ms
       setTimeout(() => {

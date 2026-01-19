@@ -22,3 +22,8 @@ export const DEFAULT_APP_METADATA = {
   url: window.location.origin,
   icons: ['https://hathor-public-files.s3.amazonaws.com/hathor-demo-icon.png'],
 };
+
+/**
+ * Deep link scheme for Hathor Wallet mobile app
+ */
+export const HATHOR_WALLET_DEEP_LINK_SCHEME = 'hathorwallet';

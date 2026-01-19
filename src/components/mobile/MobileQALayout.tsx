@@ -8,6 +8,7 @@ import MobileQASidebar from './MobileQASidebar';
 import MobileQAStepContent from './MobileQAStepContent';
 import MobileQAToolPanel from './MobileQAToolPanel';
 import ToastContainer from '../common/ToastContainer';
+import DeepLinkModal from '../common/DeepLinkModal';
 import { useAppSelector } from '../../store/hooks';
 import { selectCurrentLocation } from '../../store/slices/mobileQAProgressSlice';
 import { getStep } from '../../config/mobileQA';
@@ -52,6 +53,7 @@ export default function MobileQALayout() {
       </div>
 
       <ToastContainer />
+      <DeepLinkModal />
     </div>
   );
 }

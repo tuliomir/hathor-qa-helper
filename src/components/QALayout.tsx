@@ -6,6 +6,7 @@
 import Sidebar from './Sidebar';
 import StageContent from './StageContent';
 import ToastContainer from './common/ToastContainer';
+import DeepLinkModal from './common/DeepLinkModal';
 import { useAppSelector } from '../store/hooks';
 import { useWalletStore } from '../hooks/useWalletStore';
 import { useStage } from '../hooks/useStage';
@@ -109,6 +110,7 @@ export default function QALayout() {
         <Sidebar />
         <StageContent />
         <ToastContainer />
+        <DeepLinkModal />
       </div>
     </div>
   );

@@ -5,7 +5,6 @@
       "Bash(git add:*)",
       "WebFetch(domain:daisyui.com)",
       "mcp__ide__getDiagnostics",
-      "Bash(npx tsc:*)",
       "Bash(grep:*)",
       "WebSearch",
       "Bash(tree:*)",
@@ -30,7 +29,8 @@
     ],
     "deny": [
       "Bash(npm *)",
-      "Bash(yarn *)"
+      "Bash(yarn *)",
+      "Bash(npx *)"
     ],
     "ask": []
   }

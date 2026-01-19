@@ -33,6 +33,7 @@ import getUtxosReducer from './slices/getUtxosSlice';
 import rawRpcReducer from './slices/rawRpcSlice';
 import mobileQAProgressReducer from './slices/mobileQAProgressSlice';
 import multisigReducer from './slices/multisigSlice';
+import deepLinkReducer from './slices/deepLinkSlice';
 
 export const store = configureStore({
   reducer: {
@@ -66,6 +67,7 @@ export const store = configureStore({
     rawRpc: rawRpcReducer,
     mobileQAProgress: mobileQAProgressReducer,
     multisig: multisigReducer,
+    deepLink: deepLinkReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

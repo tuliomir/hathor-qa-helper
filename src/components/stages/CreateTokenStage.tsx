@@ -4,16 +4,18 @@
  * Tests htr_createToken RPC call with Redux state persistence
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-  setCreateTokenError,
-  setCreateTokenRequest,
-  setCreateTokenResponse,
+	setCreateTokenError,
+	setCreateTokenRequest,
+	setCreateTokenResponse,
 } from '../../store/slices/createTokenSlice';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
+import { setDeepLink } from '../../store/slices/deepLinkSlice';
+import { addToast } from '../../store/slices/toastSlice';
 import { RpcCreateTokenCard } from '../rpc/RpcCreateTokenCard';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
 import { createRpcHandlers } from '../../services/rpcHandlers';
@@ -86,6 +88,23 @@ export const CreateTokenStage: React.FC = () => {
     return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
   }, [isConnected, connectedAddress, testWalletAddress]);
 
+  // Callback for showing deep link QR code
+  const handleDeepLinkAvailable = useCallback(
+    (url: string, title: string) => {
+      dispatch(setDeepLink({ url, title }));
+      dispatch(
+        addToast({
+          id: `deeplink-toast-${Date.now()}`,
+          message: 'Deep link available. Click to show QR code.',
+          type: 'info',
+          duration: 30000, // 30 seconds
+          actionType: 'showDeepLinkModal',
+        })
+      );
+    },
+    [dispatch]
+  );
+
   // Create RPC handlers
   const rpcHandlers = useMemo(() => {
     if (!walletConnect.client || !walletConnect.session) {
@@ -96,8 +115,9 @@ export const CreateTokenStage: React.FC = () => {
       client: walletConnect.client,
       session: walletConnect.session,
       dryRun: isDryRun,
+      onDeepLinkAvailable: handleDeepLinkAvailable,
     });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
+  }, [walletConnect.client, walletConnect.session, isDryRun, handleDeepLinkAvailable]);
 
   // Wrapper for onExecute that stores results in Redux
   const handleExecuteCreateToken = async (params: CreateTokenParams) => {
