@@ -36,6 +36,16 @@ export default function TestWalletCleanup() {
   const { getWallet } = useWalletStore();
   const { sendTransaction, isSending } = useSendTransaction();
 
+  // Helper to get wallet friendly name from wallet ID
+  const getWalletFriendlyName = useCallback(
+    (walletId: string | undefined): string | undefined => {
+      if (!walletId) return undefined;
+      const wallet = getWallet(walletId);
+      return wallet?.metadata?.friendlyName || walletId;
+    },
+    [getWallet]
+  );
+
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
   const allTokens = useAppSelector((s) => s.tokens.tokens);
@@ -136,9 +146,10 @@ export default function TestWalletCleanup() {
                 const primaryFlow = tokenFlow.addressFlows[0];
                 originalSender = primaryFlow.address;
 
-                // Can return if we don't have melt authority (need to send back)
-                // or if there's a remainder we can't melt
-                canReturnToSender = !hasMeltAuthority || remainder > 0;
+                // Can ONLY return to sender if we DON'T have melt authority
+                // (we received tokens from someone else and need to give them back)
+                // If we DO have melt authority but tokens are external, that's a "retrieve" scenario
+                canReturnToSender = !hasMeltAuthority;
               }
             }
 
@@ -799,7 +810,7 @@ export default function TestWalletCleanup() {
                               {token.originalSender?.slice(0, 12)}...{token.originalSender?.slice(-6)}
                             </td>
                             <td className="py-2 px-3 text-xs text-cyan-600">
-                              {primaryFlow?.walletId || '-'}
+                              {getWalletFriendlyName(primaryFlow?.walletId) || '-'}
                             </td>
                           </tr>
                         );
@@ -810,30 +821,81 @@ export default function TestWalletCleanup() {
             </div>
           )}
 
-          {/* Tokens Remaining After Cleanup (can't be returned automatically) */}
-          {tokensRemaining.filter((t) => !t.canReturnToSender).length > 0 && (
+          {/* Tokens to Retrieve for Melting - has melt authority but tokens are held externally */}
+          {tokensToMelt.filter((t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0).length > 0 && (
+            <div className="card-primary mb-7.5 bg-amber-50 border-2 border-amber-400">
+              <h2 className="text-xl font-bold mb-2 text-amber-900">Tokens to Retrieve for Melting</h2>
+              <p className="text-sm text-amber-800 mb-4">
+                You have melt authority for these tokens, but some are held at external addresses.
+                Retrieve them to complete the cleanup:
+              </p>
+              {tokensToMelt
+                .filter((t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0)
+                .map((token) => {
+                  const externalAmount = token.tokenFlow!.totalExternalBalance;
+
+                  return (
+                    <div key={token.uid} className="mb-4 last:mb-0 bg-white rounded p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="font-semibold text-amber-900">{token.symbol}</span>
+                        <span className="font-mono text-amber-700">{externalAmount} tokens to retrieve</span>
+                      </div>
+
+                      <div className="border-t border-amber-200 pt-2 mt-2">
+                        <div className="text-xs text-amber-800 font-semibold mb-2">
+                          External Addresses:
+                        </div>
+                        <div className="space-y-2">
+                          {token.tokenFlow!.addressFlows.map((flow, idx) => (
+                            <div key={idx} className="bg-amber-50 rounded px-2 py-1.5 text-xs">
+                              <div className="flex justify-between items-start">
+                                <div className="font-mono" title={flow.address}>
+                                  {flow.address.slice(0, 14)}...{flow.address.slice(-8)}
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-semibold text-amber-800">Net: {flow.netBalance}</span>
+                                  <span className="text-amber-600 ml-2">
+                                    (sent {flow.totalSent}, recv {flow.totalReceived})
+                                  </span>
+                                </div>
+                              </div>
+                              {flow.walletId && (
+                                <div className="text-amber-600 mt-1">
+                                  <span className="font-semibold">Wallet:</span> {getWalletFriendlyName(flow.walletId)}
+                                </div>
+                              )}
+                              {flow.unspentOutputs.length > 0 && (
+                                <div className="text-amber-500 mt-1">
+                                  <span className="font-semibold">Unspent:</span>{' '}
+                                  {flow.unspentOutputs.map((utxo, i) => (
+                                    <span key={i} className="font-mono" title={utxo.txId}>
+                                      {i > 0 && ', '}
+                                      {utxo.txId.slice(0, 8)}:{utxo.outputIndex} ({utxo.amount})
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+          {/* Tokens Requiring Manual Action - no melt authority, can't return automatically */}
+          {tokensRemaining.filter((t) => !t.canReturnToSender && !t.hasMeltAuthority).length > 0 && (
             <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
               <h2 className="text-xl font-bold mb-2 text-orange-900">Tokens Requiring Manual Action</h2>
               <p className="text-sm text-orange-800 mb-4">
-                The following tokens cannot be automatically cleaned up. Use the tracking info below to locate them:
+                You don't have melt authority for these tokens. Contact the token owner or return them manually:
               </p>
               {tokensRemaining
-                .filter((t) => !t.canReturnToSender)
+                .filter((t) => !t.canReturnToSender && !t.hasMeltAuthority)
                 .map((token) => {
-                  let reason = '';
-                  let remainingAmount = 0;
-
-                  if (!token.hasMeltAuthority) {
-                    reason = 'No melt authority';
-                    remainingAmount = Number(token.balance);
-                  } else if (token.meltableAmount === 0) {
-                    reason = 'Balance below 100';
-                    remainingAmount = Number(token.balance);
-                  } else if (token.remainder > 0) {
-                    reason = 'Remainder after melting';
-                    remainingAmount = token.remainder;
-                  }
-
+                  const remainingAmount = Number(token.balance);
                   const hasFlowData = token.tokenFlow && token.tokenFlow.addressFlows.length > 0;
 
                   return (
@@ -841,7 +903,7 @@ export default function TestWalletCleanup() {
                       <div className="flex justify-between items-center mb-2">
                         <div>
                           <span className="font-semibold text-orange-900">{token.symbol}</span>
-                          <span className="text-orange-700 text-xs ml-2">({reason})</span>
+                          <span className="text-orange-700 text-xs ml-2">(No melt authority)</span>
                         </div>
                         <span className="font-mono text-orange-700">{remainingAmount} remaining</span>
                       </div>
@@ -849,7 +911,7 @@ export default function TestWalletCleanup() {
                       {hasFlowData ? (
                         <div className="border-t border-orange-200 pt-2 mt-2">
                           <div className="text-xs text-orange-800 font-semibold mb-2">
-                            External Addresses Holding Tokens ({token.tokenFlow!.totalExternalBalance} total):
+                            Token Origin:
                           </div>
                           <div className="space-y-2">
                             {token.tokenFlow!.addressFlows.map((flow, idx) => (
@@ -860,25 +922,11 @@ export default function TestWalletCleanup() {
                                   </div>
                                   <div className="text-right">
                                     <span className="font-semibold text-orange-800">Net: {flow.netBalance}</span>
-                                    <span className="text-orange-600 ml-2">
-                                      (sent {flow.totalSent}, recv {flow.totalReceived})
-                                    </span>
                                   </div>
                                 </div>
                                 {flow.walletId && (
                                   <div className="text-orange-600 mt-1">
-                                    <span className="font-semibold">Wallet:</span> {flow.walletId}
-                                  </div>
-                                )}
-                                {flow.unspentOutputs.length > 0 && (
-                                  <div className="text-orange-500 mt-1">
-                                    <span className="font-semibold">Unspent:</span>{' '}
-                                    {flow.unspentOutputs.map((utxo, i) => (
-                                      <span key={i} className="font-mono" title={utxo.txId}>
-                                        {i > 0 && ', '}
-                                        {utxo.txId.slice(0, 8)}:{utxo.outputIndex} ({utxo.amount})
-                                      </span>
-                                    ))}
+                                    <span className="font-semibold">Wallet:</span> {getWalletFriendlyName(flow.walletId)}
                                   </div>
                                 )}
                               </div>
@@ -887,7 +935,7 @@ export default function TestWalletCleanup() {
                         </div>
                       ) : (
                         <div className="text-orange-500 italic text-xs mt-2">
-                          No external flow data found
+                          Could not trace token origin
                         </div>
                       )}
                     </div>

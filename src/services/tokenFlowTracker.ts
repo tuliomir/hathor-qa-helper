@@ -54,7 +54,7 @@ interface AddressTracker {
 }
 
 // Set to true to enable verbose debug logging
-const DEBUG = true;
+const DEBUG = false;
 
 /**
  * Tracks token flow for a specific token across all transactions.
