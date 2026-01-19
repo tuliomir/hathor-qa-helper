@@ -4,18 +4,26 @@
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { ReactNode } from 'react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 // Centralized options type for toasts (duration in milliseconds)
-export type ToastOptions = { duration?: number };
+export type ToastOptions = {
+  duration?: number;
+  link?: ToastLink;
+};
+
+export interface ToastLink {
+  url: string;
+  label: string;
+}
 
 export interface Toast {
   id: string;
-  message: ReactNode; // allow React nodes so toasts can include links
+  message: string; // plain string for Redux serializability
   type: ToastType;
   duration?: number; // optional duration in milliseconds
+  link?: ToastLink; // optional link to display after the message
 }
 
 interface ToastState {

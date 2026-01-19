@@ -1,4 +1,4 @@
-import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { removeToast, type Toast } from '../../store/slices/toastSlice';
 
 const toastTypeClasses: Record<NonNullable<Toast['type']>, string> = {
@@ -21,7 +21,22 @@ export default function ToastContainer() {
       {toasts.map((toast) => (
         <div key={toast.id} className={`alert ${toastTypeClasses[toast.type]} flex items-center justify-between`}>
           <div className="flex-1">
-            <span>{toast.message}</span>
+            <span>
+              {toast.message}
+              {toast.link && (
+                <>
+                  {' '}
+                  <a
+                    href={toast.link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline text-primary"
+                  >
+                    {toast.link.label}
+                  </a>
+                </>
+              )}
+            </span>
           </div>
 
           <button

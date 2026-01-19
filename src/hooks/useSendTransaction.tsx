@@ -83,18 +83,10 @@ export function useSendTransaction() {
       const txUrl = `${explorerUrl}transaction/${tx.hash}`;
 
       // Show toast with a link and longer duration (20s)
-      success(
-        (
-          <span>
-            Transaction sent successfully! View on explorer (
-            <a href={txUrl} target="_blank" rel="noreferrer" className="underline text-primary">
-              link
-            </a>
-            )
-          </span>
-        ),
-        { duration: 20000 }
-      );
+      success('Transaction sent successfully! View on explorer:', {
+        duration: 20000,
+        link: { url: txUrl, label: 'link' },
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
       setError(errorMessage);

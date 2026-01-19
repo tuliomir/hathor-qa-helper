@@ -3,7 +3,7 @@
  * Tests toast notification Redux slice reducers
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import toastReducer, { addToast, removeToast, type Toast, type ToastType } from '../src/store/slices/toastSlice';
 
 describe('toastSlice', () => {
@@ -71,6 +71,19 @@ describe('toastSlice', () => {
       }
 
       expect(state.toasts).toHaveLength(3);
+    });
+
+    test('adds toast with link', () => {
+      const toast: Toast = {
+        id: 'test-link',
+        message: 'View transaction:',
+        type: 'success',
+        link: { url: 'https://example.com/tx/123', label: 'link' },
+      };
+
+      const state = toastReducer(initialState, addToast(toast));
+
+      expect(state.toasts[0].link).toEqual({ url: 'https://example.com/tx/123', label: 'link' });
     });
 
     test('supports all toast types', () => {
