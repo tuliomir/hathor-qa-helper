@@ -3,13 +3,14 @@
  * Manages available tokens for transactions and balance tracking
  */
 
-import { createSlice } from '@reduxjs/toolkit';
-import { NATIVE_TOKEN_UID, DEFAULT_NATIVE_TOKEN_CONFIG } from '@hathor/wallet-lib/lib/constants';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
-interface Token {
+export interface Token {
   uid: string;
   symbol: string;
   name: string;
+  timestamp?: number;
 }
 
 interface TokensState {
@@ -33,11 +34,15 @@ const tokensSlice = createSlice({
   name: 'tokens',
   initialState,
   reducers: {
-    // Placeholder reducers for future token management
-    addToken: (state, action) => {
+    // Add a token to the store (or update if already exists with new data like timestamp)
+    addToken: (state, action: PayloadAction<Token>) => {
       const token = action.payload;
-      if (!state.tokens.find((t) => t.uid === token.uid)) {
+      const existingIndex = state.tokens.findIndex((t) => t.uid === token.uid);
+      if (existingIndex === -1) {
         state.tokens.push(token);
+      } else {
+        // Update existing token with new data (preserves name/symbol, adds timestamp if missing)
+        state.tokens[existingIndex] = { ...state.tokens[existingIndex], ...token };
       }
     },
     removeToken: (state, action) => {

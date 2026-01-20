@@ -12,6 +12,7 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { tokensUtils, TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import CopyButton from '../common/CopyButton';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
+import type { Token } from '../../store/slices/tokensSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import type { NetworkType } from '../../constants/network';
@@ -20,13 +21,6 @@ import Loading from '../common/Loading';
 import { ExplorerLink } from '../common/ExplorerLink';
 
 type TabType = 'fund' | 'test';
-
-interface Token {
-  uid: string;
-  name: string;
-  symbol: string;
-  timestamp?: number;
-}
 
 // Hook for lazy-loading token balance
 function useTokenBalance(walletInstance: unknown | null, tokenUid: string, refreshKey?: number) {

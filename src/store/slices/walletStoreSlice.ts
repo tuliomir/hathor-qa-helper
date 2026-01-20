@@ -232,22 +232,20 @@ export const startWallet = createAsyncThunk(
         }
 
         try {
-          const txData = await walletInstance.getTxById(uid);
+          // Use getTokenDetails for reliable token info fetching (works for all tokens)
+          const tokenDetails = await walletInstance.getTokenDetails(uid);
 
           // Extract token info and store in Redux
-          if (txData.success && txData.txTokens) {
-            const tokenInfo = txData.txTokens.find((t: { tokenId: string; tokenName?: string; tokenSymbol?: string }) => t.tokenId === uid);
-            if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
-              dispatch(addToken({
-                uid,
-                name: tokenInfo.tokenName,
-                symbol: tokenInfo.tokenSymbol,
-              }));
-            }
+          if (tokenDetails && tokenDetails.tokenInfo) {
+            dispatch(addToken({
+              uid,
+              name: tokenDetails.tokenInfo.name,
+              symbol: tokenDetails.tokenInfo.symbol,
+              timestamp: tokenDetails.tokenInfo.timestamp,
+            }));
           }
         } catch (err) {
-          // Silently ignore errors for tokens without balance or other getTxById errors
-          // This can happen when wallet has a token UID but no balance for that token
+          // Silently ignore errors for tokens that couldn't be fetched
           console.debug(`Skipping token ${uid}: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
       }
@@ -433,21 +431,20 @@ export const refreshWalletTokens = createAsyncThunk(
         }
 
         try {
-          const txData = await instance.getTxById(uid);
+          // Use getTokenDetails for reliable token info fetching (works for all tokens)
+          const tokenDetails = await instance.getTokenDetails(uid);
 
           // Extract token info and store in Redux
-          if (txData.success && txData.txTokens) {
-            const tokenInfo = txData.txTokens.find((t: { tokenId: string; tokenName?: string; tokenSymbol?: string }) => t.tokenId === uid);
-            if (tokenInfo && tokenInfo.tokenName && tokenInfo.tokenSymbol) {
-              dispatch(addToken({
-                uid,
-                name: tokenInfo.tokenName,
-                symbol: tokenInfo.tokenSymbol,
-              }));
-            }
+          if (tokenDetails && tokenDetails.tokenInfo) {
+            dispatch(addToken({
+              uid,
+              name: tokenDetails.tokenInfo.name,
+              symbol: tokenDetails.tokenInfo.symbol,
+              timestamp: tokenDetails.tokenInfo.timestamp,
+            }));
           }
         } catch (err) {
-          // Silently ignore errors for tokens without balance or other getTxById errors
+          // Silently ignore errors for tokens that couldn't be fetched
           console.debug(`Skipping token ${uid}: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
       }
