@@ -16,6 +16,7 @@ export interface WalletMetadata {
   seedWords: string;
   network: NetworkType;
   createdAt: number;
+  lastUsedAt?: number; // Timestamp of last wallet interaction (start, select, etc.)
 }
 
 /**

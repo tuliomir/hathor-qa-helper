@@ -214,6 +214,9 @@ export const startWallet = createAsyncThunk(
       // Update status to ready
       dispatch(updateWalletStatus({ id: walletId, status: 'ready', firstAddress }));
 
+      // Update lastUsedAt timestamp
+      dispatch(updateLastUsedAt(walletId));
+
       // Update balance
       dispatch(updateWalletBalance({ id: walletId, balance: balanceString }));
 
@@ -638,6 +641,19 @@ const walletStoreSlice = createSlice({
       }
     },
 
+    updateLastUsedAt: (state, action: PayloadAction<string>) => {
+      const id = action.payload;
+      const walletInfo = state.wallets[id];
+
+      if (walletInfo) {
+        walletInfo.metadata.lastUsedAt = Date.now();
+
+        // Sync to LocalStorage
+        const metadataArray = Object.values(state.wallets).map((info) => info.metadata);
+        saveWalletsToStorage(metadataArray);
+      }
+    },
+
     addWalletEvent: {
       reducer: (
         state,
@@ -691,6 +707,7 @@ export const {
   updateWalletStatus,
   updateWalletBalance,
   updateWalletTokens,
+  updateLastUsedAt,
   addWalletEvent,
 } = walletStoreSlice.actions;
 

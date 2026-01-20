@@ -4,8 +4,18 @@
  * Wallets persist globally across all stages
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { MdCamera, MdDelete, MdEdit, MdPlayArrow, MdQrCode, MdStar, MdStarBorder, MdStop } from 'react-icons/md';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  MdCamera,
+  MdDelete,
+  MdEdit,
+  MdPlayArrow,
+  MdQrCode,
+  MdStar,
+  MdStarBorder,
+  MdStop,
+  MdViewList
+} from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
@@ -21,9 +31,11 @@ import CopyButton from '../common/CopyButton';
 import NetworkSwapButton from '../common/NetworkSwapButton';
 import Select from '../common/Select';
 import SeedPhraseModal from '../common/SeedPhraseModal';
+import WalletBrowserModal from '../common/WalletBrowserModal';
 import type { NetworkType } from '../../constants/network';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
+const MAX_VISIBLE_WALLETS = 5;
 
 export default function WalletInitialization() {
   const dispatch = useAppDispatch();
@@ -49,6 +61,9 @@ export default function WalletInitialization() {
   // Seed phrase modal state
   const [seedModalWalletId, setSeedModalWalletId] = useState<string | null>(null);
 
+  // Wallet browser modal state
+  const [showWalletBrowser, setShowWalletBrowser] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasAutoStartedRef = useRef(false);
   const allWallets = getAllWallets();
@@ -71,6 +86,7 @@ export default function WalletInitialization() {
   }, []);
 
   // Auto-start default wallets after they're loaded from localStorage
+  // Uses Promise.allSettled to start both wallets simultaneously
   useEffect(() => {
     const autoStartDefaults = async () => {
       // Only run once, and only after we've loaded defaults from localStorage
@@ -79,17 +95,25 @@ export default function WalletInitialization() {
 
       hasAutoStartedRef.current = true;
 
+      // Collect wallet startup promises for parallel execution
+      const startupPromises: Promise<void>[] = [];
+
       if (defaultFundWalletId) {
         const wallet = allWallets.find(w => w.metadata.id === defaultFundWalletId);
         if (wallet && wallet.status === 'idle') {
-          await handleStartWallet(defaultFundWalletId);
+          startupPromises.push(handleStartWallet(defaultFundWalletId));
         }
       }
-      if (defaultTestWalletId) {
+      if (defaultTestWalletId && defaultTestWalletId !== defaultFundWalletId) {
         const wallet = allWallets.find(w => w.metadata.id === defaultTestWalletId);
         if (wallet && wallet.status === 'idle') {
-          await handleStartWallet(defaultTestWalletId);
+          startupPromises.push(handleStartWallet(defaultTestWalletId));
         }
+      }
+
+      // Start all wallets in parallel (allSettled ensures all are attempted even if one fails)
+      if (startupPromises.length > 0) {
+        await Promise.allSettled(startupPromises);
       }
     };
 
@@ -97,14 +121,30 @@ export default function WalletInitialization() {
   }, [defaultFundWalletId, defaultTestWalletId]); // Run when default wallet IDs are loaded
 
   // Sort wallets: started (ready) first, then loading (connecting/syncing), then others
-  const wallets = [...allWallets].sort((a, b) => {
-    const statusPriority = (status: string) => {
-      if (status === 'ready') return 0;
-      if (status === 'connecting' || status === 'syncing') return 1;
-      return 2;
-    };
-    return statusPriority(a.status) - statusPriority(b.status);
-  });
+  // Secondary sort by lastUsedAt (most recent first)
+  const wallets = useMemo(() => {
+    return [...allWallets].sort((a, b) => {
+      const statusPriority = (status: string) => {
+        if (status === 'ready') return 0;
+        if (status === 'connecting' || status === 'syncing') return 1;
+        return 2;
+      };
+      const statusDiff = statusPriority(a.status) - statusPriority(b.status);
+      if (statusDiff !== 0) return statusDiff;
+
+      // Secondary sort by lastUsedAt (most recent first)
+      const aLastUsed = a.metadata.lastUsedAt || a.metadata.createdAt;
+      const bLastUsed = b.metadata.lastUsedAt || b.metadata.createdAt;
+      return bLastUsed - aLastUsed;
+    });
+  }, [allWallets]);
+
+  // Recent wallets for the main view (limited to MAX_VISIBLE_WALLETS)
+  const recentWallets = useMemo(() => {
+    return wallets.slice(0, MAX_VISIBLE_WALLETS);
+  }, [wallets]);
+
+  const hasMoreWallets = wallets.length > MAX_VISIBLE_WALLETS;
 
   // Get ready wallets for selection
   const readyWallets = wallets.filter((w) => w.status === 'ready');
@@ -364,7 +404,25 @@ export default function WalletInitialization() {
     <div className="max-w-300 mx-auto">
       {/* Wallets Table */}
       <div className="mb-10">
-        <h2 className="text-2xl font-bold mb-4">Registered Wallets ({wallets.length})</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold m-0">
+            Registered Wallets ({wallets.length})
+            {hasMoreWallets && (
+              <span className="text-base font-normal text-muted ml-2">
+                (showing {recentWallets.length} most recent)
+              </span>
+            )}
+          </h2>
+          {hasMoreWallets && (
+            <button
+              onClick={() => setShowWalletBrowser(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <MdViewList size={18} />
+              View All Wallets
+            </button>
+          )}
+        </div>
         {wallets.length === 0 ? (
           <div className="p-10 text-center border-2 border-dashed border-muted rounded-lg text-muted">
             <p className="text-lg m-0">No wallets registered yet</p>
@@ -383,7 +441,7 @@ export default function WalletInitialization() {
                 </tr>
               </thead>
               <tbody>
-                {wallets.map((wallet) => (
+                {recentWallets.map((wallet) => (
                   <tr key={wallet.metadata.id} className={`table-row ${getRowBackgroundColor(wallet.status)}`}>
                     <td className="p-3">
                       {editingId === wallet.metadata.id ? (
@@ -747,6 +805,17 @@ export default function WalletInitialization() {
           walletName={wallets.find(w => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
         />
       )}
+      <WalletBrowserModal
+        isOpen={showWalletBrowser}
+        onClose={() => setShowWalletBrowser(false)}
+        wallets={wallets}
+        onStartWallet={handleStartWallet}
+        onStopWallet={handleStopWallet}
+        onRemoveWallet={handleRemoveWallet}
+        onEditWallet={handleStartEdit}
+        onShowSeedModal={setSeedModalWalletId}
+        onSwapNetwork={handleSwapNetwork}
+      />
     </div>
   );
 }
