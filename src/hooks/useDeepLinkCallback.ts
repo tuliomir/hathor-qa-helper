@@ -7,7 +7,13 @@
 
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { clearDeepLink, selectDeepLinkToastId, setDeepLink, showDeepLinkModal, } from '../store/slices/deepLinkSlice';
+import {
+	clearDeepLink,
+	selectDeepLinksEnabled,
+	selectDeepLinkToastId,
+	setDeepLink,
+	showDeepLinkModal,
+} from '../store/slices/deepLinkSlice';
 import { addToast, removeToast } from '../store/slices/toastSlice';
 
 const DEEP_LINK_TOAST_DURATION = 3000; // 3 seconds
@@ -15,13 +21,20 @@ const DEEP_LINK_TOAST_DURATION = 3000; // 3 seconds
 export function useDeepLinkCallback() {
   const dispatch = useAppDispatch();
   const currentToastId = useAppSelector(selectDeepLinkToastId);
+  const deepLinksEnabled = useAppSelector(selectDeepLinksEnabled);
 
   /**
    * Callback to show the deep link QR code modal and toast
    * Pass this to createRpcHandlers as onDeepLinkAvailable
+   * Only shows if deeplinks are enabled in settings
    */
   const onDeepLinkAvailable = useCallback(
     (url: string, title: string) => {
+      // Skip if deeplinks are disabled
+      if (!deepLinksEnabled) {
+        return;
+      }
+
       const toastId = `deeplink-toast-${Date.now()}`;
 
       dispatch(setDeepLink({ url, title, toastId }));
@@ -36,7 +49,7 @@ export function useDeepLinkCallback() {
         })
       );
     },
-    [dispatch]
+    [dispatch, deepLinksEnabled]
   );
 
   /**

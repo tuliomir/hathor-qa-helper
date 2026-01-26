@@ -10,6 +10,7 @@ interface DeepLinkState {
   deepLinkUrl: string | null;
   title: string;
   toastId: string | null; // Track toast ID for cleanup
+  deepLinksEnabled: boolean; // Toggle for enabling/disabling deeplink modals and toasts
 }
 
 const initialState: DeepLinkState = {
@@ -17,6 +18,7 @@ const initialState: DeepLinkState = {
   deepLinkUrl: null,
   title: 'Scan QR Code',
   toastId: null,
+  deepLinksEnabled: true, // Enabled by default
 };
 
 const deepLinkSlice = createSlice({
@@ -42,11 +44,23 @@ const deepLinkSlice = createSlice({
       state.title = 'Scan QR Code';
       state.toastId = null;
     },
+    setDeepLinksEnabled: (state, action: PayloadAction<boolean>) => {
+      state.deepLinksEnabled = action.payload;
+    },
+    toggleDeepLinksEnabled: (state) => {
+      state.deepLinksEnabled = !state.deepLinksEnabled;
+    },
   },
 });
 
-export const { setDeepLink, showDeepLinkModal, hideDeepLinkModal, clearDeepLink } =
-  deepLinkSlice.actions;
+export const {
+  setDeepLink,
+  showDeepLinkModal,
+  hideDeepLinkModal,
+  clearDeepLink,
+  setDeepLinksEnabled,
+  toggleDeepLinksEnabled,
+} = deepLinkSlice.actions;
 
 export default deepLinkSlice.reducer;
 
@@ -62,3 +76,6 @@ export const selectDeepLinkTitle = (state: { deepLink: DeepLinkState }) =>
 
 export const selectDeepLinkToastId = (state: { deepLink: DeepLinkState }) =>
   state.deepLink.toastId;
+
+export const selectDeepLinksEnabled = (state: { deepLink: DeepLinkState }) =>
+  state.deepLink.deepLinksEnabled;

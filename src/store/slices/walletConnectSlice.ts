@@ -10,9 +10,10 @@ import type { PairingTypes, SessionTypes } from '@walletconnect/types';
 import { getSdkError } from '@walletconnect/utils';
 import { WalletConnectModal } from '@walletconnect/modal';
 import { generateHathorWalletConnectionDeepLink, initializeClient } from '../../services/walletConnectClient';
-import { setDeepLink, showDeepLinkModal } from './deepLinkSlice';
+import { clearDeepLink, setDeepLink, showDeepLinkModal } from './deepLinkSlice';
 import { addToast } from './toastSlice';
 import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
+import type { RootState } from '../index';
 
 interface WalletConnectState {
   client: Client | null;
@@ -113,9 +114,11 @@ export const initializeWalletConnect = createAsyncThunk(
 export const connectWalletConnect = createAsyncThunk<
   SessionTypes.Struct,
   { pairing?: { topic: string } } | undefined,
-  { state: { walletConnect: WalletConnectState } }
+  { state: RootState }
 >('walletConnect/connect', async (params, { getState, dispatch }) => {
-  const { client, session } = getState().walletConnect;
+  const state = getState();
+  const { client, session } = state.walletConnect;
+  const deepLinksEnabled = state.deepLink.deepLinksEnabled;
 
   if (!client) {
     throw new Error('WalletConnect is not initialized');
@@ -174,27 +177,34 @@ export const connectWalletConnect = createAsyncThunk<
     // Both modals (WalletConnect and DeepLink) need to be visible:
     // - WalletConnect modal handles the web3 connection flow
     // - DeepLink modal provides the QR code for mobile devices to open Hathor Wallet
-    const deepLinkUrl = generateHathorWalletConnectionDeepLink(uri);
-    dispatch(setDeepLink({ url: deepLinkUrl, title: 'Connect to Hathor Wallet' }));
-    dispatch(showDeepLinkModal());
-    dispatch(
-      addToast({
-        id: `deeplink-toast-${Date.now()}`,
-        message: 'Deep link available. Click to show QR code.',
-        type: 'info',
-        duration: 30000, // 30 seconds
-        actionType: 'showDeepLinkModal',
-      })
-    );
+    // Only show deeplink modal/toast if deeplinks are enabled
+    if (deepLinksEnabled) {
+      const deepLinkUrl = generateHathorWalletConnectionDeepLink(uri);
+      dispatch(setDeepLink({ url: deepLinkUrl, title: 'Connect to Hathor Wallet' }));
+      dispatch(showDeepLinkModal());
+      dispatch(
+        addToast({
+          id: `deeplink-toast-${Date.now()}`,
+          message: 'Deep link available. Click to show QR code.',
+          type: 'info',
+          duration: 3000,
+          actionType: 'showDeepLinkModal',
+        })
+      );
+    }
   }
 
   try {
     const newSession = await approval();
     getWeb3Modal().closeModal();
+    // Clear deeplink modal and toast on successful connection
+    dispatch(clearDeepLink());
     console.log('[WalletConnect] Session established', newSession);
     return newSession;
   } catch (error) {
     getWeb3Modal().closeModal();
+    // Clear deeplink modal and toast on connection rejection/failure
+    dispatch(clearDeepLink());
     throw error;
   }
 });
