@@ -12,27 +12,7 @@ import {
 } from '../../store/slices/desktopQAProgressSlice';
 import { getComponent, getNextStep, getPreviousStep, getSection, getStep } from '../../config/desktopQA';
 import { MdCheckCircle, MdNavigateBefore, MdNavigateNext, MdRadioButtonUnchecked } from 'react-icons/md';
-
-/**
- * Simple markdown-like rendering for instructions
- * Supports **bold** formatting
- */
-function renderInstructions(text: string): React.ReactNode {
-  // Split by **bold** markers
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-
-  return parts.map((part, index) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      // Bold text
-      return (
-        <strong key={index} className="font-bold">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return part;
-  });
-}
+import MarkdownText from '../common/MarkdownText';
 
 /**
  * Inline tool component - renders the embedded tool for a step
@@ -139,7 +119,9 @@ export default function DesktopQAStepContent() {
       {/* Instructions Card */}
       <div className="card-primary mb-6">
         <h2 className="text-lg font-bold mb-3">Instructions</h2>
-        <p className="text-base leading-relaxed m-0">{renderInstructions(step.instructions)}</p>
+        <p className="text-base leading-relaxed m-0">
+          <MarkdownText>{step.instructions}</MarkdownText>
+        </p>
       </div>
 
       {/* Inline Tool (if configured) */}

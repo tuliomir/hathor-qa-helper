@@ -10,6 +10,7 @@ import CustomTokens from '../../components/stages/CustomTokens';
 import { SendTransactionStage } from '../../components/stages/SendTransactionStage';
 import { GetAddressStage } from '../../components/stages/GetAddressStage';
 import { GetBalanceStage } from '../../components/stages/GetBalanceStage';
+import SeedPhraseCapture from '../../components/stages/SeedPhraseCapture';
 
 /**
  * Registry mapping component keys to their implementations
@@ -22,6 +23,7 @@ export const componentRegistry: Record<string, ComponentType> = {
   SendTransactionStage,
   GetAddressStage,
   GetBalanceStage,
+  SeedPhraseCapture,
 };
 
 /**

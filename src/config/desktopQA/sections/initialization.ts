@@ -30,36 +30,22 @@ export const initializationSection: SectionConfig = {
       id: 'step-4',
       title: 'Backup seed words',
       instructions:
-        'Complete backup of the seed words. **Important:** Save these words for later testing - you will need them.',
-      toolHint: 'You can use the WalletInitialization tool on the main QA page to compare addresses later.',
-    },
-    {
-      id: 'step-5',
-      title: 'Test seed validation errors',
-      instructions:
-        'Validate seed words by intentionally selecting wrong words to confirm the retry mechanism works correctly.',
+        'Complete backup of the seed words. **Important:** Take a screenshot of the seed words screen and paste it below to capture them for later testing.\n\nValidate seed words by intentionally selecting wrong words to confirm the retry mechanism works correctly.',
+      tool: { componentKey: 'SeedPhraseCapture' },
     },
     {
       id: 'step-6',
       title: 'Test password validation',
       instructions:
-        'Test password validation by entering a weak password like "123". Verify it is rejected.',
-    },
-    {
-      id: 'step-7',
-      title: 'Test password confirmation',
-      instructions:
-        'Test password confirmation matching - enter different passwords and verify error is shown.',
+        `Test password validation by entering a weak password like "123". Verify it is rejected.
+Test password confirmation matching - enter different passwords and verify error is shown.`,
     },
     {
       id: 'step-8',
       title: 'Test PIN validation',
-      instructions: 'Test PIN validation with the same requirements as password.',
-    },
-    {
-      id: 'step-9',
-      title: 'Start wallet',
-      instructions: 'Enter a valid PIN and start the wallet successfully.',
+      instructions: `Test PIN validation by entering a weak PIN like "123", checking it's rejected.
+Insert an invalid confirmation PIN.
+Enter a valid PIN and start the wallet successfully.`,
     },
   ],
 };
