@@ -6,10 +6,10 @@
 import { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
-	selectCompletedStepsCount,
-	selectCurrentLocation,
-	selectStepStatus,
-	setCurrentLocation,
+  selectCompletedStepsCount,
+  selectCurrentLocation,
+  selectStepStatus,
+  setCurrentLocation,
 } from '../../store/slices/desktopQAProgressSlice';
 import { getSections } from '../../config/desktopQA';
 import type { SectionConfig, StepConfig } from '../../types/desktopQA';
@@ -132,12 +132,21 @@ export default function DesktopQASidebar() {
     });
   };
 
+  // Calculate current section index (1-based)
+  const currentSectionIndex = sections.findIndex((s) => s.id === currentLocation.sectionId) + 1;
+  const totalSections = sections.length;
+
   return (
     <aside className="w-72 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
       <div className="py-4">
-        <h2 className="px-4 text-sm font-bold text-muted uppercase tracking-wide mb-2">
-          Sections
-        </h2>
+        <div className="px-4 mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-muted uppercase tracking-wide m-0">
+            Sections
+          </h2>
+          <span className="text-sm font-medium text-blue-600">
+            {currentSectionIndex}/{totalSections}
+          </span>
+        </div>
         <div>
           {sections.map((section) => (
             <SectionItem
