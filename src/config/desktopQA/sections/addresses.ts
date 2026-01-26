@@ -30,6 +30,7 @@ Verify the transaction appears with **updated balance** and that the **receiving
         'View all addresses and confirm the transaction count is correct.'
         + '\n\nCopy one of the addresses and use it in the search input to test the search functionality.'
         + '\n\nValidate only the correct address is shown on the results.',
+      tool: { componentKey: 'AddressListViewer' },
     },
     {
       id: 'step-5',
