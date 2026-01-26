@@ -35,9 +35,12 @@ Verify the transaction appears with **updated balance** and that the **receiving
     {
       id: 'step-5',
       title: 'Generate new address',
-      instructions: 'Generate a new address and verify the change is reflected. Use the Address Validator below for this.'
-      + '\n\nTest QR code copying functionality and validate the copied content below.'
-      + '\n\nDownload the QR code image and validate that its content matches the address same.',
+      instructions: 'Go back to the dashboard and **generate a new address**. Verify the change is reflected.'
+      + '\n\nCopy the current address and paste it below to confirm it\'s a valid one.'
+      + '\n\nClick \'QR Code\', take a print of it and paste the it on the component validator below.'
+      + '\n\nDownload the QR code image and upload it on the validator below.'
+      + '\n\nValidate that the filename also matches the address.',
+      tool: { componentKey: 'AddressQRValidator' },
     },
   ],
 };
