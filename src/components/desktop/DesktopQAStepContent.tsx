@@ -65,12 +65,14 @@ export default function DesktopQAStepContent() {
   const handleNext = () => {
     if (nextStep) {
       dispatch(setCurrentLocation(nextStep));
+      window.scrollTo(0, 0);
     }
   };
 
   const handlePrevious = () => {
     if (prevStep) {
       dispatch(setCurrentLocation(prevStep));
+      window.scrollTo(0, 0);
     }
   };
 
@@ -87,6 +89,7 @@ export default function DesktopQAStepContent() {
     // Navigate to next step if available
     if (nextStep) {
       dispatch(setCurrentLocation(nextStep));
+      window.scrollTo(0, 0);
     }
   };
 

@@ -14,8 +14,12 @@ export const addressesSection: SectionConfig = {
       id: 'step-1',
       title: 'Copy address and receive HTR',
       instructions:
-        'Copy your receiving address and receive **10.00 HTR** from another wallet.',
-      tool: { componentKey: 'SendTransactionStage' },
+        `Go to \`Settings\` on the bottom-left corner, then \`Change Network\`.
+
+Select \`testnet\` and change to it.
+
+Confirm your receiving address is the same as below and and send **10 HTR** from the Funding wallet to your new wallet.`,
+      tool: { componentKey: 'FundTestAddress' },
     },
     {
       id: 'step-2',

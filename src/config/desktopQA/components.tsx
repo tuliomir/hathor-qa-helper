@@ -11,6 +11,7 @@ import { SendTransactionStage } from '../../components/stages/SendTransactionSta
 import { GetAddressStage } from '../../components/stages/GetAddressStage';
 import { GetBalanceStage } from '../../components/stages/GetBalanceStage';
 import SeedPhraseCapture from '../../components/stages/SeedPhraseCapture';
+import FundTestAddress from '../../components/stages/FundTestAddress';
 
 /**
  * Registry mapping component keys to their implementations
@@ -24,6 +25,7 @@ export const componentRegistry: Record<string, ComponentType> = {
   GetAddressStage,
   GetBalanceStage,
   SeedPhraseCapture,
+  FundTestAddress,
 };
 
 /**
