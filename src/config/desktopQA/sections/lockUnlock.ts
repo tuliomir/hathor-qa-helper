@@ -35,7 +35,6 @@ export const lockUnlockSection: SectionConfig = {
       id: 'step-5',
       title: 'Verify balance after unlock',
       instructions: 'Unlock the wallet and verify that the balance is accurate.',
-      tool: { componentKey: 'GetBalanceStage' },
     },
   ],
 };

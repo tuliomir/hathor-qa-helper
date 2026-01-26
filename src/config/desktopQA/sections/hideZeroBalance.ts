@@ -44,7 +44,6 @@ export const hideZeroBalanceSection: SectionConfig = {
       id: 'step-6',
       title: 'Unregister HIDET',
       instructions: 'Unregister the HIDET token.',
-      tool: { componentKey: 'CustomTokens' },
     },
     {
       id: 'step-7',

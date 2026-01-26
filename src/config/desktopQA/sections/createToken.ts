@@ -15,7 +15,6 @@ export const createTokenSection: SectionConfig = {
       title: 'Create token',
       instructions:
         'Create a new token named **"Test Token"** with symbol **"TST"** and amount **100**.',
-      tool: { componentKey: 'CreateTokenStage' },
     },
     {
       id: 'step-2',

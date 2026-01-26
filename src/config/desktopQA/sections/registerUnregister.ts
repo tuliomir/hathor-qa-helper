@@ -15,20 +15,17 @@ export const registerUnregisterSection: SectionConfig = {
       id: 'step-1',
       title: 'Unregister TST token',
       instructions: 'Unregister the **TST** token from the Custom Token screen.',
-      tool: { componentKey: 'CustomTokens' },
     },
     {
       id: 'step-2',
       title: 'Navigate to Register token',
       instructions: 'Navigate to the **Register token** option.',
-      tool: { componentKey: 'CustomTokens' },
     },
     {
       id: 'step-3',
       title: 'Register using config string',
       instructions:
         'Register the token using the previously copied **configuration string**.',
-      tool: { componentKey: 'CustomTokens' },
     },
     {
       id: 'step-4',
@@ -52,7 +49,6 @@ export const registerUnregisterSection: SectionConfig = {
       id: 'step-7',
       title: 'Unregister token again',
       instructions: 'Unregister the token again for the next test.',
-      tool: { componentKey: 'CustomTokens' },
     },
     {
       id: 'step-8',
@@ -69,7 +65,6 @@ export const registerUnregisterSection: SectionConfig = {
       id: 'step-10',
       title: 'Register using config string',
       instructions: 'Register the token using the configuration string.',
-      tool: { componentKey: 'CustomTokens' },
     },
   ],
 };

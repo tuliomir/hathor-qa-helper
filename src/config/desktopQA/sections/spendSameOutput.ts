@@ -14,7 +14,6 @@ export const spendSameOutputSection: SectionConfig = {
       id: 'step-1',
       title: 'Select HTR and copy address',
       instructions: 'Select the **HTR** token and copy your receiving address.',
-      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-2',
@@ -31,25 +30,21 @@ export const spendSameOutputSection: SectionConfig = {
       id: 'step-4',
       title: 'Navigate to Send tokens',
       instructions: 'Navigate to **"Send tokens"**.',
-      tool: { componentKey: 'SendTransactionStage' },
     },
     {
       id: 'step-5',
       title: 'Enter transaction details',
       instructions: 'Paste the address and enter **1.00** as the amount.',
-      tool: { componentKey: 'SendTransactionStage' },
     },
     {
       id: 'step-6',
       title: 'Deselect auto inputs',
       instructions: 'Deselect **"Choose inputs automatically"**.',
-      tool: { componentKey: 'SendTransactionStage' },
     },
     {
       id: 'step-7',
       title: 'Paste transaction ID',
       instructions: 'Paste the transaction ID and index from step 3.',
-      tool: { componentKey: 'SendTransactionStage' },
     },
     {
       id: 'step-8',

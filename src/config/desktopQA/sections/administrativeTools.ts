@@ -53,7 +53,6 @@ export const administrativeToolsSection: SectionConfig = {
       id: 'step-7',
       title: 'Copy wallet address',
       instructions: 'Copy your wallet address from **"Balance & History"**.',
-      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-8',
@@ -66,6 +65,7 @@ export const administrativeToolsSection: SectionConfig = {
       title: 'Delegate melt authority',
       instructions:
         'Delegate melt authority to an alternate wallet. This should result in **zero melt outputs** for your wallet.',
+      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-10',

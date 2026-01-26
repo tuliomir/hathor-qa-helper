@@ -28,6 +28,8 @@ export interface StepConfig {
   instructions: string;
   /** Optional embedded tool configuration */
   tool?: ToolConfig;
+  /** Optional hint about a tool that might be useful (shown when no tool is configured) */
+  toolHint?: string;
 }
 
 /**

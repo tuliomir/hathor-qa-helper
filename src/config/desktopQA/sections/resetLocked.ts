@@ -14,7 +14,6 @@ export const resetLockedSection: SectionConfig = {
       id: 'step-1',
       title: 'Load wallet',
       instructions: 'Load the wallet again if not already loaded.',
-      tool: { componentKey: 'WalletInitialization' },
     },
     {
       id: 'step-2',

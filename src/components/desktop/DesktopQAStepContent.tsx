@@ -1,17 +1,17 @@
 /**
  * Desktop QA Step Content Component
- * Displays step instructions with navigation and completion controls
+ * Displays step instructions with inline tools and navigation controls
  */
 
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
-	selectCurrentLocation,
-	selectStepStatus,
-	setCurrentLocation,
-	setStepStatus,
+  selectCurrentLocation,
+  selectStepStatus,
+  setCurrentLocation,
+  setStepStatus,
 } from '../../store/slices/desktopQAProgressSlice';
-import { getNextStep, getPreviousStep, getSection, getStep } from '../../config/desktopQA';
-import { MdCheckCircle, MdNavigateBefore, MdNavigateNext, MdRadioButtonUnchecked, } from 'react-icons/md';
+import { getComponent, getNextStep, getPreviousStep, getSection, getStep } from '../../config/desktopQA';
+import { MdCheckCircle, MdNavigateBefore, MdNavigateNext, MdRadioButtonUnchecked } from 'react-icons/md';
 
 /**
  * Simple markdown-like rendering for instructions
@@ -32,6 +32,31 @@ function renderInstructions(text: string): React.ReactNode {
     }
     return part;
   });
+}
+
+/**
+ * Inline tool component - renders the embedded tool for a step
+ */
+function InlineTool({ componentKey }: { componentKey: string }) {
+  const Component = getComponent(componentKey);
+
+  if (!Component) {
+    return (
+      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-sm text-red-800 m-0">
+          Tool "{componentKey}" could not be loaded.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="border border-gray-200 rounded-lg bg-gray-50 p-4">
+        <Component />
+      </div>
+    </div>
+  );
 }
 
 export default function DesktopQAStepContent() {
@@ -116,6 +141,18 @@ export default function DesktopQAStepContent() {
         <h2 className="text-lg font-bold mb-3">Instructions</h2>
         <p className="text-base leading-relaxed m-0">{renderInstructions(step.instructions)}</p>
       </div>
+
+      {/* Inline Tool (if configured) */}
+      {step.tool && <InlineTool componentKey={step.tool.componentKey} />}
+
+      {/* Tool Hint (if no tool but might be useful) */}
+      {step.toolHint && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800 m-0">
+            <strong>Tip:</strong> {step.toolHint}
+          </p>
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between">

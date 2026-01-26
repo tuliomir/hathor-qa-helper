@@ -15,7 +15,7 @@ export const sendTokensSection: SectionConfig = {
       title: 'Send HTR',
       instructions:
         'Send **0.01 HTR** to a test address or an alternate wallet.',
-      tool: { componentKey: 'SendTransactionStage' },
+      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-2',
@@ -27,14 +27,12 @@ export const sendTokensSection: SectionConfig = {
       id: 'step-3',
       title: 'Copy current address',
       instructions: 'Copy your current receiving address for the next step.',
-      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-4',
       title: 'Send HTR and TST',
       instructions:
         'Send both HTR and TST amounts to the same address (your own).',
-      tool: { componentKey: 'SendTransactionStage' },
     },
     {
       id: 'step-5',

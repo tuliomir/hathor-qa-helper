@@ -61,12 +61,19 @@ src/
 ├── store/slices/
 │   └── desktopQAProgressSlice.ts      # Progress tracking Redux slice
 └── components/desktop/
-    ├── DesktopQALayout.tsx            # Main layout wrapper
+    ├── DesktopQALayout.tsx            # Main layout (sidebar + content)
     ├── DesktopQASidebar.tsx           # Section navigation
-    ├── DesktopQAStepContent.tsx       # Step instructions display
-    ├── DesktopQAToolPanel.tsx         # Embedded tool panel
+    ├── DesktopQAStepContent.tsx       # Step instructions with inline tools
     └── DesktopQAHeader.tsx            # Header with progress bar
 ```
+
+### Layout Architecture
+
+The Desktop QA walkthrough uses a **two-column layout**:
+- **Left**: Sidebar with section/step navigation
+- **Right**: Step content with instructions and inline tools
+
+Tools are rendered **inline** within the step content, not in a separate panel. This keeps instructions and tools together for better context.
 
 ### Files Modified
 
@@ -82,29 +89,35 @@ src/
 | Section ID | Config File | Embedded Tools |
 |------------|-------------|----------------|
 | `wallet-update` | `sections/walletUpdate.ts` | None |
-| `initialization` | `sections/initialization.ts` | `WalletInitialization` |
-| `token-empty-wallet` | `sections/tokenEmptyWallet.ts` | `CreateTokenStage` |
-| `addresses` | `sections/addresses.ts` | `GetAddressStage`, `GetBalanceStage` |
-| `lock-unlock` | `sections/lockUnlock.ts` | `GetBalanceStage` |
-| `create-token` | `sections/createToken.ts` | `CreateTokenStage` |
+| `initialization` | `sections/initialization.ts` | None (toolHint only) |
+| `token-empty-wallet` | `sections/tokenEmptyWallet.ts` | None |
+| `addresses` | `sections/addresses.ts` | `SendTransactionStage` (step 1 only) |
+| `lock-unlock` | `sections/lockUnlock.ts` | None |
+| `create-token` | `sections/createToken.ts` | None |
 | `transaction-detail-creation` | `sections/transactionDetailCreation.ts` | None |
-| `send-tokens` | `sections/sendTokens.ts` | `SendTransactionStage`, `GetAddressStage` |
-| `transaction-detail-timelock` | `sections/transactionDetailTimelock.ts` | `SendTransactionStage`, `GetBalanceStage` |
-| `token-details` | `sections/tokenDetails.ts` | `CustomTokens` |
-| `register-unregister` | `sections/registerUnregister.ts` | `CustomTokens` |
-| `administrative-tools` | `sections/administrativeTools.ts` | `GetAddressStage` |
-| `hide-zero-balance` | `sections/hideZeroBalance.ts` | `CustomTokens` |
-| `token-bar-scroll` | `sections/tokenBarScroll.ts` | `CustomTokens` |
+| `send-tokens` | `sections/sendTokens.ts` | `GetAddressStage` (step 1 only) |
+| `transaction-detail-timelock` | `sections/transactionDetailTimelock.ts` | None |
+| `token-details` | `sections/tokenDetails.ts` | None (toolHint only) |
+| `register-unregister` | `sections/registerUnregister.ts` | None |
+| `administrative-tools` | `sections/administrativeTools.ts` | `GetAddressStage` (step 9 only) |
+| `hide-zero-balance` | `sections/hideZeroBalance.ts` | `CustomTokens` (steps 1, 8) |
+| `token-bar-scroll` | `sections/tokenBarScroll.ts` | `CustomTokens` (step 1 only) |
 | `change-server` | `sections/changeServer.ts` | None |
 | `add-passphrase` | `sections/addPassphrase.ts` | None |
 | `notifications-bug-report` | `sections/notificationsBugReport.ts` | None |
-| `reload-wallet` | `sections/reloadWallet.ts` | `WalletInitialization` |
-| `register-same-name` | `sections/registerSameName.ts` | `CustomTokens` |
-| `spend-same-output` | `sections/spendSameOutput.ts` | `GetAddressStage`, `SendTransactionStage` |
+| `reload-wallet` | `sections/reloadWallet.ts` | `WalletInitialization` (step 4 only) |
+| `register-same-name` | `sections/registerSameName.ts` | `CustomTokens` (steps 2, 3) |
+| `spend-same-output` | `sections/spendSameOutput.ts` | None |
 | `create-nft` | `sections/createNft.ts` | None |
-| `reset-locked` | `sections/resetLocked.ts` | `WalletInitialization` |
+| `reset-locked` | `sections/resetLocked.ts` | None |
 | `reset-menu` | `sections/resetMenu.ts` | None |
-| `late-backup` | `sections/lateBackup.ts` | `WalletInitialization` |
+| `late-backup` | `sections/lateBackup.ts` | None |
+
+### Tool Placement Philosophy
+
+Tools are only included when they **directly assist** with executing the step:
+- **High confidence**: Steps where the tool provides necessary data (e.g., getting an address to send to)
+- **Low confidence**: Use `toolHint` to suggest a tool might be useful without embedding it
 
 Reference the original QA.md for exact step content: https://github.com/HathorNetwork/hathor-wallet/blob/master/qa/QA.md
 

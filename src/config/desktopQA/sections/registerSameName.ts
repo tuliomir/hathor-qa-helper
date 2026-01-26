@@ -14,7 +14,6 @@ export const registerSameNameSection: SectionConfig = {
       id: 'step-1',
       title: 'Unregister TST if present',
       instructions: 'Unregister the **TST** token if it is currently registered.',
-      tool: { componentKey: 'CustomTokens' },
     },
     {
       id: 'step-2',
@@ -40,7 +39,6 @@ export const registerSameNameSection: SectionConfig = {
       title: 'Test invalid config string',
       instructions:
         'Type **"abc"** and verify an **"invalid configuration string"** error is displayed.',
-      tool: { componentKey: 'CustomTokens' },
     },
   ],
 };

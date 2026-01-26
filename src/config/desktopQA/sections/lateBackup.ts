@@ -15,7 +15,6 @@ export const lateBackupSection: SectionConfig = {
       title: 'Create wallet without backup',
       instructions:
         'Open the app and create a new wallet **without completing the backup**.',
-      tool: { componentKey: 'WalletInitialization' },
     },
     {
       id: 'step-2',

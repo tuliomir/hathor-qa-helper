@@ -15,14 +15,12 @@ export const transactionDetailTimelockSection: SectionConfig = {
       title: 'Send timelocked transaction',
       instructions:
         'Send a transaction with both tokens and configure one output with a **timelock**.',
-      tool: { componentKey: 'SendTransactionStage' },
     },
     {
       id: 'step-2',
       title: 'Verify balance update',
       instructions:
         'Verify that the balance updates reflect the locked amounts correctly.',
-      tool: { componentKey: 'GetBalanceStage' },
     },
     {
       id: 'step-3',

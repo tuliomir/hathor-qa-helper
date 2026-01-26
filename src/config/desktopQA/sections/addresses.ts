@@ -15,33 +15,29 @@ export const addressesSection: SectionConfig = {
       title: 'Copy address and receive HTR',
       instructions:
         'Copy your receiving address and receive **10.00 HTR** from another wallet.',
-      tool: { componentKey: 'GetAddressStage' },
+      tool: { componentKey: 'SendTransactionStage' },
     },
     {
       id: 'step-2',
       title: 'Verify transaction',
       instructions:
         'Verify the transaction appears with updated balance and that the receiving address has changed.',
-      tool: { componentKey: 'GetBalanceStage' },
     },
     {
       id: 'step-3',
       title: 'View all addresses',
       instructions:
         'View all addresses and confirm the transaction count is correct.',
-      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-4',
       title: 'Search and filter addresses',
       instructions: 'Search and filter addresses by specific values to test the search functionality.',
-      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-5',
       title: 'Generate new address',
       instructions: 'Generate a new address and verify the change is reflected.',
-      tool: { componentKey: 'GetAddressStage' },
     },
     {
       id: 'step-6',
