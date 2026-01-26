@@ -145,11 +145,11 @@ export const ConnectionStage: React.FC = () => {
 
       {/* Address Mismatch Warning */}
       {addressMismatch && (
-        <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
+        <div className="card-primary mb-7.5 bg-red-50 border border-red-500">
           <div className="flex items-start gap-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-warning flex-shrink-0"
+              className="h-6 w-6 text-red-600 flex-shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -162,11 +162,10 @@ export const ConnectionStage: React.FC = () => {
               />
             </svg>
             <div>
-              <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
-              <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+              <p className="font-bold text-red-900 m-0">Wrong Wallet Connected</p>
+              <p className="text-sm text-red-800 mt-1 mb-0">
+                The wallet being called is not the test wallet. This is not a workflow expected by
+                this helper. Please connect the same wallet that was selected as the test wallet.
               </p>
             </div>
           </div>
