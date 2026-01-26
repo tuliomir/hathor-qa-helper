@@ -3,7 +3,7 @@
  * Displays section and step navigation with progress indicators
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectCompletedStepsCount,
@@ -119,6 +119,52 @@ export default function DesktopQASidebar() {
     // Initially expand the current section
     return new Set([currentLocation.sectionId]);
   });
+
+  // Track previous section to detect navigation
+  const prevSectionIdRef = useRef(currentLocation.sectionId);
+
+  // Get completion counts for all sections (for auto-collapse logic)
+  const sectionCompletionMap = useAppSelector((state) => {
+    const map: Record<string, { completed: number; total: number }> = {};
+    for (const section of sections) {
+      map[section.id] = {
+        completed: selectCompletedStepsCount(state, section.id),
+        total: section.steps.length,
+      };
+    }
+    return map;
+  });
+
+  // Auto-collapse completed sections when navigating to a new section
+  useEffect(() => {
+    const prevSectionId = prevSectionIdRef.current;
+    const currentSectionId = currentLocation.sectionId;
+
+    // Only act if we actually changed sections
+    if (prevSectionId !== currentSectionId) {
+      // Check if the previous section is fully completed
+      const prevSectionStatus = sectionCompletionMap[prevSectionId];
+      const isPrevSectionComplete =
+        prevSectionStatus && prevSectionStatus.completed === prevSectionStatus.total;
+
+      setExpandedSections((prev) => {
+        const next = new Set(prev);
+
+        // Collapse the previous section only if it's fully completed
+        if (isPrevSectionComplete) {
+          next.delete(prevSectionId);
+        }
+
+        // Expand the new current section
+        next.add(currentSectionId);
+
+        return next;
+      });
+
+      // Update the ref
+      prevSectionIdRef.current = currentSectionId;
+    }
+  }, [currentLocation.sectionId, sectionCompletionMap]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => {

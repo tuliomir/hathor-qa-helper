@@ -10,6 +10,7 @@ import {
   setCurrentLocation,
   setStepStatus,
 } from '../../store/slices/desktopQAProgressSlice';
+import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { getComponent, getNextStep, getPreviousStep, getSection, getStep } from '../../config/desktopQA';
 import { MdCheckCircle, MdNavigateBefore, MdNavigateNext, MdRadioButtonUnchecked } from 'react-icons/md';
 import MarkdownText from '../common/MarkdownText';
@@ -43,6 +44,7 @@ export default function DesktopQAStepContent() {
   const dispatch = useAppDispatch();
   const currentLocation = useAppSelector(selectCurrentLocation);
   const { sectionId, stepId } = currentLocation;
+  const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
 
   const section = getSection(sectionId);
   const step = getStep(sectionId, stepId);
@@ -51,6 +53,18 @@ export default function DesktopQAStepContent() {
   const isCompleted = status === 'completed';
   const nextStep = getNextStep(sectionId, stepId);
   const prevStep = getPreviousStep(sectionId, stepId);
+
+  /**
+   * Refresh tokens for steps that create/modify tokens
+   * Called when navigating away from token-creation steps
+   */
+  const refreshTokensIfNeeded = () => {
+    // Refresh tokens after creating a token (createToken step-1)
+    if (sectionId === 'create-token' && stepId === 'step-1' && testWalletId) {
+      dispatch(refreshWalletTokens(testWalletId));
+      dispatch(refreshWalletBalance(testWalletId));
+    }
+  };
 
   const handleToggleComplete = () => {
     dispatch(
@@ -64,6 +78,7 @@ export default function DesktopQAStepContent() {
 
   const handleNext = () => {
     if (nextStep) {
+      refreshTokensIfNeeded();
       dispatch(setCurrentLocation(nextStep));
       window.scrollTo(0, 0);
     }
@@ -88,6 +103,7 @@ export default function DesktopQAStepContent() {
 
     // Navigate to next step if available
     if (nextStep) {
+      refreshTokensIfNeeded();
       dispatch(setCurrentLocation(nextStep));
       window.scrollTo(0, 0);
     }

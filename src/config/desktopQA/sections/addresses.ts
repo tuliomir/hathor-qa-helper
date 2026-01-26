@@ -29,7 +29,7 @@ Verify the transaction appears with **updated balance** and that the **receiving
       instructions:
         'View all addresses and confirm the transaction count is correct.'
         + '\n\nCopy one of the addresses and use it in the search input to test the search functionality.'
-        + '\n\nValidate only the correct address is shown on the results.',
+        + '\n\n🔍 Validate only the correct address is shown on the results.',
       tool: { componentKey: 'AddressListViewer' },
     },
     {
@@ -39,7 +39,7 @@ Verify the transaction appears with **updated balance** and that the **receiving
       + '\n\nCopy the current address and paste it below to confirm it\'s a valid one.'
       + '\n\nClick \'QR Code\', take a print of it and paste the it on the component validator below.'
       + '\n\nDownload the QR code image and upload it on the validator below.'
-      + '\n\nValidate that the filename also matches the address.',
+      + '\n\n🔍 Validate that the filename also matches the address.',
       tool: { componentKey: 'AddressQRValidator' },
     },
   ],
