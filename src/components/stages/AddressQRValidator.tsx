@@ -118,7 +118,6 @@ export default function AddressQRValidator() {
       try {
         const addressIndex = await instance.getAddressIndex(address);
         if (addressIndex !== null && addressIndex !== undefined) {
-          const isTestWallet = wallet.metadata.id === testWalletId;
           return {
             address,
             isValid: true,

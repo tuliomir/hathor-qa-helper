@@ -13,7 +13,6 @@ import { lockUnlockSection } from './sections/lockUnlock';
 import { createTokenSection } from './sections/createToken';
 import { sendTokensSection } from './sections/sendTokens';
 import { tokenDetailsSection } from './sections/tokenDetails';
-import { registerUnregisterSection } from './sections/registerUnregister';
 import { administrativeToolsSection } from './sections/administrativeTools';
 import { hideZeroBalanceSection } from './sections/hideZeroBalance';
 import { tokenBarScrollSection } from './sections/tokenBarScroll';
@@ -45,7 +44,6 @@ export const desktopQAConfig: DesktopQAConfig = {
     createTokenSection,
     sendTokensSection,
     tokenDetailsSection,
-    registerUnregisterSection,
     administrativeToolsSection,
     hideZeroBalanceSection,
     tokenBarScrollSection,

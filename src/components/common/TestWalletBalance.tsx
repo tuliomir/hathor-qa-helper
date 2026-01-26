@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { refreshWalletBalance } from '../../store/slices/walletStoreSlice';
+import { formatBalance } from '../../utils/balanceUtils';
 import { useState } from 'react';
 
 export default function TestWalletBalance() {
@@ -51,14 +52,6 @@ export default function TestWalletBalance() {
       </div>
     );
   }
-
-  // Format balance for display (balance is stored as string in satoshis)
-  const formatBalance = (balanceStr?: string): string => {
-    if (!balanceStr) return '0.00';
-    const satoshis = BigInt(balanceStr);
-    const htr = Number(satoshis) / 100; // 2 decimal places for HTR
-    return htr.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
 
   return (
     <div className="card-primary">
