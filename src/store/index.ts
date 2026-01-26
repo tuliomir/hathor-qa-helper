@@ -32,6 +32,7 @@ import getAddressReducer from './slices/getAddressSlice';
 import getUtxosReducer from './slices/getUtxosSlice';
 import rawRpcReducer from './slices/rawRpcSlice';
 import mobileQAProgressReducer from './slices/mobileQAProgressSlice';
+import desktopQAProgressReducer from './slices/desktopQAProgressSlice';
 import multisigReducer from './slices/multisigSlice';
 import deepLinkReducer from './slices/deepLinkSlice';
 
@@ -66,6 +67,7 @@ export const store = configureStore({
     getUtxos: getUtxosReducer,
     rawRpc: rawRpcReducer,
     mobileQAProgress: mobileQAProgressReducer,
+    desktopQAProgress: desktopQAProgressReducer,
     multisig: multisigReducer,
     deepLink: deepLinkReducer,
   },
