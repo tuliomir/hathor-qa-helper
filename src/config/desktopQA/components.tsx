@@ -15,6 +15,7 @@ import FundTestAddress from '../../components/stages/FundTestAddress';
 import AddressListViewer from '../../components/stages/AddressListViewer';
 import AddressQRValidator from '../../components/stages/AddressQRValidator';
 import TestWalletBalance from '../../components/common/TestWalletBalance';
+import DisplayWalletAddress, { TestWalletAddress } from '../../components/common/DisplayWalletAddress.tsx';
 
 /**
  * Registry mapping component keys to their implementations
@@ -32,6 +33,8 @@ export const componentRegistry: Record<string, ComponentType> = {
   AddressListViewer,
   AddressQRValidator,
   TestWalletBalance,
+  FundingWalletAddress: DisplayWalletAddress,
+  TestWalletAddress,
 };
 
 /**

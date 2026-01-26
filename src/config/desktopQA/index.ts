@@ -12,7 +12,6 @@ import { addressesSection } from './sections/addresses';
 import { lockUnlockSection } from './sections/lockUnlock';
 import { createTokenSection } from './sections/createToken';
 import { sendTokensSection } from './sections/sendTokens';
-import { transactionDetailTimelockSection } from './sections/transactionDetailTimelock';
 import { tokenDetailsSection } from './sections/tokenDetails';
 import { registerUnregisterSection } from './sections/registerUnregister';
 import { administrativeToolsSection } from './sections/administrativeTools';
@@ -45,7 +44,6 @@ export const desktopQAConfig: DesktopQAConfig = {
     lockUnlockSection,
     createTokenSection,
     sendTokensSection,
-    transactionDetailTimelockSection,
     tokenDetailsSection,
     registerUnregisterSection,
     administrativeToolsSection,
