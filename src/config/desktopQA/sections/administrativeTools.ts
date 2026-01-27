@@ -10,79 +10,36 @@ export const administrativeToolsSection: SectionConfig = {
   title: 'Administrative Tools',
   description: 'Manage token minting, melting, and authorities',
   steps: [
-    // Validate Token Data
     {
       id: 'step-1',
-      title: 'Open Administrative Tools',
-      instructions:
-        'Select the **TST** token and open the **"Administrative Tools"** tab.',
+      title: 'Verify token data',
+      instructions: 'Select the **TST** token and open the **"Administrative Tools"** tab.' +
+        '\n\n🔍 Verify **total supply**, **balance**, **mint authorities**, and **melt authorities**.',
     },
     {
       id: 'step-2',
-      title: 'Verify token data',
-      instructions:
-        'Verify **total supply**, **balance**, **mint authorities**, and **melt authorities**.',
+      title: 'Test mint/melt operations',
+      instructions: 'Attempt to mint **10,000** tokens. This should **fail** due to insufficient HTR deposit.' +
+        '\n\nSuccessfully mint **50** tokens. Balance should become **150.00**.' +
+        '\n\nAttempt to melt **200** tokens. This should **fail** due to insufficient balance.' +
+        '\n\nSuccessfully melt **20** tokens. Balance should become **130.00**.',
     },
-    // Mint and Melt Tokens
     {
       id: 'step-3',
-      title: 'Attempt large mint',
-      instructions:
-        'Attempt to mint **10,000** tokens. This should **fail** due to insufficient HTR deposit.',
+      title: 'Delegate authorities',
+      instructions: 'Copy your wallet address from **"Balance & History"**.' +
+        '\n\nDelegate mint authority to your own address.' +
+        '\n\n🔍 Verify this creates **2 mint outputs**.' +
+        '\n\nDelegate melt authority to an alternate wallet (funding wallet address below).' +
+        '\n\n🔍 Verify this results in **zero melt outputs** for your wallet.',
+      tool: { componentKey: 'FundingWalletAddress' },
     },
     {
       id: 'step-4',
-      title: 'Mint 50 tokens',
-      instructions:
-        'Successfully mint **50** tokens. Balance should become **150.00**.',
-    },
-    {
-      id: 'step-5',
-      title: 'Attempt large melt',
-      instructions:
-        'Attempt to melt **200** tokens. This should **fail** due to insufficient balance.',
-    },
-    {
-      id: 'step-6',
-      title: 'Melt 20 tokens',
-      instructions:
-        'Successfully melt **20** tokens. Balance should become **130.00**.',
-    },
-    // Delegate and Destroy Authorities
-    {
-      id: 'step-7',
-      title: 'Copy wallet address',
-      instructions: 'Copy your wallet address from **"Balance & History"**.',
-    },
-    {
-      id: 'step-8',
-      title: 'Delegate mint authority',
-      instructions:
-        'Delegate mint authority to your own address. This should create **2 mint outputs**.',
-    },
-    {
-      id: 'step-9',
-      title: 'Delegate melt authority',
-      instructions:
-        'Delegate melt authority to an alternate wallet. This should result in **zero melt outputs** for your wallet.',
-      tool: { componentKey: 'GetAddressStage' },
-    },
-    {
-      id: 'step-10',
-      title: 'Attempt destroy 3 outputs',
-      instructions:
-        'Attempt to destroy **3** mint outputs. This should **fail** due to insufficient outputs.',
-    },
-    {
-      id: 'step-11',
-      title: 'Destroy 2 mint outputs',
-      instructions: 'Successfully destroy **2** mint outputs.',
-    },
-    {
-      id: 'step-12',
-      title: 'Verify no mint capability',
-      instructions:
-        'Verify **"Can mint new tokens: No"** appears in the About tab.',
+      title: 'Destroy mint authority',
+      instructions: 'Attempt to destroy **3** mint outputs. This should **fail** due to insufficient outputs.' +
+        '\n\nSuccessfully destroy **2** mint outputs.' +
+        '\n\n🔍 Verify **"Can mint new tokens: No"** appears in the About tab.',
     },
   ],
 };

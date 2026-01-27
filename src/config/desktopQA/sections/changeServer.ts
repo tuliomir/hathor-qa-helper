@@ -12,30 +12,16 @@ export const changeServerSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Access Change server',
-      instructions: 'Access **Settings** and select **"Change server"**.',
+      title: 'Switch to mainnet',
+      instructions: 'Access **Settings** and select **"Change server"**.' +
+        '\n\nConnect to the **mainnet default server**.' +
+        '\n\n🔍 Verify an **empty transaction list** appears (mainnet has no transactions for this wallet).',
     },
     {
       id: 'step-2',
-      title: 'Connect to mainnet',
-      instructions: 'Connect to the **mainnet default server**.',
-    },
-    {
-      id: 'step-3',
-      title: 'Verify empty list',
-      instructions:
-        'Verify an **empty transaction list** appears (mainnet has no transactions for this wallet).',
-    },
-    {
-      id: 'step-4',
       title: 'Switch back to testnet',
-      instructions: 'Return to settings and switch back to **testnet**.',
-    },
-    {
-      id: 'step-5',
-      title: 'Confirm connection',
-      instructions:
-        'Confirm the testnet connection prompt appears and transactions reload.',
+      instructions: 'Return to settings and switch back to **testnet**.' +
+        '\n\n🔍 Confirm the testnet connection prompt appears and transactions reload correctly.',
     },
   ],
 };

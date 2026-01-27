@@ -12,37 +12,18 @@ export const addPassphraseSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Navigate to passphrase',
-      instructions:
-        'Navigate to **Settings** and select **"Set a passphrase"**.',
+      title: 'Set a passphrase',
+      instructions: 'Navigate to **Settings** and select **"Set a passphrase"**.' +
+        '\n\nAttempt confirmation with incomplete fields and verify it **fails**.' +
+        '\n\nEnter a passphrase and confirm.' +
+        '\n\n🔍 Verify an **empty transaction list** appears (different wallet derived from passphrase).',
     },
     {
       id: 'step-2',
-      title: 'Test incomplete fields',
-      instructions:
-        'Attempt confirmation with incomplete fields. This should **fail**.',
-    },
-    {
-      id: 'step-3',
-      title: 'Enter passphrase',
-      instructions:
-        'Enter a passphrase and confirm. An **empty transaction list** should appear (different wallet derived).',
-    },
-    {
-      id: 'step-4',
-      title: 'Return to passphrase screen',
-      instructions: 'Return to the passphrase settings screen.',
-    },
-    {
-      id: 'step-5',
-      title: 'Set blank passphrase',
-      instructions: 'Select **"I want to set a blank passphrase"** option.',
-    },
-    {
-      id: 'step-6',
-      title: 'Verify transactions return',
-      instructions:
-        'Verify all original transactions reappear (back to original wallet).',
+      title: 'Remove passphrase',
+      instructions: 'Return to the passphrase settings screen.' +
+        '\n\nSelect **"I want to set a blank passphrase"** option.' +
+        '\n\n🔍 Verify all original transactions reappear (back to original wallet).',
     },
   ],
 };

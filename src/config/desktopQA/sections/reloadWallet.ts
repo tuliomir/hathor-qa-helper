@@ -12,32 +12,18 @@ export const reloadWalletSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Disable Wi-Fi',
-      instructions:
-        'Disable Wi-Fi until the status shows **"Offline"** in the wallet.',
+      title: 'Test offline/online transitions',
+      instructions: 'Disable Wi-Fi until the status shows **"Offline"** in the wallet.' +
+        '\n\nRe-enable Wi-Fi.' +
+        '\n\n🔍 Verify the status changes to **"Online"** and transactions reload.',
     },
     {
       id: 'step-2',
-      title: 'Enable Wi-Fi',
-      instructions:
-        'Enable Wi-Fi and verify the status changes to **"Online"** with transactions reloading.',
-    },
-    {
-      id: 'step-3',
-      title: 'Reset all data',
-      instructions: 'Select **"Reset all data"** and confirm the action.',
-    },
-    {
-      id: 'step-4',
-      title: 'Load with saved seed',
-      instructions:
-        'Load the wallet using the **seed words saved earlier** during initialization.',
+      title: 'Reset and reload with seed',
+      instructions: 'Select **"Reset all data"** and confirm the action.' +
+        '\n\nLoad the wallet using the **seed words saved earlier** during initialization.' +
+        '\n\n🔍 Verify all transactions appear normally.',
       tool: { componentKey: 'WalletInitialization' },
-    },
-    {
-      id: 'step-5',
-      title: 'Verify transactions',
-      instructions: 'Verify all transactions appear normally.',
     },
   ],
 };

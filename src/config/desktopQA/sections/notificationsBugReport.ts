@@ -12,28 +12,10 @@ export const notificationsBugReportSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Access Settings',
-      instructions: 'Access the **Settings** screen.',
-    },
-    {
-      id: 'step-2',
-      title: 'Toggle notifications',
-      instructions: 'Toggle **"Allow notifications"** setting.',
-    },
-    {
-      id: 'step-3',
-      title: 'Verify notification change',
-      instructions: 'Verify the setting changes to **"No"**.',
-    },
-    {
-      id: 'step-4',
-      title: 'Toggle bug report',
-      instructions: 'Toggle the **bug report** setting.',
-    },
-    {
-      id: 'step-5',
-      title: 'Verify bug report change',
-      instructions: 'Verify the change is reflected in the UI.',
+      title: 'Toggle settings',
+      instructions: 'Access the **Settings** screen.' +
+        '\n\nToggle **"Allow notifications"** setting and verify it changes to **"No"**.' +
+        '\n\nToggle the **bug report** setting and verify the change is reflected in the UI.',
     },
   ],
 };

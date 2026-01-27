@@ -12,45 +12,18 @@ export const spendSameOutputSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Select HTR and copy address',
-      instructions: 'Select the **HTR** token and copy your receiving address.',
+      title: 'Get spent output reference',
+      instructions: 'Select the **HTR** token and copy your receiving address.' +
+        '\n\nClick on the first **0.00** transaction in the history.' +
+        '\n\nCopy the first HTR input - specifically the **transaction ID and index**.',
     },
     {
       id: 'step-2',
-      title: 'Click first 0.00 transaction',
-      instructions: 'Click on the first **0.00** transaction.',
-    },
-    {
-      id: 'step-3',
-      title: 'Copy first HTR input',
-      instructions:
-        'Copy the first HTR input - specifically the **transaction ID and index**.',
-    },
-    {
-      id: 'step-4',
-      title: 'Navigate to Send tokens',
-      instructions: 'Navigate to **"Send tokens"**.',
-    },
-    {
-      id: 'step-5',
-      title: 'Enter transaction details',
-      instructions: 'Paste the address and enter **1.00** as the amount.',
-    },
-    {
-      id: 'step-6',
-      title: 'Deselect auto inputs',
-      instructions: 'Deselect **"Choose inputs automatically"**.',
-    },
-    {
-      id: 'step-7',
-      title: 'Paste transaction ID',
-      instructions: 'Paste the transaction ID and index from step 3.',
-    },
-    {
-      id: 'step-8',
-      title: 'Verify spent error',
-      instructions:
-        'Verify an error appears indicating the **output is already spent**.',
+      title: 'Attempt to spend spent output',
+      instructions: 'Navigate to **"Send tokens"** and paste your address with **1.00** as the amount.' +
+        '\n\nDeselect **"Choose inputs automatically"**.' +
+        '\n\nPaste the transaction ID and index copied earlier.' +
+        '\n\n🔍 Verify an error appears indicating the **output is already spent**.',
     },
   ],
 };

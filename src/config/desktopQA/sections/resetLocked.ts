@@ -12,35 +12,18 @@ export const resetLockedSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Load wallet',
-      instructions: 'Load the wallet again if not already loaded.',
+      title: 'Get to lock screen',
+      instructions: 'Load the wallet if not already loaded.' +
+        '\n\nClose and reopen the wallet application to reach the lock screen.',
     },
     {
       id: 'step-2',
-      title: 'Close and reopen',
-      instructions: 'Close and reopen the wallet application.',
-    },
-    {
-      id: 'step-3',
-      title: 'Click Reset all data',
-      instructions:
-        'From the lock screen, click **"Reset all data"** and confirm.',
-    },
-    {
-      id: 'step-4',
-      title: 'Verify password validation',
-      instructions: 'Verify that correct **password validation** occurs.',
-    },
-    {
-      id: 'step-5',
-      title: 'Confirm successful reset',
-      instructions: 'Confirm the reset is successful.',
-    },
-    {
-      id: 'step-6',
-      title: 'Verify Welcome screen',
-      instructions:
-        'Close the wallet and reopen to verify the **Welcome screen** appears.',
+      title: 'Test reset from lock screen',
+      instructions: 'From the lock screen, click **"Reset all data"** and confirm.' +
+        '\n\n🔍 Verify that correct **password validation** occurs.' +
+        '\n\nConfirm the reset is successful.' +
+        '\n\nClose and reopen the wallet.' +
+        '\n\n🔍 Verify the **Welcome screen** appears.',
     },
   ],
 };

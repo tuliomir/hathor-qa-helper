@@ -12,22 +12,11 @@ export const tokenBarScrollSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Accumulate 3+ tokens',
-      instructions:
-        'Ensure you have **3 or more tokens** in the token bar. Register the additional **TSC** token if needed.',
+      title: 'Test scroll behavior',
+      instructions: 'Ensure you have **3 or more tokens** in the token bar. Register the additional **TSC** token if needed.' +
+        '\n\nReduce the browser/window height to trigger scroll behavior in the token bar.' +
+        '\n\n🔍 Verify that the **lock** and **settings** icons remain visible while scrolling.',
       tool: { componentKey: 'CustomTokens' },
-    },
-    {
-      id: 'step-2',
-      title: 'Reduce screen height',
-      instructions:
-        'Reduce the browser/window height to trigger scroll behavior in the token bar.',
-    },
-    {
-      id: 'step-3',
-      title: 'Verify icons visible',
-      instructions:
-        'Verify that the **lock** and **settings** icons remain visible while scrolling.',
     },
   ],
 };

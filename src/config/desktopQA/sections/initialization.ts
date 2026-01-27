@@ -12,40 +12,33 @@ export const initializationSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Verify Welcome screen',
-      instructions: 'Open the wallet application and verify that the **Welcome screen** appears on startup.',
+      title: 'Welcome screen and wallet type',
+      instructions: 'Open the wallet application.' +
+        '\n\n🔍 Verify the **Welcome screen** appears on startup.' +
+        '\n\nTry to continue **without checking** the checkbox to confirm it is required.' +
+        '\n\nCheck the checkbox and select **Software Wallet**, then choose to create a new wallet.',
     },
     {
       id: 'step-2',
-      title: 'Test checkbox requirement',
-      instructions:
-        'Test that the checkbox must be checked before proceeding. Try to continue without checking it.',
-    },
-    {
-      id: 'step-3',
-      title: 'Select Software Wallet',
-      instructions: 'Select **Software Wallet** option and choose to create a new wallet.',
-    },
-    {
-      id: 'step-4',
       title: 'Backup seed words',
-      instructions:
-        'Complete backup of the seed words. **Important:** Take a screenshot of the seed words screen and paste it below to capture them for later testing.\n\nValidate seed words by intentionally selecting wrong words to confirm the retry mechanism works correctly.',
+      instructions: 'Complete backup of the seed words.' +
+        '\n\n**Important:** Take a screenshot of the seed words screen and paste it below for later testing.' +
+        '\n\nValidate seed words by intentionally **selecting wrong words** to confirm the retry mechanism works.',
       tool: { componentKey: 'SeedPhraseCapture' },
     },
     {
-      id: 'step-6',
-      title: 'Test password validation',
-      instructions:
-        `Test password validation by entering a weak password like "123". Verify it is rejected.
-Test password confirmation matching - enter different passwords and verify error is shown.`,
-    },
-    {
-      id: 'step-8',
-      title: 'Test PIN validation',
-      instructions: `Test PIN validation by entering a weak PIN like "123", checking it's rejected.
-Insert an invalid confirmation PIN.
-Enter a valid PIN and start the wallet successfully.`,
+      id: 'step-3',
+      title: 'Test password and PIN validation',
+      instructions: 'Test password validation by entering a weak password like **"123"**.' +
+        '\n\n🔍 Verify it is rejected.' +
+        '\n\nEnter different passwords in the confirmation field.' +
+        '\n\n🔍 Verify a mismatch error is shown.' +
+        '\n\nEnter a valid matching password and proceed to PIN setup.' +
+        '\n\nTest PIN validation by entering a weak PIN like **"123"**.' +
+        '\n\n🔍 Verify it is rejected.' +
+        '\n\nEnter a valid PIN with **invalid confirmation**.' +
+        '\n\n🔍 Verify the mismatch error.' +
+        '\n\nEnter a valid PIN and confirmation to start the wallet successfully.',
     },
   ],
 };

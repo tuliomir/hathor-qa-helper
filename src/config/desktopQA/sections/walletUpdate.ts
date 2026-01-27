@@ -12,27 +12,18 @@ export const walletUpdateSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Document current state',
-      instructions:
-        'Document the current wallet version and token balances before upgrading. Take note of all custom tokens and their balances.',
+      title: 'Document state and upgrade',
+      instructions: 'Document the current wallet version and token balances before upgrading.' +
+        '\n\nTake note of all **custom tokens** and their balances.' +
+        '\n\nInstall the new wallet version.' +
+        '\n\n🔍 Verify that the **lock screen** appears after installation.',
     },
     {
       id: 'step-2',
-      title: 'Install new version',
-      instructions:
-        'Install the new wallet version. Verify that the lock screen appears after installation.',
-    },
-    {
-      id: 'step-3',
-      title: 'Verify transactions load',
-      instructions:
-        'Unlock the wallet and confirm that transactions load with the correct balances matching what you documented.',
-    },
-    {
-      id: 'step-4',
-      title: 'Optional reset',
-      instructions:
-        'Optionally reset the wallet to test fresh installation flow. This step can be skipped if not testing reset functionality.',
+      title: 'Verify migration',
+      instructions: 'Unlock the wallet with your password.' +
+        '\n\n🔍 Confirm that transactions load with the **correct balances** matching what you documented.' +
+        '\n\n*Optional:* Reset the wallet to test fresh installation flow.',
     },
   ],
 };

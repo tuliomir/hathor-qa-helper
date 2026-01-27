@@ -12,33 +12,19 @@ export const registerSameNameSection: SectionConfig = {
   steps: [
     {
       id: 'step-1',
-      title: 'Unregister TST if present',
-      instructions: 'Unregister the **TST** token if it is currently registered.',
+      title: 'Test duplicate name registration',
+      instructions: 'Unregister the **TST** token if it is currently registered.' +
+        '\n\nRegister the first TST token using the configuration below.' +
+        '\n\nAttempt to register a second TST token (with a **different UID**).' +
+        '\n\n🔍 Verify the app handles the naming conflict appropriately.',
+      tool: { componentKey: 'CustomTokens' },
     },
     {
       id: 'step-2',
-      title: 'Register first TST token',
-      instructions:
-        'Register the first TST token using the provided configuration.',
-      tool: { componentKey: 'CustomTokens' },
-    },
-    {
-      id: 'step-3',
-      title: 'Attempt second TST registration',
-      instructions:
-        'Attempt to register a second TST token (with a **different UID**).',
-      tool: { componentKey: 'CustomTokens' },
-    },
-    {
-      id: 'step-4',
-      title: 'Navigate to Register token',
-      instructions: 'Navigate to the **Register token** option.',
-    },
-    {
-      id: 'step-5',
       title: 'Test invalid config string',
-      instructions:
-        'Type **"abc"** and verify an **"invalid configuration string"** error is displayed.',
+      instructions: 'Navigate to the **Register token** option.' +
+        '\n\nType **"abc"** as the configuration string.' +
+        '\n\n🔍 Verify an **"invalid configuration string"** error is displayed.',
     },
   ],
 };
