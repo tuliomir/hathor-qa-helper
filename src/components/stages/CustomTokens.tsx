@@ -19,6 +19,7 @@ import type { NetworkType } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 import { ExplorerLink } from '../common/ExplorerLink';
+import AllConfigStringsModal from '../common/AllConfigStringsModal';
 
 type TabType = 'fund' | 'test';
 
@@ -154,6 +155,7 @@ function WalletTokensDisplay({
   const [hideZeroBalance, setHideZeroBalance] = useState(true);
   const [tokenBalances, setTokenBalances] = useState<Map<string, bigint>>(new Map());
   const [isFetchingFirstEmpty, setIsFetchingFirstEmpty] = useState(false);
+  const [isAllConfigStringsModalOpen, setIsAllConfigStringsModalOpen] = useState(false);
 
 	// Refresh the tokens when page is opened
 	useEffect(() => {
@@ -632,6 +634,14 @@ function WalletTokensDisplay({
                 </label>
               </div>
               <button
+                onClick={() => setIsAllConfigStringsModalOpen(true)}
+                disabled={walletTokens.length === 0}
+                className="btn-secondary py-1.5 px-4 text-sm"
+                title="Export all token configuration strings for Desktop Wallet"
+              >
+                Export All
+              </button>
+              <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
                 className="btn-primary py-1.5 px-4 text-sm"
@@ -909,6 +919,14 @@ function WalletTokensDisplay({
           )}
         </>
       )}
+
+      {/* All Configuration Strings Modal */}
+      <AllConfigStringsModal
+        isOpen={isAllConfigStringsModalOpen}
+        onClose={() => setIsAllConfigStringsModalOpen(false)}
+        tokens={walletTokens}
+        walletName={wallet.metadata.friendlyName}
+      />
     </>
   );
 }

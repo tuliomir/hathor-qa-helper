@@ -19,7 +19,6 @@ import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const BetDepositStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -182,20 +181,16 @@ export const BetDepositStage: React.FC = () => {
       // Clear deep link notification after RPC response
       clearDeepLinkNotification();
 
-      // Serialize BigInt values to strings for Redux storage
-      const serializedRequest = JSONBigInt.parse(JSONBigInt.stringify(request));
-      const serializedResponse = JSONBigInt.parse(JSONBigInt.stringify(response));
-
       // Store request in Redux
       dispatch(setBetDepositRequest({
-        method: serializedRequest.method,
-        params: serializedRequest.params,
+        method: request.method,
+        params: request.params,
         isDryRun,
       }));
 
       // Store response in Redux with betChoice metadata
       dispatch(setBetDepositResponse({
-        response: serializedResponse,
+        response,
         duration,
         betChoice,
       }));
