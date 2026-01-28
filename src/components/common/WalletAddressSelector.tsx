@@ -191,7 +191,7 @@ export default function WalletAddressSelector({
         <div className="p-3 bg-green-50 border border-success rounded">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-medium text-green-800">Address (Index {addressIndex})</span>
-            {showCopyButton && <CopyButton text={derivedAddress} label="Copy" size="sm" />}
+            {showCopyButton && <CopyButton text={derivedAddress} label="Copy" />}
           </div>
           <p className="font-mono text-xs break-all m-0 text-green-900">{derivedAddress}</p>
         </div>

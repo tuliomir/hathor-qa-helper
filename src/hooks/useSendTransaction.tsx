@@ -37,7 +37,7 @@ export function useSendTransaction() {
     template: unknown,
     metadata: TransactionMetadata,
     pinCode: string
-  ): Promise<void> => {
+  ): Promise<{ hash: string } | undefined> => {
     const { fromWallet, toAddress, amount, tokenUid, tokenSymbol, fromWalletId } = metadata;
 
     if (!fromWallet || !fromWallet.instance) {
@@ -87,6 +87,8 @@ export function useSendTransaction() {
         duration: 20000,
         link: { url: txUrl, label: 'link' },
       });
+
+      return tx.hash ? { hash: tx.hash } : undefined;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
       setError(errorMessage);

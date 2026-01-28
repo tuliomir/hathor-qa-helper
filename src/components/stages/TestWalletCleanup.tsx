@@ -865,7 +865,7 @@ export default function TestWalletCleanup() {
                     <span className="text-gray-500">[{log.timestamp}]</span>{' '}
                     <span className="font-semibold">[{log.type.toUpperCase()}]</span>{' '}
                     {log.message}
-                    {log.data && (
+                    {log.data !== undefined && log.data !== null && (
                       <pre className="mt-1 text-2xs overflow-x-auto whitespace-pre-wrap">
                         {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
                       </pre>
