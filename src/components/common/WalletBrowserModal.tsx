@@ -37,6 +37,8 @@ interface WalletBrowserModalProps {
   onEditWallet: (walletId: string, currentName: string) => void;
   onShowSeedModal: (walletId: string) => void;
   onSwapNetwork: (walletId: string, currentNetwork: NetworkType, status: string) => Promise<void>;
+  // Stored addresses from database (walletId -> address at index 0)
+  storedFirstAddresses?: Record<string, string>;
   // Scan props
   scanState?: ScanProgressState;
   scanResults?: Record<string, WalletScanResult>;
@@ -71,6 +73,7 @@ export default function WalletBrowserModal({
   onEditWallet,
   onShowSeedModal,
   onSwapNetwork,
+  storedFirstAddresses,
   scanState,
   scanResults,
   filterHasBalance,
@@ -91,12 +94,18 @@ export default function WalletBrowserModal({
     // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (w) =>
+      result = result.filter((w) => {
+        // Check name and seed words
+        if (
           w.metadata.friendlyName.toLowerCase().includes(query) ||
-          w.metadata.seedWords.toLowerCase().includes(query) ||
-          w.firstAddress?.toLowerCase().includes(query)
-      );
+          w.metadata.seedWords.toLowerCase().includes(query)
+        ) {
+          return true;
+        }
+        // Check runtime address or stored address
+        const displayAddress = w.firstAddress || storedFirstAddresses?.[w.metadata.id];
+        return displayAddress?.toLowerCase().includes(query);
+      });
     }
 
     // Balance filter (only if scan data exists)
@@ -111,7 +120,7 @@ export default function WalletBrowserModal({
     }
 
     return result;
-  }, [wallets, searchQuery, filterHasBalance, scanResults]);
+  }, [wallets, searchQuery, filterHasBalance, scanResults, storedFirstAddresses]);
 
   // Sort wallets
   const sortedWallets = useMemo(() => {
@@ -406,21 +415,27 @@ export default function WalletBrowserModal({
                         {/* Show scan results for non-ready wallets */}
                         {wallet.status !== 'ready' && renderScanInfo(wallet.metadata.id)}
                       </td>
-                      <td
-                        className={`p-3 font-mono text-xs ${wallet.firstAddress ? 'text-success' : 'text-muted'}`}
-                      >
-                        {wallet.firstAddress ? (
-                          <div className="flex items-center gap-2">
-                            <span className="break-all">{truncateAddress(wallet.firstAddress)}</span>
-                            <CopyButton
-                              text={wallet.firstAddress}
-                              label={`Copy address for ${wallet.metadata.friendlyName}`}
-                              className="text-muted"
-                            />
-                          </div>
-                        ) : (
-                          '-'
-                        )}
+                      <td className="p-3 font-mono text-xs">
+                        {(() => {
+                          // Use runtime address if available, otherwise check stored address
+                          const storedAddress = storedFirstAddresses?.[wallet.metadata.id];
+                          const displayAddress = wallet.firstAddress || storedAddress;
+                          const isStoredOnly = !wallet.firstAddress && storedAddress;
+
+                          if (displayAddress) {
+                            return (
+                              <div className={`flex items-center gap-2 ${isStoredOnly ? 'text-muted' : 'text-success'}`}>
+                                <span className="break-all">{truncateAddress(displayAddress)}</span>
+                                <CopyButton
+                                  text={displayAddress}
+                                  label={`Copy address for ${wallet.metadata.friendlyName}`}
+                                  className="text-muted"
+                                />
+                              </div>
+                            );
+                          }
+                          return <span className="text-muted">-</span>;
+                        })()}
                       </td>
                       <td className="p-3">
                         <div className="flex gap-1.5 justify-center flex-wrap">

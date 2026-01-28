@@ -42,6 +42,7 @@ import Select from '../common/Select';
 import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
 import type { NetworkType } from '../../constants/network';
+import { getAddressesForWallet } from '../../services/addressDatabase';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
 const MAX_VISIBLE_WALLETS = 5;
@@ -86,6 +87,9 @@ export default function WalletInitialization() {
   const scanResults = useAppSelector(selectScanResults);
   const filterHasBalance = useAppSelector(selectFilterHasBalance);
   const sortByBalance = useAppSelector(selectSortByBalance);
+
+  // Stored first addresses from database (walletId -> address at index 0)
+  const [storedFirstAddresses, setStoredFirstAddresses] = useState<Record<string, string>>({});
 
   // Load default wallets from localStorage on mount
   useEffect(() => {
@@ -391,6 +395,33 @@ export default function WalletInitialization() {
     textareaRef.current?.focus();
   }, []);
 
+  // Load stored first addresses from database on mount and when wallets change
+  useEffect(() => {
+    const loadStoredAddresses = async () => {
+      const addressMap: Record<string, string> = {};
+
+      for (const wallet of allWallets) {
+        // Skip wallets that already have a runtime address
+        if (wallet.firstAddress) continue;
+
+        try {
+          const addresses = await getAddressesForWallet(wallet.metadata.id);
+          // Find address at index 0
+          const firstAddr = addresses.find((a) => a.index === 0);
+          if (firstAddr) {
+            addressMap[wallet.metadata.id] = firstAddr.address;
+          }
+        } catch (err) {
+          console.error(`Failed to load addresses for wallet ${wallet.metadata.id}:`, err);
+        }
+      }
+
+      setStoredFirstAddresses(addressMap);
+    };
+
+    loadStoredAddresses();
+  }, [allWallets]);
+
   // Auto-assign fund and test wallets when exactly 2 ready wallets exist
   useEffect(() => {
     if (readyWallets.length === 2) {
@@ -510,15 +541,22 @@ export default function WalletInitialization() {
                         <div className="text-xs text-danger mt-1">{wallet.error}</div>
                       )}
                     </td>
-                    <td className={`p-3 font-mono text-2.5xs ${wallet.firstAddress ? 'text-success' : 'text-muted'}`}>
-                      {wallet.firstAddress ? (
-                        <div className="flex items-center gap-2">
-                          <span className="break-all text-xs">{truncateAddress(wallet.firstAddress)}</span>
-                          <CopyButton text={wallet.firstAddress} label={`Copy address for ${wallet.metadata.friendlyName}`} className="text-muted" />
-                        </div>
-                      ) : (
-                        '-'
-                      )}
+                    <td className="p-3 font-mono text-2.5xs">
+                      {(() => {
+                        const storedAddress = storedFirstAddresses[wallet.metadata.id];
+                        const displayAddress = wallet.firstAddress || storedAddress;
+                        const isStoredOnly = !wallet.firstAddress && storedAddress;
+
+                        if (displayAddress) {
+                          return (
+                            <div className={`flex items-center gap-2 ${isStoredOnly ? 'text-muted' : 'text-success'}`}>
+                              <span className="break-all text-xs">{truncateAddress(displayAddress)}</span>
+                              <CopyButton text={displayAddress} label={`Copy address for ${wallet.metadata.friendlyName}`} className="text-muted" />
+                            </div>
+                          );
+                        }
+                        return <span className="text-muted">-</span>;
+                      })()}
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1.5 justify-center flex-wrap">
@@ -831,6 +869,8 @@ export default function WalletInitialization() {
         onEditWallet={handleStartEdit}
         onShowSeedModal={setSeedModalWalletId}
         onSwapNetwork={handleSwapNetwork}
+        // Stored addresses from database
+        storedFirstAddresses={storedFirstAddresses}
         // Scan for lost funds props
         scanState={scanProgress}
         scanResults={scanResults}
