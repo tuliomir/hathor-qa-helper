@@ -10,7 +10,7 @@ import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/wa
 import { formatBalance } from '../../utils/balanceUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
-import { useSendTransaction } from '../../hooks/useSendTransaction';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 import { trackTokenFlow } from '../../services/tokenFlowTracker';
@@ -35,7 +35,6 @@ interface TokenToMelt {
 export default function TestWalletCleanup() {
   const dispatch = useAppDispatch();
   const { getWallet } = useWalletStore();
-  const { sendTransaction, isSending } = useSendTransaction();
 
   // Helper to get wallet friendly name from wallet ID
   const getWalletFriendlyName = useCallback(
@@ -62,6 +61,29 @@ export default function TestWalletCleanup() {
   const [executionStep, setExecutionStep] = useState<string>('');
   const [errors, setErrors] = useState<string[]>([]);
   const [completed, setCompleted] = useState(false);
+
+  // Debug state
+  interface DebugLogEntry {
+    timestamp: string;
+    type: 'info' | 'error' | 'template' | 'tx';
+    message: string;
+    data?: unknown;
+  }
+  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
+  const [showDebug, setShowDebug] = useState(true);
+
+  const addDebugLog = (type: DebugLogEntry['type'], message: string, data?: unknown) => {
+    // Safely serialize data that may contain BigInt
+    const safeData = data ? JSON.parse(JSONBigInt.stringify(data)) : undefined;
+    const entry: DebugLogEntry = {
+      timestamp: new Date().toISOString().slice(11, 23),
+      type,
+      message,
+      data: safeData,
+    };
+    setDebugLogs((prev) => [...prev, entry]);
+    console.log(`[DEBUG ${type}] ${message}`, safeData ?? '');
+  };
 
   // Cleanup status tracking
   // Note: Simple transactions (melts, sends) don't need block confirmation waiting.
@@ -209,15 +231,11 @@ export default function TestWalletCleanup() {
     }
   }, [testWallet, isRefreshing, dispatch, loadPreviewData]);
 
-  // Refresh when page opens
+  // Refresh when page opens (only on mount)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     handleRefresh().catch((e) => console.error('Failed refresh', e));
   }, []);
-
-  // Also reload preview when dependencies change
-  useEffect(() => {
-    loadPreviewData();
-  }, [loadPreviewData]);
 
   // Handler to retrieve tokens from Funding Wallet back to Test Wallet
   const handleRetrieveFromFunding = async (tokenUid: string, tokenSymbol: string, amount: number) => {
@@ -287,8 +305,118 @@ export default function TestWalletCleanup() {
     }
   };
 
+  /**
+   * Build a melt template that melts all tokens in one atomic transaction.
+   * The melt operation converts tokens to HTR (100 tokens = 1 HTR).
+   * The resulting HTR is sent directly to the funding wallet.
+   */
+  const buildMeltTemplate = (
+    tokensWithMeltAuthority: TokenToMelt[],
+    testWalletAddr: string,
+    fundingAddr: string
+  ) => {
+    addDebugLog('template', 'Building melt template', {
+      tokenCount: tokensWithMeltAuthority.length,
+      tokens: tokensWithMeltAuthority.map((t) => ({
+        symbol: t.symbol,
+        uid: t.uid.slice(0, 8) + '...',
+        meltableAmount: t.meltableAmount,
+        hasMeltAuthority: t.hasMeltAuthority,
+      })),
+      testWalletAddr: testWalletAddr.slice(0, 12) + '...',
+      fundingAddr: fundingAddr.slice(0, 12) + '...',
+    });
+
+    let builder = TransactionTemplateBuilder.new()
+      .addSetVarAction({ name: 'fundingAddr', value: fundingAddr })
+      .addSetVarAction({ name: 'testAddr', value: testWalletAddr });
+
+    let totalHtrFromMelts = 0;
+    const templateOps: string[] = ['setVar:fundingAddr', 'setVar:testAddr'];
+
+    // Add melt operations for each token
+    // Note: fill parameter expects number, not BigInt
+    for (const token of tokensWithMeltAuthority) {
+      const htrFromThisMelt = Math.floor(token.meltableAmount / 100);
+
+      addDebugLog('template', `Adding melt for ${token.symbol}`, {
+        tokenUid: token.uid,
+        meltableAmount: token.meltableAmount,
+        expectedHtr: htrFromThisMelt,
+      });
+
+      builder = builder
+        .addUtxoSelect({ fill: token.meltableAmount, token: token.uid })
+        .addAuthoritySelect({ authority: 'melt', token: token.uid })
+        .addAuthorityOutput({
+          authority: 'melt',
+          token: token.uid,
+          address: '{testAddr}',
+        });
+
+      templateOps.push(
+        `utxoSelect:${token.symbol}(${token.meltableAmount})`,
+        `authoritySelect:melt:${token.symbol}`,
+        `authorityOutput:melt:${token.symbol}`
+      );
+
+      totalHtrFromMelts += htrFromThisMelt;
+    }
+
+    // Output the HTR produced by melting to funding wallet
+    // Note: amount parameter expects number, not BigInt
+    if (totalHtrFromMelts > 0) {
+      addDebugLog('template', 'Adding HTR output from melt', {
+        totalHtrFromMelts,
+      });
+
+      builder = builder.addTokenOutput({
+        address: '{fundingAddr}',
+        amount: totalHtrFromMelts,
+      });
+      templateOps.push(`tokenOutput:HTR(${totalHtrFromMelts})`);
+    } else {
+      addDebugLog('template', 'WARNING: No HTR output - totalHtrFromMelts is 0');
+    }
+
+    // NOTE: Do NOT use addCompleteAction for melt transactions!
+    // addCompleteAction would add token change outputs, preventing the melt.
+    // In a melt, tokens are consumed (inputs) without token outputs.
+    addDebugLog('template', 'Template operations (no completeAction for melt)', { ops: templateOps });
+
+    return builder.build();
+  };
+
+  /**
+   * Build a simple HTR transfer template.
+   */
+  const buildHtrTransferTemplate = (
+    fromAddr: string,
+    toAddr: string,
+    amount: bigint
+  ) => {
+    addDebugLog('template', 'Building HTR transfer template', {
+      from: fromAddr.slice(0, 12) + '...',
+      to: toAddr.slice(0, 12) + '...',
+      amount: amount.toString(),
+    });
+
+    return TransactionTemplateBuilder.new()
+      .addSetVarAction({ name: 'toAddr', value: toAddr })
+      .addSetVarAction({ name: 'changeAddr', value: fromAddr })
+      .addTokenOutput({
+        address: '{toAddr}',
+        amount,
+      })
+      .addCompleteAction({ changeAddress: '{changeAddr}' })
+      .build();
+  };
+
   const handleExecuteCleanup = async () => {
     if (!testWallet?.instance || !fundingWallet?.instance) return;
+
+    // Clear previous debug logs
+    setDebugLogs([]);
 
     setIsExecuting(true);
     setErrors([]);
@@ -298,56 +426,156 @@ export default function TestWalletCleanup() {
     setCleanupPhase('melting');
     const newErrors: string[] = [];
 
+    addDebugLog('info', 'Starting cleanup execution');
+    addDebugLog('info', 'Initial state', {
+      tokensToMeltCount: tokensToMelt.length,
+      htrBalance: htrBalance.toString(),
+      allTokens: tokensToMelt.map((t) => ({
+        symbol: t.symbol,
+        uid: t.uid.slice(0, 8) + '...',
+        balance: t.balance.toString(),
+        meltableAmount: t.meltableAmount,
+        hasMeltAuthority: t.hasMeltAuthority,
+      })),
+    });
+
     try {
-      // Step 1: Melt each token one by one
       const tokensWithMeltAuthority = tokensToMelt.filter(
         (t) => t.hasMeltAuthority && t.meltableAmount > 0
       );
 
-      for (let i = 0; i < tokensWithMeltAuthority.length; i++) {
-        const token = tokensWithMeltAuthority[i];
-        setExecutionStep(`Melting ${token.symbol} (${i + 1}/${tokensWithMeltAuthority.length})...`);
+      addDebugLog('info', 'Filtered tokens with melt authority', {
+        count: tokensWithMeltAuthority.length,
+        tokens: tokensWithMeltAuthority.map((t) => ({
+          symbol: t.symbol,
+          meltableAmount: t.meltableAmount,
+        })),
+      });
+
+      const testWalletAddr = await testWallet.instance.getAddressAtIndex(0);
+      const fundingAddr = await fundingWallet.instance.getAddressAtIndex(0);
+
+      addDebugLog('info', 'Addresses', {
+        testWalletAddr,
+        fundingAddr,
+      });
+
+      // Step 1: Melt all tokens in one atomic transaction
+      if (tokensWithMeltAuthority.length > 0) {
+        const tokenSymbols = tokensWithMeltAuthority.map((t) => t.symbol).join(', ');
+        setExecutionStep(`Melting ${tokenSymbols}...`);
+        addDebugLog('info', `Step 1: Melting ${tokensWithMeltAuthority.length} tokens`);
 
         try {
-          const address0 = await testWallet.instance.getAddressAtIndex(0);
-
-          const sendTx = await testWallet.instance.meltTokensSendTransaction(
-            token.uid,
-            BigInt(token.meltableAmount),
-            {
-              pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
-              changeAddress: address0,
-              meltAuthorityAddress: address0,
-              createAnotherMelt: true,
-            }
+          const meltTemplate = buildMeltTemplate(
+            tokensWithMeltAuthority,
+            testWalletAddr,
+            fundingAddr
           );
 
-          const txResponse = await sendTx.runFromMining();
-          const txHash = txResponse?.hash || sendTx.transaction?.hash;
+          addDebugLog('template', 'Built melt template', {
+            templateKeys: Object.keys(meltTemplate),
+            template: JSONBigInt.stringify(meltTemplate, 2).slice(0, 500) + '...',
+          });
 
-          if (txHash) {
-            console.log(`[Cleanup] Melted ${token.symbol}, tx: ${txHash.slice(0, 8)}...`);
+          addDebugLog('info', 'Calling runTxTemplate for melt...');
+          const tx = await testWallet.instance.runTxTemplate(
+            meltTemplate,
+            WALLET_CONFIG.DEFAULT_PIN_CODE
+          );
 
-            // Wait for wallet to receive and process the transaction event
-            await waitForTxSettlement(txHash);
+          addDebugLog('tx', 'Melt transaction result', {
+            hash: tx?.hash,
+            hasTransaction: !!tx,
+            outputs: tx?.outputs?.map((o: { value: bigint; tokenData: number }) => ({
+              value: o.value?.toString(),
+              tokenData: o.tokenData,
+            })),
+            inputs: tx?.inputs?.length,
+          });
 
-            setMeltTxStatuses((prev) => [
-              ...prev,
-              { tokenSymbol: token.symbol, txHash, status: 'confirmed' },
-            ]);
+          if (tx?.hash) {
+            addDebugLog('info', `Melt tx submitted: ${tx.hash}`);
+            await waitForTxSettlement(tx.hash);
+            addDebugLog('info', 'Melt tx settled');
+
+            for (const token of tokensWithMeltAuthority) {
+              setMeltTxStatuses((prev) => [
+                ...prev,
+                { tokenSymbol: token.symbol, txHash: tx.hash!, status: 'confirmed' },
+              ]);
+            }
+          } else {
+            addDebugLog('error', 'Melt transaction returned no hash!', { tx });
           }
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-          newErrors.push(`Failed to melt ${token.symbol}: ${errorMessage}`);
-          console.error(`Failed to melt ${token.symbol}:`, err);
-          setMeltTxStatuses((prev) => [
-            ...prev,
-            { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
-          ]);
+          addDebugLog('error', 'Melt transaction failed', {
+            error: errorMessage,
+            stack: err instanceof Error ? err.stack : undefined,
+          });
+          newErrors.push(`Melt transaction failed: ${errorMessage}`);
+
+          for (const token of tokensWithMeltAuthority) {
+            setMeltTxStatuses((prev) => [
+              ...prev,
+              { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
+            ]);
+          }
+        }
+      } else {
+        addDebugLog('info', 'Step 1: SKIPPED - No tokens with melt authority and meltableAmount > 0');
+      }
+
+      // Step 2: Transfer remaining HTR to funding wallet
+      addDebugLog('info', 'Step 2: Checking remaining HTR balance');
+      await dispatch(refreshWalletBalance(testWallet.metadata.id)).unwrap();
+      const updatedHtrData = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+      const remainingHtr = updatedHtrData[0]?.balance?.unlocked || 0n;
+
+      addDebugLog('info', 'Updated HTR balance', {
+        remainingHtr: remainingHtr.toString(),
+        fundingReady,
+      });
+
+      if (remainingHtr > 0n && fundingReady) {
+        setCleanupPhase('transferring');
+        setExecutionStep(`Transferring ${formatBalance(remainingHtr)} HTR...`);
+        addDebugLog('info', `Transferring ${remainingHtr.toString()} HTR to funding wallet`);
+
+        try {
+          const transferTemplate = buildHtrTransferTemplate(
+            testWalletAddr,
+            fundingAddr,
+            remainingHtr
+          );
+
+          addDebugLog('info', 'Calling runTxTemplate for HTR transfer...');
+          const tx = await testWallet.instance.runTxTemplate(
+            transferTemplate,
+            WALLET_CONFIG.DEFAULT_PIN_CODE
+          );
+
+          addDebugLog('tx', 'HTR transfer result', {
+            hash: tx?.hash,
+            hasTransaction: !!tx,
+          });
+
+          if (tx?.hash) {
+            addDebugLog('info', `HTR transfer tx submitted: ${tx.hash}`);
+            await waitForTxSettlement(tx.hash);
+            addDebugLog('info', 'HTR transfer settled');
+            setExecutionStep('HTR transferred successfully');
+          }
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          addDebugLog('error', 'HTR transfer failed', { error: errorMessage });
+          newErrors.push(`HTR transfer failed: ${errorMessage}`);
+          console.error('HTR transfer failed:', err);
         }
       }
 
-      // Step 2.5: Return tokens that can't be melted to their original senders
+      // Step 2: Return tokens that can't be melted to their original senders
       const tokensToReturn = tokensToMelt.filter(
         (t) => t.canReturnToSender && t.originalSender
       );
@@ -374,11 +602,9 @@ export default function TestWalletCleanup() {
           );
 
           try {
-            const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
-
             const template = TransactionTemplateBuilder.new()
               .addSetVarAction({ name: 'recipientAddr', value: token.originalSender })
-              .addSetVarAction({ name: 'changeAddr', value: testWalletAddress })
+              .addSetVarAction({ name: 'changeAddr', value: testWalletAddr })
               .addTokenOutput({
                 address: '{recipientAddr}',
                 amount: BigInt(amountToReturn),
@@ -389,25 +615,16 @@ export default function TestWalletCleanup() {
               })
               .build();
 
-            const tx = await testWallet.instance.buildTxTemplate(template, {
-              signTx: true,
-              pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
-            });
+            const tx = await testWallet.instance.runTxTemplate(
+              template,
+              WALLET_CONFIG.DEFAULT_PIN_CODE
+            );
 
-            const { SendTransaction } = await import('@hathor/wallet-lib');
-            const sendTx = new SendTransaction({
-              storage: testWallet.instance.storage,
-              transaction: tx,
-            });
-
-            const txResponse = await sendTx.runFromMining();
-            const txHash = txResponse?.hash || tx.hash;
-
-            if (txHash) {
-              console.log(`[Cleanup] Returned ${amountToReturn} ${token.symbol} to sender, tx: ${txHash.slice(0, 8)}...`);
+            if (tx?.hash) {
+              console.log(`[Cleanup] Returned ${amountToReturn} ${token.symbol} to sender, tx: ${tx.hash.slice(0, 8)}...`);
 
               // Wait for wallet to receive and process the transaction event
-              await waitForTxSettlement(txHash);
+              await waitForTxSettlement(tx.hash);
 
               setReturnTxStatuses((prev) => [
                 ...prev,
@@ -415,7 +632,7 @@ export default function TestWalletCleanup() {
                   tokenSymbol: token.symbol,
                   toAddress: token.originalSender!,
                   amount: amountToReturn,
-                  txHash,
+                  txHash: tx.hash!,
                   status: 'confirmed',
                 },
               ]);
@@ -436,64 +653,10 @@ export default function TestWalletCleanup() {
             ]);
           }
         }
-
-      }
-
-      // Refresh wallet data after ALL melts are confirmed
-      setExecutionStep('Refreshing wallet data...');
-      await Promise.all([
-        dispatch(refreshWalletTokens(testWallet.metadata.id)).unwrap(),
-        dispatch(refreshWalletBalance(testWallet.metadata.id)).unwrap(),
-      ]);
-
-      // Get updated HTR balance after melting - this should now have the correct amount
-      const updatedHtrBalanceData = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
-      const updatedHtrBalance = updatedHtrBalanceData[0]?.balance?.unlocked || 0n;
-
-      console.log(`[Cleanup] Final HTR balance after melting: ${updatedHtrBalance}`);
-
-      // Step 3: Send ALL HTR to funding wallet in a single transaction
-      if (updatedHtrBalance > 0n && fundingReady) {
-        setCleanupPhase('transferring');
-        setExecutionStep(`Transferring ${formatBalance(updatedHtrBalance)} HTR to Funding Wallet...`);
-
-        try {
-          const fundWalletAddress = await fundingWallet.instance.getAddressAtIndex(0);
-          const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
-
-          const template = TransactionTemplateBuilder.new()
-            .addSetVarAction({ name: 'recipientAddr', value: fundWalletAddress })
-            .addSetVarAction({ name: 'changeAddr', value: testWalletAddress })
-            .addTokenOutput({
-              address: '{recipientAddr}',
-              amount: updatedHtrBalance,
-              token: NATIVE_TOKEN_UID,
-            })
-            .addCompleteAction({
-              changeAddress: '{changeAddr}',
-            })
-            .build();
-
-          await sendTransaction(
-            template,
-            {
-              fromWalletId: testWallet.metadata.id,
-              fromWallet: testWallet,
-              toAddress: fundWalletAddress,
-              amount: Number(updatedHtrBalance),
-              tokenUid: NATIVE_TOKEN_UID,
-              tokenSymbol: 'HTR',
-            },
-            WALLET_CONFIG.DEFAULT_PIN_CODE
-          );
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-          newErrors.push(`Failed to transfer HTR: ${errorMessage}`);
-          console.error('Failed to transfer HTR:', err);
-        }
       }
 
       // Final refresh
+      setExecutionStep('Refreshing wallet data...');
       await Promise.all([
         dispatch(refreshWalletTokens(testWallet.metadata.id)).unwrap(),
         dispatch(refreshWalletBalance(testWallet.metadata.id)).unwrap(),
@@ -546,11 +709,17 @@ export default function TestWalletCleanup() {
         })
       );
       setTokensToMelt(tokensData.filter((t): t is TokenToMelt => t !== null));
+      addDebugLog('info', 'Cleanup execution completed', { errors: newErrors });
     } catch (err) {
       console.error('Cleanup execution failed:', err);
+      addDebugLog('error', 'Cleanup execution failed with exception', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined,
+      });
       newErrors.push(`Cleanup execution failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setErrors(newErrors);
     } finally {
+      addDebugLog('info', 'Cleanup finished', { phase: cleanupPhase, errorCount: newErrors.length });
       setIsExecuting(false);
       setExecutionStep('');
       if (cleanupPhase !== 'done') {
@@ -578,7 +747,7 @@ export default function TestWalletCleanup() {
 
   return (
     <div className="max-w-300 mx-auto">
-      {(isExecuting || isSending || isRetrieving) && (
+      {(isExecuting || isRetrieving) && (
         <Loading overlay message={isRetrieving ? 'Retrieving tokens from Funding Wallet...' : (executionStep || 'Processing...')} />
       )}
 
@@ -603,6 +772,80 @@ export default function TestWalletCleanup() {
             </ul>
           </div>
         </div>
+      </div>
+
+      {/* Debug Panel */}
+      <div className="card-primary mb-7.5 bg-gray-900 text-gray-100 border-2 border-gray-700">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-bold text-lg m-0 text-gray-100">Debug Panel</h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setDebugLogs([])}
+              className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => setShowDebug(!showDebug)}
+              className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              {showDebug ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
+
+        {showDebug && (
+          <>
+            {/* Current State Summary */}
+            <div className="mb-3 p-2 bg-gray-800 rounded text-xs font-mono">
+              <div className="text-gray-400 mb-1">Current State:</div>
+              <div>tokensToMelt: {tokensToMelt.length} tokens</div>
+              <div>htrBalance: {htrBalance.toString()}</div>
+              <div>hasTokensToMelt: {hasTokensToMelt.toString()}</div>
+              <div>cleanupPhase: {cleanupPhase}</div>
+              <div className="mt-2 text-gray-400">Tokens with melt authority:</div>
+              {tokensToMelt.filter(t => t.hasMeltAuthority && t.meltableAmount > 0).map((t, i) => (
+                <div key={i} className="ml-2 text-green-400">
+                  {t.symbol}: {t.meltableAmount} meltable (balance: {t.balance.toString()})
+                </div>
+              ))}
+              {tokensToMelt.filter(t => t.hasMeltAuthority && t.meltableAmount > 0).length === 0 && (
+                <div className="ml-2 text-yellow-400">None found!</div>
+              )}
+            </div>
+
+            {/* Log Entries */}
+            <div className="max-h-80 overflow-y-auto text-xs font-mono space-y-1">
+              {debugLogs.length === 0 ? (
+                <div className="text-gray-500 italic">No logs yet. Execute cleanup to see debug output.</div>
+              ) : (
+                debugLogs.map((log, i) => (
+                  <div
+                    key={i}
+                    className={`p-1.5 rounded ${
+                      log.type === 'error'
+                        ? 'bg-red-900/50 text-red-300'
+                        : log.type === 'template'
+                        ? 'bg-blue-900/50 text-blue-300'
+                        : log.type === 'tx'
+                        ? 'bg-green-900/50 text-green-300'
+                        : 'bg-gray-800 text-gray-300'
+                    }`}
+                  >
+                    <span className="text-gray-500">[{log.timestamp}]</span>{' '}
+                    <span className="font-semibold">[{log.type.toUpperCase()}]</span>{' '}
+                    {log.message}
+                    {log.data && (
+                      <pre className="mt-1 text-2xs overflow-x-auto whitespace-pre-wrap">
+                        {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* No Test Wallet Selected */}
