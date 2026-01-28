@@ -12,7 +12,6 @@
       "Bash(find:*)",
       "Bash(bun test)",
       "Bash(bun lint:*)",
-      "Bash(yarn install)",
       "Bash(bun install)",
       "Bash(bun run lint:*)",
       "WebFetch(domain:github.com)",
@@ -25,7 +24,8 @@
       "Bash(timeout 10 bun dev:*)",
       "Bash(bun eslint:*)",
       "Bash(bun test:*)",
-      "mcp__plugin_context7_context7__resolve-library-id"
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "Bash(bun run typecheck:*)"
     ],
     "deny": [
       "Bash(npm *)",

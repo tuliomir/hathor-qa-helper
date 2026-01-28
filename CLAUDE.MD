@@ -133,12 +133,13 @@ const status = getTransactionStatus({
 
 ## Scripts Reference
 
-| Command            | Purpose                  |
-|--------------------|--------------------------|
-| `bun dev`          | Start dev server         |
-| `bun run build`    | Production build         |
-| `bun preview`      | Preview production build |
-| `bun lint`         | Run ESLint               |
-| `bun lint:fix`     | Fix lint issues          |
-| `bun format`       | Format with Prettier     |
-| `bun format:check` | Check formatting         |
+| Command              | Purpose                  |
+|----------------------|--------------------------|
+| `bun dev`            | Start dev server         |
+| `bun run build`      | Production build         |
+| `bun run typecheck`  | TypeScript type checking |
+| `bun preview`        | Preview production build |
+| `bun lint`           | Run ESLint               |
+| `bun lint:fix`       | Fix lint issues          |
+| `bun format`         | Format with Prettier     |
+| `bun format:check`   | Check formatting         |

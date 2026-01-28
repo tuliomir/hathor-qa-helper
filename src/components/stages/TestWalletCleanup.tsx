@@ -15,6 +15,7 @@ import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 import { trackTokenFlow } from '../../services/tokenFlowTracker';
 import type { TokenFlowResult } from '../../types/tokenFlowTracker';
+import { waitForTxSettlement } from '../../utils/waitForTxSettlement';
 
 interface TokenToMelt {
   uid: string;
@@ -63,13 +64,15 @@ export default function TestWalletCleanup() {
   const [completed, setCompleted] = useState(false);
 
   // Cleanup status tracking
+  // Note: Simple transactions (melts, sends) don't need block confirmation waiting.
+  // Only nano contract transactions require confirmation polling.
   interface MeltTxStatus {
     tokenSymbol: string;
     txHash: string;
-    status: 'pending' | 'confirming' | 'confirmed' | 'failed';
+    status: 'confirmed' | 'failed';
   }
   const [meltTxStatuses, setMeltTxStatuses] = useState<MeltTxStatus[]>([]);
-  const [cleanupPhase, setCleanupPhase] = useState<'idle' | 'melting' | 'confirming' | 'returning' | 'transferring' | 'done'>('idle');
+  const [cleanupPhase, setCleanupPhase] = useState<'idle' | 'melting' | 'returning' | 'transferring' | 'done'>('idle');
 
   // Track return-to-sender transaction statuses
   interface ReturnTxStatus {
@@ -77,7 +80,7 @@ export default function TestWalletCleanup() {
     toAddress: string;
     amount: number;
     txHash: string;
-    status: 'pending' | 'confirming' | 'confirmed' | 'failed';
+    status: 'confirmed' | 'failed';
   }
   const [returnTxStatuses, setReturnTxStatuses] = useState<ReturnTxStatus[]>([]);
 
@@ -216,38 +219,6 @@ export default function TestWalletCleanup() {
     loadPreviewData();
   }, [loadPreviewData]);
 
-  // Helper function to wait for a transaction to be confirmed
-  const waitForTxConfirmation = async (
-    txHash: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletInstance: any,
-    maxAttempts = 60, // 60 attempts * 2 seconds = 2 minutes max wait
-    intervalMs = 2000
-  ): Promise<boolean> => {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        // First check wallet cache (fast, no HTTP)
-        const txData = await walletInstance.getTx(txHash);
-        if (txData && txData.first_block) {
-          return true; // Transaction is confirmed
-        }
-
-        // If not in cache, check full node
-        const response = await walletInstance.getFullTxById(txHash);
-        if (response.success && response.meta?.first_block) {
-          return true; // Transaction is confirmed
-        }
-
-        // Not confirmed yet, wait before next attempt
-        await new Promise((resolve) => setTimeout(resolve, intervalMs));
-      } catch (err) {
-        console.error(`Error checking tx ${txHash.slice(0, 8)}:`, err);
-        await new Promise((resolve) => setTimeout(resolve, intervalMs));
-      }
-    }
-    return false; // Timed out waiting for confirmation
-  };
-
   // Handler to retrieve tokens from Funding Wallet back to Test Wallet
   const handleRetrieveFromFunding = async (tokenUid: string, tokenSymbol: string, amount: number) => {
     if (!fundingWallet?.instance || !testWallet?.instance || !fundingReady || !testReady) {
@@ -291,23 +262,21 @@ export default function TestWalletCleanup() {
       const txHash = txResponse?.hash || tx.hash;
 
       if (txHash) {
-        // Wait for confirmation
-        const confirmed = await waitForTxConfirmation(txHash, fundingWallet.instance);
+        console.log(`[Cleanup] Retrieved ${tokenSymbol} from Funding Wallet, tx: ${txHash.slice(0, 8)}...`);
 
-        if (confirmed) {
-          // Refresh both wallets
-          await Promise.all([
-            dispatch(refreshWalletTokens(testWallet.metadata.id)).unwrap(),
-            dispatch(refreshWalletBalance(testWallet.metadata.id)).unwrap(),
-            dispatch(refreshWalletTokens(fundingWallet.metadata.id)).unwrap(),
-            dispatch(refreshWalletBalance(fundingWallet.metadata.id)).unwrap(),
-          ]);
+        // Wait for wallet to receive and process the transaction event
+        await waitForTxSettlement(txHash);
 
-          // Reload preview data to show updated state
-          await loadPreviewData();
-        } else {
-          setErrors((prev) => [...prev, `Timeout waiting for ${tokenSymbol} retrieve confirmation`]);
-        }
+        // Refresh both wallets after settlement
+        await Promise.all([
+          dispatch(refreshWalletTokens(testWallet.metadata.id)).unwrap(),
+          dispatch(refreshWalletBalance(testWallet.metadata.id)).unwrap(),
+          dispatch(refreshWalletTokens(fundingWallet.metadata.id)).unwrap(),
+          dispatch(refreshWalletBalance(fundingWallet.metadata.id)).unwrap(),
+        ]);
+
+        // Reload preview data to show updated state
+        await loadPreviewData();
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -328,7 +297,6 @@ export default function TestWalletCleanup() {
     setReturnTxStatuses([]);
     setCleanupPhase('melting');
     const newErrors: string[] = [];
-    const meltTxHashes: { tokenSymbol: string; txHash: string }[] = [];
 
     try {
       // Step 1: Melt each token one by one
@@ -358,10 +326,14 @@ export default function TestWalletCleanup() {
           const txHash = txResponse?.hash || sendTx.transaction?.hash;
 
           if (txHash) {
-            meltTxHashes.push({ tokenSymbol: token.symbol, txHash });
+            console.log(`[Cleanup] Melted ${token.symbol}, tx: ${txHash.slice(0, 8)}...`);
+
+            // Wait for wallet to receive and process the transaction event
+            await waitForTxSettlement(txHash);
+
             setMeltTxStatuses((prev) => [
               ...prev,
-              { tokenSymbol: token.symbol, txHash, status: 'pending' },
+              { tokenSymbol: token.symbol, txHash, status: 'confirmed' },
             ]);
           }
         } catch (err) {
@@ -373,41 +345,6 @@ export default function TestWalletCleanup() {
             { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
           ]);
         }
-      }
-
-      // Step 2: Wait for ALL melt transactions to be confirmed
-      if (meltTxHashes.length > 0) {
-        setCleanupPhase('confirming');
-        setExecutionStep(`Waiting for ${meltTxHashes.length} melt transaction(s) to confirm...`);
-
-        // Update all statuses to "confirming"
-        setMeltTxStatuses((prev) =>
-          prev.map((tx) =>
-            tx.status === 'pending' ? { ...tx, status: 'confirming' } : tx
-          )
-        );
-
-        // Wait for each transaction to confirm
-        for (const { tokenSymbol, txHash } of meltTxHashes) {
-          setExecutionStep(`Waiting for ${tokenSymbol} melt to confirm...`);
-
-          const confirmed = await waitForTxConfirmation(txHash, testWallet.instance);
-
-          setMeltTxStatuses((prev) =>
-            prev.map((tx) =>
-              tx.txHash === txHash
-                ? { ...tx, status: confirmed ? 'confirmed' : 'failed' }
-                : tx
-            )
-          );
-
-          if (!confirmed) {
-            newErrors.push(`Timeout waiting for ${tokenSymbol} melt confirmation`);
-          }
-        }
-
-        // Small additional delay to ensure wallet state is fully updated
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
       // Step 2.5: Return tokens that can't be melted to their original senders
@@ -467,6 +404,11 @@ export default function TestWalletCleanup() {
             const txHash = txResponse?.hash || tx.hash;
 
             if (txHash) {
+              console.log(`[Cleanup] Returned ${amountToReturn} ${token.symbol} to sender, tx: ${txHash.slice(0, 8)}...`);
+
+              // Wait for wallet to receive and process the transaction event
+              await waitForTxSettlement(txHash);
+
               setReturnTxStatuses((prev) => [
                 ...prev,
                 {
@@ -474,30 +416,9 @@ export default function TestWalletCleanup() {
                   toAddress: token.originalSender!,
                   amount: amountToReturn,
                   txHash,
-                  status: 'pending',
+                  status: 'confirmed',
                 },
               ]);
-
-              // Wait for confirmation
-              setReturnTxStatuses((prev) =>
-                prev.map((t) =>
-                  t.txHash === txHash ? { ...t, status: 'confirming' } : t
-                )
-              );
-
-              const confirmed = await waitForTxConfirmation(txHash, testWallet.instance);
-
-              setReturnTxStatuses((prev) =>
-                prev.map((t) =>
-                  t.txHash === txHash
-                    ? { ...t, status: confirmed ? 'confirmed' : 'failed' }
-                    : t
-                )
-              );
-
-              if (!confirmed) {
-                newErrors.push(`Timeout waiting for ${token.symbol} return confirmation`);
-              }
             }
           } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -516,8 +437,6 @@ export default function TestWalletCleanup() {
           }
         }
 
-        // Small delay after returns
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
       // Refresh wallet data after ALL melts are confirmed
@@ -1046,13 +965,11 @@ export default function TestWalletCleanup() {
                   <span className="text-purple-800 font-semibold">Phase:</span>
                   <span className={`badge ${
                     cleanupPhase === 'melting' ? 'badge-warning' :
-                    cleanupPhase === 'confirming' ? 'badge-info' :
                     cleanupPhase === 'returning' ? 'badge-secondary' :
                     cleanupPhase === 'transferring' ? 'badge-primary' :
                     cleanupPhase === 'done' ? 'badge-success' : 'badge-ghost'
                   }`}>
                     {cleanupPhase === 'melting' && 'Melting Tokens'}
-                    {cleanupPhase === 'confirming' && 'Waiting for Confirmations'}
                     {cleanupPhase === 'returning' && 'Returning Tokens to Senders'}
                     {cleanupPhase === 'transferring' && 'Transferring HTR'}
                     {cleanupPhase === 'done' && 'Completed'}
@@ -1079,15 +996,9 @@ export default function TestWalletCleanup() {
                             </span>
                           )}
                           <span className={`badge badge-sm ${
-                            tx.status === 'pending' ? 'badge-warning' :
-                            tx.status === 'confirming' ? 'badge-info' :
-                            tx.status === 'confirmed' ? 'badge-success' :
-                            'badge-error'
+                            tx.status === 'confirmed' ? 'badge-success' : 'badge-error'
                           }`}>
-                            {tx.status === 'pending' && 'Pending'}
-                            {tx.status === 'confirming' && 'Confirming...'}
-                            {tx.status === 'confirmed' && 'Confirmed'}
-                            {tx.status === 'failed' && 'Failed'}
+                            {tx.status === 'confirmed' ? 'Sent' : 'Failed'}
                           </span>
                         </div>
                       </div>
@@ -1116,15 +1027,9 @@ export default function TestWalletCleanup() {
                             </span>
                           )}
                           <span className={`badge badge-sm ${
-                            tx.status === 'pending' ? 'badge-warning' :
-                            tx.status === 'confirming' ? 'badge-info' :
-                            tx.status === 'confirmed' ? 'badge-success' :
-                            'badge-error'
+                            tx.status === 'confirmed' ? 'badge-success' : 'badge-error'
                           }`}>
-                            {tx.status === 'pending' && 'Pending'}
-                            {tx.status === 'confirming' && 'Confirming...'}
-                            {tx.status === 'confirmed' && 'Confirmed'}
-                            {tx.status === 'failed' && 'Failed'}
+                            {tx.status === 'confirmed' ? 'Sent' : 'Failed'}
                           </span>
                         </div>
                       </div>
