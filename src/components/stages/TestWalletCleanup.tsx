@@ -306,23 +306,37 @@ export default function TestWalletCleanup() {
   };
 
   /**
-   * Build a melt template that melts all tokens in one atomic transaction.
-   * The melt operation converts tokens to HTR (100 tokens = 1 HTR).
-   * The resulting HTR is sent directly to the funding wallet.
+   * Build a unified cleanup template that melts all tokens AND transfers HTR in ONE atomic transaction.
+   *
+   * How it works:
+   * 1. Token UTXOs are selected as inputs (will be destroyed/melted)
+   * 2. Melt authority is selected (required for melting)
+   * 3. Authority is preserved for future melts
+   * 4. Existing HTR is selected as input (manually, not via addCompleteAction)
+   * 5. Total HTR output = existing HTR + HTR produced by melting (100 tokens = 1 HTR)
+   *
+   * The protocol validates that:
+   * - Token inputs > token outputs (with melt authority) = melt operation
+   * - Melt operation produces HTR that covers the HTR output deficit
+   *
+   * NO addCompleteAction is used because it would:
+   * - See token "surplus" (inputs > outputs) and create change outputs, preventing the melt
+   * - We manually select HTR UTXOs instead
    */
-  const buildMeltTemplate = (
+  const buildUnifiedCleanupTemplate = (
     tokensWithMeltAuthority: TokenToMelt[],
     testWalletAddr: string,
-    fundingAddr: string
+    fundingAddr: string,
+    existingHtrBalance: bigint
   ) => {
-    addDebugLog('template', 'Building melt template', {
+    addDebugLog('template', 'Building UNIFIED cleanup template (melt + HTR in ONE tx)', {
       tokenCount: tokensWithMeltAuthority.length,
       tokens: tokensWithMeltAuthority.map((t) => ({
         symbol: t.symbol,
         uid: t.uid.slice(0, 8) + '...',
         meltableAmount: t.meltableAmount,
-        hasMeltAuthority: t.hasMeltAuthority,
       })),
+      existingHtrBalance: existingHtrBalance.toString(),
       testWalletAddr: testWalletAddr.slice(0, 12) + '...',
       fundingAddr: fundingAddr.slice(0, 12) + '...',
     });
@@ -335,7 +349,6 @@ export default function TestWalletCleanup() {
     const templateOps: string[] = ['setVar:fundingAddr', 'setVar:testAddr'];
 
     // Add melt operations for each token
-    // Note: fill parameter expects number, not BigInt
     for (const token of tokensWithMeltAuthority) {
       const htrFromThisMelt = Math.floor(token.meltableAmount / 100);
 
@@ -363,39 +376,54 @@ export default function TestWalletCleanup() {
       totalHtrFromMelts += htrFromThisMelt;
     }
 
-    // Output the HTR produced by melting to funding wallet
-    // Note: amount parameter expects number, not BigInt
-    if (totalHtrFromMelts > 0) {
-      addDebugLog('template', 'Adding HTR output from melt', {
-        totalHtrFromMelts,
+    // Select existing HTR balance (if any) - MANUALLY, not via addCompleteAction
+    if (existingHtrBalance > 0n) {
+      addDebugLog('template', 'Selecting existing HTR UTXOs', {
+        amount: existingHtrBalance.toString(),
+      });
+
+      builder = builder.addUtxoSelect({
+        fill: existingHtrBalance,
+        token: NATIVE_TOKEN_UID,
+      });
+      templateOps.push(`utxoSelect:HTR(${existingHtrBalance})`);
+    }
+
+    // Calculate total HTR output: existing + melt-produced
+    const totalHtrOutput = Number(existingHtrBalance) + totalHtrFromMelts;
+
+    if (totalHtrOutput > 0) {
+      addDebugLog('template', 'Adding combined HTR output', {
+        existingHtr: Number(existingHtrBalance),
+        meltProducedHtr: totalHtrFromMelts,
+        totalHtrOutput,
       });
 
       builder = builder.addTokenOutput({
         address: '{fundingAddr}',
-        amount: totalHtrFromMelts,
+        amount: totalHtrOutput,
       });
-      templateOps.push(`tokenOutput:HTR(${totalHtrFromMelts})`);
-    } else {
-      addDebugLog('template', 'WARNING: No HTR output - totalHtrFromMelts is 0');
+      templateOps.push(`tokenOutput:HTR(${totalHtrOutput})`);
     }
 
-    // NOTE: Do NOT use addCompleteAction for melt transactions!
-    // addCompleteAction would add token change outputs, preventing the melt.
-    // In a melt, tokens are consumed (inputs) without token outputs.
-    addDebugLog('template', 'Template operations (no completeAction for melt)', { ops: templateOps });
+    // NO addCompleteAction! The protocol handles the melt balance:
+    // - Token deficit (inputs > outputs with melt authority) = tokens are melted
+    // - HTR surplus (melt-produced HTR covers the output deficit)
+    addDebugLog('template', 'Unified template built (NO addCompleteAction)', { ops: templateOps });
 
     return builder.build();
   };
 
   /**
-   * Build a simple HTR transfer template.
+   * Build a simple HTR-only transfer template (when no tokens to melt).
+   * Uses addCompleteAction since there's no melt operation.
    */
-  const buildHtrTransferTemplate = (
+  const buildHtrOnlyTransferTemplate = (
     fromAddr: string,
     toAddr: string,
     amount: bigint
   ) => {
-    addDebugLog('template', 'Building HTR transfer template', {
+    addDebugLog('template', 'Building HTR-only transfer template', {
       from: fromAddr.slice(0, 12) + '...',
       to: toAddr.slice(0, 12) + '...',
       amount: amount.toString(),
@@ -460,31 +488,42 @@ export default function TestWalletCleanup() {
         fundingAddr,
       });
 
-      // Step 1: Melt all tokens in one atomic transaction
+      // UNIFIED CLEANUP: Melt tokens AND transfer HTR in ONE atomic transaction
       if (tokensWithMeltAuthority.length > 0) {
         const tokenSymbols = tokensWithMeltAuthority.map((t) => t.symbol).join(', ');
-        setExecutionStep(`Melting ${tokenSymbols}...`);
-        addDebugLog('info', `Step 1: Melting ${tokensWithMeltAuthority.length} tokens`);
+        const totalHtrFromMelts = tokensWithMeltAuthority.reduce(
+          (sum, t) => sum + Math.floor(t.meltableAmount / 100),
+          0
+        );
+
+        setExecutionStep(`Melting ${tokenSymbols} + transferring HTR (single tx)...`);
+        addDebugLog('info', 'UNIFIED CLEANUP: Melt + HTR transfer in ONE transaction', {
+          tokenCount: tokensWithMeltAuthority.length,
+          existingHtrBalance: htrBalance.toString(),
+          expectedHtrFromMelts: totalHtrFromMelts,
+          totalHtrOutput: Number(htrBalance) + totalHtrFromMelts,
+        });
 
         try {
-          const meltTemplate = buildMeltTemplate(
+          const unifiedTemplate = buildUnifiedCleanupTemplate(
             tokensWithMeltAuthority,
             testWalletAddr,
-            fundingAddr
+            fundingAddr,
+            htrBalance // Pass current HTR balance to include in the same tx
           );
 
-          addDebugLog('template', 'Built melt template', {
-            templateKeys: Object.keys(meltTemplate),
-            template: JSONBigInt.stringify(meltTemplate, 2).slice(0, 500) + '...',
+          addDebugLog('template', 'Built unified cleanup template', {
+            templateLength: unifiedTemplate.length,
+            template: JSONBigInt.stringify(unifiedTemplate, 2).slice(0, 800) + '...',
           });
 
-          addDebugLog('info', 'Calling runTxTemplate for melt...');
+          addDebugLog('info', 'Calling runTxTemplate for unified cleanup...');
           const tx = await testWallet.instance.runTxTemplate(
-            meltTemplate,
+            unifiedTemplate,
             WALLET_CONFIG.DEFAULT_PIN_CODE
           );
 
-          addDebugLog('tx', 'Melt transaction result', {
+          addDebugLog('tx', 'Unified cleanup transaction result', {
             hash: tx?.hash,
             hasTransaction: !!tx,
             outputs: tx?.outputs?.map((o: { value: bigint; tokenData: number }) => ({
@@ -495,9 +534,9 @@ export default function TestWalletCleanup() {
           });
 
           if (tx?.hash) {
-            addDebugLog('info', `Melt tx submitted: ${tx.hash}`);
+            addDebugLog('info', `Unified cleanup tx submitted: ${tx.hash}`);
             await waitForTxSettlement(tx.hash);
-            addDebugLog('info', 'Melt tx settled');
+            addDebugLog('info', 'Unified cleanup tx settled - tokens melted AND HTR transferred!');
 
             for (const token of tokensWithMeltAuthority) {
               setMeltTxStatuses((prev) => [
@@ -505,16 +544,17 @@ export default function TestWalletCleanup() {
                 { tokenSymbol: token.symbol, txHash: tx.hash!, status: 'confirmed' },
               ]);
             }
+            setExecutionStep('Cleanup completed (single transaction)');
           } else {
-            addDebugLog('error', 'Melt transaction returned no hash!', { tx });
+            addDebugLog('error', 'Unified cleanup transaction returned no hash!', { tx });
           }
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-          addDebugLog('error', 'Melt transaction failed', {
+          addDebugLog('error', 'Unified cleanup transaction failed', {
             error: errorMessage,
             stack: err instanceof Error ? err.stack : undefined,
           });
-          newErrors.push(`Melt transaction failed: ${errorMessage}`);
+          newErrors.push(`Unified cleanup failed: ${errorMessage}`);
 
           for (const token of tokensWithMeltAuthority) {
             setMeltTxStatuses((prev) => [
@@ -523,34 +563,22 @@ export default function TestWalletCleanup() {
             ]);
           }
         }
-      } else {
-        addDebugLog('info', 'Step 1: SKIPPED - No tokens with melt authority and meltableAmount > 0');
-      }
-
-      // Step 2: Transfer remaining HTR to funding wallet
-      addDebugLog('info', 'Step 2: Checking remaining HTR balance');
-      await dispatch(refreshWalletBalance(testWallet.metadata.id)).unwrap();
-      const updatedHtrData = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
-      const remainingHtr = updatedHtrData[0]?.balance?.unlocked || 0n;
-
-      addDebugLog('info', 'Updated HTR balance', {
-        remainingHtr: remainingHtr.toString(),
-        fundingReady,
-      });
-
-      if (remainingHtr > 0n && fundingReady) {
+      } else if (htrBalance > 0n && fundingReady) {
+        // No tokens to melt, but HTR to transfer - use simple HTR transfer
         setCleanupPhase('transferring');
-        setExecutionStep(`Transferring ${formatBalance(remainingHtr)} HTR...`);
-        addDebugLog('info', `Transferring ${remainingHtr.toString()} HTR to funding wallet`);
+        setExecutionStep(`Transferring ${formatBalance(htrBalance)} HTR...`);
+        addDebugLog('info', 'HTR-only transfer (no tokens to melt)', {
+          htrBalance: htrBalance.toString(),
+        });
 
         try {
-          const transferTemplate = buildHtrTransferTemplate(
+          const transferTemplate = buildHtrOnlyTransferTemplate(
             testWalletAddr,
             fundingAddr,
-            remainingHtr
+            htrBalance
           );
 
-          addDebugLog('info', 'Calling runTxTemplate for HTR transfer...');
+          addDebugLog('info', 'Calling runTxTemplate for HTR-only transfer...');
           const tx = await testWallet.instance.runTxTemplate(
             transferTemplate,
             WALLET_CONFIG.DEFAULT_PIN_CODE
@@ -573,6 +601,8 @@ export default function TestWalletCleanup() {
           newErrors.push(`HTR transfer failed: ${errorMessage}`);
           console.error('HTR transfer failed:', err);
         }
+      } else {
+        addDebugLog('info', 'No melt or HTR transfer needed');
       }
 
       // Step 2: Return tokens that can't be melted to their original senders
