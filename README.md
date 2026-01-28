@@ -78,6 +78,23 @@ bun run lint
 bun run lint:fix
 ```
 
+### Binary Distribution
+
+You can compile the app to a standalone binary for easy distribution:
+
+```bash
+# Build the app
+bun run build
+
+# Compile the server binary
+bun run build:binary
+
+# Run (requires dist/ folder alongside the binary)
+./qa-helper-standalone
+```
+
+The binary serves the app at `http://localhost:5173` by default. Use `PORT=3000 ./qa-helper` for a custom port.
+
 ## Usage
 
 1. **Initialize a wallet** - Enter a seed phrase or use OCR to extract words from an image

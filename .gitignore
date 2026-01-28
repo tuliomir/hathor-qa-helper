@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Compiled binary
+qa-helper-standalone
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

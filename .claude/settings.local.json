@@ -26,7 +26,8 @@
       "Bash(bun test:*)",
       "mcp__plugin_context7_context7__resolve-library-id",
       "Bash(bun run typecheck:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(bun run build:binary:*)"
     ],
     "deny": [
       "Bash(npm *)",

@@ -69,10 +69,31 @@ idle → connecting → syncing → ready
 ```
 
 ## Scripts
-- `yarn dev` - Dev server (localhost:5173)
-- `yarn build` - Production build
-- `yarn lint` / `yarn lint:fix` - Linting
-- `yarn format` / `yarn format:check` - Formatting
+- `bun run dev` - Dev server (localhost:5173)
+- `bun run build` - Production build
+- `bun run build:binary` - Compile standalone server binary
+- `bun run lint` / `bun run lint:fix` - Linting
+- `bun run format` / `bun run format:check` - Formatting
+
+## Binary Build
+
+The app can be compiled to a standalone binary using Bun's `--compile` feature.
+
+```bash
+# Build the app first
+bun run build
+
+# Compile the server binary
+bun run build:binary
+
+# Run the binary (serves dist/ folder)
+./qa-helper
+
+# Custom port
+PORT=3000 ./qa-helper
+```
+
+The binary (`qa-helper`) is a static file server that serves the `dist/` folder. It requires the `dist/` folder to be present alongside it.
 
 ## Core Dependencies
 - react, @reduxjs/toolkit, react-redux
