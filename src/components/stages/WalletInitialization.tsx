@@ -17,9 +17,18 @@ import {
   MdViewList
 } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { useScanForLostFunds } from '../../hooks/useScanForLostFunds';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
 import { setFundingWallet, setTestWallet } from '../../store/slices/walletSelectionSlice';
+import {
+  selectFilterHasBalance,
+  selectScanProgress,
+  selectScanResults,
+  selectSortByBalance,
+  toggleFilterHasBalance,
+  toggleSortByBalance,
+} from '../../store/slices/walletScanSlice';
 import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
 import OCRReferenceImage from '../OCRReferenceImage';
@@ -70,6 +79,13 @@ export default function WalletInitialization() {
 
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
+
+  // Scan for lost funds state
+  const { startScanForLostFunds } = useScanForLostFunds();
+  const scanProgress = useAppSelector(selectScanProgress);
+  const scanResults = useAppSelector(selectScanResults);
+  const filterHasBalance = useAppSelector(selectFilterHasBalance);
+  const sortByBalance = useAppSelector(selectSortByBalance);
 
   // Load default wallets from localStorage on mount
   useEffect(() => {
@@ -815,6 +831,14 @@ export default function WalletInitialization() {
         onEditWallet={handleStartEdit}
         onShowSeedModal={setSeedModalWalletId}
         onSwapNetwork={handleSwapNetwork}
+        // Scan for lost funds props
+        scanState={scanProgress}
+        scanResults={scanResults}
+        filterHasBalance={filterHasBalance}
+        sortByBalance={sortByBalance}
+        onScanForLostFunds={startScanForLostFunds}
+        onToggleFilterHasBalance={() => dispatch(toggleFilterHasBalance())}
+        onToggleSortByBalance={() => dispatch(toggleSortByBalance())}
       />
     </div>
   );

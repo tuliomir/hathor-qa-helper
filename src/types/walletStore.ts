@@ -17,6 +17,7 @@ export interface WalletMetadata {
   network: NetworkType;
   createdAt: number;
   lastUsedAt?: number; // Timestamp of last wallet interaction (start, select, etc.)
+  lastInitDurationMs?: number; // Time to reach ready state (ms), used for scan time estimation
 }
 
 /**

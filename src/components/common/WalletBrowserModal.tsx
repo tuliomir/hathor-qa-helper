@@ -2,15 +2,30 @@
  * Wallet Browser Modal
  * Modal for browsing, searching, and managing all registered wallets
  * Used when there are many wallets to avoid cluttering the main view
+ * Includes "Scan for Lost Funds" feature to check all wallets for balances
  */
 
 import { useMemo, useState } from 'react';
-import { MdDelete, MdEdit, MdPlayArrow, MdQrCode, MdSearch, MdStop } from 'react-icons/md';
+import { MdDelete, MdEdit, MdFilterList, MdPlayArrow, MdQrCode, MdSearch, MdSort, MdStop, } from 'react-icons/md';
 import type { WalletInfo } from '../../types/walletStore';
 import type { NetworkType } from '../../constants/network';
+import type { WalletScanResult } from '../../store/slices/walletScanSlice';
+import { calculateTotalValue } from '../../store/slices/walletScanSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from './CopyButton';
 import NetworkSwapButton from './NetworkSwapButton';
+
+/**
+ * Scan progress state passed from parent
+ */
+interface ScanProgressState {
+  isScanning: boolean;
+  progress: number;
+  currentWalletName: string | null;
+  estimatedRemainingMs: number | null;
+  scannedCount: number;
+  totalWallets: number;
+}
 
 interface WalletBrowserModalProps {
   isOpen: boolean;
@@ -22,6 +37,28 @@ interface WalletBrowserModalProps {
   onEditWallet: (walletId: string, currentName: string) => void;
   onShowSeedModal: (walletId: string) => void;
   onSwapNetwork: (walletId: string, currentNetwork: NetworkType, status: string) => Promise<void>;
+  // Scan props
+  scanState?: ScanProgressState;
+  scanResults?: Record<string, WalletScanResult>;
+  filterHasBalance?: boolean;
+  sortByBalance?: boolean;
+  onScanForLostFunds?: () => void;
+  onToggleFilterHasBalance?: () => void;
+  onToggleSortByBalance?: () => void;
+}
+
+/**
+ * Format milliseconds as human-readable time (e.g., "~2m 30s")
+ */
+function formatTimeRemaining(ms: number | null): string {
+  if (ms === null || ms <= 0) return '';
+  const totalSeconds = Math.ceil(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes > 0) {
+    return `~${minutes}m ${seconds}s`;
+  }
+  return `~${seconds}s`;
 }
 
 export default function WalletBrowserModal({
@@ -34,29 +71,76 @@ export default function WalletBrowserModal({
   onEditWallet,
   onShowSeedModal,
   onSwapNetwork,
+  scanState,
+  scanResults,
+  filterHasBalance,
+  sortByBalance,
+  onScanForLostFunds,
+  onToggleFilterHasBalance,
+  onToggleSortByBalance,
 }: WalletBrowserModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter wallets based on search query
-  const filteredWallets = useMemo(() => {
-    if (!searchQuery.trim()) return wallets;
-    const query = searchQuery.toLowerCase();
-    return wallets.filter(
-      (w) =>
-        w.metadata.friendlyName.toLowerCase().includes(query) ||
-        w.metadata.seedWords.toLowerCase().includes(query) ||
-        w.firstAddress?.toLowerCase().includes(query)
-    );
-  }, [wallets, searchQuery]);
+  // Check if scan data exists
+  const hasScanData = scanResults && Object.keys(scanResults).length > 0;
 
-  // Sort by lastUsedAt (most recent first), then by createdAt
+  // Filter wallets based on search query and balance filter
+  const filteredWallets = useMemo(() => {
+    let result = wallets;
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (w) =>
+          w.metadata.friendlyName.toLowerCase().includes(query) ||
+          w.metadata.seedWords.toLowerCase().includes(query) ||
+          w.firstAddress?.toLowerCase().includes(query)
+      );
+    }
+
+    // Balance filter (only if scan data exists)
+    if (filterHasBalance && scanResults) {
+      result = result.filter((w) => {
+        const scanResult = scanResults[w.metadata.id];
+        if (!scanResult) return false;
+        const htrBalance = BigInt(scanResult.htrBalance || '0');
+        const hasCustomTokens = scanResult.customTokenBalances.length > 0;
+        return htrBalance > 0n || hasCustomTokens;
+      });
+    }
+
+    return result;
+  }, [wallets, searchQuery, filterHasBalance, scanResults]);
+
+  // Sort wallets
   const sortedWallets = useMemo(() => {
-    return [...filteredWallets].sort((a, b) => {
-      const aLastUsed = a.metadata.lastUsedAt || a.metadata.createdAt;
-      const bLastUsed = b.metadata.lastUsedAt || b.metadata.createdAt;
-      return bLastUsed - aLastUsed;
-    });
-  }, [filteredWallets]);
+    const sorted = [...filteredWallets];
+
+    if (sortByBalance && scanResults) {
+      // Sort by total value (descending)
+      sorted.sort((a, b) => {
+        const resultA = scanResults[a.metadata.id];
+        const resultB = scanResults[b.metadata.id];
+
+        const valueA = resultA ? calculateTotalValue(resultA) : 0n;
+        const valueB = resultB ? calculateTotalValue(resultB) : 0n;
+
+        if (valueB > valueA) return 1;
+        if (valueB < valueA) return -1;
+        return 0;
+      });
+    } else {
+      // Default sort: lastUsedAt (most recent first), then by createdAt
+      sorted.sort((a, b) => {
+        const aLastUsed = a.metadata.lastUsedAt || a.metadata.createdAt;
+        const bLastUsed = b.metadata.lastUsedAt || b.metadata.createdAt;
+        return bLastUsed - aLastUsed;
+      });
+    }
+
+    return sorted;
+  }, [filteredWallets, sortByBalance, scanResults]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -99,6 +183,31 @@ export default function WalletBrowserModal({
     return words.slice(0, n).join(' ') + '...';
   };
 
+  /**
+   * Render scan result info for a wallet
+   */
+  const renderScanInfo = (walletId: string) => {
+    if (!scanResults) return null;
+    const result = scanResults[walletId];
+    if (!result) return null;
+
+    const htrBalance = BigInt(result.htrBalance || '0');
+    const customTokenCount = result.customTokenBalances.length;
+
+    return (
+      <div className="text-xs mt-1 space-y-0.5">
+        <div className="text-success">
+          HTR: {formatBalance(htrBalance)}
+        </div>
+        {customTokenCount > 0 && (
+          <div className="text-info">
+            +{customTokenCount} token{customTokenCount > 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -112,19 +221,64 @@ export default function WalletBrowserModal({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold m-0">All Wallets ({wallets.length})</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-              aria-label="Close"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-3">
+              {onScanForLostFunds && (
+                <button
+                  onClick={onScanForLostFunds}
+                  disabled={scanState?.isScanning}
+                  className={`btn flex items-center gap-2 ${
+                    scanState?.isScanning
+                      ? 'btn-secondary cursor-not-allowed opacity-60'
+                      : 'btn-primary'
+                  }`}
+                >
+                  <MdSearch size={18} />
+                  {scanState?.isScanning ? 'Scanning...' : 'Scan for Lost Funds'}
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
-          {/* Search */}
+          {/* Scan Progress */}
+          {scanState?.isScanning && (
+            <div className="p-4 bg-blue-50 border-b border-blue-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                  <span className="font-medium">
+                    Scanning: {scanState.currentWalletName || '...'}
+                  </span>
+                </div>
+                <span className="text-sm text-muted">
+                  {scanState.scannedCount} of {scanState.totalWallets} wallets
+                  {scanState.estimatedRemainingMs
+                    ? ` (${formatTimeRemaining(scanState.estimatedRemainingMs)} remaining)`
+                    : ''}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${scanState.progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Search and Filters */}
           <div className="p-4 border-b border-gray-200">
             <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <MdSearch
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
               <input
                 type="text"
                 placeholder="Search by name, seed words, or address..."
@@ -134,6 +288,35 @@ export default function WalletBrowserModal({
                 autoFocus
               />
             </div>
+
+            {/* Filter/Sort Controls */}
+            {hasScanData && (
+              <div className="flex items-center gap-4 mt-3">
+                {onToggleFilterHasBalance && (
+                  <button
+                    onClick={onToggleFilterHasBalance}
+                    className={`btn text-sm flex items-center gap-1.5 ${
+                      filterHasBalance ? 'btn-primary' : 'btn-secondary'
+                    }`}
+                  >
+                    <MdFilterList size={16} />
+                    {filterHasBalance ? 'Showing with balance' : 'Show all'}
+                  </button>
+                )}
+                {onToggleSortByBalance && (
+                  <button
+                    onClick={onToggleSortByBalance}
+                    className={`btn text-sm flex items-center gap-1.5 ${
+                      sortByBalance ? 'btn-primary' : 'btn-secondary'
+                    }`}
+                  >
+                    <MdSort size={16} />
+                    {sortByBalance ? 'Sorted by balance' : 'Sort by balance'}
+                  </button>
+                )}
+              </div>
+            )}
+
             {searchQuery && (
               <p className="text-sm text-muted mt-2 mb-0">
                 Showing {filteredWallets.length} of {wallets.length} wallets
@@ -146,7 +329,11 @@ export default function WalletBrowserModal({
             {sortedWallets.length === 0 ? (
               <div className="p-10 text-center text-muted">
                 <p className="text-lg m-0">
-                  {searchQuery ? 'No wallets match your search' : 'No wallets registered'}
+                  {searchQuery
+                    ? 'No wallets match your search'
+                    : filterHasBalance
+                      ? 'No wallets with balance found'
+                      : 'No wallets registered'}
                 </p>
               </div>
             ) : (
@@ -156,7 +343,7 @@ export default function WalletBrowserModal({
                     <th className="p-3 text-left font-bold">Name</th>
                     <th className="p-3 text-left font-bold">Seed</th>
                     <th className="p-3 text-left font-bold">Network</th>
-                    <th className="p-3 text-left font-bold">Status</th>
+                    <th className="p-3 text-left font-bold">Status / Balance</th>
                     <th className="p-3 text-left font-bold">Address</th>
                     <th className="p-3 text-center font-bold">Actions</th>
                   </tr>
@@ -216,6 +403,8 @@ export default function WalletBrowserModal({
                         {wallet.error && (
                           <div className="text-xs text-danger mt-1">{wallet.error}</div>
                         )}
+                        {/* Show scan results for non-ready wallets */}
+                        {wallet.status !== 'ready' && renderScanInfo(wallet.metadata.id)}
                       </td>
                       <td
                         className={`p-3 font-mono text-xs ${wallet.firstAddress ? 'text-success' : 'text-muted'}`}

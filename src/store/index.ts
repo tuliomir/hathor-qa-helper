@@ -35,6 +35,7 @@ import mobileQAProgressReducer from './slices/mobileQAProgressSlice';
 import desktopQAProgressReducer from './slices/desktopQAProgressSlice';
 import multisigReducer from './slices/multisigSlice';
 import deepLinkReducer from './slices/deepLinkSlice';
+import walletScanReducer from './slices/walletScanSlice';
 
 export const store = configureStore({
   reducer: {
@@ -70,6 +71,7 @@ export const store = configureStore({
     desktopQAProgress: desktopQAProgressReducer,
     multisig: multisigReducer,
     deepLink: deepLinkReducer,
+    walletScan: walletScanReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

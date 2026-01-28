@@ -16,9 +16,9 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { addToken } from './tokensSlice';
 import {
-  deleteAddressesForWallet,
-  storeAddresses,
-  storeAddressesFromTransaction,
+	deleteAddressesForWallet,
+	storeAddresses,
+	storeAddressesFromTransaction,
 } from '../../services/addressDatabase';
 import type { AddressEntry } from '../../types/addressDatabase';
 
@@ -692,6 +692,26 @@ const walletStoreSlice = createSlice({
         };
       },
     },
+
+    /**
+     * Update the init duration for a wallet (persisted to localStorage)
+     * Used for time estimation during scan operations
+     */
+    updateWalletInitDuration: (
+      state,
+      action: PayloadAction<{ id: string; durationMs: number }>
+    ) => {
+      const { id, durationMs } = action.payload;
+      const walletInfo = state.wallets[id];
+
+      if (walletInfo) {
+        walletInfo.metadata.lastInitDurationMs = durationMs;
+
+        // Sync to LocalStorage
+        const metadataArray = Object.values(state.wallets).map((info) => info.metadata);
+        saveWalletsToStorage(metadataArray);
+      }
+    },
   },
 });
 
@@ -706,6 +726,7 @@ export const {
   updateWalletTokens,
   updateLastUsedAt,
   addWalletEvent,
+  updateWalletInitDuration,
 } = walletStoreSlice.actions;
 
 export default walletStoreSlice.reducer;
