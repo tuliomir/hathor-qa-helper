@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:bg": "vite &",
+    "dev:kill": "lsof -ti:5173 -ti:5174 | xargs kill 2>/dev/null || true",
+    "dev:clean": "rm -rf node_modules/.vite",
+    "dev:restart": "bun run dev:kill && bun run dev:clean && bun run dev:bg && sleep 3",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

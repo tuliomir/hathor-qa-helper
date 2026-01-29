@@ -87,10 +87,10 @@ bun run build
 bun run build:binary
 
 # Run the binary (serves dist/ folder)
-./qa-helper
+./qa-helper-standalone
 
 # Custom port
-PORT=3000 ./qa-helper
+PORT=3000 ./qa-helper-standalone
 ```
 
 The binary (`qa-helper`) is a static file server that serves the `dist/` folder. It requires the `dist/` folder to be present alongside it.
