@@ -102,5 +102,9 @@ const allWallets = useMemo(
 - Use env vars for config
 - Run `bun audit` periodically
 
+## Debugging
+- Use Playwright MCP tools for interactive debugging
+- See `playwright-debugging.md` for workflow and commands
+
 ## Documentation
 - Optimize Claude documentation for token usage, while maintaining clarity
