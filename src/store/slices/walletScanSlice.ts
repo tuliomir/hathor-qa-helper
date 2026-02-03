@@ -4,7 +4,7 @@
  * This is ephemeral state - not persisted to localStorage
  */
 
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
 
 /**
@@ -181,14 +181,17 @@ export default walletScanSlice.reducer;
 export const selectWalletScanState = (state: RootState) => state.walletScan;
 export const selectScanResults = (state: RootState) => state.walletScan.results;
 export const selectIsScanning = (state: RootState) => state.walletScan.isScanning;
-export const selectScanProgress = (state: RootState) => ({
-  isScanning: state.walletScan.isScanning,
-  progress: state.walletScan.progress,
-  currentWalletName: state.walletScan.currentWalletName,
-  estimatedRemainingMs: state.walletScan.estimatedRemainingMs,
-  scannedCount: state.walletScan.scannedCount,
-  totalWallets: state.walletScan.totalWallets,
-});
+export const selectScanProgress = createSelector(
+  [selectWalletScanState],
+  (scanState) => ({
+    isScanning: scanState.isScanning,
+    progress: scanState.progress,
+    currentWalletName: scanState.currentWalletName,
+    estimatedRemainingMs: scanState.estimatedRemainingMs,
+    scannedCount: scanState.scannedCount,
+    totalWallets: scanState.totalWallets,
+  })
+);
 export const selectFilterHasBalance = (state: RootState) => state.walletScan.filterHasBalance;
 export const selectSortByBalance = (state: RootState) => state.walletScan.sortByBalance;
 export const selectScanErrors = (state: RootState) => state.walletScan.errors;

@@ -32,7 +32,10 @@
       "mcp__plugin_playwright_playwright__browser_console_messages",
       "Bash(lsof:*)",
       "Bash(xargs kill)",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_close",
+      "mcp__plugin_playwright_playwright__browser_wait_for"
     ],
     "deny": [
       "Bash(npm *)",

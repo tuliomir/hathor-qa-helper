@@ -56,6 +56,21 @@ const wallets = useSelector(state => state.walletStore.wallets);
 const instance = walletInstancesMap.get(walletId); // Fragmented
 ```
 
+### 4. Memoize Derived Arrays
+```tsx
+// ✅ DO - walletsMap is memoized by createSelector
+const { wallets: walletsMap } = useWalletStore();
+const allWallets = useMemo(
+  () => Array.from(walletsMap.values()),
+  [walletsMap]
+);
+
+// ❌ DON'T - Creates new array every render, causes infinite loops
+const allWallets = getAllWallets(); // Called during render
+```
+
+See `development-practices.md` for more on preventing render loops.
+
 ### 4. Update Status via Redux Actions
 ```tsx
 // ✅ DO - Extract specific data

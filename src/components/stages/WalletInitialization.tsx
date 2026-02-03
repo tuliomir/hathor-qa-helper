@@ -6,15 +6,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  MdCamera,
-  MdDelete,
-  MdEdit,
-  MdPlayArrow,
-  MdQrCode,
-  MdStar,
-  MdStarBorder,
-  MdStop,
-  MdViewList
+	MdCamera,
+	MdDelete,
+	MdEdit,
+	MdPlayArrow,
+	MdQrCode,
+	MdStar,
+	MdStarBorder,
+	MdStop,
+	MdViewList
 } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useScanForLostFunds } from '../../hooks/useScanForLostFunds';
@@ -22,12 +22,12 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
 import { setFundingWallet, setTestWallet } from '../../store/slices/walletSelectionSlice';
 import {
-  selectFilterHasBalance,
-  selectScanProgress,
-  selectScanResults,
-  selectSortByBalance,
-  toggleFilterHasBalance,
-  toggleSortByBalance,
+	selectFilterHasBalance,
+	selectScanProgress,
+	selectScanResults,
+	selectSortByBalance,
+	toggleFilterHasBalance,
+	toggleSortByBalance,
 } from '../../store/slices/walletScanSlice';
 import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
@@ -49,7 +49,7 @@ const MAX_VISIBLE_WALLETS = 5;
 
 export default function WalletInitialization() {
   const dispatch = useAppDispatch();
-  const { addWallet, removeWallet, getAllWallets, updateFriendlyName, updateNetwork } = useWalletStore();
+  const { wallets: walletsMap, addWallet, removeWallet, updateFriendlyName, updateNetwork } = useWalletStore();
 
   const [seedInput, setSeedInput] = useState('');
   const [walletName, setWalletName] = useState('');
@@ -76,7 +76,8 @@ export default function WalletInitialization() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasAutoStartedRef = useRef(false);
-  const allWallets = getAllWallets();
+  // Memoize allWallets to prevent infinite re-renders - walletsMap is already memoized by createSelector
+  const allWallets = useMemo(() => Array.from(walletsMap.values()), [walletsMap]);
 
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);

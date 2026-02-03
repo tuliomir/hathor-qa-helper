@@ -156,33 +156,56 @@ function WalletTokensDisplay({
   const [tokenBalances, setTokenBalances] = useState<Map<string, bigint>>(new Map());
   const [isFetchingFirstEmpty, setIsFetchingFirstEmpty] = useState(false);
   const [isAllConfigStringsModalOpen, setIsAllConfigStringsModalOpen] = useState(false);
+  // Token UIDs fetched directly from wallet instance (more reliable than Redux store)
+  const [fetchedTokenUids, setFetchedTokenUids] = useState<string[]>([]);
 
 	// Refresh the tokens when page is opened
 	useEffect(() => {
 		handleRefresh().catch(e => console.error('Failed refresh', e));
 	}, []);
 
-  // Tokens are now loaded automatically when wallet starts, so we don't need to load them here
-  // Just reset selected token when wallet changes
+  // Fetch tokens directly from wallet instance (more reliable than Redux store)
+  // This catches tokens received from other wallets that may not be in wallet.tokenUids
+  useEffect(() => {
+    const fetchTokensFromInstance = async () => {
+      if (!wallet?.instance) {
+        setFetchedTokenUids([]);
+        return;
+      }
+
+      try {
+        // Use getTokens() directly on the wallet instance for complete token list
+        const tokenUids: string[] = await wallet.instance.getTokens();
+        setFetchedTokenUids(tokenUids);
+      } catch (err) {
+        console.error('Failed to fetch tokens from wallet instance:', err);
+        // Fallback to Redux store data if direct fetch fails
+        setFetchedTokenUids(wallet.tokenUids || []);
+      }
+    };
+
+    fetchTokensFromInstance();
+  }, [wallet?.instance, wallet?.metadata.id, refreshKey]);
+
+  // Reset selected token when wallet changes
   useEffect(() => {
     setSelectedTokenUid(null);
     setConfigString(null);
   }, [wallet?.metadata.id]);
 
   // Filter tokens for this wallet (exclude native token)
-  const walletTokens: Token[] = wallet.tokenUids
-    ? wallet.tokenUids
-        .filter((uid) => uid !== NATIVE_TOKEN_UID)
-        .map((uid) => allTokens.find((t) => t.uid === uid))
-        .filter((t): t is Token => t !== undefined)
-        .sort((a, b) => {
-          // Sort by timestamp (newer first), fallback to uid if no timestamp
-          if (a.timestamp && b.timestamp) {
-            return b.timestamp - a.timestamp;
-          }
-          return 0;
-        })
-    : [];
+  // Uses fetchedTokenUids from direct wallet instance call instead of Redux store
+  const walletTokens: Token[] = fetchedTokenUids
+    .filter((uid) => uid !== NATIVE_TOKEN_UID)
+    .map((uid) => allTokens.find((t) => t.uid === uid))
+    .filter((t): t is Token => t !== undefined)
+    .sort((a, b) => {
+      // Sort by timestamp (newer first), fallback to uid if no timestamp
+      if (a.timestamp && b.timestamp) {
+        return b.timestamp - a.timestamp;
+      }
+      return 0;
+    });
 
   // Load all token balances for filtering
   useEffect(() => {
