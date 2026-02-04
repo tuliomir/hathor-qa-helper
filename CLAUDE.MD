@@ -19,23 +19,35 @@ React + TypeScript app for testing Hathor wallet functionality, RPC methods, and
 
 ## Documentation
 
+**Always consult these docs before making changes.** Use `@` imports to load file contents:
+
 ### Core Architecture
-- **[architecture.md](.claude/docs/architecture.md)** - System structure, Redux patterns, component lifecycle, common pitfalls
+- @.claude/docs/architecture.md - System structure, Redux patterns, component lifecycle
 
 ### State Management
-- **[wallet-state-management.md](.claude/docs/wallet-state-management.md)** - Redux + external map pattern, wallet lifecycle, event handling, critical serialization rules
-- **[wallet-event-monitoring.md](.claude/docs/wallet-event-monitoring.md)** - Real-time event capture, transaction status tracking (Unconfirmed/Valid/Voided), NC confirmation monitoring, selectors
+- @.claude/docs/wallet-state-management.md - Redux + external map pattern, wallet lifecycle
+- @.claude/docs/wallet-event-monitoring.md - Event capture, transaction status tracking
+- @.claude/docs/token-management.md - Custom token handling, caching patterns
 
 ### Data Handling
-- **[bigint-handling.md](.claude/docs/bigint-handling.md)** - BigInt serialization patterns, Redux compatibility, balance calculations
-- **[token-management.md](.claude/docs/token-management.md)** - Custom token handling, token selection, caching patterns
+- @.claude/docs/bigint-handling.md - BigInt serialization, Redux compatibility
 
 ### UI/UX
-- **[design-system.md](.claude/docs/design-system.md)** - Tailwind classes, color system, component patterns, spacing/typography
-- **[daisyui-components.md](.claude/docs/daisyui-components.md)** - DaisyUI component usage, theme configuration
+- @.claude/docs/design-system.md - Tailwind classes, color system, component patterns
+- @.claude/docs/daisyui-components.md - DaisyUI component usage
 
-### Development
-- **[development-practices.md](.claude/docs/development-practices.md)** - Code style, best practices, testing patterns, common mistakes
+### Development Guides
+- @.claude/docs/development-practices.md - Code style, best practices
+- @.claude/docs/creating-stages.md - **Step-by-step guide for adding new stages**
+- @.claude/docs/new-transaction-handling.md - Transaction ID display with ExplorerLink
+
+### Testing & Debugging
+- @.claude/docs/testing.md - Bun test runner, test patterns
+- @.claude/docs/playwright-debugging.md - Playwright debugging strategies
+
+### Reference
+- @.claude/docs/tx-template.md - Transaction templates
+- @.claude/docs/desktop-qa-development.md - Desktop wallet QA
 
 ## Quick Start
 
