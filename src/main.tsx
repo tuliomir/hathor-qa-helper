@@ -6,10 +6,22 @@ import './index.css';
 import App from './App.tsx';
 import { store } from './store';
 import { initializeWalletConnect } from './store/slices/walletConnectSlice';
-import { walletInstancesMap } from './store/slices/walletStoreSlice';
+import { walletInstancesMap, importWalletsFromCloud } from './store/slices/walletStoreSlice';
 
 // Initialize WalletConnect on app load
 store.dispatch(initializeWalletConnect());
+
+// Sync wallets from cloud storage on app load
+store.dispatch(importWalletsFromCloud())
+  .then((result) => {
+    if (result.payload && typeof result.payload === 'object' && 'imported' in result.payload) {
+      const { imported, skipped } = result.payload as { imported: number; skipped: number };
+      if (imported > 0) {
+        console.log(`%c☁️ Cloud Sync: Imported ${imported} wallet(s)${skipped > 0 ? `, ${skipped} already existed` : ''}`, 'color: #10b981');
+      }
+    }
+  })
+  .catch((err) => console.warn('[CloudSync] Failed to sync on startup:', err));
 
 // Expose wallet instances globally for DevTools debugging
 // Usage in console: fundingWallet.getTokens(), testWallet.getAddressAtIndex(0), etc.

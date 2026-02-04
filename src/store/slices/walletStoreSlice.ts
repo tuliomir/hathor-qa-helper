@@ -21,6 +21,7 @@ import {
 	storeAddressesFromTransaction,
 } from '../../services/addressDatabase';
 import type { AddressEntry } from '../../types/addressDatabase';
+import { fetchCloudWallets, storeCloudWallets } from '../../services/cloudWalletSync';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
@@ -490,6 +491,78 @@ export const refreshWalletBalance = createAsyncThunk(
       console.error(`Failed to refresh balance for wallet ${walletId}:`, error);
       throw error;
     }
+  }
+);
+
+/**
+ * Async Thunk: Import wallets from cloud storage
+ * Fetches wallets from the remote API and merges with local wallets
+ * Only adds wallets that don't already exist locally (by seed words)
+ */
+export const importWalletsFromCloud = createAsyncThunk(
+  'walletStore/importWalletsFromCloud',
+  async (_, { getState, dispatch }) => {
+    const cloudWallets = await fetchCloudWallets();
+
+    if (cloudWallets.length === 0) {
+      return { imported: 0, skipped: 0, total: 0 };
+    }
+
+    const state = getState() as RootState;
+    const existingWallets = Object.values(state.walletStore.wallets);
+
+    // Create a set of existing seed words (normalized) for deduplication
+    const existingSeeds = new Set(
+      existingWallets.map((w) => w.metadata.seedWords.toLowerCase().trim())
+    );
+
+    let imported = 0;
+    let skipped = 0;
+
+    for (const cloudWallet of cloudWallets) {
+      const normalizedSeed = cloudWallet.seedWords.toLowerCase().trim();
+
+      if (existingSeeds.has(normalizedSeed)) {
+        skipped++;
+        continue;
+      }
+
+      // Add the wallet (use original metadata but generate new ID)
+      dispatch(addWallet({
+        friendlyName: cloudWallet.friendlyName,
+        seedWords: cloudWallet.seedWords,
+        network: cloudWallet.network,
+        lastUsedAt: cloudWallet.lastUsedAt,
+        lastInitDurationMs: cloudWallet.lastInitDurationMs,
+      }));
+
+      // Add to existing seeds to prevent duplicates within the same import
+      existingSeeds.add(normalizedSeed);
+      imported++;
+    }
+
+    console.log(`[CloudSync] Imported ${imported} wallets, skipped ${skipped} duplicates`);
+    return { imported, skipped, total: cloudWallets.length };
+  }
+);
+
+/**
+ * Async Thunk: Export wallets to cloud storage
+ * Sends all local wallets to the remote API
+ */
+export const exportWalletsToCloud = createAsyncThunk(
+  'walletStore/exportWalletsToCloud',
+  async (_, { getState }) => {
+    const state = getState() as RootState;
+    const wallets = Object.values(state.walletStore.wallets).map((w) => w.metadata);
+
+    if (wallets.length === 0) {
+      return { stored: 0, filtered: 0 };
+    }
+
+    const result = await storeCloudWallets(wallets);
+    console.log(`[CloudSync] Exported ${result.stored} wallets to cloud (${result.filtered} filtered by server)`);
+    return result;
   }
 );
 

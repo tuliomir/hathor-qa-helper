@@ -6,7 +6,9 @@
  */
 
 import { useMemo, useState } from 'react';
-import { MdDelete, MdEdit, MdFilterList, MdPlayArrow, MdQrCode, MdSearch, MdSort, MdStop, } from 'react-icons/md';
+import { MdCloudUpload, MdDelete, MdEdit, MdFilterList, MdPlayArrow, MdQrCode, MdSearch, MdSort, MdStop, } from 'react-icons/md';
+import { useAppDispatch } from '../../store/hooks';
+import { exportWalletsToCloud } from '../../store/slices/walletStoreSlice';
 import type { WalletInfo } from '../../types/walletStore';
 import type { NetworkType } from '../../constants/network';
 import type { WalletScanResult } from '../../store/slices/walletScanSlice';
@@ -82,7 +84,33 @@ export default function WalletBrowserModal({
   onToggleFilterHasBalance,
   onToggleSortByBalance,
 }: WalletBrowserModalProps) {
+  const dispatch = useAppDispatch();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Handle cloud sync
+  const handleCloudSync = async () => {
+    setIsSyncing(true);
+    setSyncResult(null);
+
+    try {
+      const result = await dispatch(exportWalletsToCloud()).unwrap();
+      setSyncResult({
+        success: true,
+        message: `Synced ${result.stored} wallet(s) to cloud${result.filtered > 0 ? ` (${result.filtered} filtered)` : ''}`,
+      });
+      // Clear success message after 5 seconds
+      setTimeout(() => setSyncResult(null), 5000);
+    } catch (error) {
+      setSyncResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to sync wallets',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Check if scan data exists
   const hasScanData = scanResults && Object.keys(scanResults).length > 0;
@@ -231,6 +259,24 @@ export default function WalletBrowserModal({
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h2 className="text-2xl font-bold m-0">All Wallets ({wallets.length})</h2>
             <div className="flex items-center gap-3">
+              {/* Cloud Sync Button */}
+              <button
+                onClick={handleCloudSync}
+                disabled={isSyncing || wallets.length === 0}
+                className={`btn flex items-center gap-2 ${
+                  isSyncing || wallets.length === 0
+                    ? 'btn-secondary cursor-not-allowed opacity-60'
+                    : 'btn-info'
+                }`}
+                title="Sync wallets to cloud storage"
+              >
+                {isSyncing ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                ) : (
+                  <MdCloudUpload size={18} />
+                )}
+                {isSyncing ? 'Syncing...' : 'Sync to Cloud'}
+              </button>
               {onScanForLostFunds && (
                 <button
                   onClick={onScanForLostFunds}
@@ -254,6 +300,29 @@ export default function WalletBrowserModal({
               </button>
             </div>
           </div>
+
+          {/* Cloud Sync Result Feedback */}
+          {syncResult && (
+            <div
+              className={`p-3 border-b ${
+                syncResult.success
+                  ? 'bg-green-50 border-green-200 text-green-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium">
+                  {syncResult.success ? '✓' : '✗'} {syncResult.message}
+                </span>
+                <button
+                  onClick={() => setSyncResult(null)}
+                  className="text-current opacity-60 hover:opacity-100"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Scan Progress */}
           {scanState?.isScanning && (
