@@ -29,3 +29,8 @@ export const WALLET_CONFIG = {
   DEFAULT_PIN_CODE: '123456',
   SYNC_CHECK_INTERVAL: 100,
 } as const;
+
+/**
+ * Cloud API URL for wallet synchronization
+ */
+export const CLOUD_API_URL = 'https://tuliomir.com/qa-helper/wallets-api.php';

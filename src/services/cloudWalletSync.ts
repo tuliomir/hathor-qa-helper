@@ -4,8 +4,7 @@
  */
 
 import type { WalletMetadata } from '../types/walletStore';
-
-const CLOUD_API_URL = 'https://tuliomir.com/qa-helper/wallets-api.php';
+import { CLOUD_API_URL } from '../constants/network';
 
 /**
  * Response from the cloud API when storing wallets
