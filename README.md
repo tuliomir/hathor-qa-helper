@@ -105,7 +105,7 @@ Best free tier with unlimited bandwidth and 300+ global edge locations.
 
 ```bash
 # First time setup: login to Cloudflare
-npx wrangler login
+bunx wrangler login
 
 # Build and deploy
 bun run upload

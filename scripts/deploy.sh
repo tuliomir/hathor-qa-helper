@@ -25,10 +25,10 @@ fi
 # Deploy using Wrangler
 # If CLOUDFLARE_ACCOUNT_ID is set, use it (for CI/CD)
 if [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
-  npx wrangler pages deploy "$BUILD_DIR" --project-name="$PROJECT_NAME"
+  bunx wrangler pages deploy "$BUILD_DIR" --project-name="$PROJECT_NAME"
 else
   # Interactive mode - will prompt for login if needed
-  npx wrangler pages deploy "$BUILD_DIR" --project-name="$PROJECT_NAME"
+  bunx wrangler pages deploy "$BUILD_DIR" --project-name="$PROJECT_NAME"
 fi
 
 echo ""
