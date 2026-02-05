@@ -1,18 +1,25 @@
 /**
  * Transaction History Component
  * Displays transaction history from Redux and wallet getTxHistory()
+ * Supports filtering by token (HTR, custom tokens, or all)
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import TxStatus from '../common/TxStatus';
 import Loading from '../common/Loading';
+import Select from '../common/Select';
 import { NETWORK_CONFIG } from '../../constants/network';
+import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { refreshWalletTokens } from '../../store/slices/walletStoreSlice';
+import type { Token } from '../../store/slices/tokensSlice';
 import dateFormatter from '@hathor/wallet-lib/lib/utils/date';
+
+const ALL_TOKENS_VALUE = '__all__';
 
 interface WalletTransaction {
   txId: string;
@@ -28,13 +35,16 @@ interface WalletTransaction {
     method?: string;
     [key: string]: unknown;
   };
+  tokenSymbol?: string;
   // Keep raw data for console export
   raw: unknown;
 }
 
 export default function TransactionHistory() {
+  const dispatch = useAppDispatch();
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
   const reduxTransactions = useAppSelector((s) => s.transactionHistory.transactions);
+  const allTokens = useAppSelector((s) => s.tokens.tokens);
   const { getWallet } = useWalletStore();
   const { info } = useToast();
 
@@ -45,7 +55,76 @@ export default function TransactionHistory() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [qrModalTxHash, setQrModalTxHash] = useState<string | null>(null);
+  const [selectedTokenFilter, setSelectedTokenFilter] = useState<string>(NATIVE_TOKEN_UID);
+  const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const pageSize = 20;
+
+  // Refresh tokens on mount (same pattern as CustomTokens)
+  useEffect(() => {
+    async function refreshTokens() {
+      if (!testWallet?.instance || !testWalletId) return;
+
+      setIsLoadingTokens(true);
+      try {
+        await dispatch(refreshWalletTokens(testWalletId)).unwrap();
+
+        const tokenUids: string[] = await testWallet.instance.getTokens();
+        const htrToken: Token = {
+          uid: NATIVE_TOKEN_UID,
+          symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+          name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+        };
+
+        const tokens: Token[] = [htrToken];
+        for (const uid of tokenUids) {
+          if (uid === NATIVE_TOKEN_UID) continue;
+          const found = allTokens.find((t) => t.uid === uid);
+          if (found) tokens.push(found);
+        }
+
+        setAvailableTokens(tokens);
+      } catch (err) {
+        console.error('Failed to refresh tokens:', err);
+        // Fallback: at least show HTR
+        setAvailableTokens([{
+          uid: NATIVE_TOKEN_UID,
+          symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+          name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+        }]);
+      } finally {
+        setIsLoadingTokens(false);
+      }
+    }
+
+    refreshTokens();
+  }, [testWallet?.instance, testWalletId]);
+
+  // Parse a single raw tx into our WalletTransaction shape
+  function parseTx(tx: unknown, tokenSymbol?: string): WalletTransaction {
+    const txData = tx as {
+      tx_id?: string; txId?: string; timestamp?: number; balance?: number;
+      first_block?: string | number; firstBlock?: string | number; voided?: boolean; version?: number;
+      nc_caller?: string; ncCaller?: string; nc_id?: string; ncId?: string;
+      nc_method?: string; ncMethod?: string;
+      headers?: { method?: string; [key: string]: unknown };
+    };
+    const rawFirstBlock = txData.first_block ?? txData.firstBlock;
+    return {
+      txId: txData.tx_id || txData.txId || 'unknown',
+      timestamp: (txData.timestamp || 0) * 1000,
+      balance: txData.balance || 0,
+      firstBlock: typeof rawFirstBlock === 'string' ? parseInt(rawFirstBlock, 10) || undefined : rawFirstBlock,
+      voided: txData.voided || false,
+      version: txData.version,
+      ncCaller: txData.nc_caller || txData.ncCaller,
+      ncId: txData.nc_id || txData.ncId,
+      ncMethod: txData.nc_method || txData.ncMethod,
+      headers: txData.headers,
+      tokenSymbol,
+      raw: tx,
+    };
+  }
 
   // Fetch transaction history from wallet
   useEffect(() => {
@@ -54,33 +133,35 @@ export default function TransactionHistory() {
 
       setIsLoading(true);
       setError(null);
+      setCurrentPage(0);
 
       try {
         const hWallet = testWallet.instance;
-        const txHistory = await hWallet.getTxHistory();
 
-        console.log('Raw getTxHistory() response:', txHistory);
-        console.log('First transaction sample:', txHistory[0]);
+        if (selectedTokenFilter === ALL_TOKENS_VALUE) {
+          // Fetch for each token in parallel, merge and deduplicate
+          const fetchPromises = availableTokens.map(async (token) => {
+            const txHistory = await hWallet.getTxHistory({ token_id: token.uid });
+            return txHistory.map((tx: unknown) => parseTx(tx, token.symbol));
+          });
 
-        // Extract the fields we need
-        const simplifiedTxs: WalletTransaction[] = txHistory.map((tx: unknown) => {
-          const txData = tx as { tx_id?: string; txId?: string; timestamp?: number; balance?: number; first_block?: string; firstBlock?: string; voided?: boolean; version?: number; nc_caller?: string; ncCaller?: string; nc_id?: string; ncId?: string; nc_method?: string; ncMethod?: string; headers?: unknown };
-          return {
-            txId: txData.tx_id || txData.txId || 'unknown',
-            timestamp: (txData.timestamp || 0) * 1000, // Convert to milliseconds
-            balance: txData.balance || 0,
-            firstBlock: txData.first_block || txData.firstBlock,
-            voided: txData.voided || false,
-            version: txData.version,
-            ncCaller: txData.nc_caller || txData.ncCaller,
-            ncId: txData.nc_id || txData.ncId,
-            ncMethod: txData.nc_method || txData.ncMethod,
-            headers: txData.headers,
-            raw: tx, // Keep raw data for console export
-          };
-        });
+          const results = await Promise.all(fetchPromises);
+          const merged: WalletTransaction[] = results.flat();
 
-        setWalletTxs(simplifiedTxs);
+          // Deduplicate by txId — a single tx can appear in multiple token histories.
+          // Keep the first occurrence per txId (they share the same raw data).
+          // But since balance differs per token, we actually want all entries.
+          // Sort by timestamp descending (newest first)
+          merged.sort((a, b) => b.timestamp - a.timestamp);
+
+          setWalletTxs(merged);
+        } else {
+          // Fetch for a single token
+          const token = availableTokens.find((t) => t.uid === selectedTokenFilter);
+          const txHistory = await hWallet.getTxHistory({ token_id: selectedTokenFilter });
+          const simplifiedTxs = txHistory.map((tx: unknown) => parseTx(tx, token?.symbol));
+          setWalletTxs(simplifiedTxs);
+        }
       } catch (err) {
         console.error('Error fetching transaction history:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch transaction history');
@@ -90,7 +171,7 @@ export default function TransactionHistory() {
     }
 
     fetchTxHistory();
-  }, [testWallet]);
+  }, [testWallet?.instance, selectedTokenFilter, availableTokens]);
 
   // Truncate hash for display
   function truncateHash(hash: string | undefined): string {
@@ -111,7 +192,6 @@ export default function TransactionHistory() {
   // Determine transaction type
   function getTxType(tx: WalletTransaction): string {
     if (tx.ncCaller || tx.ncId || tx.ncMethod) {
-      // Check if it's a Nano Init transaction
       if (tx.headers?.method === 'initialize') {
         return 'Nano Init';
       }
@@ -127,6 +207,9 @@ export default function TransactionHistory() {
     console.log(`Showing tx ${truncated}`, tx.raw);
     info('Raw tx exported to console');
   }
+
+  // Whether the "All" filter is active (shows the Token column)
+  const isAllFilter = selectedTokenFilter === ALL_TOKENS_VALUE;
 
   // Paginate wallet transactions
   const paginatedTxs = walletTxs.slice(
@@ -227,6 +310,27 @@ export default function TransactionHistory() {
           Full transaction history from wallet-lib (paginated)
         </p>
 
+        {/* Token Filter Select */}
+        <div className="mb-4">
+          <label className="block text-sm font-bold mb-1.5">Filter by Token:</label>
+          {isLoadingTokens ? (
+            <Loading message="Loading tokens..." />
+          ) : (
+            <Select
+              value={selectedTokenFilter}
+              onChange={(e) => setSelectedTokenFilter(e.target.value)}
+              className="w-full max-w-xs"
+            >
+              <option value={ALL_TOKENS_VALUE}>All Tokens</option>
+              {availableTokens.map((token) => (
+                <option key={token.uid} value={token.uid}>
+                  {token.symbol} — {token.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
+
         {isLoading && <Loading message="Loading transaction history..." />}
 
         {error && (
@@ -248,17 +352,20 @@ export default function TransactionHistory() {
                     <th className="text-left py-2 px-3 font-bold">Hash</th>
                     <th className="text-left py-2 px-3 font-bold">Timestamp</th>
                     <th className="text-right py-2 px-3 font-bold">Balance</th>
+                    {isAllFilter && (
+                      <th className="text-center py-2 px-3 font-bold">Token</th>
+                    )}
                     <th className="text-center py-2 px-3 font-bold">Status</th>
                     <th className="text-center py-2 px-3 font-bold">Type</th>
                     <th className="text-center py-2 px-3 font-bold">Explorer</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedTxs.map((tx) => {
+                  {paginatedTxs.map((tx, idx) => {
                     const txType = getTxType(tx);
                     return (
                       <tr
-                        key={tx.txId}
+                        key={`${tx.txId}-${tx.tokenSymbol ?? idx}`}
                         className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
                         onClick={() => handleTxClick(tx)}
                       >
@@ -274,6 +381,21 @@ export default function TransactionHistory() {
                         <td className="py-2 px-3 text-right">
                           {tx.balance}
                         </td>
+                        {isAllFilter && (
+                          <td className="py-2 px-3 text-center">
+                            <button
+                              className="text-primary hover:underline text-xs font-semibold"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const token = availableTokens.find((t) => t.symbol === tx.tokenSymbol);
+                                if (token) setSelectedTokenFilter(token.uid);
+                              }}
+                              title={`Filter by ${tx.tokenSymbol}`}
+                            >
+                              {tx.tokenSymbol}
+                            </button>
+                          </td>
+                        )}
                         <td className="py-2 px-3 text-center">
                           <TxStatus hash={tx.txId} walletId={testWalletId ?? undefined} />
                         </td>

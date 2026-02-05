@@ -11,6 +11,7 @@
       "Bash(wc:*)",
       "Bash(find:*)",
       "Bash(bun test)",
+      "Bash(bun typecheck)",
       "Bash(bun lint:*)",
       "Bash(bun install)",
       "Bash(bun run lint:*)",
@@ -43,7 +44,8 @@
       "Bash(npm *)",
       "Bash(yarn *)",
       "Bash(npx *)",
-      "Bash(node -e *)"
+      "Bash(node -e *)",
+      "Bash(bunx tsc *)"
     ],
     "ask": []
   }
