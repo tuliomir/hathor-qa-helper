@@ -15,10 +15,8 @@
       if (typeof process === 'undefined') {
         window.process = { env: {}, browser: true };
       }
-      // Ensure Buffer is available (basic shim, full polyfill comes from bundle)
-      if (typeof Buffer === 'undefined') {
-        window.Buffer = { isBuffer: function() { return false; } };
-      }
+      // NOTE: Buffer is NOT pre-initialized here - the bundle's polyfill provides
+      // the full Buffer implementation. A simple shim would break Buffer.from(), etc.
     </script>
   </head>
   <body>
