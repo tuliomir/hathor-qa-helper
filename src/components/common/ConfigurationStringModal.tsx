@@ -4,7 +4,7 @@
  */
 
 import QRCode from 'react-qr-code';
-import { tokensUtils } from '@hathor/wallet-lib';
+import { getConfigurationString } from '../../utils/tokenConfigString';
 import CopyButton from './CopyButton';
 
 interface ConfigurationStringModalProps {
@@ -24,7 +24,7 @@ export default function ConfigurationStringModal({
 }: ConfigurationStringModalProps) {
   if (!isOpen) return null;
 
-  const configString = tokensUtils.getConfigurationString(tokenUid, tokenName, tokenSymbol);
+  const configString = getConfigurationString(tokenUid, tokenName, tokenSymbol);
 
   return (
     <>

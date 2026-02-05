@@ -9,7 +9,8 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { tokensUtils, TransactionTemplateBuilder } from '@hathor/wallet-lib';
+import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
+import { getConfigurationString } from '../../utils/tokenConfigString';
 import CopyButton from '../common/CopyButton';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import type { Token } from '../../store/slices/tokensSlice';
@@ -248,7 +249,7 @@ function WalletTokensDisplay({
     if (filteredTokens.length > 0 && !selectedTokenUid) {
       const firstToken = filteredTokens[0];
       setSelectedTokenUid(firstToken.uid);
-      const config = tokensUtils.getConfigurationString(firstToken.uid, firstToken.name, firstToken.symbol);
+      const config = getConfigurationString(firstToken.uid, firstToken.name, firstToken.symbol);
       setConfigString(config);
     }
   }, [filteredTokens.length, selectedTokenUid]);
@@ -331,7 +332,7 @@ function WalletTokensDisplay({
 
   const handleTokenClick = (uid: string, name: string, symbol: string) => {
     setSelectedTokenUid(uid);
-    const config = tokensUtils.getConfigurationString(uid, name, symbol);
+    const config = getConfigurationString(uid, name, symbol);
     setConfigString(config);
   };
 

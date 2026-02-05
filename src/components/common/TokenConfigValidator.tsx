@@ -8,7 +8,7 @@
 
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { tokensUtils } from '@hathor/wallet-lib';
+import { getConfigurationString } from '../../utils/tokenConfigString';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -70,7 +70,7 @@ function TokenConfigComponent({ mode }: TokenConfigComponentProps) {
   // Generate configuration string for the most recent token
   const configString = useMemo(() => {
     if (!mostRecentToken) return null;
-    return tokensUtils.getConfigurationString(
+    return getConfigurationString(
       mostRecentToken.uid,
       mostRecentToken.name,
       mostRecentToken.symbol

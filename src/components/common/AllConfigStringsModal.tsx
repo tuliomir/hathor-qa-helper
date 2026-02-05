@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { tokensUtils } from '@hathor/wallet-lib';
+import { getConfigurationString } from '../../utils/tokenConfigString';
 import CopyButton from './CopyButton';
 import type { Token } from '../../store/slices/tokensSlice';
 
@@ -24,7 +24,7 @@ export default function AllConfigStringsModal({
   // Generate all configuration strings, separated by double line breaks
   const allConfigStrings = useMemo(() => {
     return tokens
-      .map((token) => tokensUtils.getConfigurationString(token.uid, token.name, token.symbol))
+      .map((token) => getConfigurationString(token.uid, token.name, token.symbol))
       .join('\n\n');
   }, [tokens]);
 

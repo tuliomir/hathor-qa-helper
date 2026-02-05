@@ -35,12 +35,15 @@
       "Bash(bun run:*)",
       "mcp__plugin_playwright_playwright__browser_click",
       "mcp__plugin_playwright_playwright__browser_close",
-      "mcp__plugin_playwright_playwright__browser_wait_for"
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "Bash(git reflog:*)",
+      "Bash(git log:*)"
     ],
     "deny": [
       "Bash(npm *)",
       "Bash(yarn *)",
-      "Bash(npx *)"
+      "Bash(npx *)",
+      "Bash(node -e *)"
     ],
     "ask": []
   }
