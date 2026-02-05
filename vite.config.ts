@@ -36,4 +36,15 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
+  optimizeDeps: {
+    // Exclude WalletConnect packages from pre-bundling to avoid SES lockdown conflicts
+    exclude: ['@walletconnect/sign-client', '@walletconnect/core', '@walletconnect/modal'],
+    // Ensure these are included for proper polyfill handling
+    include: ['buffer'],
+  },
+  build: {
+    // Disable modulepreload to prevent WalletConnect from loading before dynamic import
+    // This is crucial to avoid SES lockdown conflicts with polyfills
+    modulePreload: false,
+  },
 })

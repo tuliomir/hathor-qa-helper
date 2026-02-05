@@ -7,7 +7,9 @@
  * conflicts during bundle initialization in production builds.
  */
 
-import type Client from '@walletconnect/sign-client';
+// NOTE: WalletConnect Client type is inlined to avoid any module resolution that could trigger SES lockdown
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Client = any;
 import {
   DEFAULT_APP_METADATA,
   DEFAULT_LOGGER,

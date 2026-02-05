@@ -5,6 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hathor QA Helper</title>
+    <!-- Pre-initialize globals before SES lockdown from WalletConnect runs -->
+    <script>
+      // Ensure global is defined before any module loads
+      if (typeof global === 'undefined') {
+        window.global = window;
+      }
+      // Ensure process is defined
+      if (typeof process === 'undefined') {
+        window.process = { env: {}, browser: true };
+      }
+      // Ensure Buffer is available (basic shim, full polyfill comes from bundle)
+      if (typeof Buffer === 'undefined') {
+        window.Buffer = { isBuffer: function() { return false; } };
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

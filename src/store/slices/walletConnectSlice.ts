@@ -8,10 +8,22 @@
  */
 
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type Client from '@walletconnect/sign-client';
-import type { PairingTypes, SessionTypes } from '@walletconnect/types';
-// NOTE: WalletConnect modules (@walletconnect/modal, @walletconnect/utils, walletConnectClient)
-// are imported dynamically inside async thunks to avoid SES lockdown conflicts in production builds
+// NOTE: WalletConnect types are inlined to avoid any module resolution that could trigger SES lockdown
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Client = any;
+// Inline type definitions to avoid importing from @walletconnect/types
+interface PairingStruct {
+  topic: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+interface SessionStruct {
+  topic: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  namespaces: Record<string, { accounts: string[]; [key: string]: any }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
 import { clearDeepLink, setDeepLink, showDeepLinkModal } from './deepLinkSlice';
 import { addToast } from './toastSlice';
 import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
@@ -19,8 +31,8 @@ import type { RootState } from '../index';
 
 interface WalletConnectState {
   client: Client | null;
-  session: SessionTypes.Struct | null;
-  pairings: PairingTypes.Struct[];
+  session: SessionStruct | null;
+  pairings: PairingStruct[];
   accounts: string[];
   chains: string[];
   isConnecting: boolean;
@@ -75,15 +87,18 @@ export const initializeWalletConnect = createAsyncThunk(
     const client = await initializeClient();
 
     // Subscribe to events
-    client.on('session_ping', (args) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on('session_ping', (args: any) => {
       console.log('[WalletConnect] session_ping', args);
     });
 
-    client.on('session_event', (args) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on('session_event', (args: any) => {
       console.log('[WalletConnect] session_event', args);
     });
 
-    client.on('session_update', ({ topic, params }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on('session_update', ({ topic, params }: { topic: string; params: any }) => {
       console.log('[WalletConnect] session_update', { topic, params });
       const { namespaces } = params;
       const _session = client.session.get(topic);
@@ -118,7 +133,7 @@ export const initializeWalletConnect = createAsyncThunk(
 
 // Connect to WalletConnect
 export const connectWalletConnect = createAsyncThunk<
-  SessionTypes.Struct,
+  SessionStruct,
   { pairing?: { topic: string } } | undefined,
   { state: RootState }
 >('walletConnect/connect', async (params, { getState, dispatch }) => {
@@ -245,7 +260,7 @@ const walletConnectSlice = createSlice({
   name: 'walletConnect',
   initialState,
   reducers: {
-    sessionConnected: (state, action: PayloadAction<SessionTypes.Struct>) => {
+    sessionConnected: (state, action: PayloadAction<SessionStruct>) => {
       const session = action.payload;
       const allNamespaceAccounts = Object.values(session.namespaces)
         .map((namespace) => namespace.accounts)
@@ -281,7 +296,8 @@ const walletConnectSlice = createSlice({
 
       if (action.payload.session) {
         const allNamespaceAccounts = Object.values(action.payload.session.namespaces)
-          .map((namespace) => namespace.accounts)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((namespace: any) => namespace.accounts)
           .flat();
         const allNamespaceChains = Object.keys(action.payload.session.namespaces);
         state.chains = allNamespaceChains;
