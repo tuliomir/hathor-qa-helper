@@ -311,7 +311,7 @@ export default function TransactionHistory() {
         </p>
 
         {/* Token Filter Select */}
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col items-center">
           <label className="block text-sm font-bold mb-1.5">Filter by Token:</label>
           {isLoadingTokens ? (
             <Loading message="Loading tokens..." />
