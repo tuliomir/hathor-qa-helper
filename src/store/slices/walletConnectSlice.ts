@@ -2,14 +2,16 @@
  * WalletConnect Redux Slice
  *
  * Manages WalletConnect client, session, and connection state
+ *
+ * NOTE: WalletConnect modules are imported dynamically to avoid SES lockdown
+ * conflicts during bundle initialization in production builds.
  */
 
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type Client from '@walletconnect/sign-client';
 import type { PairingTypes, SessionTypes } from '@walletconnect/types';
-import { getSdkError } from '@walletconnect/utils';
-import { WalletConnectModal } from '@walletconnect/modal';
-import { generateHathorWalletConnectionDeepLink, initializeClient } from '../../services/walletConnectClient';
+// NOTE: WalletConnect modules (@walletconnect/modal, @walletconnect/utils, walletConnectClient)
+// are imported dynamically inside async thunks to avoid SES lockdown conflicts in production builds
 import { clearDeepLink, setDeepLink, showDeepLinkModal } from './deepLinkSlice';
 import { addToast } from './toastSlice';
 import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
@@ -37,11 +39,13 @@ const initialState: WalletConnectState = {
   error: null,
 };
 
-// Initialize WalletConnect modal (singleton)
-let web3Modal: WalletConnectModal | null = null;
+// Initialize WalletConnect modal (singleton) - lazily loaded
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let web3Modal: any = null;
 
-const getWeb3Modal = () => {
+const getWeb3Modal = async () => {
   if (!web3Modal) {
+    const { WalletConnectModal } = await import('@walletconnect/modal');
     web3Modal = new WalletConnectModal({
       projectId: DEFAULT_PROJECT_ID,
       themeMode: 'dark',
@@ -66,6 +70,8 @@ const getWeb3Modal = () => {
 export const initializeWalletConnect = createAsyncThunk(
   'walletConnect/initialize',
   async (_, { dispatch }) => {
+    // Dynamic import to avoid SES lockdown conflicts
+    const { initializeClient } = await import('../../services/walletConnectClient');
     const client = await initializeClient();
 
     // Subscribe to events
@@ -163,7 +169,7 @@ export const connectWalletConnect = createAsyncThunk<
   console.log('[WalletConnect] Connection initiated', { uri });
 
   if (uri) {
-    const modal = getWeb3Modal();
+    const modal = await getWeb3Modal();
     const standaloneChains = Object.values(requiredNamespaces)
       .map((namespace) => namespace.chains)
       .flat() as string[];
@@ -179,6 +185,9 @@ export const connectWalletConnect = createAsyncThunk<
     // - DeepLink modal provides the QR code for mobile devices to open Hathor Wallet
     // Only show deeplink modal/toast if deeplinks are enabled
     if (deepLinksEnabled) {
+      const { generateHathorWalletConnectionDeepLink } = await import(
+        '../../services/walletConnectClient'
+      );
       const deepLinkUrl = generateHathorWalletConnectionDeepLink(uri);
       dispatch(setDeepLink({ url: deepLinkUrl, title: 'Connect to Hathor Wallet' }));
       dispatch(showDeepLinkModal());
@@ -196,13 +205,13 @@ export const connectWalletConnect = createAsyncThunk<
 
   try {
     const newSession = await approval();
-    getWeb3Modal().closeModal();
+    (await getWeb3Modal()).closeModal();
     // Clear deeplink modal and toast on successful connection
     dispatch(clearDeepLink());
     console.log('[WalletConnect] Session established', newSession);
     return newSession;
   } catch (error) {
-    getWeb3Modal().closeModal();
+    (await getWeb3Modal()).closeModal();
     // Clear deeplink modal and toast on connection rejection/failure
     dispatch(clearDeepLink());
     throw error;
@@ -224,6 +233,8 @@ export const disconnectWalletConnect = createAsyncThunk<
     throw new Error('Session is not connected');
   }
 
+  // Dynamic import to avoid SES lockdown conflicts
+  const { getSdkError } = await import('@walletconnect/utils');
   await client.disconnect({
     topic: session.topic,
     reason: getSdkError('USER_DISCONNECTED'),

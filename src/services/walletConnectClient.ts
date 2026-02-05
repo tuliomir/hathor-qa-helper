@@ -2,9 +2,12 @@
  * WalletConnect Client Initialization
  *
  * Manages the WalletConnect client singleton instance
+ *
+ * NOTE: @walletconnect/sign-client is imported dynamically to avoid SES lockdown
+ * conflicts during bundle initialization in production builds.
  */
 
-import Client from '@walletconnect/sign-client';
+import type Client from '@walletconnect/sign-client';
 import {
   DEFAULT_APP_METADATA,
   DEFAULT_LOGGER,
@@ -25,7 +28,9 @@ export async function initializeClient(): Promise<Client> {
   }
 
   try {
-    client = await Client.init({
+    // Dynamic import to avoid SES lockdown conflicts in production builds
+    const SignClient = (await import('@walletconnect/sign-client')).default;
+    client = await SignClient.init({
       logger: DEFAULT_LOGGER,
       relayUrl: DEFAULT_RELAY_URL,
       projectId: DEFAULT_PROJECT_ID,
