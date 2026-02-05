@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment files (keep .env.example)
+.env
+.env.local
+.env.production
+.env.staging
+
 # Compiled binary
 qa-helper-standalone
 

@@ -2,14 +2,28 @@
  * WalletConnect Redux Slice
  *
  * Manages WalletConnect client, session, and connection state
+ *
+ * NOTE: WalletConnect modules are imported dynamically to avoid SES lockdown
+ * conflicts during bundle initialization in production builds.
  */
 
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type Client from '@walletconnect/sign-client';
-import type { PairingTypes, SessionTypes } from '@walletconnect/types';
-import { getSdkError } from '@walletconnect/utils';
-import { WalletConnectModal } from '@walletconnect/modal';
-import { generateHathorWalletConnectionDeepLink, initializeClient } from '../../services/walletConnectClient';
+// NOTE: WalletConnect types are inlined to avoid any module resolution that could trigger SES lockdown
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Client = any;
+// Inline type definitions to avoid importing from @walletconnect/types
+interface PairingStruct {
+  topic: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+interface SessionStruct {
+  topic: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  namespaces: Record<string, { accounts: string[]; [key: string]: any }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
 import { clearDeepLink, setDeepLink, showDeepLinkModal } from './deepLinkSlice';
 import { addToast } from './toastSlice';
 import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
@@ -17,8 +31,8 @@ import type { RootState } from '../index';
 
 interface WalletConnectState {
   client: Client | null;
-  session: SessionTypes.Struct | null;
-  pairings: PairingTypes.Struct[];
+  session: SessionStruct | null;
+  pairings: PairingStruct[];
   accounts: string[];
   chains: string[];
   isConnecting: boolean;
@@ -37,11 +51,13 @@ const initialState: WalletConnectState = {
   error: null,
 };
 
-// Initialize WalletConnect modal (singleton)
-let web3Modal: WalletConnectModal | null = null;
+// Initialize WalletConnect modal (singleton) - lazily loaded
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let web3Modal: any = null;
 
-const getWeb3Modal = () => {
+const getWeb3Modal = async () => {
   if (!web3Modal) {
+    const { WalletConnectModal } = await import('@walletconnect/modal');
     web3Modal = new WalletConnectModal({
       projectId: DEFAULT_PROJECT_ID,
       themeMode: 'dark',
@@ -66,18 +82,23 @@ const getWeb3Modal = () => {
 export const initializeWalletConnect = createAsyncThunk(
   'walletConnect/initialize',
   async (_, { dispatch }) => {
+    // Dynamic import to avoid SES lockdown conflicts
+    const { initializeClient } = await import('../../services/walletConnectClient');
     const client = await initializeClient();
 
     // Subscribe to events
-    client.on('session_ping', (args) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on('session_ping', (args: any) => {
       console.log('[WalletConnect] session_ping', args);
     });
 
-    client.on('session_event', (args) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on('session_event', (args: any) => {
       console.log('[WalletConnect] session_event', args);
     });
 
-    client.on('session_update', ({ topic, params }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on('session_update', ({ topic, params }: { topic: string; params: any }) => {
       console.log('[WalletConnect] session_update', { topic, params });
       const { namespaces } = params;
       const _session = client.session.get(topic);
@@ -112,7 +133,7 @@ export const initializeWalletConnect = createAsyncThunk(
 
 // Connect to WalletConnect
 export const connectWalletConnect = createAsyncThunk<
-  SessionTypes.Struct,
+  SessionStruct,
   { pairing?: { topic: string } } | undefined,
   { state: RootState }
 >('walletConnect/connect', async (params, { getState, dispatch }) => {
@@ -163,7 +184,7 @@ export const connectWalletConnect = createAsyncThunk<
   console.log('[WalletConnect] Connection initiated', { uri });
 
   if (uri) {
-    const modal = getWeb3Modal();
+    const modal = await getWeb3Modal();
     const standaloneChains = Object.values(requiredNamespaces)
       .map((namespace) => namespace.chains)
       .flat() as string[];
@@ -179,6 +200,9 @@ export const connectWalletConnect = createAsyncThunk<
     // - DeepLink modal provides the QR code for mobile devices to open Hathor Wallet
     // Only show deeplink modal/toast if deeplinks are enabled
     if (deepLinksEnabled) {
+      const { generateHathorWalletConnectionDeepLink } = await import(
+        '../../services/walletConnectClient'
+      );
       const deepLinkUrl = generateHathorWalletConnectionDeepLink(uri);
       dispatch(setDeepLink({ url: deepLinkUrl, title: 'Connect to Hathor Wallet' }));
       dispatch(showDeepLinkModal());
@@ -196,13 +220,13 @@ export const connectWalletConnect = createAsyncThunk<
 
   try {
     const newSession = await approval();
-    getWeb3Modal().closeModal();
+    (await getWeb3Modal()).closeModal();
     // Clear deeplink modal and toast on successful connection
     dispatch(clearDeepLink());
     console.log('[WalletConnect] Session established', newSession);
     return newSession;
   } catch (error) {
-    getWeb3Modal().closeModal();
+    (await getWeb3Modal()).closeModal();
     // Clear deeplink modal and toast on connection rejection/failure
     dispatch(clearDeepLink());
     throw error;
@@ -224,6 +248,8 @@ export const disconnectWalletConnect = createAsyncThunk<
     throw new Error('Session is not connected');
   }
 
+  // Dynamic import to avoid SES lockdown conflicts
+  const { getSdkError } = await import('@walletconnect/utils');
   await client.disconnect({
     topic: session.topic,
     reason: getSdkError('USER_DISCONNECTED'),
@@ -234,7 +260,7 @@ const walletConnectSlice = createSlice({
   name: 'walletConnect',
   initialState,
   reducers: {
-    sessionConnected: (state, action: PayloadAction<SessionTypes.Struct>) => {
+    sessionConnected: (state, action: PayloadAction<SessionStruct>) => {
       const session = action.payload;
       const allNamespaceAccounts = Object.values(session.namespaces)
         .map((namespace) => namespace.accounts)
@@ -270,7 +296,8 @@ const walletConnectSlice = createSlice({
 
       if (action.payload.session) {
         const allNamespaceAccounts = Object.values(action.payload.session.namespaces)
-          .map((namespace) => namespace.accounts)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((namespace: any) => namespace.accounts)
           .flat();
         const allNamespaceChains = Object.keys(action.payload.session.namespaces);
         state.chains = allNamespaceChains;

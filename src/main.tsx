@@ -5,11 +5,17 @@ import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App.tsx';
 import { store } from './store';
-import { initializeWalletConnect } from './store/slices/walletConnectSlice';
 import { walletInstancesMap, importWalletsFromCloud } from './store/slices/walletStoreSlice';
 
-// Initialize WalletConnect on app load
-store.dispatch(initializeWalletConnect());
+// Lazy-load WalletConnect to avoid SES lockdown conflicts in production builds
+// SES (Secure ECMAScript) from WalletConnect can conflict with polyfills during bundle initialization
+const initWalletConnect = async () => {
+  const { initializeWalletConnect } = await import('./store/slices/walletConnectSlice');
+  store.dispatch(initializeWalletConnect());
+};
+
+// Initialize WalletConnect after a small delay to ensure polyfills are ready
+setTimeout(initWalletConnect, 0);
 
 // Sync wallets from cloud storage on app load
 store.dispatch(importWalletsFromCloud())

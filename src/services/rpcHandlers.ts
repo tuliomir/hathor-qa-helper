@@ -5,8 +5,17 @@
  * These handlers are responsible for making RPC requests through WalletConnect client.
  */
 
-import type Client from '@walletconnect/sign-client';
-import type { SessionTypes } from '@walletconnect/types';
+// NOTE: WalletConnect types are inlined to avoid any module resolution that could trigger SES lockdown
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Client = any;
+// Inline type definition to avoid importing from @walletconnect/types
+interface SessionStruct {
+  topic: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  namespaces: Record<string, { accounts: string[]; [key: string]: any }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
 import { HATHOR_TESTNET_CHAIN } from '../constants/walletConnect';
 import { getOracleBuffer } from '../utils/betHelpers';
 import { generateHathorWalletRequestDeepLink } from './walletConnectClient';
@@ -27,7 +36,7 @@ export interface CreateTokenParams {
 
 export interface RpcHandlerDependencies {
   client: Client;  // WalletConnect client
-  session: SessionTypes.Struct; // Active WalletConnect session
+  session: SessionStruct; // Active WalletConnect session
   balanceTokens?: string[];
   dryRun?: boolean;  // If true, skip actual RPC call
   onDeepLinkAvailable?: (url: string, title: string) => void;  // Callback when a deep link needs to be shown

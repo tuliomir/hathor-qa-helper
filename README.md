@@ -95,6 +95,44 @@ bun run build:binary
 
 The binary serves the app at `http://localhost:5173` by default. Use `PORT=3000 ./qa-helper` for a custom port.
 
+### Cloud Deployment
+
+Deploy the app to a CDN for easy access. Two options are supported:
+
+#### Cloudflare Pages (Recommended)
+
+Best free tier with unlimited bandwidth and 300+ global edge locations.
+
+```bash
+# First time setup: login to Cloudflare
+bunx wrangler login
+
+# Build and deploy
+bun run upload
+
+# Or just deploy (if already built)
+bun run deploy
+```
+
+Configure via `.env` (copy from `.env.example`):
+```bash
+CLOUDFLARE_PROJECT_NAME=hathor-qa-helper
+```
+
+#### Firebase Hosting
+
+Good option if you're already using Firebase services.
+
+```bash
+# First time setup: login to Firebase
+firebase login
+
+# Update .firebaserc with your project ID
+
+# Build and deploy
+bun run upload:firebase
+```
+
 ## Usage
 
 1. **Initialize a wallet** - Enter a seed phrase or use OCR to extract words from an image
