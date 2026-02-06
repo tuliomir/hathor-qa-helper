@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 import { useStage } from '../hooks/useStage';
 import { STAGE_GROUPS, getGroupForStage } from '../types/stage';
 import type { StageId, GroupId, StageGroup } from '../types/stage';
-import { FiChevronDown } from 'react-icons/fi';
+import { FiChevronDown, FiGithub, FiExternalLink } from 'react-icons/fi';
 
 interface AccordionGroupProps {
   group: StageGroup;
@@ -123,6 +123,27 @@ export default function Sidebar() {
             />
           ))}
         </div>
+      </div>
+
+      <div className="flex-shrink-0 border-t-2 border-border px-5 py-3 flex items-center gap-4">
+        <a
+          href="https://github.com/tuliomir/hathor-qa-helper"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted hover:text-dark transition-colors duration-150"
+          title="Open in GitHub"
+        >
+          <FiGithub size={18} />
+        </a>
+        <a
+          href="https://hathor-qa-helper.pages.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted hover:text-dark transition-colors duration-150"
+          title="Open publicly deployed"
+        >
+          <FiExternalLink size={18} />
+        </a>
       </div>
     </div>
   );
