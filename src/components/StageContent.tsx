@@ -3,8 +3,10 @@
  * Renders the content for the currently selected stage
  */
 
+import type { ComponentType } from 'react';
 import { useStage } from '../hooks/useStage';
 import { useScrollPreservation } from '../hooks/useScrollPreservation';
+import type { StageId } from '../types/stage';
 import WalletInitialization from './stages/WalletInitialization';
 import AddressValidation from './stages/AddressValidation';
 import CustomTokens from './stages/CustomTokens';
@@ -28,9 +30,36 @@ import { RawRpcEditorStage } from './stages/RawRpcEditorStage';
 import TestWalletCleanup from './stages/TestWalletCleanup';
 import MultisigWalletManagement from './stages/MultisigWalletManagement';
 
+const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
+  'wallet-initialization': WalletInitialization,
+  'address-validation': AddressValidation,
+  'custom-tokens': CustomTokens,
+  'rpc-connection': ConnectionStage,
+  'rpc-basic-info': BasicInfoStage,
+  'rpc-get-address': GetAddressStage,
+  'rpc-get-balance': GetBalanceStage,
+  'rpc-get-utxos': GetUtxosStage,
+  'rpc-sign-with-address': SignWithAddressStage,
+  'rpc-create-token': CreateTokenStage,
+  'rpc-send-transaction': SendTransactionStage,
+  'rpc-sign-oracle-data': SignOracleDataStage,
+  'rpc-raw-editor': RawRpcEditorStage,
+  'rpc-bet-initialize': BetInitializeStage,
+  'rpc-bet-deposit': BetDepositStage,
+  'rpc-set-bet-result': SetBetResultStage,
+  'rpc-bet-withdraw': BetWithdrawStage,
+  'push-notifications': PushNotifications,
+  'transaction-history': TransactionHistory,
+  'tx-update-events': TxUpdateEvents,
+  'test-wallet-cleanup': TestWalletCleanup,
+  'multisig-wallet-management': MultisigWalletManagement,
+};
+
 export default function StageContent() {
   const { currentStage } = useStage();
   const scrollContainerRef = useScrollPreservation();
+
+  const StageComponent = STAGE_COMPONENT_MAP[currentStage];
 
   return (
     // Independently scrollable content area with scroll position preservation
@@ -38,28 +67,7 @@ export default function StageContent() {
       ref={scrollContainerRef}
       className="flex-1 p-7.5 bg-white overflow-y-auto"
     >
-      {currentStage === 'wallet-initialization' && <WalletInitialization />}
-      {currentStage === 'address-validation' && <AddressValidation />}
-      {currentStage === 'custom-tokens' && <CustomTokens />}
-      {currentStage === 'transaction-history' && <TransactionHistory />}
-      {currentStage === 'tx-update-events' && <TxUpdateEvents />}
-      {currentStage === 'rpc-connection' && <ConnectionStage />}
-      {currentStage === 'rpc-basic-info' && <BasicInfoStage />}
-      {currentStage === 'rpc-get-address' && <GetAddressStage />}
-      {currentStage === 'rpc-get-balance' && <GetBalanceStage />}
-      {currentStage === 'rpc-get-utxos' && <GetUtxosStage />}
-      {currentStage === 'rpc-sign-with-address' && <SignWithAddressStage />}
-      {currentStage === 'rpc-create-token' && <CreateTokenStage />}
-      {currentStage === 'rpc-send-transaction' && <SendTransactionStage />}
-      {currentStage === 'rpc-sign-oracle-data' && <SignOracleDataStage />}
-      {currentStage === 'rpc-raw-editor' && <RawRpcEditorStage />}
-      {currentStage === 'rpc-bet-initialize' && <BetInitializeStage />}
-      {currentStage === 'rpc-bet-deposit' && <BetDepositStage />}
-      {currentStage === 'rpc-set-bet-result' && <SetBetResultStage />}
-      {currentStage === 'rpc-bet-withdraw' && <BetWithdrawStage />}
-      {currentStage === 'push-notifications' && <PushNotifications />}
-      {currentStage === 'test-wallet-cleanup' && <TestWalletCleanup />}
-      {currentStage === 'multisig-wallet-management' && <MultisigWalletManagement />}
+      {StageComponent ? <StageComponent /> : <div className="text-center text-gray-500 mt-8">Stage not found</div>}
     </div>
   );
 }

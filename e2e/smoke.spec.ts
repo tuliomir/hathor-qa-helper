@@ -5,13 +5,15 @@ import { DESKTOP_QA_SECTIONS, MAIN_QA_STAGES, MOBILE_QA_SECTIONS } from './helpe
 // Use fast timeouts — a screen should load in under 3 seconds
 test.use({ actionTimeout: 3_000 });
 
-// ─── Main QA Stages (/) ──────────────────────────────────────────────────────
+// ─── Main QA Stages (/tools/:groupSlug/:stageSlug) ─────────────────────────
 
 test.describe('Main QA Stages', () => {
   for (const stage of MAIN_QA_STAGES) {
     test(`loads stage: ${stage.title}`, async ({ page }) => {
       const collector = createConsoleCollector(page);
-      await page.goto('/');
+
+      // Navigate directly to the stage URL
+      await page.goto(stage.url);
       await page.locator('h2', { hasText: 'QA Stages' }).waitFor();
 
       // Locate the accordion group container that wraps this stage
@@ -19,27 +21,10 @@ test.describe('Main QA Stages', () => {
         has: page.locator('span.uppercase', { hasText: stage.groupTitle }),
       });
 
-      // Check if the accordion is expanded via the CSS grid class.
-      // Collapsed = grid-rows-[0fr], Expanded = grid-rows-[1fr]
-      const gridDiv = groupContainer.locator('div.grid');
-      const isExpanded = await gridDiv.evaluate(
-        (el) => el.className.includes('grid-rows-[1fr]')
-      );
-
-      if (!isExpanded) {
-        // Click the group header button (first button in the container)
-        await groupContainer.locator('button').first().click();
-        // Wait for the 200ms CSS grid transition
-        await page.waitForTimeout(300);
-      }
-
-      // Click the stage button within this group container
+      // The sidebar stage button should be active (bg-primary)
       const stageButton = groupContainer.locator('button', { hasText: stage.title }).filter({
         has: page.locator('span', { hasText: stage.title }),
       });
-      await stageButton.click();
-
-      // Assert: button has active class (bg-primary)
       await expect(stageButton).toHaveClass(/bg-primary/);
 
       // Assert: content area is present and not empty

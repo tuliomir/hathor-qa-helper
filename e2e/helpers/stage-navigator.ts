@@ -3,43 +3,44 @@
  * Mirrors the app's config without importing app code.
  */
 
-// ─── Main QA Stages (/) ──────────────────────────────────────────────────────
+// ─── Main QA Stages (/tools/:groupSlug/:stageSlug) ─────────────────────────
 
 export interface StageEntry {
   id: string;
   title: string;
   groupTitle: string;
+  url: string;
 }
 
 export const MAIN_QA_STAGES: StageEntry[] = [
   // Main QA
-  { id: 'wallet-initialization', title: 'Wallet Initialization', groupTitle: 'Main QA' },
-  { id: 'address-validation', title: 'Address Validation', groupTitle: 'Main QA' },
-  { id: 'custom-tokens', title: 'Custom Tokens', groupTitle: 'Main QA' },
+  { id: 'wallet-initialization', title: 'Wallet Initialization', groupTitle: 'Main QA', url: '/tools/main/wallet-initialization' },
+  { id: 'address-validation', title: 'Address Validation', groupTitle: 'Main QA', url: '/tools/main/address-validation' },
+  { id: 'custom-tokens', title: 'Custom Tokens', groupTitle: 'Main QA', url: '/tools/main/custom-tokens' },
   // RPC Requests
-  { id: 'rpc-connection', title: 'Connection', groupTitle: 'RPC Requests' },
-  { id: 'rpc-basic-info', title: 'Basic Information', groupTitle: 'RPC Requests' },
-  { id: 'rpc-get-address', title: 'Get Address', groupTitle: 'RPC Requests' },
-  { id: 'rpc-get-balance', title: 'Get Balance', groupTitle: 'RPC Requests' },
-  { id: 'rpc-get-utxos', title: 'Get UTXOs', groupTitle: 'RPC Requests' },
-  { id: 'rpc-sign-with-address', title: 'Sign with Address', groupTitle: 'RPC Requests' },
-  { id: 'rpc-create-token', title: 'Create Token', groupTitle: 'RPC Requests' },
-  { id: 'rpc-send-transaction', title: 'Send Transaction', groupTitle: 'RPC Requests' },
-  { id: 'rpc-sign-oracle-data', title: 'Sign Oracle Data', groupTitle: 'RPC Requests' },
-  { id: 'rpc-raw-editor', title: 'Raw RPC Editor', groupTitle: 'RPC Requests' },
+  { id: 'rpc-connection', title: 'Connection', groupTitle: 'RPC Requests', url: '/tools/rpc/connection' },
+  { id: 'rpc-basic-info', title: 'Basic Information', groupTitle: 'RPC Requests', url: '/tools/rpc/basic-info' },
+  { id: 'rpc-get-address', title: 'Get Address', groupTitle: 'RPC Requests', url: '/tools/rpc/get-address' },
+  { id: 'rpc-get-balance', title: 'Get Balance', groupTitle: 'RPC Requests', url: '/tools/rpc/get-balance' },
+  { id: 'rpc-get-utxos', title: 'Get UTXOs', groupTitle: 'RPC Requests', url: '/tools/rpc/get-utxos' },
+  { id: 'rpc-sign-with-address', title: 'Sign with Address', groupTitle: 'RPC Requests', url: '/tools/rpc/sign-with-address' },
+  { id: 'rpc-create-token', title: 'Create Token', groupTitle: 'RPC Requests', url: '/tools/rpc/create-token' },
+  { id: 'rpc-send-transaction', title: 'Send Transaction', groupTitle: 'RPC Requests', url: '/tools/rpc/send-transaction' },
+  { id: 'rpc-sign-oracle-data', title: 'Sign Oracle Data', groupTitle: 'RPC Requests', url: '/tools/rpc/sign-oracle-data' },
+  { id: 'rpc-raw-editor', title: 'Raw RPC Editor', groupTitle: 'RPC Requests', url: '/tools/rpc/raw-editor' },
   // Bet Nano Contract
-  { id: 'rpc-bet-initialize', title: 'Initialize Bet', groupTitle: 'Bet Nano Contract' },
-  { id: 'rpc-bet-deposit', title: 'Place Bet', groupTitle: 'Bet Nano Contract' },
-  { id: 'rpc-set-bet-result', title: 'Set Bet Result', groupTitle: 'Bet Nano Contract' },
-  { id: 'rpc-bet-withdraw', title: 'Withdraw Prize', groupTitle: 'Bet Nano Contract' },
+  { id: 'rpc-bet-initialize', title: 'Initialize Bet', groupTitle: 'Bet Nano Contract', url: '/tools/bet-nc/initialize' },
+  { id: 'rpc-bet-deposit', title: 'Place Bet', groupTitle: 'Bet Nano Contract', url: '/tools/bet-nc/deposit' },
+  { id: 'rpc-set-bet-result', title: 'Set Bet Result', groupTitle: 'Bet Nano Contract', url: '/tools/bet-nc/set-result' },
+  { id: 'rpc-bet-withdraw', title: 'Withdraw Prize', groupTitle: 'Bet Nano Contract', url: '/tools/bet-nc/withdraw' },
   // Push Notification
-  { id: 'push-notifications', title: 'Push Notifications', groupTitle: 'Push Notification' },
+  { id: 'push-notifications', title: 'Push Notifications', groupTitle: 'Push Notification', url: '/tools/notifications/push' },
   // Auditing
-  { id: 'transaction-history', title: 'Transaction History', groupTitle: 'Auditing' },
-  { id: 'tx-update-events', title: 'Tx Update Events', groupTitle: 'Auditing' },
-  { id: 'test-wallet-cleanup', title: 'Test Wallet Cleanup', groupTitle: 'Auditing' },
+  { id: 'transaction-history', title: 'Transaction History', groupTitle: 'Auditing', url: '/tools/auditing/transaction-history' },
+  { id: 'tx-update-events', title: 'Tx Update Events', groupTitle: 'Auditing', url: '/tools/auditing/tx-update-events' },
+  { id: 'test-wallet-cleanup', title: 'Test Wallet Cleanup', groupTitle: 'Auditing', url: '/tools/auditing/test-wallet-cleanup' },
   // MultiSig
-  { id: 'multisig-wallet-management', title: 'MultiSig Wallets', groupTitle: 'MultiSig' },
+  { id: 'multisig-wallet-management', title: 'MultiSig Wallets', groupTitle: 'MultiSig', url: '/tools/multisig/wallet-management' },
 ];
 
 // ─── Mobile QA Sections (/mobile) ────────────────────────────────────────────

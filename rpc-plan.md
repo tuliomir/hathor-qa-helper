@@ -794,7 +794,8 @@ For each new RPC method, you must:
 - [ ] Create stage component: `src/components/stages/XxxStage.tsx`
 - [ ] Add to stage types: `src/types/stage.ts` (StageId union type)
 - [ ] Add to STAGES array: `src/types/stage.ts` (under RPC separator)
-- [ ] Add to StageContent: `src/components/StageContent.tsx` (import + routing)
+- [ ] Add route slug: `src/config/stageRoutes.ts` (STAGE_SLUG_MAP entry)
+- [ ] Add to StageContent: `src/components/StageContent.tsx` (STAGE_COMPONENT_MAP entry)
 - [ ] Add RPC handler: `src/services/rpcHandlers.ts`
 
 ### 6. **Component Import Changes**

@@ -8,7 +8,7 @@ The application maintains global state for two wallet types:
 - **Funding Wallet**: Used to fund transactions and send tokens to test wallets
 - **Test Wallet**: Used for testing and validation purposes
 
-These are selected by the user in the **Wallet Initialization** stage and stored in Redux for global access.
+These are selected by the user in the **Wallet Initialization** stage (`/tools/main/wallet-initialization`) and stored in Redux for global access.
 
 ## Redux Store
 

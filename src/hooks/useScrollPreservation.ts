@@ -16,12 +16,13 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { saveScrollPosition } from '../store/slices/stageSlice';
+import { useStage } from './useStage';
 import type { StageId } from '../types/stage';
 
 export function useScrollPreservation() {
   const dispatch = useAppDispatch();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const currentStage = useAppSelector((state) => state.stage.currentStage);
+  const { currentStage } = useStage();
   const previousStageRef = useRef<StageId>(currentStage);
 
   // Get saved scroll position for current stage (default to 0 if not visited before)

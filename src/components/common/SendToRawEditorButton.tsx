@@ -6,9 +6,10 @@
 
 import React from 'react';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import type { AppDispatch } from '../../store';
 import { navigateToRawRpcEditor } from '../../store/slices/navigationSlice';
-import { setCurrentStage } from '../../store/slices/stageSlice';
+import { getStageUrl } from '../../config/stageRoutes';
 import { useToast } from '../../hooks/useToast';
 
 interface SendToRawEditorButtonProps {
@@ -21,6 +22,7 @@ const SendToRawEditorButton: React.FC<SendToRawEditorButtonProps> = ({
   disabled = false,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { showToast } = useToast();
 
   const handleClick = () => {
@@ -33,7 +35,7 @@ const SendToRawEditorButton: React.FC<SendToRawEditorButtonProps> = ({
       dispatch(navigateToRawRpcEditor({ requestJson: formatted }));
 
       // Navigate to the raw editor stage
-      dispatch(setCurrentStage('rpc-raw-editor'));
+      navigate(getStageUrl('rpc-raw-editor'));
     } catch (e) {
       showToast('Failed to send to raw editor', 'error');
     }
