@@ -229,7 +229,7 @@ function WalletAddressDisplay({
           <div>
             <p className="text-sm text-muted mb-1">Balance:</p>
             <p className="font-bold m-0 text-success">
-              {wallet.balance ? `${formatBalance(wallet.balance)} HTR` : 'N/A'}
+              {wallet.balance !== undefined ? `${formatBalance(wallet.balance)} HTR` : 'N/A'}
             </p>
           </div>
           <div>
