@@ -7,18 +7,28 @@ export default defineConfig({
   plugins: [
     react(),
     nodePolyfills({
-      // Enable polyfills for specific globals and modules
       globals: {
         Buffer: true,
         global: true,
         process: true,
       },
-      // Explicitly include Node.js module polyfills required by wallet-lib
-      include: ['buffer', 'crypto', 'stream', 'util', 'events', 'path'],
-      // Make sure to polyfill the buffer module
+      // Don't include 'buffer' here — the plugin's shim has __esModule + default=Buffer
+      // which breaks CJS interop in rolldown-vite (wallet-lib's _interopRequireDefault
+      // accesses .default.Buffer, but .default is the constructor, not the module).
+      // The real `buffer` npm package (already in dependencies) has proper CJS exports.
+      // globals.Buffer still injects the global Buffer via a separate banner import.
+      include: ['crypto', 'stream', 'util', 'events', 'path'],
       protocolImports: true,
     }),
   ],
+  resolve: {
+    alias: {
+      // Point 'buffer' to the real npm package so rolldown-vite doesn't externalize it.
+      // Without this, removing buffer from the polyfill include list causes rolldown to
+      // treat it as a Node.js built-in and externalize it for browser compatibility.
+      buffer: 'buffer/',
+    },
+  },
   define: {
     global: 'globalThis',
   },
