@@ -7,7 +7,8 @@
  */
 
 import { useState } from 'react';
-import { MdCheckCircle, MdError, MdPending, MdPlayArrow, MdRefresh, MdSend, MdStop } from 'react-icons/md';
+import { MdCheckCircle, MdError, MdPending, MdPlayArrow, MdQrCode, MdRefresh, MdSend, MdStop } from 'react-icons/md';
+import QRCode from 'react-qr-code';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   assembleAndSendTransaction,
@@ -53,6 +54,7 @@ export default function MultisigWalletManagement() {
   const [isCreating, setIsCreating] = useState(false);
   const [signingParticipantId, setSigningParticipantId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [qrAddress, setQrAddress] = useState<string | null>(null);
 
   // Handlers
   const handleStartParticipant = async (participantId: string) => {
@@ -376,6 +378,13 @@ export default function MultisigWalletManagement() {
                           label={`Copy address for ${participant.friendlyName}`}
                           className="text-muted"
                         />
+                        <button
+                          onClick={() => setQrAddress(participant.firstAddress!)}
+                          className="btn btn-ghost btn-xs p-0 text-muted hover:text-primary"
+                          title={`Show QR code for ${participant.friendlyName}`}
+                        >
+                          <MdQrCode size={16} />
+                        </button>
                       </div>
                     ) : (
                       <span className="text-muted">-</span>
@@ -716,6 +725,28 @@ export default function MultisigWalletManagement() {
             <p>Collected Signatures: {transaction.collectedSignatures.length}</p>
           </div>
         </details>
+      )}
+      {/* QR Code Modal */}
+      {qrAddress && (
+        <div className="modal modal-open" onClick={() => setQrAddress(null)}>
+          <div className="modal-box max-w-xs text-center" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-lg mb-4">Wallet Address</h3>
+            <div className="flex justify-center mb-4">
+              <div className="p-3 bg-white border-2 border-gray-300 rounded">
+                <QRCode value={qrAddress} size={180} />
+              </div>
+            </div>
+            <div className="font-mono text-xs break-all bg-gray-100 p-2 rounded mb-4">
+              {qrAddress}
+            </div>
+            <div className="flex justify-center gap-2">
+              <CopyButton text={qrAddress} label="Copy address" />
+              <button className="btn btn-ghost btn-sm" onClick={() => setQrAddress(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
