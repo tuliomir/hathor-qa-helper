@@ -32,6 +32,22 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
+  server: {
+    proxy: {
+      '/hathor-node/testnet': {
+        target: 'https://node1.testnet.hathor.network',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/hathor-node\/testnet/, ''),
+      },
+      '/hathor-node/mainnet': {
+        target: 'https://node1.mainnet.hathor.network',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/hathor-node\/mainnet/, ''),
+      },
+    },
+  },
   optimizeDeps: {
     // Exclude WalletConnect packages from pre-bundling to avoid SES lockdown conflicts
     exclude: ['@walletconnect/sign-client', '@walletconnect/core', '@walletconnect/modal'],
