@@ -6,9 +6,9 @@
  */
 
 import { useMemo, useState } from 'react';
-import { MdCloudUpload, MdDelete, MdEdit, MdFilterList, MdPlayArrow, MdQrCode, MdSearch, MdSort, MdStop, } from 'react-icons/md';
+import { MdSync, MdDelete, MdEdit, MdFilterList, MdPlayArrow, MdQrCode, MdSearch, MdSort, MdStop, } from 'react-icons/md';
 import { useAppDispatch } from '../../store/hooks';
-import { exportWalletsToCloud } from '../../store/slices/walletStoreSlice';
+import { exportWalletsToCloud, importWalletsFromCloud } from '../../store/slices/walletStoreSlice';
 import type { WalletInfo } from '../../types/walletStore';
 import type { NetworkType } from '../../constants/network';
 import type { WalletScanResult } from '../../store/slices/walletScanSlice';
@@ -89,17 +89,34 @@ export default function WalletBrowserModal({
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Handle cloud sync
+  // Handle bidirectional cloud sync: import from cloud first, then export local wallets
   const handleCloudSync = async () => {
     setIsSyncing(true);
     setSyncResult(null);
 
     try {
-      const result = await dispatch(exportWalletsToCloud()).unwrap();
-      setSyncResult({
-        success: true,
-        message: `Synced ${result.stored} wallet(s) to cloud${result.filtered > 0 ? ` (${result.filtered} filtered)` : ''}`,
-      });
+      // Step 1: Import wallets from cloud (pull new wallets from other machines)
+      const importResult = await dispatch(importWalletsFromCloud()).unwrap();
+
+      // Step 2: Export all local wallets to cloud (push our wallets for other machines)
+      const exportResult = await dispatch(exportWalletsToCloud()).unwrap();
+
+      const parts: string[] = [];
+      if (importResult.imported > 0) {
+        parts.push(`${importResult.imported} imported`);
+      }
+      if (exportResult.stored > 0) {
+        parts.push(`${exportResult.stored} uploaded`);
+      }
+      if (exportResult.filtered > 0) {
+        parts.push(`${exportResult.filtered} filtered`);
+      }
+
+      const message = parts.length > 0
+        ? `Sync complete: ${parts.join(', ')}`
+        : 'Sync complete: everything up to date';
+
+      setSyncResult({ success: true, message });
       // Clear success message after 5 seconds
       setTimeout(() => setSyncResult(null), 5000);
     } catch (error) {
@@ -262,20 +279,20 @@ export default function WalletBrowserModal({
               {/* Cloud Sync Button */}
               <button
                 onClick={handleCloudSync}
-                disabled={isSyncing || wallets.length === 0}
+                disabled={isSyncing}
                 className={`btn flex items-center gap-2 ${
-                  isSyncing || wallets.length === 0
+                  isSyncing
                     ? 'btn-secondary cursor-not-allowed opacity-60'
                     : 'btn-info'
                 }`}
-                title="Sync wallets to cloud storage"
+                title="Sync wallets between this machine and cloud"
               >
                 {isSyncing ? (
                   <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                 ) : (
-                  <MdCloudUpload size={18} />
+                  <MdSync size={18} />
                 )}
-                {isSyncing ? 'Syncing...' : 'Sync to Cloud'}
+                {isSyncing ? 'Syncing...' : 'Sync Wallets'}
               </button>
               {onScanForLostFunds && (
                 <button
