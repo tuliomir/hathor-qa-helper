@@ -49,8 +49,11 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    // Exclude WalletConnect packages from pre-bundling to avoid SES lockdown conflicts
-    exclude: ['@walletconnect/sign-client', '@walletconnect/core', '@walletconnect/modal'],
+    // WalletConnect packages were previously excluded to avoid SES lockdown
+    // conflicts, but this caused CJS-to-ESM interop failures (missing named
+    // exports like toMiliseconds, isReactNative, pino). The SES issue is now
+    // handled by dynamically importing @walletconnect/sign-client in
+    // walletConnectClient.ts, so pre-bundling is safe.
   },
   build: {
     // Disable modulepreload to prevent WalletConnect from loading before dynamic import
