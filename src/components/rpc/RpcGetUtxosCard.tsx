@@ -12,6 +12,7 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import type { UtxoData } from '../../store/slices/getUtxosSlice';
 import { DEFAULT_NETWORK, type NetworkType } from '../../constants/network';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -92,7 +93,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
       );
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
+      const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
       setExpanded(true);
 

@@ -14,6 +14,7 @@ import { RpcGetBalanceCard } from '../rpc/RpcGetBalanceCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useToast } from '../../hooks/useToast';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
@@ -165,7 +166,7 @@ export const GetBalanceStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setGetBalanceError({
         error: errorMessage,
         duration,

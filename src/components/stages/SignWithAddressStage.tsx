@@ -16,6 +16,7 @@ import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from 
 import { RpcSignWithAddressCard } from '../rpc/RpcSignWithAddressCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export const SignWithAddressStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -115,7 +116,7 @@ export const SignWithAddressStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setSignWithAddressError({
         error: errorMessage,
         duration,

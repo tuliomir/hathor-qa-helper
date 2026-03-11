@@ -17,6 +17,8 @@ import {
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcGetUtxosCard } from '../rpc/RpcGetUtxosCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { extractErrorMessage } from '../../utils/errorUtils';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
@@ -175,10 +177,13 @@ export const GetUtxosStage: React.FC = () => {
         })
       );
 
+      // Convert BigInt to strings for Redux serialization
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store response in Redux
       dispatch(
         setGetUtxosResponse({
-          response,
+          response: serializedResponse,
           duration,
         })
       );
@@ -191,7 +196,7 @@ export const GetUtxosStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(
         setGetUtxosError({
           error: errorMessage,

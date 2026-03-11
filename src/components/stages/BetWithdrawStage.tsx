@@ -18,6 +18,7 @@ import { RpcBetWithdrawCard } from '../rpc/RpcBetWithdrawCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export const BetWithdrawStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -188,7 +189,7 @@ export const BetWithdrawStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setBetWithdrawError({
         error: errorMessage,
         duration,

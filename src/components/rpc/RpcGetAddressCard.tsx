@@ -11,6 +11,7 @@ import Select from '../common/Select';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import type { AddressRequestType } from '../../store/slices/getAddressSlice';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -100,7 +101,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
       );
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
+      const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
       setExpanded(true);
 

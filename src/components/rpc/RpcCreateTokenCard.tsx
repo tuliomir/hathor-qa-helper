@@ -12,6 +12,7 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
 import type { NetworkType } from '../../constants/network';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export interface RpcCreateTokenCardProps {
   onExecute: (params: CreateTokenParams) => Promise<{ request: unknown; response: unknown }>;
@@ -143,7 +144,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
         'success'
       );
     } catch (err: unknown) {
-      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
+      const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
       setExpanded(true);
 

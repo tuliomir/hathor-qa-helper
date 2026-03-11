@@ -18,6 +18,7 @@ import {
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcSendTransactionCard } from '../rpc/RpcSendTransactionCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
@@ -163,7 +164,7 @@ export const SendTransactionStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setSendTransactionError({
         error: errorMessage,
         duration,

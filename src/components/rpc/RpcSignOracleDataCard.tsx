@@ -10,6 +10,7 @@ import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import { safeStringify } from '../../utils/betHelpers';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export interface RpcSignOracleDataCardProps {
   onExecute: () => Promise<{ request: unknown; response: unknown }>;
@@ -133,7 +134,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
       );
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
+      const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
       setExpanded(true);
 

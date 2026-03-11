@@ -14,6 +14,7 @@ import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { safeStringify } from '../../utils/betHelpers';
 import { useAppSelector } from '../../store/hooks.ts'
 import TxStatus from '../common/TxStatus.tsx'
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export interface RpcBetWithdrawCardProps {
   onExecute: () => Promise<{ request: unknown; response: unknown }>;
@@ -153,7 +154,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
       );
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
+      const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
       setExpanded(true);
 

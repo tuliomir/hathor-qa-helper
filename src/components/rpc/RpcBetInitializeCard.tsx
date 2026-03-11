@@ -17,6 +17,7 @@ import { NETWORK_CONFIG } from '../../constants/network';
 import { formatTimeUntil } from '../../utils/valuesUtils.ts'
 import TxStatus from '../common/TxStatus.tsx'
 import { useAppSelector } from '../../store/hooks.ts'
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export interface RpcBetInitializeCardProps {
   onExecute: () => Promise<{ request: unknown; response: unknown }>;
@@ -178,7 +179,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       );
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
-      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
+      const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
       setExpanded(true);
 

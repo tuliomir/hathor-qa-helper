@@ -18,6 +18,7 @@ import { RpcBetDepositCard } from '../rpc/RpcBetDepositCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
 export const BetDepositStage: React.FC = () => {
@@ -203,7 +204,7 @@ export const BetDepositStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setBetDepositError({
         error: errorMessage,
         duration,

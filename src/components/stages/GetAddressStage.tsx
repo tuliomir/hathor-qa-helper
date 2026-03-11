@@ -22,6 +22,7 @@ import { RpcGetAddressCard } from '../rpc/RpcGetAddressCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export const GetAddressStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -93,7 +94,7 @@ export const GetAddressStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setGetAddressError({
         error: errorMessage,
         duration,

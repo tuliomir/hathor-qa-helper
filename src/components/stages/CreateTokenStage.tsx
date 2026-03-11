@@ -19,6 +19,7 @@ import type { CreateTokenParams } from '../../services/rpcHandlers';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { extractErrorMessage } from '../../utils/errorUtils';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const CreateTokenStage: React.FC = () => {
@@ -158,7 +159,7 @@ export const CreateTokenStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setCreateTokenError({
         error: errorMessage,
         duration,

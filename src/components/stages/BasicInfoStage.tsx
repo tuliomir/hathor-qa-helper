@@ -23,6 +23,7 @@ import { selectIsWalletConnectConnected } from '../../store/slices/walletConnect
 import { RpcWalletInformationCard } from '../rpc/RpcWalletInformationCard';
 import { RpcConnectedNetworkCard } from '../rpc/RpcConnectedNetworkCard';
 import { createRpcHandlers } from '../../services/rpcHandlers';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 export const BasicInfoStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -77,7 +78,7 @@ export const BasicInfoStage: React.FC = () => {
       const duration = Date.now() - startTime;
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setWalletInformationError({
         error: errorMessage,
         duration,
@@ -117,7 +118,7 @@ export const BasicInfoStage: React.FC = () => {
       const duration = Date.now() - startTime;
 
       // Store error in Redux
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = extractErrorMessage(error);
       dispatch(setConnectedNetworkError({
         error: errorMessage,
         duration,

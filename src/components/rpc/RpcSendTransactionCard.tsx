@@ -15,6 +15,7 @@ import type { NetworkType } from '../../constants/network';
 import Select from '../common/Select';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
+import { extractErrorMessage } from '../../utils/errorUtils';
 
 interface Token {
   uid: string;
@@ -201,7 +202,7 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
         'success'
       );
     } catch (err: unknown) {
-      const errorMessage = (err instanceof Error ? err.message : null) || 'An error occurred';
+      const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
       setExpanded(true);
 
