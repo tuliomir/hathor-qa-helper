@@ -20,10 +20,13 @@ import { HATHOR_TESTNET_CHAIN } from '../constants/walletConnect';
 import { getOracleBuffer } from '../utils/betHelpers';
 import { generateHathorWalletRequestDeepLink } from './walletConnectClient';
 
+export type CreateTokenVersion = 'deposit' | 'fee';
+
 export interface CreateTokenParams {
   name: string;
   symbol: string;
   amount: string;
+  version: CreateTokenVersion;
   change_address: string;
   create_mint: boolean;
   mint_authority_address: string;
@@ -399,6 +402,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         name: string;
         symbol: string;
         amount: string;
+        version: CreateTokenVersion;
         create_mint: boolean;
         create_melt: boolean;
         change_address?: string;
@@ -412,6 +416,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         name: params.name,
         symbol: params.symbol,
         amount: params.amount,
+        version: params.version,
         create_mint: params.create_mint,
         create_melt: params.create_melt,
       };

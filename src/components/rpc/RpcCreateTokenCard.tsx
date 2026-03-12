@@ -9,8 +9,9 @@ import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { useToast } from '../../hooks/useToast';
 import DryRunCheckbox from '../common/DryRunCheckbox';
+import Select from '../common/Select';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
-import type { CreateTokenParams } from '../../services/rpcHandlers';
+import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
 import type { NetworkType } from '../../constants/network';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -53,6 +54,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
     name: 'Test Token',
     symbol: 'TST',
     amount: '100',
+    version: 'deposit' as CreateTokenVersion,
     change_address: '',
     create_mint: true,
     mint_authority_address: '',
@@ -330,6 +332,17 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
               placeholder="Amount (e.g., 100)"
               className="input"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium mb-1">Version</label>
+            <Select
+              value={params.version}
+              onChange={(e) => handleFieldChange('version', e.target.value)}
+            >
+              <option value="deposit">Deposit</option>
+              <option value="fee">Fee</option>
+            </Select>
           </div>
 
           {/* Change Address */}
