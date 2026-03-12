@@ -82,10 +82,16 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
       const eventStatus = getTransactionStatus(latestEvent.data);
       // console.log(`[TxStatus ${hash.slice(0, 8)}] Status from event: ${eventStatus}`);
       setStatus(eventStatus);
-      return;
+
+      // For confirmed/voided statuses, the event is authoritative — no need to fetch
+      if (eventStatus !== 'Unconfirmed') {
+        return;
+      }
+      // For 'Unconfirmed', fall through to fetch from network for up-to-date status
+      // Wallet events don't fire on block confirmations, so we must check the full node
     }
 
-    // No event in Redux, fall back to getTxById with caching
+    // No event or event shows Unconfirmed — fetch from wallet cache / full node
     async function fetchTxStatus() {
       // Check cache first
       const cached = txStatusCache.get(hash);
@@ -202,6 +208,44 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
     fetchTxStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId, hash, walletId]); // Use eventId instead of latestEvent to prevent infinite loop
+
+  // Poll for confirmation when status is 'Unconfirmed'
+  // Wallet events don't fire on block confirmations, so we must poll the full node
+  useEffect(() => {
+    if (status !== 'Unconfirmed') return;
+
+    const pollConfirmation = async () => {
+      let walletInstance = null;
+      if (walletId) {
+        walletInstance = walletInstancesMap.get(walletId);
+      } else {
+        const instances = Array.from(walletInstancesMap.values());
+        walletInstance = instances.find((w) => w !== null) || null;
+      }
+
+      if (!walletInstance) return;
+
+      try {
+        const response = await walletInstance.getFullTxById(hash);
+        if (response.success && response.meta?.first_block) {
+          const isVoided = response.meta.voided_by && response.meta.voided_by.length > 0;
+          const txStatus = getTransactionStatus({
+            ...response.tx,
+            first_block: response.meta.first_block,
+            is_voided: isVoided,
+          });
+
+          txStatusCache.set(hash, { status: txStatus, timestamp: Date.now() });
+          setStatus(txStatus);
+        }
+      } catch (err) {
+        console.error(`[TxStatus ${hash.slice(0, 8)}] Polling error:`, err);
+      }
+    };
+
+    const interval = setInterval(pollConfirmation, UNCONFIRMED_CACHE_TTL);
+    return () => clearInterval(interval);
+  }, [status, hash, walletId]);
 
   if (isLoading) {
     return (
