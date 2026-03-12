@@ -12,6 +12,7 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { WALLET_CONFIG } from '../../constants/network';
+import { fetchSwapTokens } from '../../store/slices/swapTokensSlice';
 import Loading from '../common/Loading';
 import { trackTokenFlow } from '../../services/tokenFlowTracker';
 import type { TokenFlowResult } from '../../types/tokenFlowTracker';
@@ -28,6 +29,8 @@ interface TokenToMelt {
   // For tokens that can't be melted, track the original sender (first address with positive flow)
   originalSender?: string;
   canReturnToSender: boolean;
+  // Token is a swap test token — never melt, send to funding wallet instead
+  isSwapToken: boolean;
   // Rich flow data showing all external addresses holding this token
   tokenFlow?: TokenFlowResult;
 }
@@ -49,6 +52,7 @@ export default function TestWalletCleanup() {
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
   const allTokens = useAppSelector((s) => s.tokens.tokens);
+  const swapTokensState = useAppSelector((s) => s.swapTokens);
 
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
   const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : undefined;
@@ -145,6 +149,23 @@ export default function TestWalletCleanup() {
 
             if (balance === 0n) return null;
 
+            // Check if this is a swap test token (never melt, send to funding)
+            const swapTokenUids = testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapToken = swapTokenUids.includes(uid);
+            if (swapToken) {
+              return {
+                uid,
+                symbol: tokenInfo.symbol,
+                name: tokenInfo.name,
+                balance,
+                meltableAmount: 0,
+                remainder: 0,
+                hasMeltAuthority: false,
+                canReturnToSender: false,
+                isSwapToken: true,
+              } as TokenToMelt;
+            }
+
             // Check melt authority
             const meltAuthority = await testWallet.instance.getMeltAuthority(uid, {
               many: false,
@@ -191,6 +212,7 @@ export default function TestWalletCleanup() {
               hasMeltAuthority,
               originalSender,
               canReturnToSender,
+              isSwapToken: false,
               tokenFlow,
             } as TokenToMelt;
           } catch (err) {
@@ -209,7 +231,7 @@ export default function TestWalletCleanup() {
     } finally {
       setIsLoading(false);
     }
-  }, [testWallet, testReady, allTokens]);
+  }, [testWallet, testReady, allTokens, swapTokensState]);
 
   // Refresh wallet data and reload preview
   const handleRefresh = useCallback(async () => {
@@ -231,9 +253,10 @@ export default function TestWalletCleanup() {
     }
   }, [testWallet, isRefreshing, dispatch, loadPreviewData]);
 
-  // Refresh when page opens (only on mount)
+  // Fetch swap tokens registry and refresh wallet data on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    dispatch(fetchSwapTokens());
     handleRefresh().catch((e) => console.error('Failed refresh', e));
   }, []);
 
@@ -325,16 +348,23 @@ export default function TestWalletCleanup() {
    */
   const buildUnifiedCleanupTemplate = (
     tokensWithMeltAuthority: TokenToMelt[],
+    swapTokens: TokenToMelt[],
     testWalletAddr: string,
     fundingAddr: string,
     existingHtrBalance: bigint
   ) => {
-    addDebugLog('template', 'Building UNIFIED cleanup template (melt + HTR in ONE tx)', {
-      tokenCount: tokensWithMeltAuthority.length,
-      tokens: tokensWithMeltAuthority.map((t) => ({
+    addDebugLog('template', 'Building UNIFIED cleanup template (melt + swap + HTR in ONE tx)', {
+      meltCount: tokensWithMeltAuthority.length,
+      swapCount: swapTokens.length,
+      meltTokens: tokensWithMeltAuthority.map((t) => ({
         symbol: t.symbol,
         uid: t.uid.slice(0, 8) + '...',
         meltableAmount: t.meltableAmount,
+      })),
+      swapTokens: swapTokens.map((t) => ({
+        symbol: t.symbol,
+        uid: t.uid.slice(0, 8) + '...',
+        balance: t.balance.toString(),
       })),
       existingHtrBalance: existingHtrBalance.toString(),
       testWalletAddr: testWalletAddr.slice(0, 12) + '...',
@@ -376,6 +406,29 @@ export default function TestWalletCleanup() {
       totalHtrFromMelts += htrFromThisMelt;
     }
 
+    // Add swap token transfers (select UTXOs + output to funding, no melt)
+    for (const token of swapTokens) {
+      const amount = Number(token.balance);
+
+      addDebugLog('template', `Adding swap token transfer for ${token.symbol}`, {
+        tokenUid: token.uid,
+        amount,
+      });
+
+      builder = builder
+        .addUtxoSelect({ fill: amount, token: token.uid })
+        .addTokenOutput({
+          address: '{fundingAddr}',
+          amount,
+          token: token.uid,
+        });
+
+      templateOps.push(
+        `utxoSelect:${token.symbol}(${amount})`,
+        `tokenOutput:${token.symbol}(${amount})→funding`
+      );
+    }
+
     // Select existing HTR balance (if any) - MANUALLY, not via addCompleteAction
     if (existingHtrBalance > 0n) {
       addDebugLog('template', 'Selecting existing HTR UTXOs', {
@@ -408,36 +461,11 @@ export default function TestWalletCleanup() {
 
     // NO addCompleteAction! The protocol handles the melt balance:
     // - Token deficit (inputs > outputs with melt authority) = tokens are melted
+    // - Swap tokens: inputs = outputs (balanced transfer, no melt)
     // - HTR surplus (melt-produced HTR covers the output deficit)
     addDebugLog('template', 'Unified template built (NO addCompleteAction)', { ops: templateOps });
 
     return builder.build();
-  };
-
-  /**
-   * Build a simple HTR-only transfer template (when no tokens to melt).
-   * Uses addCompleteAction since there's no melt operation.
-   */
-  const buildHtrOnlyTransferTemplate = (
-    fromAddr: string,
-    toAddr: string,
-    amount: bigint
-  ) => {
-    addDebugLog('template', 'Building HTR-only transfer template', {
-      from: fromAddr.slice(0, 12) + '...',
-      to: toAddr.slice(0, 12) + '...',
-      amount: amount.toString(),
-    });
-
-    return TransactionTemplateBuilder.new()
-      .addSetVarAction({ name: 'toAddr', value: toAddr })
-      .addSetVarAction({ name: 'changeAddr', value: fromAddr })
-      .addTokenOutput({
-        address: '{toAddr}',
-        amount,
-      })
-      .addCompleteAction({ changeAddress: '{changeAddr}' })
-      .build();
   };
 
   const handleExecuteCleanup = async () => {
@@ -469,14 +497,22 @@ export default function TestWalletCleanup() {
 
     try {
       const tokensWithMeltAuthority = tokensToMelt.filter(
-        (t) => t.hasMeltAuthority && t.meltableAmount > 0
+        (t) => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0
+      );
+      const swapTokensToTransfer = tokensToMelt.filter(
+        (t) => t.isSwapToken && t.balance > 0n
       );
 
-      addDebugLog('info', 'Filtered tokens with melt authority', {
-        count: tokensWithMeltAuthority.length,
-        tokens: tokensWithMeltAuthority.map((t) => ({
+      addDebugLog('info', 'Filtered tokens', {
+        meltCount: tokensWithMeltAuthority.length,
+        meltTokens: tokensWithMeltAuthority.map((t) => ({
           symbol: t.symbol,
           meltableAmount: t.meltableAmount,
+        })),
+        swapCount: swapTokensToTransfer.length,
+        swapTokens: swapTokensToTransfer.map((t) => ({
+          symbol: t.symbol,
+          balance: t.balance.toString(),
         })),
       });
 
@@ -488,17 +524,24 @@ export default function TestWalletCleanup() {
         fundingAddr,
       });
 
-      // UNIFIED CLEANUP: Melt tokens AND transfer HTR in ONE atomic transaction
-      if (tokensWithMeltAuthority.length > 0) {
-        const tokenSymbols = tokensWithMeltAuthority.map((t) => t.symbol).join(', ');
+      // UNIFIED CLEANUP: Melt tokens + transfer swap tokens + transfer HTR in ONE atomic transaction
+      if (tokensWithMeltAuthority.length > 0 || swapTokensToTransfer.length > 0 || htrBalance > 0n) {
+        const meltSymbols = tokensWithMeltAuthority.map((t) => t.symbol);
+        const swapSymbols = swapTokensToTransfer.map((t) => t.symbol);
         const totalHtrFromMelts = tokensWithMeltAuthority.reduce(
           (sum, t) => sum + Math.floor(t.meltableAmount / 100),
           0
         );
 
-        setExecutionStep(`Melting ${tokenSymbols} + transferring HTR (single tx)...`);
-        addDebugLog('info', 'UNIFIED CLEANUP: Melt + HTR transfer in ONE transaction', {
-          tokenCount: tokensWithMeltAuthority.length,
+        const stepParts: string[] = [];
+        if (meltSymbols.length > 0) stepParts.push(`melting ${meltSymbols.join(', ')}`);
+        if (swapSymbols.length > 0) stepParts.push(`transferring swap tokens (${swapSymbols.join(', ')})`);
+        stepParts.push('transferring HTR');
+        setExecutionStep(`${stepParts.join(' + ')} (single tx)...`);
+
+        addDebugLog('info', 'UNIFIED CLEANUP: Melt + swap transfers + HTR in ONE transaction', {
+          meltCount: tokensWithMeltAuthority.length,
+          swapCount: swapTokensToTransfer.length,
           existingHtrBalance: htrBalance.toString(),
           expectedHtrFromMelts: totalHtrFromMelts,
           totalHtrOutput: Number(htrBalance) + totalHtrFromMelts,
@@ -507,9 +550,10 @@ export default function TestWalletCleanup() {
         try {
           const unifiedTemplate = buildUnifiedCleanupTemplate(
             tokensWithMeltAuthority,
+            swapTokensToTransfer,
             testWalletAddr,
             fundingAddr,
-            htrBalance // Pass current HTR balance to include in the same tx
+            htrBalance
           );
 
           addDebugLog('template', 'Built unified cleanup template', {
@@ -536,12 +580,18 @@ export default function TestWalletCleanup() {
           if (tx?.hash) {
             addDebugLog('info', `Unified cleanup tx submitted: ${tx.hash}`);
             await waitForTxSettlement(tx.hash);
-            addDebugLog('info', 'Unified cleanup tx settled - tokens melted AND HTR transferred!');
+            addDebugLog('info', 'Unified cleanup tx settled — tokens melted, swap tokens + HTR transferred!');
 
             for (const token of tokensWithMeltAuthority) {
               setMeltTxStatuses((prev) => [
                 ...prev,
                 { tokenSymbol: token.symbol, txHash: tx.hash!, status: 'confirmed' },
+              ]);
+            }
+            for (const token of swapTokensToTransfer) {
+              setMeltTxStatuses((prev) => [
+                ...prev,
+                { tokenSymbol: `${token.symbol} (swap)`, txHash: tx.hash!, status: 'confirmed' },
               ]);
             }
             setExecutionStep('Cleanup completed (single transaction)');
@@ -556,53 +606,15 @@ export default function TestWalletCleanup() {
           });
           newErrors.push(`Unified cleanup failed: ${errorMessage}`);
 
-          for (const token of tokensWithMeltAuthority) {
+          for (const token of [...tokensWithMeltAuthority, ...swapTokensToTransfer]) {
             setMeltTxStatuses((prev) => [
               ...prev,
               { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
             ]);
           }
         }
-      } else if (htrBalance > 0n && fundingReady) {
-        // No tokens to melt, but HTR to transfer - use simple HTR transfer
-        setCleanupPhase('transferring');
-        setExecutionStep(`Transferring ${formatBalance(htrBalance)} HTR...`);
-        addDebugLog('info', 'HTR-only transfer (no tokens to melt)', {
-          htrBalance: htrBalance.toString(),
-        });
-
-        try {
-          const transferTemplate = buildHtrOnlyTransferTemplate(
-            testWalletAddr,
-            fundingAddr,
-            htrBalance
-          );
-
-          addDebugLog('info', 'Calling runTxTemplate for HTR-only transfer...');
-          const tx = await testWallet.instance.runTxTemplate(
-            transferTemplate,
-            WALLET_CONFIG.DEFAULT_PIN_CODE
-          );
-
-          addDebugLog('tx', 'HTR transfer result', {
-            hash: tx?.hash,
-            hasTransaction: !!tx,
-          });
-
-          if (tx?.hash) {
-            addDebugLog('info', `HTR transfer tx submitted: ${tx.hash}`);
-            await waitForTxSettlement(tx.hash);
-            addDebugLog('info', 'HTR transfer settled');
-            setExecutionStep('HTR transferred successfully');
-          }
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-          addDebugLog('error', 'HTR transfer failed', { error: errorMessage });
-          newErrors.push(`HTR transfer failed: ${errorMessage}`);
-          console.error('HTR transfer failed:', err);
-        }
       } else {
-        addDebugLog('info', 'No melt or HTR transfer needed');
+        addDebugLog('info', 'No melt, swap transfer, or HTR transfer needed');
       }
 
       // Step 2: Return tokens that can't be melted to their original senders
@@ -713,6 +725,22 @@ export default function TestWalletCleanup() {
             const balance = balanceData[0]?.balance?.unlocked || 0n;
             if (balance === 0n) return null;
 
+            const swapTokenUids = testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapToken = swapTokenUids.includes(uid);
+            if (swapToken) {
+              return {
+                uid,
+                symbol: tokenInfo.symbol,
+                name: tokenInfo.name,
+                balance,
+                meltableAmount: 0,
+                remainder: 0,
+                hasMeltAuthority: false,
+                canReturnToSender: false,
+                isSwapToken: true,
+              };
+            }
+
             const meltAuthority = await testWallet.instance.getMeltAuthority(uid, {
               many: false,
               only_available_utxos: true,
@@ -732,6 +760,7 @@ export default function TestWalletCleanup() {
               remainder,
               hasMeltAuthority,
               canReturnToSender: false, // Don't re-lookup after cleanup
+              isSwapToken: false,
             };
           } catch {
             return null;
@@ -758,21 +787,25 @@ export default function TestWalletCleanup() {
     }
   };
 
-  const hasTokensToMelt = tokensToMelt.some((t) => t.hasMeltAuthority && t.meltableAmount > 0);
+  const hasTokensToMelt = tokensToMelt.some((t) => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0);
+  const hasSwapTokens = tokensToMelt.some((t) => t.isSwapToken && t.balance > 0n);
   const hasTokensToReturn = tokensToMelt.some((t) => t.canReturnToSender);
   const hasHtrToTransfer = htrBalance > 0n;
-  const canExecute = (hasTokensToMelt || hasTokensToReturn || hasHtrToTransfer) && !isExecuting && !isLoading;
+  const canExecute = (hasTokensToMelt || hasSwapTokens || hasTokensToReturn || hasHtrToTransfer) && fundingReady && !isExecuting && !isLoading;
 
   // Calculate estimated HTR from melting (100 tokens = 1 HTR)
   const totalMeltableTokens = tokensToMelt
-    .filter((t) => t.hasMeltAuthority && t.meltableAmount > 0)
+    .filter((t) => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0)
     .reduce((sum, t) => sum + t.meltableAmount, 0);
   const estimatedHtrFromMelting = Math.floor(totalMeltableTokens / 100);
   const totalEstimatedHtr = Number(htrBalance) + estimatedHtrFromMelting;
 
-  // Tokens that will remain in the wallet after cleanup
+  // Swap tokens to transfer to funding wallet
+  const swapTokensList = tokensToMelt.filter((t) => t.isSwapToken && t.balance > 0n);
+
+  // Tokens that will remain in the wallet after cleanup (exclude swap tokens — they go to funding)
   const tokensRemaining = tokensToMelt.filter(
-    (t) => !t.hasMeltAuthority || t.remainder > 0 || (t.hasMeltAuthority && t.meltableAmount === 0)
+    (t) => !t.isSwapToken && (!t.hasMeltAuthority || t.remainder > 0 || (t.hasMeltAuthority && t.meltableAmount === 0))
   );
 
   return (
@@ -797,6 +830,7 @@ export default function TestWalletCleanup() {
             </p>
             <ul className="mt-2 mb-0 text-yellow-800">
               <li>Melt all custom tokens (in multiples of 100)</li>
+              <li>Transfer swap test tokens to the Funding Wallet (never melted)</li>
               <li>Return unmeltable tokens to their original sender (if found)</li>
               <li>Transfer all resulting HTR to the Funding Wallet (address 0)</li>
             </ul>
@@ -834,13 +868,22 @@ export default function TestWalletCleanup() {
               <div>hasTokensToMelt: {hasTokensToMelt.toString()}</div>
               <div>cleanupPhase: {cleanupPhase}</div>
               <div className="mt-2 text-gray-400">Tokens with melt authority:</div>
-              {tokensToMelt.filter(t => t.hasMeltAuthority && t.meltableAmount > 0).map((t, i) => (
+              {tokensToMelt.filter(t => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0).map((t, i) => (
                 <div key={i} className="ml-2 text-green-400">
                   {t.symbol}: {t.meltableAmount} meltable (balance: {t.balance.toString()})
                 </div>
               ))}
-              {tokensToMelt.filter(t => t.hasMeltAuthority && t.meltableAmount > 0).length === 0 && (
+              {tokensToMelt.filter(t => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0).length === 0 && (
                 <div className="ml-2 text-yellow-400">None found!</div>
+              )}
+              <div className="mt-2 text-gray-400">Swap test tokens:</div>
+              {tokensToMelt.filter(t => t.isSwapToken).map((t, i) => (
+                <div key={i} className="ml-2 text-indigo-400">
+                  {t.symbol}: {t.balance.toString()} → funding wallet
+                </div>
+              ))}
+              {tokensToMelt.filter(t => t.isSwapToken).length === 0 && (
+                <div className="ml-2 text-yellow-400">None found</div>
               )}
             </div>
 
@@ -878,6 +921,15 @@ export default function TestWalletCleanup() {
         )}
       </div>
 
+      {/* Swap Tokens Fetch Error */}
+      {swapTokensState.status === 'failed' && (
+        <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
+          <p className="m-0 text-orange-900">
+            Failed to load swap token registry: {swapTokensState.error}. Swap tokens may be incorrectly melted instead of transferred.
+          </p>
+        </div>
+      )}
+
       {/* No Test Wallet Selected */}
       {!testWallet && (
         <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
@@ -896,11 +948,11 @@ export default function TestWalletCleanup() {
         </div>
       )}
 
-      {/* No Funding Wallet Warning */}
+      {/* No Funding Wallet Error */}
       {!fundingWallet && testReady && (
-        <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
-          <p className="m-0 text-orange-900">
-            No Funding Wallet selected. HTR transfer will be skipped, but tokens can still be melted.
+        <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
+          <p className="m-0 text-red-900">
+            No Funding Wallet selected. A Funding Wallet is required for cleanup — all tokens and HTR must be sent there.
           </p>
         </div>
       )}
@@ -928,7 +980,7 @@ export default function TestWalletCleanup() {
               </button>
             </div>
 
-            {tokensToMelt.length === 0 ? (
+            {tokensToMelt.filter((t) => !t.isSwapToken).length === 0 ? (
               <p className="m-0 text-muted text-center">No custom tokens found in Test Wallet.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -944,7 +996,7 @@ export default function TestWalletCleanup() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tokensToMelt.map((token) => {
+                    {tokensToMelt.filter((t) => !t.isSwapToken).map((token) => {
                       // Calculate amount that will be returned to sender
                       const returnAmount = token.canReturnToSender
                         ? (!token.hasMeltAuthority ? Number(token.balance) : token.remainder)
@@ -1009,6 +1061,43 @@ export default function TestWalletCleanup() {
             )}
           </div>
 
+          {/* Swap Test Tokens */}
+          {swapTokensList.length > 0 && (
+            <div className="card-primary mb-7.5 bg-indigo-50 border-2 border-indigo-400">
+              <h2 className="text-xl font-bold mb-2 text-indigo-900">Swap Test Tokens</h2>
+              <p className="text-sm text-indigo-800 mb-4">
+                These tokens are side-effects from swap tests. They will be sent to the Funding Wallet (never melted):
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-indigo-300">
+                    <tr>
+                      <th className="text-left py-2 px-3 font-bold text-indigo-900">Token</th>
+                      <th className="text-right py-2 px-3 font-bold text-indigo-900">Balance</th>
+                      <th className="text-center py-2 px-3 font-bold text-indigo-900">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {swapTokensList.map((token) => (
+                      <tr key={token.uid} className="border-b border-indigo-200">
+                        <td className="py-2 px-3">
+                          <span className="font-semibold">{token.symbol}</span>
+                          <span className="text-muted text-xs ml-2">({token.name})</span>
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono">
+                          {formatBalance(token.balance)}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <span className="badge badge-primary badge-sm">Send to Funding</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Cleanup Summary */}
           <div className="card-primary mb-7.5 bg-blue-50 border-2 border-blue-400">
             <h2 className="text-xl font-bold mb-4 text-blue-900">Cleanup Summary</h2>
@@ -1021,6 +1110,14 @@ export default function TestWalletCleanup() {
                 <span className="text-blue-800">HTR from Melting ({totalMeltableTokens} tokens):</span>
                 <span className="font-mono font-bold">+{estimatedHtrFromMelting} HTR</span>
               </div>
+              {swapTokensList.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-blue-800">Swap Tokens to Transfer:</span>
+                  <span className="font-mono font-bold">
+                    {swapTokensList.map((t) => `${formatBalance(t.balance)} ${t.symbol}`).join(', ')}
+                  </span>
+                </div>
+              )}
               <div className="border-t border-blue-300 pt-3">
                 <div className="flex justify-between items-center">
                   <span className="text-blue-900 font-bold text-lg">Total HTR to Send:</span>
@@ -1032,8 +1129,8 @@ export default function TestWalletCleanup() {
                   Will be sent to Funding Wallet address 0.
                 </p>
               ) : (
-                <p className="text-sm text-orange-600 mt-2 mb-0">
-                  No funding wallet available. HTR will not be transferred.
+                <p className="text-sm text-red-600 mt-2 mb-0">
+                  No funding wallet available. Cleanup cannot proceed.
                 </p>
               )}
             </div>
@@ -1346,7 +1443,9 @@ export default function TestWalletCleanup() {
             </button>
             {!canExecute && !isExecuting && !isLoading && (
               <p className="text-sm text-muted text-center mt-2 mb-0">
-                {!hasTokensToMelt && !hasTokensToReturn && !hasHtrToTransfer
+                {!fundingReady
+                  ? 'Funding Wallet required for cleanup.'
+                  : !hasTokensToMelt && !hasSwapTokens && !hasTokensToReturn && !hasHtrToTransfer
                   ? 'Nothing to clean up.'
                   : 'Cannot execute cleanup.'}
               </p>

@@ -135,6 +135,7 @@ const status = getTransactionStatus({
 ## Good Practices
 
 1. Always add new files to git and stage updated files for commit as well
+2. Commit titles should have 50 characters max. Body lines should have 72 max.
 
 ## Need Help?
 
@@ -144,6 +145,7 @@ const status = getTransactionStatus({
 4. Check design system for UI patterns
 
 ## Scripts Reference
+`npx` and `yarn` commands are forbidden. Only use `bun` commands.
 
 | Command              | Purpose                  |
 |----------------------|--------------------------|
