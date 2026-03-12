@@ -40,7 +40,8 @@
       "Bash(git reflog:*)",
       "Bash(git log:*)",
       "mcp__plugin_playwright_playwright__browser_snapshot",
-      "mcp__plugin_playwright_playwright__browser_evaluate"
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "Bash(npm view:*)"
     ],
     "deny": [
       "Bash(npm *)",

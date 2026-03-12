@@ -5,7 +5,7 @@
     "": {
       "name": "hathor-qa-helper",
       "dependencies": {
-        "@hathor/wallet-lib": "2.9.1",
+        "@hathor/wallet-lib": "^2.16.0",
         "@reduxjs/toolkit": "^2.10.1",
         "@walletconnect/core": "^2.15.1",
         "@walletconnect/modal": "^2.7.0",
@@ -123,7 +123,7 @@
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
 
-    "@hathor/wallet-lib": ["@hathor/wallet-lib@2.9.1", "", { "dependencies": { "axios": "1.7.7", "bitcore-lib": "8.25.10", "bitcore-mnemonic": "8.25.10", "buffer": "6.0.3", "crypto-js": "4.2.0", "isomorphic-ws": "5.0.0", "lodash": "4.17.21", "queue-microtask": "1.2.3", "ws": "8.17.1", "zod": "3.23.8" } }, "sha512-HFINZC5KOuMCFRKQU2RsgNwhQC+6QT4d196PxQE/bE7ubSZtiQriul9FiSlxxfNCI5DtYvYPZuvBSTSO1vLHXg=="],
+    "@hathor/wallet-lib": ["@hathor/wallet-lib@2.16.0", "", { "dependencies": { "axios": "1.7.7", "bitcore-lib": "8.25.10", "bitcore-mnemonic": "8.25.10", "buffer": "6.0.3", "crypto-js": "4.2.0", "isomorphic-ws": "5.0.0", "lodash": "4.17.21", "queue-microtask": "1.2.3", "ws": "8.17.1", "zod": "3.23.8" } }, "sha512-xi11x5XtgHFtDbmK5rj6Xr5hj5OXEWwKc8m9pkfxDYKIsa5E7tSIIsSoz2aradVc5dMppXFV3qjuZsgwP9J3eg=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.1", "", {}, "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA=="],
 

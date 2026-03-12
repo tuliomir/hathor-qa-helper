@@ -9,6 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { TokenVersion } from '@hathor/wallet-lib/lib/types';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { WALLET_CONFIG } from '../../constants/network';
@@ -18,6 +19,14 @@ import { trackTokenFlow } from '../../services/tokenFlowTracker';
 import type { TokenFlowResult } from '../../types/tokenFlowTracker';
 import { waitForTxSettlement } from '../../utils/waitForTxSettlement';
 import { buildUnifiedCleanupTemplate } from '../../services/cleanupTemplateBuilder';
+import {
+  getMeltableTokens,
+  getSwapTokens,
+  getFeeTokens,
+  getReturnableTokens,
+  getRemainingTokens,
+  getDisplayableTokens,
+} from '../../services/cleanupTokenCategorizer';
 
 interface TokenToMelt {
   uid: string;
@@ -32,6 +41,8 @@ interface TokenToMelt {
   canReturnToSender: boolean;
   // Token is a swap test token — never melt, send to funding wallet instead
   isSwapToken: boolean;
+  // Token was created with version "fee" — costs HTR to move, leave in wallet
+  isFeeToken: boolean;
   // Rich flow data showing all external addresses holding this token
   tokenFlow?: TokenFlowResult;
 }
@@ -150,6 +161,23 @@ export default function TestWalletCleanup() {
 
             if (balance === 0n) return null;
 
+            // Check if this is a fee token (version FEE) — never move, costs HTR to transfer
+            const storedToken = await testWallet.instance.storage.getToken(uid);
+            if (storedToken?.version === TokenVersion.FEE) {
+              return {
+                uid,
+                symbol: tokenInfo.symbol,
+                name: tokenInfo.name,
+                balance,
+                meltableAmount: 0,
+                remainder: 0,
+                hasMeltAuthority: false,
+                canReturnToSender: false,
+                isSwapToken: false,
+                isFeeToken: true,
+              } as TokenToMelt;
+            }
+
             // Check if this is a swap test token (never melt, send to funding)
             const swapTokenUids = testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
             const swapToken = swapTokenUids.includes(uid);
@@ -164,6 +192,7 @@ export default function TestWalletCleanup() {
                 hasMeltAuthority: false,
                 canReturnToSender: false,
                 isSwapToken: true,
+                isFeeToken: false,
               } as TokenToMelt;
             }
 
@@ -214,6 +243,7 @@ export default function TestWalletCleanup() {
               originalSender,
               canReturnToSender,
               isSwapToken: false,
+              isFeeToken: false,
               tokenFlow,
             } as TokenToMelt;
           } catch (err) {
@@ -586,6 +616,23 @@ export default function TestWalletCleanup() {
             const balance = balanceData[0]?.balance?.unlocked || 0n;
             if (balance === 0n) return null;
 
+            // Check if this is a fee token
+            const storedToken = await testWallet.instance.storage.getToken(uid);
+            if (storedToken?.version === TokenVersion.FEE) {
+              return {
+                uid,
+                symbol: tokenInfo.symbol,
+                name: tokenInfo.name,
+                balance,
+                meltableAmount: 0,
+                remainder: 0,
+                hasMeltAuthority: false,
+                canReturnToSender: false,
+                isSwapToken: false,
+                isFeeToken: true,
+              };
+            }
+
             const swapTokenUids = testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
             const swapToken = swapTokenUids.includes(uid);
             if (swapToken) {
@@ -599,6 +646,7 @@ export default function TestWalletCleanup() {
                 hasMeltAuthority: false,
                 canReturnToSender: false,
                 isSwapToken: true,
+                isFeeToken: false,
               };
             }
 
@@ -622,6 +670,7 @@ export default function TestWalletCleanup() {
               hasMeltAuthority,
               canReturnToSender: false, // Don't re-lookup after cleanup
               isSwapToken: false,
+              isFeeToken: false,
             };
           } catch {
             return null;
@@ -648,26 +697,22 @@ export default function TestWalletCleanup() {
     }
   };
 
-  const hasTokensToMelt = tokensToMelt.some((t) => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0);
-  const hasSwapTokens = tokensToMelt.some((t) => t.isSwapToken && t.balance > 0n);
-  const hasTokensToReturn = tokensToMelt.some((t) => t.canReturnToSender);
+  const meltableTokensList = getMeltableTokens(tokensToMelt);
+  const swapTokensList = getSwapTokens(tokensToMelt);
+  const feeTokensList = getFeeTokens(tokensToMelt);
+  const returnableTokensList = getReturnableTokens(tokensToMelt);
+  const tokensRemaining = getRemainingTokens(tokensToMelt);
+
+  const hasTokensToMelt = meltableTokensList.length > 0;
+  const hasSwapTokens = swapTokensList.length > 0;
+  const hasTokensToReturn = returnableTokensList.length > 0;
   const hasHtrToTransfer = htrBalance > 0n;
   const canExecute = (hasTokensToMelt || hasSwapTokens || hasTokensToReturn || hasHtrToTransfer) && fundingReady && !isExecuting && !isLoading;
 
   // Calculate estimated HTR from melting (100 tokens = 1 HTR)
-  const totalMeltableTokens = tokensToMelt
-    .filter((t) => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0)
-    .reduce((sum, t) => sum + t.meltableAmount, 0);
+  const totalMeltableTokens = meltableTokensList.reduce((sum, t) => sum + t.meltableAmount, 0);
   const estimatedHtrFromMelting = Math.floor(totalMeltableTokens / 100);
   const totalEstimatedHtr = Number(htrBalance) + estimatedHtrFromMelting;
-
-  // Swap tokens to transfer to funding wallet
-  const swapTokensList = tokensToMelt.filter((t) => t.isSwapToken && t.balance > 0n);
-
-  // Tokens that will remain in the wallet after cleanup (exclude swap tokens — they go to funding)
-  const tokensRemaining = tokensToMelt.filter(
-    (t) => !t.isSwapToken && (!t.hasMeltAuthority || t.remainder > 0 || (t.hasMeltAuthority && t.meltableAmount === 0))
-  );
 
   return (
     <div className="max-w-300 mx-auto">
@@ -693,6 +738,7 @@ export default function TestWalletCleanup() {
               <li>Melt all custom tokens (in multiples of 100)</li>
               <li>Transfer swap test tokens to the Funding Wallet (never melted)</li>
               <li>Return unmeltable tokens to their original sender (if found)</li>
+              <li>Leave fee tokens in the wallet (cost HTR to transfer)</li>
               <li>Transfer all resulting HTR to the Funding Wallet (address 0)</li>
             </ul>
           </div>
@@ -729,21 +775,30 @@ export default function TestWalletCleanup() {
               <div>hasTokensToMelt: {hasTokensToMelt.toString()}</div>
               <div>cleanupPhase: {cleanupPhase}</div>
               <div className="mt-2 text-gray-400">Tokens with melt authority:</div>
-              {tokensToMelt.filter(t => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0).map((t, i) => (
+              {meltableTokensList.map((t, i) => (
                 <div key={i} className="ml-2 text-green-400">
                   {t.symbol}: {t.meltableAmount} meltable (balance: {t.balance.toString()})
                 </div>
               ))}
-              {tokensToMelt.filter(t => !t.isSwapToken && t.hasMeltAuthority && t.meltableAmount > 0).length === 0 && (
+              {meltableTokensList.length === 0 && (
                 <div className="ml-2 text-yellow-400">None found!</div>
               )}
               <div className="mt-2 text-gray-400">Swap test tokens:</div>
-              {tokensToMelt.filter(t => t.isSwapToken).map((t, i) => (
+              {swapTokensList.map((t, i) => (
                 <div key={i} className="ml-2 text-indigo-400">
                   {t.symbol}: {t.balance.toString()} → funding wallet
                 </div>
               ))}
-              {tokensToMelt.filter(t => t.isSwapToken).length === 0 && (
+              {swapTokensList.length === 0 && (
+                <div className="ml-2 text-yellow-400">None found</div>
+              )}
+              <div className="mt-2 text-gray-400">Fee tokens (left in wallet):</div>
+              {feeTokensList.map((t, i) => (
+                <div key={i} className="ml-2 text-rose-400">
+                  {t.symbol}: {t.balance.toString()} (skipped)
+                </div>
+              ))}
+              {feeTokensList.length === 0 && (
                 <div className="ml-2 text-yellow-400">None found</div>
               )}
             </div>
@@ -841,7 +896,7 @@ export default function TestWalletCleanup() {
               </button>
             </div>
 
-            {tokensToMelt.filter((t) => !t.isSwapToken).length === 0 ? (
+            {getDisplayableTokens(tokensToMelt).length === 0 ? (
               <p className="m-0 text-muted text-center">No custom tokens found in Test Wallet.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -857,7 +912,7 @@ export default function TestWalletCleanup() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tokensToMelt.filter((t) => !t.isSwapToken).map((token) => {
+                    {getDisplayableTokens(tokensToMelt).map((token) => {
                       // Calculate amount that will be returned to sender
                       const returnAmount = token.canReturnToSender
                         ? (!token.hasMeltAuthority ? Number(token.balance) : token.remainder)
@@ -959,6 +1014,43 @@ export default function TestWalletCleanup() {
             </div>
           )}
 
+          {/* Fee Tokens — left in wallet */}
+          {feeTokensList.length > 0 && (
+            <div className="card-primary mb-7.5 bg-rose-50 border-2 border-rose-400">
+              <h2 className="text-xl font-bold mb-2 text-rose-900">Fee Tokens</h2>
+              <p className="text-sm text-rose-800 mb-4">
+                These tokens were created with version &quot;fee&quot; and cost HTR to transfer. They will be left in the wallet:
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-rose-300">
+                    <tr>
+                      <th className="text-left py-2 px-3 font-bold text-rose-900">Token</th>
+                      <th className="text-right py-2 px-3 font-bold text-rose-900">Balance</th>
+                      <th className="text-center py-2 px-3 font-bold text-rose-900">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feeTokensList.map((token) => (
+                      <tr key={token.uid} className="border-b border-rose-200">
+                        <td className="py-2 px-3">
+                          <span className="font-semibold">{token.symbol}</span>
+                          <span className="text-muted text-xs ml-2">({token.name})</span>
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono">
+                          {formatBalance(token.balance)}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <span className="badge badge-warning badge-sm">Left in wallet</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Cleanup Summary */}
           <div className="card-primary mb-7.5 bg-blue-50 border-2 border-blue-400">
             <h2 className="text-xl font-bold mb-4 text-blue-900">Cleanup Summary</h2>
@@ -976,6 +1068,14 @@ export default function TestWalletCleanup() {
                   <span className="text-blue-800">Swap Tokens to Transfer:</span>
                   <span className="font-mono font-bold">
                     {swapTokensList.map((t) => `${formatBalance(t.balance)} ${t.symbol}`).join(', ')}
+                  </span>
+                </div>
+              )}
+              {feeTokensList.length > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-blue-800">Fee Tokens (left in wallet):</span>
+                  <span className="font-mono font-bold text-rose-700">
+                    {feeTokensList.map((t) => `${formatBalance(t.balance)} ${t.symbol}`).join(', ')}
                   </span>
                 </div>
               )}
@@ -998,7 +1098,7 @@ export default function TestWalletCleanup() {
           </div>
 
           {/* Tokens to Return to Sender */}
-          {tokensToMelt.some((t) => t.canReturnToSender) && (
+          {returnableTokensList.length > 0 && (
             <div className="card-primary mb-7.5 bg-cyan-50 border-2 border-cyan-400">
               <h2 className="text-xl font-bold mb-2 text-cyan-900">Tokens to Return to Sender</h2>
               <p className="text-sm text-cyan-800 mb-4">

@@ -31,7 +31,7 @@
     "deploy:firebase": "./scripts/deploy-firebase.sh"
   },
   "dependencies": {
-    "@hathor/wallet-lib": "2.9.1",
+    "@hathor/wallet-lib": "^2.16.0",
     "@reduxjs/toolkit": "^2.10.1",
     "@walletconnect/core": "^2.15.1",
     "@walletconnect/modal": "^2.7.0",
