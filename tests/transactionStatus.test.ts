@@ -61,11 +61,58 @@ describe('transactionStatus', () => {
       expect(result).toBe('Unconfirmed');
     });
 
-    test('handles empty transaction object', () => {
+    test('handles empty transaction object as Unconfirmed', () => {
       const tx = {};
       const result = getTransactionStatus(tx);
 
-      expect(result).toBe('Valid');
+      expect(result).toBe('Unconfirmed');
+    });
+
+    // Bug scenario: TxStatus.tsx calls getTransactionStatus with only
+    // { first_block, is_voided } (no nc_* fields) even for nano contract txs.
+    // This must still return Unconfirmed when first_block is null.
+    describe('called without nc_* fields (TxStatus.tsx code paths)', () => {
+      test('returns Unconfirmed when first_block is null and is_voided is false', () => {
+        const tx = { first_block: null, is_voided: false };
+        const result = getTransactionStatus(tx);
+
+        expect(result).toBe('Unconfirmed');
+      });
+
+      test('returns Unconfirmed when first_block is undefined and is_voided is false', () => {
+        const tx = { is_voided: false };
+        const result = getTransactionStatus(tx);
+
+        expect(result).toBe('Unconfirmed');
+      });
+
+      test('returns Valid when first_block is present and is_voided is false', () => {
+        const tx = { first_block: 'blockhash123', is_voided: false };
+        const result = getTransactionStatus(tx);
+
+        expect(result).toBe('Valid');
+      });
+
+      test('returns Voided when is_voided is true regardless of first_block', () => {
+        expect(getTransactionStatus({ first_block: null, is_voided: true })).toBe('Voided');
+        expect(getTransactionStatus({ first_block: 'blockhash', is_voided: true })).toBe('Voided');
+      });
+    });
+
+    describe('non-nano regular transactions', () => {
+      test('returns Unconfirmed for regular tx without first_block', () => {
+        const tx = { voided: false };
+        const result = getTransactionStatus(tx);
+
+        expect(result).toBe('Unconfirmed');
+      });
+
+      test('returns Valid for regular tx with first_block', () => {
+        const tx = { first_block: 'blockhash', voided: false };
+        const result = getTransactionStatus(tx);
+
+        expect(result).toBe('Valid');
+      });
     });
   });
 
