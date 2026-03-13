@@ -7,7 +7,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { buildUnifiedCleanupTemplate, type CleanupToken } from '../src/services/cleanupTemplateBuilder';
+import { buildUnifiedCleanupTemplate, type CleanupToken, type ReturnToken } from '../src/services/cleanupTemplateBuilder';
 
 // ---------------------------------------------------------------------------
 // Test constants — valid 64-char hex UIDs required by wallet-lib's Zod schema
@@ -18,8 +18,12 @@ const TOKEN_B = '000000000000000000000000000000000000000000000000000000000000000
 const SWAP_TOKEN_NST = '00000000d3ab1beb579a2ff95f2ca86e911c92603f70fd74e4a6243d6af693e6';
 const SWAP_TOKEN_KELB = '0000000094c00683bdca052d6f2c1ae384bb04ed91a333b425c474226d1a22e7';
 
+const RETURN_TOKEN_C = '0000000000000000000000000000000000000000000000000000000000000003';
+
 const TEST_ADDR = 'WYBwT3xLpDnHNtYZiU5WfQqFn921';
 const FUNDING_ADDR = 'WZ4p6bXjNqh5cDBxFiNZNwJzSAR22';
+const SENDER_ADDR_1 = 'WSenderAddr1xyzABC123';
+const SENDER_ADDR_2 = 'WSenderAddr2xyzDEF456';
 
 // ---------------------------------------------------------------------------
 // Helpers — filter template operations by type
@@ -59,6 +63,12 @@ const swapToken = (uid: string, balance: number): CleanupToken => ({
   meltableAmount: 0,
 });
 
+const returnToken = (uid: string, amount: number, recipientAddress: string): ReturnToken => ({
+  uid,
+  amount,
+  recipientAddress,
+});
+
 // ===========================================================================
 // Tests
 // ===========================================================================
@@ -70,7 +80,7 @@ describe('buildUnifiedCleanupTemplate', () => {
   // -------------------------------------------------------------------------
   describe('structural invariants', () => {
     test('always starts with two setVar actions (fundingAddr, testAddr)', () => {
-      const template = buildUnifiedCleanupTemplate([], [], TEST_ADDR, FUNDING_ADDR, 0n);
+      const template = buildUnifiedCleanupTemplate([], [], [], TEST_ADDR, FUNDING_ADDR, 0n);
       const vars = setVars(template);
       expect(vars.length).toBe(2);
       expect(vars[0].name).toBe('fundingAddr');
@@ -83,6 +93,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 200)],
         [swapToken(SWAP_TOKEN_NST, 50)],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         300n
@@ -96,7 +107,7 @@ describe('buildUnifiedCleanupTemplate', () => {
   // -------------------------------------------------------------------------
   describe('only HTR, no tokens', () => {
     test('selects HTR UTXOs and outputs to funding', () => {
-      const template = buildUnifiedCleanupTemplate([], [], TEST_ADDR, FUNDING_ADDR, 500n);
+      const template = buildUnifiedCleanupTemplate([], [], [], TEST_ADDR, FUNDING_ADDR, 500n);
 
       // One HTR utxo select
       const htrSelects = utxoSelectsFor(template, HTR_UID);
@@ -120,7 +131,7 @@ describe('buildUnifiedCleanupTemplate', () => {
   // -------------------------------------------------------------------------
   describe('empty wallet', () => {
     test('produces only setVar actions', () => {
-      const template = buildUnifiedCleanupTemplate([], [], TEST_ADDR, FUNDING_ADDR, 0n);
+      const template = buildUnifiedCleanupTemplate([], [], [], TEST_ADDR, FUNDING_ADDR, 0n);
 
       expect(template).toHaveLength(2); // just the two setVars
       expect(utxoSelects(template)).toHaveLength(0);
@@ -136,6 +147,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       // 200 tokens → melt produces 2 HTR. Existing 300 HTR. Total = 302 HTR.
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 200)],
+        [],
         [],
         TEST_ADDR,
         FUNDING_ADDR,
@@ -178,6 +190,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 500), meltToken(TOKEN_B, 300)],
         [],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         100n
@@ -204,6 +217,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [],
         [swapToken(SWAP_TOKEN_NST, 50)],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         0n
@@ -231,6 +245,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [],
         [swapToken(SWAP_TOKEN_NST, 17), swapToken(SWAP_TOKEN_KELB, 42)],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         300n
@@ -265,6 +280,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 100)], // TST
         [swapToken(SWAP_TOKEN_NST, 17)], // NST
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         3n // 3 HTR existing
@@ -300,6 +316,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 300, 350n)],
         [],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         0n
@@ -325,6 +342,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [],
         [swapToken(SWAP_TOKEN_NST, 0)],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         100n
@@ -347,6 +365,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       // Balance is 50 but meltableAmount is 0 (< 100 units)
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 0, 50n)],
+        [],
         [],
         TEST_ADDR,
         FUNDING_ADDR,
@@ -372,6 +391,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 100), meltToken(TOKEN_B, 200)],
         [],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         0n
@@ -396,6 +416,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 10000)],
         [],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         50n
@@ -415,6 +436,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 100)],
         [swapToken(SWAP_TOKEN_NST, 25)],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         10n
@@ -446,6 +468,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [],
         [swapToken(SWAP_TOKEN_NST, 100), swapToken(SWAP_TOKEN_KELB, 200)],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         0n
@@ -477,6 +500,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 500)],
         [],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         0n // no existing HTR
@@ -500,6 +524,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [meltToken(TOKEN_A, 400), meltToken(TOKEN_B, 600)],
         [swapToken(SWAP_TOKEN_NST, 33), swapToken(SWAP_TOKEN_KELB, 77)],
+        [],
         TEST_ADDR,
         FUNDING_ADDR,
         1000n
@@ -527,6 +552,190 @@ describe('buildUnifiedCleanupTemplate', () => {
 
       // Total token outputs: 2 swap + 1 HTR = 3 (melted tokens have NO output)
       expect(tokenOutputs(template)).toHaveLength(3);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scenario 17: Single return-to-sender token
+  // -------------------------------------------------------------------------
+  describe('single return-to-sender token', () => {
+    test('creates setVar for recipient + utxoSelect + tokenOutput to recipient', () => {
+      const template = buildUnifiedCleanupTemplate(
+        [],
+        [],
+        [returnToken(RETURN_TOKEN_C, 50, SENDER_ADDR_1)],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        0n
+      );
+
+      // 3 setVars: fundingAddr, testAddr, returnAddr_0
+      const vars = setVars(template);
+      expect(vars).toHaveLength(3);
+      expect(vars[2].name).toBe('returnAddr_0');
+      expect(vars[2].value).toBe(SENDER_ADDR_1);
+
+      // utxoSelect for the return token
+      expect(utxoSelectsFor(template, RETURN_TOKEN_C)).toHaveLength(1);
+
+      // tokenOutput to the recipient address variable
+      const returnOutputs = tokenOutputsFor(template, RETURN_TOKEN_C);
+      expect(returnOutputs).toHaveLength(1);
+      expect(returnOutputs[0].amount).toBe(50n);
+      expect(returnOutputs[0].address).toBe('{returnAddr_0}');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scenario 18: Multiple return tokens to different recipients
+  // -------------------------------------------------------------------------
+  describe('multiple return tokens, different recipients', () => {
+    test('creates one setVar per unique recipient address', () => {
+      const template = buildUnifiedCleanupTemplate(
+        [],
+        [],
+        [
+          returnToken(RETURN_TOKEN_C, 30, SENDER_ADDR_1),
+          returnToken(TOKEN_B, 70, SENDER_ADDR_2),
+        ],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        0n
+      );
+
+      // 4 setVars: fundingAddr, testAddr, returnAddr_0, returnAddr_1
+      const vars = setVars(template);
+      expect(vars).toHaveLength(4);
+      expect(vars[2].name).toBe('returnAddr_0');
+      expect(vars[2].value).toBe(SENDER_ADDR_1);
+      expect(vars[3].name).toBe('returnAddr_1');
+      expect(vars[3].value).toBe(SENDER_ADDR_2);
+
+      // Each return token gets its own output to respective recipient
+      const cOutputs = tokenOutputsFor(template, RETURN_TOKEN_C);
+      expect(cOutputs).toHaveLength(1);
+      expect(cOutputs[0].address).toBe('{returnAddr_0}');
+
+      const bOutputs = tokenOutputsFor(template, TOKEN_B);
+      expect(bOutputs).toHaveLength(1);
+      expect(bOutputs[0].address).toBe('{returnAddr_1}');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scenario 19: Multiple return tokens to the SAME recipient (deduplication)
+  // -------------------------------------------------------------------------
+  describe('return tokens to same recipient', () => {
+    test('deduplicates setVar — only one variable per unique address', () => {
+      const template = buildUnifiedCleanupTemplate(
+        [],
+        [],
+        [
+          returnToken(RETURN_TOKEN_C, 20, SENDER_ADDR_1),
+          returnToken(TOKEN_B, 40, SENDER_ADDR_1), // same recipient
+        ],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        0n
+      );
+
+      // Only 3 setVars (not 4): fundingAddr, testAddr, returnAddr_0
+      const vars = setVars(template);
+      expect(vars).toHaveLength(3);
+
+      // Both outputs use the same address variable
+      const cOutputs = tokenOutputsFor(template, RETURN_TOKEN_C);
+      const bOutputs = tokenOutputsFor(template, TOKEN_B);
+      expect(cOutputs[0].address).toBe('{returnAddr_0}');
+      expect(bOutputs[0].address).toBe('{returnAddr_0}');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scenario 20: Zero-amount return tokens are skipped
+  // -------------------------------------------------------------------------
+  describe('zero-amount return token', () => {
+    test('skips return tokens with zero amount', () => {
+      const template = buildUnifiedCleanupTemplate(
+        [],
+        [],
+        [returnToken(RETURN_TOKEN_C, 0, SENDER_ADDR_1)],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        100n
+      );
+
+      // No return address setVar (only fundingAddr + testAddr)
+      expect(setVars(template)).toHaveLength(2);
+
+      // No operations for the return token
+      expect(utxoSelectsFor(template, RETURN_TOKEN_C)).toHaveLength(0);
+      expect(tokenOutputsFor(template, RETURN_TOKEN_C)).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scenario 21: Full kitchen sink — melt + swap + return + HTR
+  // -------------------------------------------------------------------------
+  describe('kitchen sink: melt + swap + return + HTR', () => {
+    test('all operation types coexist in one atomic template', () => {
+      const template = buildUnifiedCleanupTemplate(
+        [meltToken(TOKEN_A, 400)],
+        [swapToken(SWAP_TOKEN_NST, 33)],
+        [returnToken(RETURN_TOKEN_C, 25, SENDER_ADDR_1)],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        100n
+      );
+
+      // 3 setVars: fundingAddr, testAddr, returnAddr_0
+      expect(setVars(template)).toHaveLength(3);
+
+      // Melt ops
+      expect(utxoSelectsFor(template, TOKEN_A)).toHaveLength(1);
+      expect(authoritySelects(template)).toHaveLength(1);
+      expect(authorityOutputs(template)).toHaveLength(1);
+
+      // Swap ops
+      const nstOutputs = tokenOutputsFor(template, SWAP_TOKEN_NST);
+      expect(nstOutputs).toHaveLength(1);
+      expect(nstOutputs[0].address).toBe('{fundingAddr}');
+
+      // Return ops
+      const returnOutputs = tokenOutputsFor(template, RETURN_TOKEN_C);
+      expect(returnOutputs).toHaveLength(1);
+      expect(returnOutputs[0].amount).toBe(25n);
+      expect(returnOutputs[0].address).toBe('{returnAddr_0}');
+
+      // HTR: 100 existing + 4 from melt = 104
+      const htrOutputs = tokenOutputsFor(template, HTR_UID);
+      expect(htrOutputs).toHaveLength(1);
+      expect(htrOutputs[0].amount).toBe(104n);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scenario 22: Operation ordering with returns
+  // -------------------------------------------------------------------------
+  describe('operation ordering with returns', () => {
+    test('returns come after swaps and before HTR select', () => {
+      const template = buildUnifiedCleanupTemplate(
+        [meltToken(TOKEN_A, 100)],
+        [swapToken(SWAP_TOKEN_NST, 25)],
+        [returnToken(RETURN_TOKEN_C, 10, SENDER_ADDR_1)],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        50n
+      ) as TemplateOp[];
+
+      const firstSwapUtxo = template.findIndex((op) => op.type === 'input/utxo' && op.token === SWAP_TOKEN_NST);
+      const firstReturnUtxo = template.findIndex((op) => op.type === 'input/utxo' && op.token === RETURN_TOKEN_C);
+      const htrUtxo = template.findIndex((op) => op.type === 'input/utxo' && op.token === HTR_UID);
+
+      // swap before return
+      expect(firstSwapUtxo).toBeLessThan(firstReturnUtxo);
+      // return before HTR
+      expect(firstReturnUtxo).toBeLessThan(htrUtxo);
     });
   });
 });

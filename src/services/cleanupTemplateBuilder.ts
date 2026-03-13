@@ -2,8 +2,8 @@
  * Cleanup Template Builder
  *
  * Builds transaction templates for the unified cleanup operation:
- * melting tokens + transferring swap tokens + transferring HTR
- * in a single atomic transaction.
+ * melting tokens + transferring swap tokens + returning tokens to senders
+ * + transferring HTR — all in a single atomic transaction.
  */
 
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
@@ -15,13 +15,20 @@ export interface CleanupToken {
   meltableAmount: number;
 }
 
+export interface ReturnToken {
+  uid: string;
+  amount: number;
+  recipientAddress: string;
+}
+
 /**
- * Builds a unified cleanup template that handles all three operation types
+ * Builds a unified cleanup template that handles all operation types
  * in a single atomic transaction:
  *
  * 1. Melt tokens (inputs > outputs with melt authority)
  * 2. Transfer swap tokens to funding wallet (balanced inputs = outputs)
- * 3. Transfer all HTR (existing + produced by melts) to funding wallet
+ * 3. Return tokens to their original senders (balanced inputs = outputs)
+ * 4. Transfer all HTR (existing + produced by melts) to funding wallet
  *
  * Does NOT use addCompleteAction — all UTXOs are manually selected
  * because addCompleteAction would create change outputs that prevent melts.
@@ -29,6 +36,7 @@ export interface CleanupToken {
 export function buildUnifiedCleanupTemplate(
   tokensToMelt: CleanupToken[],
   swapTokens: CleanupToken[],
+  returnTokens: ReturnToken[],
   testWalletAddr: string,
   fundingAddr: string,
   existingHtrBalance: bigint
@@ -36,6 +44,15 @@ export function buildUnifiedCleanupTemplate(
   let builder = TransactionTemplateBuilder.new()
     .addSetVarAction({ name: 'fundingAddr', value: fundingAddr })
     .addSetVarAction({ name: 'testAddr', value: testWalletAddr });
+
+  // Set variables for unique return-to-sender addresses
+  const returnAddressVars = new Map<string, string>();
+  for (const token of returnTokens) {
+    if (token.amount <= 0 || returnAddressVars.has(token.recipientAddress)) continue;
+    const varName = `returnAddr_${returnAddressVars.size}`;
+    returnAddressVars.set(token.recipientAddress, varName);
+    builder = builder.addSetVarAction({ name: varName, value: token.recipientAddress });
+  }
 
   let totalHtrFromMelts = 0;
 
@@ -65,6 +82,20 @@ export function buildUnifiedCleanupTemplate(
       .addTokenOutput({
         address: '{fundingAddr}',
         amount,
+        token: token.uid,
+      });
+  }
+
+  // Return-to-sender transfers: select UTXOs + output to original sender
+  for (const token of returnTokens) {
+    if (token.amount <= 0) continue;
+    const varName = returnAddressVars.get(token.recipientAddress)!;
+
+    builder = builder
+      .addUtxoSelect({ fill: token.amount, token: token.uid })
+      .addTokenOutput({
+        address: `{${varName}}`,
+        amount: token.amount,
         token: token.uid,
       });
   }
