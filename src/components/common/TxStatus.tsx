@@ -142,10 +142,8 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
         if (txData && txData.first_block) {
           // console.log(`[TxStatus ${hash.slice(0, 8)}] Found first_block in wallet cache, using cached data`);
 
-          const txStatus = getTransactionStatus({
-            first_block: txData.first_block,
-            is_voided: txData.is_voided,
-          });
+          // Spread txData to preserve nc_* fields for nano contract detection
+          const txStatus = getTransactionStatus(txData);
 
           // console.log(`[TxStatus ${hash.slice(0, 8)}] Status from wallet cache: ${txStatus}`, {
           //   first_block: txData.first_block,
@@ -175,16 +173,12 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
           const isVoided = response.meta.voided_by && response.meta.voided_by.length > 0;
           const firstBlock = response.meta.first_block;
 
+          // Spread response.tx to preserve nc_* fields for nano contract detection
           const txStatus = getTransactionStatus({
+            ...response.tx,
             first_block: firstBlock,
             is_voided: isVoided,
           });
-
-          // console.log(`[TxStatus ${hash.slice(0, 8)}] Computed status from full node: ${txStatus}`, {
-          //   first_block: firstBlock,
-          //   voided_by: response.meta.voided_by,
-          //   is_voided: isVoided,
-          // });
 
           // Cache the result
           txStatusCache.set(hash, {
