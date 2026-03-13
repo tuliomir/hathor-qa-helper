@@ -23,6 +23,10 @@ import betInitializeReducer from './slices/betInitializeSlice';
 import betDepositReducer from './slices/betDepositSlice';
 import setBetResultReducer from './slices/setBetResultSlice';
 import betWithdrawReducer from './slices/betWithdrawSlice';
+import feeNanoContractReducer from './slices/feeNanoContractSlice';
+import feeInitializeReducer from './slices/feeInitializeSlice';
+import feeDepositReducer from './slices/feeDepositSlice';
+import feeWithdrawReducer from './slices/feeWithdrawSlice';
 import txUpdateEventsReducer from './slices/txUpdateEventsSlice';
 import navigationReducer from './slices/navigationSlice';
 import pushNotificationsReducer from './slices/pushNotificationsSlice';
@@ -60,6 +64,10 @@ export const store = configureStore({
     betDeposit: betDepositReducer,
     setBetResult: setBetResultReducer,
     betWithdraw: betWithdrawReducer,
+    feeNanoContract: feeNanoContractReducer,
+    feeInitialize: feeInitializeReducer,
+    feeDeposit: feeDepositReducer,
+    feeWithdraw: feeWithdrawReducer,
     txUpdateEvents: txUpdateEventsReducer,
     navigation: navigationReducer,
     pushNotifications: pushNotificationsReducer,

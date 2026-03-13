@@ -32,6 +32,12 @@ describe('stage types', () => {
       expect(bet!.title).toBe('Bet Nano Contract');
     });
 
+    test('contains fee-nano-contracts group', () => {
+      const fee = STAGE_GROUPS.find((g) => g.id === 'fee-nano-contracts');
+      expect(fee).toBeDefined();
+      expect(fee!.title).toBe('Fee Nano Contract');
+    });
+
     test('contains auditing group', () => {
       const auditing = STAGE_GROUPS.find((g) => g.id === 'auditing');
       expect(auditing).toBeDefined();
@@ -109,6 +115,11 @@ describe('stage types', () => {
       expect(group).toBe('bet-nano-contracts');
     });
 
+    test('returns correct group for rpc-fee-initialize', () => {
+      const group = getGroupForStage('rpc-fee-initialize');
+      expect(group).toBe('fee-nano-contracts');
+    });
+
     test('returns correct group for transaction-history', () => {
       const group = getGroupForStage('transaction-history');
       expect(group).toBe('auditing');
@@ -162,6 +173,9 @@ describe('stage types', () => {
       'rpc-send-transaction',
       'rpc-create-token',
       'rpc-bet-initialize',
+      'rpc-fee-initialize',
+      'rpc-fee-deposit',
+      'rpc-fee-withdraw',
       'transaction-history',
       'multisig-wallet-management',
     ];

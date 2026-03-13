@@ -822,6 +822,235 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
     },
 
     /**
+     * Initialize Fee
+     * Initialize a new fee nano contract with an HTR deposit
+     */
+    getRpcFeeInitialize: async (
+      blueprintId: string,
+      amount: string,
+      changeAddress: string,
+      pushTx: boolean,
+    ) => {
+      if (!session || !client) {
+        throw new Error('WalletConnect session not available');
+      }
+
+      const invokeParams = {
+        network: DEFAULT_NETWORK,
+        method: 'initialize',
+        blueprint_id: blueprintId,
+        actions: [
+          {
+            type: 'deposit',
+            token: '00',
+            amount,
+            changeAddress,
+          },
+        ],
+        args: [],
+        push_tx: pushTx,
+        nc_id: null,
+      };
+
+      const requestParams = {
+        method: 'htr_sendNanoContractTx',
+        params: invokeParams,
+      };
+
+      try {
+        let response;
+
+        if (dryRun) {
+          response = null;
+        } else {
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Initialize Fee');
+          }
+
+          response = await client.request({
+            topic: session.topic,
+            chainId: HATHOR_TESTNET_CHAIN,
+            request: requestParams,
+          });
+        }
+
+        return {
+          request: requestParams,
+          response,
+        };
+      } catch (error) {
+        const errorWithRequest = error as { requestParams?: unknown };
+        errorWithRequest.requestParams = requestParams;
+        throw errorWithRequest;
+      }
+    },
+
+    /**
+     * Fee Deposit
+     * Deposit a fee-based token into the fee nano contract
+     */
+    getRpcFeeDeposit: async (
+      ncId: string,
+      feeToken: string,
+      amount: string,
+      changeAddress: string,
+      pushTx: boolean,
+      contractPaysFees: boolean,
+      htrWithdrawAmount: string,
+    ) => {
+      if (!session || !client) {
+        throw new Error('WalletConnect session not available');
+      }
+
+      const actions: unknown[] = [];
+
+      if (contractPaysFees) {
+        actions.push({
+          type: 'withdrawal',
+          token: '00',
+          amount: htrWithdrawAmount,
+          address: changeAddress,
+        });
+      }
+
+      actions.push({
+        type: 'deposit',
+        token: feeToken,
+        amount,
+        changeAddress,
+      });
+
+      const invokeParams: Record<string, unknown> = {
+        network: DEFAULT_NETWORK,
+        method: 'noop',
+        nc_id: ncId,
+        actions,
+        args: [],
+        push_tx: pushTx,
+      };
+
+      if (contractPaysFees) {
+        invokeParams.contract_pays_fees = true;
+      }
+
+      const requestParams = {
+        method: 'htr_sendNanoContractTx',
+        params: invokeParams,
+      };
+
+      try {
+        let response;
+
+        if (dryRun) {
+          response = null;
+        } else {
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Fee Deposit');
+          }
+
+          response = await client.request({
+            topic: session.topic,
+            chainId: HATHOR_TESTNET_CHAIN,
+            request: requestParams,
+          });
+        }
+
+        return {
+          request: requestParams,
+          response,
+        };
+      } catch (error) {
+        const errorWithRequest = error as { requestParams?: unknown };
+        errorWithRequest.requestParams = requestParams;
+        throw errorWithRequest;
+      }
+    },
+
+    /**
+     * Fee Withdraw
+     * Withdraw a fee-based token from the fee nano contract
+     */
+    getRpcFeeWithdraw: async (
+      ncId: string,
+      feeToken: string,
+      amount: string,
+      address: string,
+      pushTx: boolean,
+      contractPaysFees: boolean,
+      htrWithdrawAmount: string,
+    ) => {
+      if (!session || !client) {
+        throw new Error('WalletConnect session not available');
+      }
+
+      const actions: unknown[] = [];
+
+      if (contractPaysFees) {
+        actions.push({
+          type: 'withdrawal',
+          token: '00',
+          amount: htrWithdrawAmount,
+          address,
+        });
+      }
+
+      actions.push({
+        type: 'withdrawal',
+        token: feeToken,
+        amount,
+        address,
+      });
+
+      const invokeParams: Record<string, unknown> = {
+        network: DEFAULT_NETWORK,
+        method: 'noop',
+        nc_id: ncId,
+        actions,
+        args: [],
+        push_tx: pushTx,
+      };
+
+      if (contractPaysFees) {
+        invokeParams.contract_pays_fees = true;
+      }
+
+      const requestParams = {
+        method: 'htr_sendNanoContractTx',
+        params: invokeParams,
+      };
+
+      try {
+        let response;
+
+        if (dryRun) {
+          response = null;
+        } else {
+          if (onDeepLinkAvailable) {
+            const deepLinkUrl = generateHathorWalletRequestDeepLink(session.topic);
+            onDeepLinkAvailable(deepLinkUrl, 'Fee Withdraw');
+          }
+
+          response = await client.request({
+            topic: session.topic,
+            chainId: HATHOR_TESTNET_CHAIN,
+            request: requestParams,
+          });
+        }
+
+        return {
+          request: requestParams,
+          response,
+        };
+      } catch (error) {
+        const errorWithRequest = error as { requestParams?: unknown };
+        errorWithRequest.requestParams = requestParams;
+        throw errorWithRequest;
+      }
+    },
+
+    /**
      * Withdraw Bet Prize
      * Withdraw prize from a bet nano contract
      */

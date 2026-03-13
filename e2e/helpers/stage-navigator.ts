@@ -33,6 +33,10 @@ export const MAIN_QA_STAGES: StageEntry[] = [
   { id: 'rpc-bet-deposit', title: 'Place Bet', groupTitle: 'Bet Nano Contract', url: '/tools/bet-nc/deposit' },
   { id: 'rpc-set-bet-result', title: 'Set Bet Result', groupTitle: 'Bet Nano Contract', url: '/tools/bet-nc/set-result' },
   { id: 'rpc-bet-withdraw', title: 'Withdraw Prize', groupTitle: 'Bet Nano Contract', url: '/tools/bet-nc/withdraw' },
+  // Fee Nano Contract
+  { id: 'rpc-fee-initialize', title: 'Initialize Fee', groupTitle: 'Fee Nano Contract', url: '/tools/fee-nc/initialize' },
+  { id: 'rpc-fee-deposit', title: 'Deposit Fee Token', groupTitle: 'Fee Nano Contract', url: '/tools/fee-nc/deposit' },
+  { id: 'rpc-fee-withdraw', title: 'Withdraw Fee Token', groupTitle: 'Fee Nano Contract', url: '/tools/fee-nc/withdraw' },
   // Push Notification
   { id: 'push-notifications', title: 'Push Notifications', groupTitle: 'Push Notification', url: '/tools/notifications/push' },
   // Auditing

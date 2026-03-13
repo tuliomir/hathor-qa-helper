@@ -23,6 +23,9 @@ import { BetInitializeStage } from './stages/BetInitializeStage';
 import { BetDepositStage } from './stages/BetDepositStage';
 import { SetBetResultStage } from './stages/SetBetResultStage';
 import { BetWithdrawStage } from './stages/BetWithdrawStage';
+import { FeeInitializeStage } from './stages/FeeInitializeStage';
+import { FeeDepositStage } from './stages/FeeDepositStage';
+import { FeeWithdrawStage } from './stages/FeeWithdrawStage';
 import PushNotifications from './stages/PushNotifications';
 import { BasicInfoStage } from './stages/BasicInfoStage';
 import { GetAddressStage } from './stages/GetAddressStage';
@@ -48,6 +51,9 @@ const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'rpc-bet-deposit': BetDepositStage,
   'rpc-set-bet-result': SetBetResultStage,
   'rpc-bet-withdraw': BetWithdrawStage,
+  'rpc-fee-initialize': FeeInitializeStage,
+  'rpc-fee-deposit': FeeDepositStage,
+  'rpc-fee-withdraw': FeeWithdrawStage,
   'push-notifications': PushNotifications,
   'transaction-history': TransactionHistory,
   'tx-update-events': TxUpdateEvents,

@@ -5,12 +5,12 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management';
 
 /**
  * Available stage groups
  */
-export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig';
+export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'fee-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig';
 
 /**
  * Stage configuration
@@ -165,6 +165,30 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Withdraw Prize',
         description: 'Withdraw your prize from a bet nano contract',
         icon: '🏆',
+      },
+    ],
+  },
+  {
+    id: 'fee-nano-contracts',
+    title: 'Fee Nano Contract',
+    stages: [
+      {
+        id: 'rpc-fee-initialize',
+        title: 'Initialize Fee',
+        description: 'Initialize a new fee nano contract with an HTR deposit',
+        icon: '💎',
+      },
+      {
+        id: 'rpc-fee-deposit',
+        title: 'Deposit Fee Token',
+        description: 'Deposit a fee-based token into the fee nano contract',
+        icon: '📥',
+      },
+      {
+        id: 'rpc-fee-withdraw',
+        title: 'Withdraw Fee Token',
+        description: 'Withdraw a fee-based token from the fee nano contract',
+        icon: '📤',
       },
     ],
   },

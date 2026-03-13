@@ -29,13 +29,13 @@ describe('stageRoutes', () => {
       }
     });
 
-    test('all 22 stages are covered', () => {
+    test('all 25 stages are covered', () => {
       const totalStages = STAGE_GROUPS.reduce(
         (sum, group) => sum + group.stages.length,
         0,
       );
-      expect(totalStages).toBe(22);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(22);
+      expect(totalStages).toBe(25);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(25);
     });
   });
 
@@ -59,6 +59,12 @@ describe('stageRoutes', () => {
       expect(getStageUrl('rpc-bet-withdraw')).toBe('/tools/bet-nc/withdraw');
     });
 
+    test('builds correct URL for fee-nano-contracts stages', () => {
+      expect(getStageUrl('rpc-fee-initialize')).toBe('/tools/fee-nc/initialize');
+      expect(getStageUrl('rpc-fee-deposit')).toBe('/tools/fee-nc/deposit');
+      expect(getStageUrl('rpc-fee-withdraw')).toBe('/tools/fee-nc/withdraw');
+    });
+
     test('builds correct URL for push-notifications', () => {
       expect(getStageUrl('push-notifications')).toBe('/tools/notifications/push');
     });
@@ -79,6 +85,9 @@ describe('stageRoutes', () => {
       expect(getStageIdFromSlugs('main', 'wallet-initialization')).toBe('wallet-initialization');
       expect(getStageIdFromSlugs('rpc', 'connection')).toBe('rpc-connection');
       expect(getStageIdFromSlugs('bet-nc', 'initialize')).toBe('rpc-bet-initialize');
+      expect(getStageIdFromSlugs('fee-nc', 'initialize')).toBe('rpc-fee-initialize');
+      expect(getStageIdFromSlugs('fee-nc', 'deposit')).toBe('rpc-fee-deposit');
+      expect(getStageIdFromSlugs('fee-nc', 'withdraw')).toBe('rpc-fee-withdraw');
       expect(getStageIdFromSlugs('notifications', 'push')).toBe('push-notifications');
       expect(getStageIdFromSlugs('auditing', 'transaction-history')).toBe('transaction-history');
       expect(getStageIdFromSlugs('multisig', 'wallet-management')).toBe('multisig-wallet-management');
@@ -103,6 +112,7 @@ describe('stageRoutes', () => {
       expect(getGroupIdFromSlug('main')).toBe('main-qa');
       expect(getGroupIdFromSlug('rpc')).toBe('rpc');
       expect(getGroupIdFromSlug('bet-nc')).toBe('bet-nano-contracts');
+      expect(getGroupIdFromSlug('fee-nc')).toBe('fee-nano-contracts');
       expect(getGroupIdFromSlug('notifications')).toBe('push-notifications');
       expect(getGroupIdFromSlug('auditing')).toBe('auditing');
       expect(getGroupIdFromSlug('multisig')).toBe('multisig');

@@ -14,6 +14,7 @@ export const GROUP_SLUG_MAP: Record<GroupId, string> = {
   'main-qa': 'main',
   'rpc': 'rpc',
   'bet-nano-contracts': 'bet-nc',
+  'fee-nano-contracts': 'fee-nc',
   'push-notifications': 'notifications',
   'auditing': 'auditing',
   'multisig': 'multisig',
@@ -42,6 +43,10 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   'rpc-bet-deposit': 'deposit',
   'rpc-set-bet-result': 'set-result',
   'rpc-bet-withdraw': 'withdraw',
+  // Fee Nano Contract
+  'rpc-fee-initialize': 'initialize',
+  'rpc-fee-deposit': 'deposit',
+  'rpc-fee-withdraw': 'withdraw',
   // Push Notifications
   'push-notifications': 'push',
   // Auditing
