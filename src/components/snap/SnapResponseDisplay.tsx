@@ -12,6 +12,7 @@ import { ExplorerLink } from '../common/ExplorerLink';
 import { TransactionResponseDisplay } from '../common/TransactionResponseDisplay';
 import { safeStringify } from '../../utils/betHelpers';
 import { RpcResponseType } from '../../constants/snap';
+import { parseSnapResponse, isSnapEnvelope, isTransactionLike, safeDisplayValue } from '../../utils/snapResponseHelpers';
 
 /* ------------------------------------------------------------------ */
 /*  JSON Syntax Highlighting                                          */
@@ -57,38 +58,9 @@ function JsonHighlight({ json }: { json: string }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Helpers                                                           */
+/*  Helpers (parseSnapResponse, isSnapEnvelope, isTransactionLike,    */
+/*  safeDisplayValue imported from utils/snapResponseHelpers)         */
 /* ------------------------------------------------------------------ */
-
-function parseResponse(data: unknown): unknown {
-  if (typeof data === 'string') {
-    try { return JSON.parse(data); } catch { return data; }
-  }
-  return data;
-}
-
-interface EnvelopeResponse {
-  type: number;
-  response: unknown;
-}
-
-function isEnvelope(data: unknown): data is EnvelopeResponse {
-  return !!(
-    data &&
-    typeof data === 'object' &&
-    'type' in data &&
-    typeof (data as Record<string, unknown>).type === 'number' &&
-    'response' in data
-  );
-}
-
-function isTransactionLike(data: unknown): boolean {
-  if (!data || typeof data !== 'object') return false;
-  const obj = data as Record<string, unknown>;
-  if ('hash' in obj && ('inputs' in obj || 'outputs' in obj)) return true;
-  if ('type' in obj && 'response' in obj) return isTransactionLike(obj.response);
-  return false;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Field Box (reusable labeled field, matches RPC card style)        */
@@ -122,12 +94,12 @@ function FieldBox({ label, value, copyable = false, mono = true }: {
 /* ------------------------------------------------------------------ */
 
 /** type 2 - htr_getAddress */
-function RenderGetAddress({ data }: { data: { address?: string; index?: number; addressPath?: string } }) {
+function RenderGetAddress({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-3">
-      <FieldBox label="address" value={data.address || 'N/A'} copyable />
-      <FieldBox label="index" value={String(data.index ?? 'N/A')} />
-      <FieldBox label="addressPath" value={data.addressPath || 'N/A'} copyable />
+      <FieldBox label="address" value={safeDisplayValue(data.address)} copyable />
+      <FieldBox label="index" value={safeDisplayValue(data.index)} />
+      <FieldBox label="addressPath" value={safeDisplayValue(data.addressPath)} copyable />
     </div>
   );
 }
@@ -178,7 +150,7 @@ function RenderGetBalance({ data }: { data: Array<{
             <div className="grid grid-cols-2 gap-4 mb-3">
               <div>
                 <div className="text-xs text-muted mb-1">Transactions</div>
-                <div className="text-base font-semibold">{item.transactions ?? 0}</div>
+                <div className="text-base font-semibold">{safeDisplayValue(item.transactions, '0')}</div>
               </div>
               <div>
                 <div className="text-xs text-muted mb-1">Lock Expires</div>
@@ -230,86 +202,75 @@ function RenderGetBalance({ data }: { data: Array<{
 }
 
 /** type 4 - htr_getConnectedNetwork */
-function RenderGetNetwork({ data }: { data: { network?: string; genesisHash?: string } }) {
+function RenderGetNetwork({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-3">
-      <FieldBox label="network" value={data.network || 'N/A'} />
+      <FieldBox label="network" value={safeDisplayValue(data.network)} />
       {data.genesisHash !== undefined && (
-        <FieldBox label="genesisHash" value={data.genesisHash || '(empty)'} copyable={!!data.genesisHash} />
+        <FieldBox label="genesisHash" value={safeDisplayValue(data.genesisHash, '(empty)')} copyable={!!data.genesisHash} />
       )}
     </div>
   );
 }
 
 /** type 5 - htr_getUtxos */
-function RenderGetUtxos({ data }: { data: {
-  total_amount_available: number;
-  total_utxos_available: number;
-  total_amount_locked: number;
-  total_utxos_locked: number;
-  utxos: Array<{
-    address: string;
-    amount: number;
-    tx_id: string;
-    locked: boolean;
-    index: number;
-  }>;
-} }) {
+function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
+  const utxos = Array.isArray(data.utxos) ? data.utxos as Record<string, unknown>[] : [];
   return (
     <div className="space-y-4">
       {/* Summary Statistics */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border border-gray-300 rounded p-3">
           <p className="text-xs text-muted mb-1">Total Amount Available</p>
-          <p className="text-lg font-bold font-mono m-0">{data.total_amount_available}</p>
+          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_amount_available, '0')}</p>
         </div>
         <div className="bg-white border border-gray-300 rounded p-3">
           <p className="text-xs text-muted mb-1">Total UTXOs Available</p>
-          <p className="text-lg font-bold font-mono m-0">{data.total_utxos_available}</p>
+          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_utxos_available, '0')}</p>
         </div>
         <div className="bg-white border border-gray-300 rounded p-3">
           <p className="text-xs text-muted mb-1">Total Amount Locked</p>
-          <p className="text-lg font-bold font-mono m-0">{data.total_amount_locked}</p>
+          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_amount_locked, '0')}</p>
         </div>
         <div className="bg-white border border-gray-300 rounded p-3">
           <p className="text-xs text-muted mb-1">Total UTXOs Locked</p>
-          <p className="text-lg font-bold font-mono m-0">{data.total_utxos_locked}</p>
+          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_utxos_locked, '0')}</p>
         </div>
       </div>
 
       {/* UTXOs List */}
-      {data.utxos && data.utxos.length > 0 && (
+      {utxos.length > 0 && (
         <div className="bg-white border border-gray-300 rounded overflow-hidden">
           <div className="bg-gray-100 px-3 py-2 border-b border-gray-300">
-            <span className="text-sm font-semibold text-primary">UTXOs ({data.utxos.length})</span>
+            <span className="text-sm font-semibold text-primary">UTXOs ({utxos.length})</span>
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {data.utxos.map((utxo, index) => (
+            {utxos.map((utxo, index) => (
               <div
-                key={`${utxo.tx_id}-${utxo.index}`}
+                key={`${safeDisplayValue(utxo.tx_id, index.toString())}-${safeDisplayValue(utxo.index, '0')}`}
                 className={`p-3 ${index > 0 ? 'border-t border-gray-200' : ''}`}
               >
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="text-muted">Address:</span>
-                    <p className="font-mono text-2xs break-all mt-1 mb-0">{utxo.address}</p>
+                    <p className="font-mono text-2xs break-all mt-1 mb-0">{safeDisplayValue(utxo.address)}</p>
                   </div>
                   <div>
                     <span className="text-muted">Amount:</span>
-                    <p className="font-mono font-semibold mt-1 mb-0">{utxo.amount}</p>
+                    <p className="font-mono font-semibold mt-1 mb-0">{safeDisplayValue(utxo.amount, '0')}</p>
                   </div>
                   <div className="col-span-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
                         <span className="text-muted">TX ID:</span>
-                        <p className="font-mono text-2xs break-all mt-1 mb-0">{utxo.tx_id}</p>
+                        <p className="font-mono text-2xs break-all mt-1 mb-0">{safeDisplayValue(utxo.tx_id)}</p>
                       </div>
-                      <ExplorerLink hash={utxo.tx_id} network="testnet" />
+                      {typeof utxo.tx_id === 'string' && <ExplorerLink hash={utxo.tx_id} network="testnet" />}
                     </div>
                   </div>
                   <div>
                     <span className="text-muted">Index:</span>
-                    <p className="font-mono mt-1 mb-0">{utxo.index}</p>
+                    <p className="font-mono mt-1 mb-0">{safeDisplayValue(utxo.index)}</p>
                   </div>
                   <div>
                     <span className="text-muted">Status:</span>
@@ -328,7 +289,7 @@ function RenderGetUtxos({ data }: { data: {
         </div>
       )}
 
-      {data.utxos && data.utxos.length === 0 && (
+      {utxos.length === 0 && (
         <div className="bg-gray-50 border border-gray-300 rounded p-4 text-center">
           <p className="text-muted m-0">No UTXOs found</p>
         </div>
@@ -338,40 +299,44 @@ function RenderGetUtxos({ data }: { data: {
 }
 
 /** type 10 - htr_changeNetwork */
-function RenderChangeNetwork({ data }: { data: { newNetwork?: string } }) {
+function RenderChangeNetwork({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-3">
-      <FieldBox label="newNetwork" value={data.newNetwork || 'N/A'} />
+      <FieldBox label="newNetwork" value={safeDisplayValue(data.newNetwork)} />
     </div>
   );
 }
 
 /** type 11 - htr_getXpub */
-function RenderGetXpub({ data }: { data: { xpub?: string } }) {
+function RenderGetXpub({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-3">
-      <FieldBox label="xpub" value={data.xpub || 'N/A'} copyable />
+      <FieldBox label="xpub" value={safeDisplayValue(data.xpub)} copyable />
     </div>
   );
 }
 
 /** type 12 - htr_getWalletInformation */
-function RenderGetWalletInformation({ data }: { data: { network?: string; address0?: string } }) {
+function RenderGetWalletInformation({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-3">
-      <FieldBox label="network" value={data.network || 'N/A'} />
-      <FieldBox label="address0" value={data.address0 || 'N/A'} copyable />
+      <FieldBox label="network" value={safeDisplayValue(data.network)} />
+      <FieldBox label="address0" value={safeDisplayValue(data.address0)} copyable />
     </div>
   );
 }
 
 /** type 1 - htr_signWithAddress */
-function RenderSignWithAddress({ data }: { data: { signature?: string; address?: string; message?: string } }) {
+function RenderSignWithAddress({ data }: { data: Record<string, unknown> }) {
+  // The snap may return address as an object {address, index, addressPath} or a string
+  const addressVal = data.address && typeof data.address === 'object'
+    ? (data.address as Record<string, unknown>).address
+    : data.address;
   return (
     <div className="space-y-3">
-      {data.signature && <FieldBox label="signature" value={data.signature} copyable />}
-      {data.address && <FieldBox label="address" value={data.address} copyable />}
-      {data.message && <FieldBox label="message" value={data.message} />}
+      {data.signature && <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable />}
+      {addressVal && <FieldBox label="address" value={safeDisplayValue(addressVal)} copyable />}
+      {data.message && <FieldBox label="message" value={safeDisplayValue(data.message)} />}
     </div>
   );
 }
@@ -418,7 +383,7 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({
   response,
   showRaw = false,
 }) => {
-  const parsed = parseResponse(response);
+  const parsed = parseSnapResponse(response);
 
   // Raw mode: highlighted JSON
   if (showRaw) {
@@ -435,14 +400,14 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({
   }
 
   // Check for {type, response} envelope
-  if (isEnvelope(parsed)) {
+  if (isSnapEnvelope(parsed)) {
     const { type, response: inner } = parsed;
     let formatted: React.ReactNode = null;
 
     switch (type) {
       case RpcResponseType.GetAddress:
         if (inner && typeof inner === 'object') {
-          formatted = <RenderGetAddress data={inner as Parameters<typeof RenderGetAddress>[0]['data']} />;
+          formatted = <RenderGetAddress data={inner as Record<string, unknown>} />;
         }
         break;
 
@@ -454,19 +419,19 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({
 
       case RpcResponseType.GetConnectedNetwork:
         if (inner && typeof inner === 'object') {
-          formatted = <RenderGetNetwork data={inner as Parameters<typeof RenderGetNetwork>[0]['data']} />;
+          formatted = <RenderGetNetwork data={inner as Record<string, unknown>} />;
         }
         break;
 
       case RpcResponseType.GetUtxos:
         if (inner && typeof inner === 'object') {
-          formatted = <RenderGetUtxos data={inner as Parameters<typeof RenderGetUtxos>[0]['data']} />;
+          formatted = <RenderGetUtxos data={inner as Record<string, unknown>} />;
         }
         break;
 
       case RpcResponseType.SignWithAddress:
         if (inner && typeof inner === 'object') {
-          formatted = <RenderSignWithAddress data={inner as Parameters<typeof RenderSignWithAddress>[0]['data']} />;
+          formatted = <RenderSignWithAddress data={inner as Record<string, unknown>} />;
         }
         break;
 
@@ -478,19 +443,19 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({
 
       case RpcResponseType.ChangeNetwork:
         if (inner && typeof inner === 'object') {
-          formatted = <RenderChangeNetwork data={inner as Parameters<typeof RenderChangeNetwork>[0]['data']} />;
+          formatted = <RenderChangeNetwork data={inner as Record<string, unknown>} />;
         }
         break;
 
       case RpcResponseType.GetXpub:
         if (inner && typeof inner === 'object') {
-          formatted = <RenderGetXpub data={inner as Parameters<typeof RenderGetXpub>[0]['data']} />;
+          formatted = <RenderGetXpub data={inner as Record<string, unknown>} />;
         }
         break;
 
       case RpcResponseType.GetWalletInformation:
         if (inner && typeof inner === 'object') {
-          formatted = <RenderGetWalletInformation data={inner as Parameters<typeof RenderGetWalletInformation>[0]['data']} />;
+          formatted = <RenderGetWalletInformation data={inner as Record<string, unknown>} />;
         }
         break;
 

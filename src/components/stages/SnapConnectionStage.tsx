@@ -96,14 +96,10 @@ export const SnapConnectionStage: React.FC = () => {
   const fetchWalletInfo = useCallback(async () => {
     setIsFetchingWalletInfo(true);
     try {
-      const [addrRes, netRes] = await Promise.all([
-        invokeSnap({ method: 'htr_getAddress', params: { type: 'index', index: 0 } }),
-        invokeSnap({ method: 'htr_getConnectedNetwork' }),
-      ]);
-      const addrParsed = typeof addrRes === 'string' ? JSON.parse(addrRes) : addrRes;
-      const netParsed = typeof netRes === 'string' ? JSON.parse(netRes) : netRes;
-      const address = addrParsed?.response?.address ?? null;
-      const network = netParsed?.response?.network ?? null;
+      const res = await invokeSnap({ method: 'htr_getWalletInformation' });
+      const parsed = typeof res === 'string' ? JSON.parse(res) : res;
+      const address = parsed?.response?.address0 ?? null;
+      const network = parsed?.response?.network ?? null;
       if (address && network) {
         dispatch(setSnapWalletInfo({ address, network }));
       }
@@ -120,6 +116,10 @@ export const SnapConnectionStage: React.FC = () => {
     try {
       await requestSnap();
       showToast('Snap connected successfully', 'success');
+      // Scroll sidebar to the snaps group so stages are visible
+      setTimeout(() => {
+        document.getElementById('stage-group-snaps')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     } catch (err) {
       const msg = extractErrorMessage(err);
       dispatch(setSnapError(msg));

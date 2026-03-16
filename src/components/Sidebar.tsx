@@ -19,7 +19,7 @@ interface AccordionGroupProps {
 
 function AccordionGroup({ group, isExpanded, onToggle, currentStage, onStageClick }: AccordionGroupProps) {
   return (
-    <div className="border-2 border-border rounded-lg overflow-hidden">
+    <div id={`stage-group-${group.id}`} className="border-2 border-border rounded-lg overflow-hidden">
       {/* Accordion Header */}
       <button
         onClick={onToggle}

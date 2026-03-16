@@ -65,14 +65,10 @@ function JsonHighlight({ json }: { json: string }) {
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
 
-function isUserRejection(err: unknown): boolean {
-  if (!err) return false;
-  if (typeof err === 'object' && 'code' in (err as Record<string, unknown>)) {
-    if ((err as Record<string, unknown>).code === 4001) return true;
-  }
-  const msg = extractErrorMessage(err).toLowerCase();
-  return /reject|denied|cancel/i.test(msg);
-}
+// Rejection detection moved to utils/snapErrors for testability
+// Keeping this as a thin re-export wrapper for the component
+import { isSnapUserRejection } from '../../utils/snapErrors';
+const isUserRejection = isSnapUserRejection;
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */
