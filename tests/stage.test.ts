@@ -54,7 +54,7 @@ describe('stage types', () => {
       const snaps = STAGE_GROUPS.find((g) => g.id === 'snaps');
       expect(snaps).toBeDefined();
       expect(snaps!.title).toBe('MetaMask Snaps');
-      expect(snaps!.stages).toHaveLength(12);
+      expect(snaps!.stages).toHaveLength(14);
     });
 
     test('all groups have required properties', () => {
@@ -141,6 +141,8 @@ describe('stage types', () => {
       expect(getGroupForStage('snap-connection')).toBe('snaps');
       expect(getGroupForStage('snap-get-address')).toBe('snaps');
       expect(getGroupForStage('snap-change-network')).toBe('snaps');
+      expect(getGroupForStage('snap-get-xpub')).toBe('snaps');
+      expect(getGroupForStage('snap-get-wallet-info')).toBe('snaps');
     });
 
     test('returns null for invalid stage id', () => {
@@ -197,6 +199,8 @@ describe('stage types', () => {
       'snap-send-transaction',
       'snap-sign-oracle-data',
       'snap-change-network',
+      'snap-get-xpub',
+      'snap-get-wallet-info',
     ];
 
     expectedStages.forEach((stageId) => {

@@ -44,6 +44,8 @@ import { SnapSendNanoContractTxStage } from './stages/SnapSendNanoContractTxStag
 import { SnapCreateNcTokenStage } from './stages/SnapCreateNcTokenStage';
 import { SnapSignOracleDataStage } from './stages/SnapSignOracleDataStage';
 import { SnapChangeNetworkStage } from './stages/SnapChangeNetworkStage';
+import { SnapGetXpubStage } from './stages/SnapGetXpubStage';
+import { SnapGetWalletInfoStage } from './stages/SnapGetWalletInfoStage';
 
 const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'wallet-initialization': WalletInitialization,
@@ -83,6 +85,8 @@ const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'snap-create-nc-token': SnapCreateNcTokenStage,
   'snap-sign-oracle-data': SnapSignOracleDataStage,
   'snap-change-network': SnapChangeNetworkStage,
+  'snap-get-xpub': SnapGetXpubStage,
+  'snap-get-wallet-info': SnapGetWalletInfoStage,
 };
 
 export default function StageContent() {

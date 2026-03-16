@@ -34,8 +34,8 @@ describe('stageRoutes', () => {
         (sum, group) => sum + group.stages.length,
         0,
       );
-      expect(totalStages).toBe(37);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(37);
+      expect(totalStages).toBe(39);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(39);
     });
   });
 
@@ -92,6 +92,8 @@ describe('stageRoutes', () => {
       expect(getStageUrl('snap-create-nc-token')).toBe('/tools/snaps/nc-create-token');
       expect(getStageUrl('snap-sign-oracle-data')).toBe('/tools/snaps/sign-oracle-data');
       expect(getStageUrl('snap-change-network')).toBe('/tools/snaps/change-network');
+      expect(getStageUrl('snap-get-xpub')).toBe('/tools/snaps/get-xpub');
+      expect(getStageUrl('snap-get-wallet-info')).toBe('/tools/snaps/wallet-info');
     });
   });
 
@@ -109,6 +111,8 @@ describe('stageRoutes', () => {
       expect(getStageIdFromSlugs('snaps', 'connection')).toBe('snap-connection');
       expect(getStageIdFromSlugs('snaps', 'get-address')).toBe('snap-get-address');
       expect(getStageIdFromSlugs('snaps', 'change-network')).toBe('snap-change-network');
+      expect(getStageIdFromSlugs('snaps', 'get-xpub')).toBe('snap-get-xpub');
+      expect(getStageIdFromSlugs('snaps', 'wallet-info')).toBe('snap-get-wallet-info');
     });
 
     test('returns null for invalid group slug', () => {

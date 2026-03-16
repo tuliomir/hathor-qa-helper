@@ -57,6 +57,21 @@ describe('createSnapHandlers', () => {
       expect(result.response).toBeNull();
     });
 
+    test('getXpub returns request with null response', async () => {
+      const result = await handlers.getXpub('testnet');
+      expect(result.request).toEqual({
+        method: 'htr_getXpub',
+        params: { network: 'testnet' },
+      });
+      expect(result.response).toBeNull();
+    });
+
+    test('getWalletInformation returns request with null response', async () => {
+      const result = await handlers.getWalletInformation();
+      expect(result.request).toEqual({ method: 'htr_getWalletInformation' });
+      expect(result.response).toBeNull();
+    });
+
     test('signOracleData returns request with null response', async () => {
       const result = await handlers.signOracleData('nc123', '1x0', 'WdcPHo');
       expect(result.request).toEqual({
@@ -136,6 +151,25 @@ describe('createSnapHandlers', () => {
       expect(result.request).toEqual({
         method: 'htr_createNanoContractCreateTokenTx',
         params,
+      });
+    });
+
+    test('getXpub calls invokeSnap with network', async () => {
+      const result = await handlers.getXpub('mainnet');
+      expect(result.request).toEqual({
+        method: 'htr_getXpub',
+        params: { network: 'mainnet' },
+      });
+      expect(result.response).toEqual({
+        echo: { method: 'htr_getXpub', params: { network: 'mainnet' } },
+      });
+    });
+
+    test('getWalletInformation calls invokeSnap with no params', async () => {
+      const result = await handlers.getWalletInformation();
+      expect(result.request).toEqual({ method: 'htr_getWalletInformation' });
+      expect(result.response).toEqual({
+        echo: { method: 'htr_getWalletInformation' },
       });
     });
   });

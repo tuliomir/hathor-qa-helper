@@ -345,6 +345,25 @@ function RenderChangeNetwork({ data }: { data: { newNetwork?: string } }) {
   );
 }
 
+/** type 11 - htr_getXpub */
+function RenderGetXpub({ data }: { data: { xpub?: string } }) {
+  return (
+    <div className="space-y-3">
+      <FieldBox label="xpub" value={data.xpub || 'N/A'} copyable />
+    </div>
+  );
+}
+
+/** type 12 - htr_getWalletInformation */
+function RenderGetWalletInformation({ data }: { data: { network?: string; address0?: string } }) {
+  return (
+    <div className="space-y-3">
+      <FieldBox label="network" value={data.network || 'N/A'} />
+      <FieldBox label="address0" value={data.address0 || 'N/A'} copyable />
+    </div>
+  );
+}
+
 /** type 8 - htr_signWithAddress */
 function RenderSignWithAddress({ data }: { data: { signature?: string; address?: string; message?: string } }) {
   return (
@@ -459,6 +478,18 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({
       case 10: // changeNetwork
         if (inner && typeof inner === 'object') {
           formatted = <RenderChangeNetwork data={inner as Parameters<typeof RenderChangeNetwork>[0]['data']} />;
+        }
+        break;
+
+      case 11: // getXpub
+        if (inner && typeof inner === 'object') {
+          formatted = <RenderGetXpub data={inner as Parameters<typeof RenderGetXpub>[0]['data']} />;
+        }
+        break;
+
+      case 12: // getWalletInformation
+        if (inner && typeof inner === 'object') {
+          formatted = <RenderGetWalletInformation data={inner as Parameters<typeof RenderGetWalletInformation>[0]['data']} />;
         }
         break;
 

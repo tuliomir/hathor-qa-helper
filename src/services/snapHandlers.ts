@@ -63,5 +63,11 @@ export const createSnapHandlers = (
 
     changeNetwork: (newNetwork: string) =>
       invoke('htr_changeNetwork', { newNetwork }),
+
+    getXpub: (network: string) =>
+      invoke('htr_getXpub', { network }),
+
+    getWalletInformation: () =>
+      invoke('htr_getWalletInformation'),
   };
 };

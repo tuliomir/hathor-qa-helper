@@ -58,6 +58,8 @@ export const MAIN_QA_STAGES: StageEntry[] = [
   { id: 'snap-create-nc-token', title: 'NC + Create Token', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/nc-create-token' },
   { id: 'snap-sign-oracle-data', title: 'Sign Oracle Data', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/sign-oracle-data' },
   { id: 'snap-change-network', title: 'Change Network', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/change-network' },
+  { id: 'snap-get-xpub', title: 'Get Xpub', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/get-xpub' },
+  { id: 'snap-get-wallet-info', title: 'Wallet Information', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/wallet-info' },
 ];
 
 // ─── Mobile QA Sections (/mobile) ────────────────────────────────────────────

@@ -69,6 +69,8 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   'snap-create-nc-token': 'nc-create-token',
   'snap-sign-oracle-data': 'sign-oracle-data',
   'snap-change-network': 'change-network',
+  'snap-get-xpub': 'get-xpub',
+  'snap-get-wallet-info': 'wallet-info',
 };
 
 // ─── Reverse lookup maps (built once at module load) ─────────────────────────

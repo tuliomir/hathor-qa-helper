@@ -5,7 +5,7 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management' | 'snap-connection' | 'snap-get-address' | 'snap-get-balance' | 'snap-get-connected-network' | 'snap-get-utxos' | 'snap-send-transaction' | 'snap-sign-with-address' | 'snap-create-token' | 'snap-send-nano-contract-tx' | 'snap-create-nc-token' | 'snap-sign-oracle-data' | 'snap-change-network';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management' | 'snap-connection' | 'snap-get-address' | 'snap-get-balance' | 'snap-get-connected-network' | 'snap-get-utxos' | 'snap-send-transaction' | 'snap-sign-with-address' | 'snap-create-token' | 'snap-send-nano-contract-tx' | 'snap-create-nc-token' | 'snap-sign-oracle-data' | 'snap-change-network' | 'snap-get-xpub' | 'snap-get-wallet-info';
 
 /**
  * Available stage groups
@@ -315,6 +315,18 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Change Network',
         description: 'Change the connected network via Snap',
         icon: '🔄',
+      },
+      {
+        id: 'snap-get-xpub',
+        title: 'Get Xpub',
+        description: 'Retrieve the wallet extended public key via Snap',
+        icon: '🔑',
+      },
+      {
+        id: 'snap-get-wallet-info',
+        title: 'Wallet Information',
+        description: 'Get wallet network and address via Snap',
+        icon: '📋',
       },
     ],
   },
