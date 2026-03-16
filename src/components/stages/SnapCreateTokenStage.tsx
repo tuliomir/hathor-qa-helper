@@ -5,20 +5,55 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useWalletStore } from '../../hooks/useWalletStore';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { selectSnapAddress } from '../../store/slices/snapSlice';
+import type { RootState } from '../../store';
 import Select from '../common/Select';
+
+/** Reusable row of quick-fill address buttons */
+function AddressButtons({ snapAddress, testWallet, fundingWallet, onFill }: {
+  snapAddress: string | null;
+  testWallet: { instance?: { getAddressAtIndex: (i: number) => Promise<string> } } | null;
+  fundingWallet: { instance?: { getAddressAtIndex: (i: number) => Promise<string> } } | null;
+  onFill: (addr: string) => void;
+}) {
+  const fillTest = async () => {
+    if (!testWallet?.instance) return;
+    try { onFill(await testWallet.instance.getAddressAtIndex(0)); } catch { /* ignore */ }
+  };
+  const fillFund = async () => {
+    if (!fundingWallet?.instance) return;
+    try { onFill(await fundingWallet.instance.getAddressAtIndex(0)); } catch { /* ignore */ }
+  };
+  return (
+    <div className="flex gap-2 mt-1.5">
+      <button type="button" onClick={() => { if (snapAddress) onFill(snapAddress); }} disabled={!snapAddress} className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap" title="Use address 0 from the connected Snap wallet">Snap Addr0</button>
+      <button type="button" onClick={fillTest} disabled={!testWallet?.instance} className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap" title="Use address 0 from the test wallet">Test Addr0</button>
+      <button type="button" onClick={fillFund} disabled={!fundingWallet?.instance} className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap" title="Use address 0 from the funding wallet">Fund Addr0</button>
+    </div>
+  );
+}
 
 export const SnapCreateTokenStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } =
     useSnapMethod('createToken');
 
-  const [name, setName] = useState('');
-  const [symbol, setSymbol] = useState('');
+  const snapAddress = useSelector(selectSnapAddress);
+  const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
+  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
+  const { getWallet } = useWalletStore();
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
+  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
+
+  const [name, setName] = useState('Test Snaps Token');
+  const [symbol, setSymbol] = useState('TSNT');
   const [amount, setAmount] = useState('100');
   const [address, setAddress] = useState('');
-  const [changeAddress, setChangeAddress] = useState('');
+  const [changeAddress, setChangeAddress] = useState(snapAddress ?? '');
   const [createMint, setCreateMint] = useState(false);
   const [mintAuthorityAddress, setMintAuthorityAddress] = useState('');
   const [allowExternalMint, setAllowExternalMint] = useState(false);
@@ -105,10 +140,12 @@ export const SnapCreateTokenStage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium mb-1.5">Address (optional)</label>
             <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Destination address" className="input" />
+            <AddressButtons snapAddress={snapAddress} testWallet={testWallet} fundingWallet={fundingWallet} onFill={setAddress} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Change Address (optional)</label>
             <input type="text" value={changeAddress} onChange={(e) => setChangeAddress(e.target.value)} placeholder="Change address" className="input" />
+            <AddressButtons snapAddress={snapAddress} testWallet={testWallet} fundingWallet={fundingWallet} onFill={setChangeAddress} />
           </div>
 
           {/* Mint Authority */}
@@ -121,6 +158,7 @@ export const SnapCreateTokenStage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium mb-1.5">Mint Authority Address</label>
                 <input type="text" value={mintAuthorityAddress} onChange={(e) => setMintAuthorityAddress(e.target.value)} className="input" />
+                <AddressButtons snapAddress={snapAddress} testWallet={testWallet} fundingWallet={fundingWallet} onFill={setMintAuthorityAddress} />
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={allowExternalMint} onChange={(e) => setAllowExternalMint(e.target.checked)} className="checkbox checkbox-primary" id="snapExtMint" />
@@ -139,6 +177,7 @@ export const SnapCreateTokenStage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium mb-1.5">Melt Authority Address</label>
                 <input type="text" value={meltAuthorityAddress} onChange={(e) => setMeltAuthorityAddress(e.target.value)} className="input" />
+                <AddressButtons snapAddress={snapAddress} testWallet={testWallet} fundingWallet={fundingWallet} onFill={setMeltAuthorityAddress} />
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={allowExternalMelt} onChange={(e) => setAllowExternalMelt(e.target.checked)} className="checkbox checkbox-primary" id="snapExtMelt" />
