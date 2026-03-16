@@ -50,6 +50,13 @@ describe('stage types', () => {
       expect(multisig!.title).toBe('MultiSig');
     });
 
+    test('contains snaps group', () => {
+      const snaps = STAGE_GROUPS.find((g) => g.id === 'snaps');
+      expect(snaps).toBeDefined();
+      expect(snaps!.title).toBe('MetaMask Snaps');
+      expect(snaps!.stages).toHaveLength(12);
+    });
+
     test('all groups have required properties', () => {
       STAGE_GROUPS.forEach((group: StageGroup) => {
         expect(group.id).toBeDefined();
@@ -130,6 +137,12 @@ describe('stage types', () => {
       expect(group).toBe('multisig');
     });
 
+    test('returns correct group for snap stages', () => {
+      expect(getGroupForStage('snap-connection')).toBe('snaps');
+      expect(getGroupForStage('snap-get-address')).toBe('snaps');
+      expect(getGroupForStage('snap-change-network')).toBe('snaps');
+    });
+
     test('returns null for invalid stage id', () => {
       const group = getGroupForStage('invalid-stage' as StageId);
       expect(group).toBeNull();
@@ -178,6 +191,12 @@ describe('stage types', () => {
       'rpc-fee-withdraw',
       'transaction-history',
       'multisig-wallet-management',
+      'snap-connection',
+      'snap-get-address',
+      'snap-get-balance',
+      'snap-send-transaction',
+      'snap-sign-oracle-data',
+      'snap-change-network',
     ];
 
     expectedStages.forEach((stageId) => {

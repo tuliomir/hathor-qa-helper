@@ -5,12 +5,12 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management' | 'snap-connection' | 'snap-get-address' | 'snap-get-balance' | 'snap-get-connected-network' | 'snap-get-utxos' | 'snap-send-transaction' | 'snap-sign-with-address' | 'snap-create-token' | 'snap-send-nano-contract-tx' | 'snap-create-nc-token' | 'snap-sign-oracle-data' | 'snap-change-network';
 
 /**
  * Available stage groups
  */
-export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'fee-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig';
+export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'fee-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig' | 'snaps';
 
 /**
  * Stage configuration
@@ -237,6 +237,84 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'MultiSig Wallets',
         description: 'Manage multisig participant wallets and send transactions',
         icon: '🔐',
+      },
+    ],
+  },
+  {
+    id: 'snaps',
+    title: 'MetaMask Snaps',
+    stages: [
+      {
+        id: 'snap-connection',
+        title: 'Snap Connection',
+        description: 'Connect to MetaMask Snap and configure snap origin',
+        icon: '🦊',
+      },
+      {
+        id: 'snap-get-address',
+        title: 'Get Address',
+        description: 'Retrieve addresses by type and index via Snap',
+        icon: '📍',
+      },
+      {
+        id: 'snap-get-balance',
+        title: 'Get Balance',
+        description: 'Query token balances via Snap',
+        icon: '💰',
+      },
+      {
+        id: 'snap-get-connected-network',
+        title: 'Get Network',
+        description: 'Get the connected network information via Snap',
+        icon: '🌐',
+      },
+      {
+        id: 'snap-get-utxos',
+        title: 'Get UTXOs',
+        description: 'Retrieve unspent transaction outputs via Snap',
+        icon: '📦',
+      },
+      {
+        id: 'snap-send-transaction',
+        title: 'Send Transaction',
+        description: 'Send a transaction with outputs via Snap',
+        icon: '📤',
+      },
+      {
+        id: 'snap-sign-with-address',
+        title: 'Sign with Address',
+        description: 'Sign a message using a specific address via Snap',
+        icon: '✍️',
+      },
+      {
+        id: 'snap-create-token',
+        title: 'Create Token',
+        description: 'Create a new custom token via Snap',
+        icon: '🪙',
+      },
+      {
+        id: 'snap-send-nano-contract-tx',
+        title: 'Nano Contract TX',
+        description: 'Send a nano contract transaction via Snap',
+        icon: '📜',
+      },
+      {
+        id: 'snap-create-nc-token',
+        title: 'NC + Create Token',
+        description: 'Create a nano contract with token creation via Snap',
+        icon: '🔗',
+      },
+      {
+        id: 'snap-sign-oracle-data',
+        title: 'Sign Oracle Data',
+        description: 'Sign oracle data for a nano contract via Snap',
+        icon: '🔮',
+      },
+      {
+        id: 'snap-change-network',
+        title: 'Change Network',
+        description: 'Change the connected network via Snap',
+        icon: '🔄',
       },
     ],
   },

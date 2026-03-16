@@ -18,6 +18,7 @@ export const GROUP_SLUG_MAP: Record<GroupId, string> = {
   'push-notifications': 'notifications',
   'auditing': 'auditing',
   'multisig': 'multisig',
+  'snaps': 'snaps',
 };
 
 // ─── Stage slugs (group prefix stripped where redundant) ─────────────────────
@@ -55,6 +56,19 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   'test-wallet-cleanup': 'test-wallet-cleanup',
   // MultiSig
   'multisig-wallet-management': 'wallet-management',
+  // MetaMask Snaps
+  'snap-connection': 'connection',
+  'snap-get-address': 'get-address',
+  'snap-get-balance': 'get-balance',
+  'snap-get-connected-network': 'get-network',
+  'snap-get-utxos': 'get-utxos',
+  'snap-send-transaction': 'send-transaction',
+  'snap-sign-with-address': 'sign-with-address',
+  'snap-create-token': 'create-token',
+  'snap-send-nano-contract-tx': 'nano-contract-tx',
+  'snap-create-nc-token': 'nc-create-token',
+  'snap-sign-oracle-data': 'sign-oracle-data',
+  'snap-change-network': 'change-network',
 };
 
 // ─── Reverse lookup maps (built once at module load) ─────────────────────────

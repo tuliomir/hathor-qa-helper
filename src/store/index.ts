@@ -41,6 +41,8 @@ import multisigReducer from './slices/multisigSlice';
 import deepLinkReducer from './slices/deepLinkSlice';
 import walletScanReducer from './slices/walletScanSlice';
 import swapTokensReducer from './slices/swapTokensSlice';
+import snapReducer from './slices/snapSlice';
+import snapMethodsReducer from './slices/snapMethodsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -82,6 +84,8 @@ export const store = configureStore({
     deepLink: deepLinkReducer,
     walletScan: walletScanReducer,
     swapTokens: swapTokensReducer,
+    snap: snapReducer,
+    snapMethods: snapMethodsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

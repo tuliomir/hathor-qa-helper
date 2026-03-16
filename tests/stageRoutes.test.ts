@@ -29,13 +29,13 @@ describe('stageRoutes', () => {
       }
     });
 
-    test('all 25 stages are covered', () => {
+    test('all 37 stages are covered', () => {
       const totalStages = STAGE_GROUPS.reduce(
         (sum, group) => sum + group.stages.length,
         0,
       );
-      expect(totalStages).toBe(25);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(25);
+      expect(totalStages).toBe(37);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(37);
     });
   });
 
@@ -78,6 +78,21 @@ describe('stageRoutes', () => {
     test('builds correct URL for multisig stages', () => {
       expect(getStageUrl('multisig-wallet-management')).toBe('/tools/multisig/wallet-management');
     });
+
+    test('builds correct URL for snap stages', () => {
+      expect(getStageUrl('snap-connection')).toBe('/tools/snaps/connection');
+      expect(getStageUrl('snap-get-address')).toBe('/tools/snaps/get-address');
+      expect(getStageUrl('snap-get-balance')).toBe('/tools/snaps/get-balance');
+      expect(getStageUrl('snap-get-connected-network')).toBe('/tools/snaps/get-network');
+      expect(getStageUrl('snap-get-utxos')).toBe('/tools/snaps/get-utxos');
+      expect(getStageUrl('snap-send-transaction')).toBe('/tools/snaps/send-transaction');
+      expect(getStageUrl('snap-sign-with-address')).toBe('/tools/snaps/sign-with-address');
+      expect(getStageUrl('snap-create-token')).toBe('/tools/snaps/create-token');
+      expect(getStageUrl('snap-send-nano-contract-tx')).toBe('/tools/snaps/nano-contract-tx');
+      expect(getStageUrl('snap-create-nc-token')).toBe('/tools/snaps/nc-create-token');
+      expect(getStageUrl('snap-sign-oracle-data')).toBe('/tools/snaps/sign-oracle-data');
+      expect(getStageUrl('snap-change-network')).toBe('/tools/snaps/change-network');
+    });
   });
 
   describe('getStageIdFromSlugs', () => {
@@ -91,6 +106,9 @@ describe('stageRoutes', () => {
       expect(getStageIdFromSlugs('notifications', 'push')).toBe('push-notifications');
       expect(getStageIdFromSlugs('auditing', 'transaction-history')).toBe('transaction-history');
       expect(getStageIdFromSlugs('multisig', 'wallet-management')).toBe('multisig-wallet-management');
+      expect(getStageIdFromSlugs('snaps', 'connection')).toBe('snap-connection');
+      expect(getStageIdFromSlugs('snaps', 'get-address')).toBe('snap-get-address');
+      expect(getStageIdFromSlugs('snaps', 'change-network')).toBe('snap-change-network');
     });
 
     test('returns null for invalid group slug', () => {
@@ -116,6 +134,7 @@ describe('stageRoutes', () => {
       expect(getGroupIdFromSlug('notifications')).toBe('push-notifications');
       expect(getGroupIdFromSlug('auditing')).toBe('auditing');
       expect(getGroupIdFromSlug('multisig')).toBe('multisig');
+      expect(getGroupIdFromSlug('snaps')).toBe('snaps');
     });
 
     test('returns null for invalid slug', () => {

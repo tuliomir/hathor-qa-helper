@@ -32,6 +32,18 @@ import { GetAddressStage } from './stages/GetAddressStage';
 import { RawRpcEditorStage } from './stages/RawRpcEditorStage';
 import TestWalletCleanup from './stages/TestWalletCleanup';
 import MultisigWalletManagement from './stages/MultisigWalletManagement';
+import { SnapConnectionStage } from './stages/SnapConnectionStage';
+import { SnapGetAddressStage } from './stages/SnapGetAddressStage';
+import { SnapGetBalanceStage } from './stages/SnapGetBalanceStage';
+import { SnapGetNetworkStage } from './stages/SnapGetNetworkStage';
+import { SnapGetUtxosStage } from './stages/SnapGetUtxosStage';
+import { SnapSendTransactionStage } from './stages/SnapSendTransactionStage';
+import { SnapSignWithAddressStage } from './stages/SnapSignWithAddressStage';
+import { SnapCreateTokenStage } from './stages/SnapCreateTokenStage';
+import { SnapSendNanoContractTxStage } from './stages/SnapSendNanoContractTxStage';
+import { SnapCreateNcTokenStage } from './stages/SnapCreateNcTokenStage';
+import { SnapSignOracleDataStage } from './stages/SnapSignOracleDataStage';
+import { SnapChangeNetworkStage } from './stages/SnapChangeNetworkStage';
 
 const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'wallet-initialization': WalletInitialization,
@@ -59,6 +71,18 @@ const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'tx-update-events': TxUpdateEvents,
   'test-wallet-cleanup': TestWalletCleanup,
   'multisig-wallet-management': MultisigWalletManagement,
+  'snap-connection': SnapConnectionStage,
+  'snap-get-address': SnapGetAddressStage,
+  'snap-get-balance': SnapGetBalanceStage,
+  'snap-get-connected-network': SnapGetNetworkStage,
+  'snap-get-utxos': SnapGetUtxosStage,
+  'snap-send-transaction': SnapSendTransactionStage,
+  'snap-sign-with-address': SnapSignWithAddressStage,
+  'snap-create-token': SnapCreateTokenStage,
+  'snap-send-nano-contract-tx': SnapSendNanoContractTxStage,
+  'snap-create-nc-token': SnapCreateNcTokenStage,
+  'snap-sign-oracle-data': SnapSignOracleDataStage,
+  'snap-change-network': SnapChangeNetworkStage,
 };
 
 export default function StageContent() {

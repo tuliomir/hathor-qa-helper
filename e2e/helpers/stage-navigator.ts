@@ -45,6 +45,19 @@ export const MAIN_QA_STAGES: StageEntry[] = [
   { id: 'test-wallet-cleanup', title: 'Test Wallet Cleanup', groupTitle: 'Auditing', url: '/tools/auditing/test-wallet-cleanup' },
   // MultiSig
   { id: 'multisig-wallet-management', title: 'MultiSig Wallets', groupTitle: 'MultiSig', url: '/tools/multisig/wallet-management' },
+  // MetaMask Snaps
+  { id: 'snap-connection', title: 'Snap Connection', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/connection' },
+  { id: 'snap-get-address', title: 'Get Address', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/get-address' },
+  { id: 'snap-get-balance', title: 'Get Balance', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/get-balance' },
+  { id: 'snap-get-connected-network', title: 'Get Network', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/get-network' },
+  { id: 'snap-get-utxos', title: 'Get UTXOs', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/get-utxos' },
+  { id: 'snap-send-transaction', title: 'Send Transaction', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/send-transaction' },
+  { id: 'snap-sign-with-address', title: 'Sign with Address', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/sign-with-address' },
+  { id: 'snap-create-token', title: 'Create Token', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/create-token' },
+  { id: 'snap-send-nano-contract-tx', title: 'Nano Contract TX', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/nano-contract-tx' },
+  { id: 'snap-create-nc-token', title: 'NC + Create Token', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/nc-create-token' },
+  { id: 'snap-sign-oracle-data', title: 'Sign Oracle Data', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/sign-oracle-data' },
+  { id: 'snap-change-network', title: 'Change Network', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/change-network' },
 ];
 
 // ─── Mobile QA Sections (/mobile) ────────────────────────────────────────────
