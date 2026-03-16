@@ -14,9 +14,21 @@ describe('createSnapHandlers', () => {
   describe('dry-run mode', () => {
     const handlers = createSnapHandlers(mockInvokeSnap, true);
 
-    test('getAddress returns request with null response', async () => {
+    test('getAddress with index type includes index param', async () => {
       const result = await handlers.getAddress('index', 0);
       expect(result.request).toEqual({ method: 'htr_getAddress', params: { type: 'index', index: 0 } });
+      expect(result.response).toBeNull();
+    });
+
+    test('getAddress with first_empty type omits index param', async () => {
+      const result = await handlers.getAddress('first_empty');
+      expect(result.request).toEqual({ method: 'htr_getAddress', params: { type: 'first_empty' } });
+      expect(result.response).toBeNull();
+    });
+
+    test('getAddress with client type omits index param', async () => {
+      const result = await handlers.getAddress('client');
+      expect(result.request).toEqual({ method: 'htr_getAddress', params: { type: 'client' } });
       expect(result.response).toBeNull();
     });
 
@@ -85,15 +97,36 @@ describe('createSnapHandlers', () => {
   describe('live mode', () => {
     const handlers = createSnapHandlers(mockInvokeSnap, false);
 
-    test('getAddress calls invokeSnap and returns response', async () => {
-      const result = await handlers.getAddress('first_empty', 0);
+    test('getAddress with index calls invokeSnap with index param', async () => {
+      const result = await handlers.getAddress('index', 3);
       expect(result.request).toEqual({
         method: 'htr_getAddress',
-        params: { type: 'first_empty', index: 0 },
+        params: { type: 'index', index: 3 },
       });
-      // mockInvokeSnap echoes back the request
       expect(result.response).toEqual({
-        echo: { method: 'htr_getAddress', params: { type: 'first_empty', index: 0 } },
+        echo: { method: 'htr_getAddress', params: { type: 'index', index: 3 } },
+      });
+    });
+
+    test('getAddress with first_empty calls invokeSnap without index', async () => {
+      const result = await handlers.getAddress('first_empty');
+      expect(result.request).toEqual({
+        method: 'htr_getAddress',
+        params: { type: 'first_empty' },
+      });
+      expect(result.response).toEqual({
+        echo: { method: 'htr_getAddress', params: { type: 'first_empty' } },
+      });
+    });
+
+    test('getAddress with client calls invokeSnap without index', async () => {
+      const result = await handlers.getAddress('client');
+      expect(result.request).toEqual({
+        method: 'htr_getAddress',
+        params: { type: 'client' },
+      });
+      expect(result.response).toEqual({
+        echo: { method: 'htr_getAddress', params: { type: 'client' } },
       });
     });
 

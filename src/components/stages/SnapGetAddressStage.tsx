@@ -10,19 +10,24 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import Select from '../common/Select';
 
+const ADDRESS_TYPES = ['index', 'first_empty', 'client'] as const;
+
 export const SnapGetAddressStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getAddress');
 
   const [type, setType] = useState<string>('index');
   const [index, setIndex] = useState<number>(0);
 
-  const liveRequest = useMemo(
-    () => ({ method: 'htr_getAddress', params: { type, index } }),
-    [type, index],
-  );
+  const needsIndex = type === 'index';
+
+  const liveRequest = useMemo(() => {
+    const params: Record<string, unknown> = { type };
+    if (needsIndex) params.index = index;
+    return { method: 'htr_getAddress', params };
+  }, [type, index, needsIndex]);
 
   const handleExecute = () =>
-    execute((h) => h.getAddress(type, index));
+    execute((h) => h.getAddress(type, needsIndex ? index : undefined));
 
   return (
     <div className="max-w-300 mx-auto">
@@ -48,21 +53,30 @@ export const SnapGetAddressStage: React.FC = () => {
               value={type}
               onChange={(e) => setType(e.target.value)}
             >
-              <option value="index">Index</option>
-              <option value="first_empty">First Empty</option>
-              <option value="client">Client</option>
+              {ADDRESS_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t === 'index' ? 'Index' : t === 'first_empty' ? 'First Empty' : 'Client'}
+                </option>
+              ))}
             </Select>
+            <p className="text-xs text-muted mt-1">
+              {type === 'index' && 'Returns the address at a specific derivation index'}
+              {type === 'first_empty' && 'Returns the first unused address (requires wallet sync)'}
+              {type === 'client' && 'Opens a MetaMask dialog for the user to select an address'}
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Address Index</label>
-            <input
-              type="number"
-              value={index}
-              onChange={(e) => setIndex(parseInt(e.target.value) || 0)}
-              min={0}
-              className="input"
-            />
-          </div>
+          {needsIndex && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Address Index</label>
+              <input
+                type="number"
+                value={index}
+                onChange={(e) => setIndex(parseInt(e.target.value) || 0)}
+                min={0}
+                className="input"
+              />
+            </div>
+          )}
         </SnapMethodCard>
       )}
     </div>

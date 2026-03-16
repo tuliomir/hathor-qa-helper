@@ -31,8 +31,11 @@ export const createSnapHandlers = (
   };
 
   return {
-    getAddress: (type: string, index: number) =>
-      invoke('htr_getAddress', { type, index }),
+    getAddress: (type: string, index?: number) => {
+      const params: Record<string, unknown> = { type };
+      if (type === 'index' && index !== undefined) params.index = index;
+      return invoke('htr_getAddress', params);
+    },
 
     getBalance: (tokens: string[]) =>
       invoke('htr_getBalance', { tokens }),
