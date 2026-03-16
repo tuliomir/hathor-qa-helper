@@ -33,6 +33,9 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
   const [method, setMethod] = useState('initialize');
   const [actions, setActions] = useState<NcAction[]>([]);
   const [argsText, setArgsText] = useState('');
+  const [maxFee, setMaxFee] = useState('');
+  const [contractPaysFees, setContractPaysFees] = useState(false);
+  const [pushTx, setPushTx] = useState(true);
 
   const params = useMemo(() => {
     const p: Record<string, unknown> = { method };
@@ -56,8 +59,12 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
       p.args = argsText.trim() ? [argsText] : [];
     }
 
+    if (maxFee.trim()) p.max_fee = maxFee;
+    if (contractPaysFees) p.contract_pays_fees = true;
+    if (!pushTx) p.push_tx = false;
+
     return p;
-  }, [ncId, blueprintId, method, actions, argsText]);
+  }, [ncId, blueprintId, method, actions, argsText, maxFee, contractPaysFees, pushTx]);
 
   const liveRequest = useMemo(
     () => ({ method: 'htr_sendNanoContractTx', params }),
@@ -136,6 +143,27 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
             <p className="text-xs text-muted mt-1">
               JSON array of arguments for the nano contract method
             </p>
+          </div>
+
+          {/* Max Fee */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Max Fee (optional)</label>
+            <input type="text" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} placeholder="e.g. 100" className="input" />
+            <p className="text-xs text-muted mt-1">
+              Maximum fee willing to pay (in string format)
+            </p>
+          </div>
+
+          {/* Contract Pays Fees */}
+          <div className="flex items-center gap-2">
+            <input type="checkbox" checked={contractPaysFees} onChange={(e) => setContractPaysFees(e.target.checked)} className="checkbox checkbox-primary" />
+            <label className="text-sm font-medium">Contract Pays Fees</label>
+          </div>
+
+          {/* Push Transaction */}
+          <div className="flex items-center gap-2">
+            <input type="checkbox" checked={pushTx} onChange={(e) => setPushTx(e.target.checked)} className="checkbox checkbox-primary" />
+            <label className="text-sm font-medium">Push Transaction</label>
           </div>
         </SnapMethodCard>
       )}

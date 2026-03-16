@@ -117,21 +117,25 @@ QA Helper UI → snapHandlers.ts → useInvokeSnap() → MetaMask → snap onRpc
 - The snap returns responses as JSON strings via `JSONBigInt.stringify()` (BigInt-safe)
 
 ### Response Envelope
-All responses follow `{ type: N, response: ... }` where N is a `RpcResponseTypes` enum value:
-- 2 = GetAddress, 3 = GetBalance, 4 = GetNetwork, 5 = GetUtxos
-- 7 = SignOracleData, 8 = SendTransaction/SignWithAddress, 9 = CreateNcToken
+All responses follow `{ type: N, response: ... }` where N is a `RpcResponseTypes` enum value (0-indexed):
+- 0 = SendNanoContractTx, 1 = SignWithAddress, 2 = GetAddress, 3 = GetBalance
+- 4 = GetConnectedNetwork, 5 = GetUtxos, 6 = CreateToken, 7 = SignOracleData
+- 8 = SendTransaction, 9 = CreateNanoContractCreateTokenTx
 - 10 = ChangeNetwork, 11 = GetXpub, 12 = GetWalletInformation
 
-New methods will have new type numbers — check `RpcResponseTypes` enum.
+These constants are defined in `src/constants/snap.ts` as `RpcResponseType`.
+New methods will have new type numbers — check `RpcResponseTypes` enum in hathor-rpc-handler.
 
 ### Stage Ordering Convention
 Stages are ordered by progressive test complexity in `STAGE_GROUPS`:
 1. Connection
 2. No-approval reads (getNetwork, getWalletInfo)
-3. Read-only with approval (getAddress, getBalance, getUtxos, getXpub)
+3. Read-only with approval (getAddress, getBalance, getUtxos, getXpub, changeNetwork)
 4. Signatures (signWithAddress, signOracleData)
-5. Transactions (sendTransaction, createToken, changeNetwork)
+5. Transactions (sendTransaction, createToken)
 6. Nano contracts (sendNanoContractTx, createNcToken)
+
+Note: changeNetwork is in the snap's `READ_ONLY_METHODS` set (uses read-only wallet).
 
 Place new stages in the appropriate tier.
 

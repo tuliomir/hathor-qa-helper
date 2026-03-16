@@ -16,6 +16,10 @@ export const SnapGetUtxosStage: React.FC = () => {
   const [maxUtxos, setMaxUtxos] = useState<string>('');
   const [amountSmallerThan, setAmountSmallerThan] = useState<string>('');
   const [amountBiggerThan, setAmountBiggerThan] = useState<string>('');
+  const [filterAddress, setFilterAddress] = useState<string>('');
+  const [authorities, setAuthorities] = useState<string>('');
+  const [maximumAmount, setMaximumAmount] = useState<string>('');
+  const [onlyAvailableUtxos, setOnlyAvailableUtxos] = useState<boolean>(false);
 
   const params = useMemo(() => {
     const p: Record<string, unknown> = {};
@@ -23,8 +27,12 @@ export const SnapGetUtxosStage: React.FC = () => {
     if (maxUtxos.trim()) p.maxUtxos = parseInt(maxUtxos);
     if (amountSmallerThan.trim()) p.amountSmallerThan = parseInt(amountSmallerThan);
     if (amountBiggerThan.trim()) p.amountBiggerThan = parseInt(amountBiggerThan);
+    if (filterAddress.trim()) p.filterAddress = filterAddress.trim();
+    if (authorities.trim()) p.authorities = parseInt(authorities);
+    if (maximumAmount.trim()) p.maximumAmount = parseInt(maximumAmount);
+    if (onlyAvailableUtxos) p.onlyAvailableUtxos = true;
     return p;
-  }, [tokenUid, maxUtxos, amountSmallerThan, amountBiggerThan]);
+  }, [tokenUid, maxUtxos, amountSmallerThan, amountBiggerThan, filterAddress, authorities, maximumAmount, onlyAvailableUtxos]);
 
   const liveRequest = useMemo(
     () => ({ method: 'htr_getUtxos', params }),
@@ -88,6 +96,45 @@ export const SnapGetUtxosStage: React.FC = () => {
               onChange={(e) => setAmountBiggerThan(e.target.value)}
               className="input"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Filter Address (optional)</label>
+            <input
+              type="text"
+              value={filterAddress}
+              onChange={(e) => setFilterAddress(e.target.value)}
+              placeholder="Filter by address"
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Authorities (optional)</label>
+            <input
+              type="number"
+              value={authorities}
+              onChange={(e) => setAuthorities(e.target.value)}
+              placeholder="e.g. 1 for mint, 2 for melt"
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Maximum Amount (optional)</label>
+            <input
+              type="number"
+              value={maximumAmount}
+              onChange={(e) => setMaximumAmount(e.target.value)}
+              className="input"
+            />
+          </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={onlyAvailableUtxos}
+                onChange={(e) => setOnlyAvailableUtxos(e.target.checked)}
+              />
+              Only Available UTXOs
+            </label>
           </div>
         </SnapMethodCard>
       )}

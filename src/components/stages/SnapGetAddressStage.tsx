@@ -10,7 +10,7 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import Select from '../common/Select';
 
-const ADDRESS_TYPES = ['index', 'first_empty'] as const;
+const ADDRESS_TYPES = ['index', 'first_empty', 'client'] as const;
 
 export const SnapGetAddressStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getAddress');
@@ -55,13 +55,14 @@ export const SnapGetAddressStage: React.FC = () => {
             >
               {ADDRESS_TYPES.map((t) => (
                 <option key={t} value={t}>
-                  {t === 'index' ? 'Index' : 'First Empty'}
+                  {t === 'index' ? 'Index' : t === 'first_empty' ? 'First Empty' : 'Client'}
                 </option>
               ))}
             </Select>
             <p className="text-xs text-muted mt-1">
               {type === 'index' && 'Returns the address at a specific derivation index'}
               {type === 'first_empty' && 'Returns the first unused address (requires wallet sync)'}
+              {type === 'client' && 'Prompts the MetaMask user to select an address to share'}
             </p>
           </div>
           {needsIndex && (

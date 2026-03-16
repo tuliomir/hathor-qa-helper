@@ -45,10 +45,54 @@ describe('createSnapHandlers', () => {
     });
 
     test('sendTransaction returns request with null response', async () => {
-      const outputs = [{ address: 'W123', value: '10' }];
-      const result = await handlers.sendTransaction(outputs);
+      const result = await handlers.sendTransaction({
+        outputs: [{ address: 'W123', value: '10' }],
+      });
       expect(result.request.method).toBe('htr_sendTransaction');
       expect(result.response).toBeNull();
+    });
+
+    test('sendTransaction includes inputs when provided', async () => {
+      const result = await handlers.sendTransaction({
+        outputs: [{ address: 'W123', value: '10' }],
+        inputs: [{ txId: 'abc', index: 0 }],
+      });
+      expect(result.request).toEqual({
+        method: 'htr_sendTransaction',
+        params: {
+          outputs: [{ address: 'W123', value: '10' }],
+          inputs: [{ txId: 'abc', index: 0 }],
+        },
+      });
+      expect(result.response).toBeNull();
+    });
+
+    test('sendTransaction includes changeAddress when provided', async () => {
+      const result = await handlers.sendTransaction({
+        outputs: [{ address: 'W123', value: '10' }],
+        changeAddress: 'Wchange',
+      });
+      expect(result.request).toEqual({
+        method: 'htr_sendTransaction',
+        params: {
+          outputs: [{ address: 'W123', value: '10' }],
+          changeAddress: 'Wchange',
+        },
+      });
+    });
+
+    test('sendTransaction includes push_tx when provided', async () => {
+      const result = await handlers.sendTransaction({
+        outputs: [{ address: 'W123', value: '10' }],
+        push_tx: false,
+      });
+      expect(result.request).toEqual({
+        method: 'htr_sendTransaction',
+        params: {
+          outputs: [{ address: 'W123', value: '10' }],
+          push_tx: false,
+        },
+      });
     });
 
     test('signWithAddress returns request with null response', async () => {
@@ -155,6 +199,20 @@ describe('createSnapHandlers', () => {
     test('getUtxos with empty params passes empty object', async () => {
       const result = await handlers.getUtxos();
       expect(result.request).toEqual({ method: 'htr_getUtxos', params: {} });
+    });
+
+    test('sendTransaction passes full params with inputs and options', async () => {
+      const params = {
+        outputs: [{ address: 'W123', value: '10', token: '00' }],
+        inputs: [{ txId: 'tx1', index: 0 }],
+        changeAddress: 'Wchange',
+        push_tx: false,
+      };
+      const result = await handlers.sendTransaction(params);
+      expect(result.request).toEqual({ method: 'htr_sendTransaction', params });
+      expect(result.response).toEqual({
+        echo: { method: 'htr_sendTransaction', params },
+      });
     });
 
     test('createToken passes full params', async () => {

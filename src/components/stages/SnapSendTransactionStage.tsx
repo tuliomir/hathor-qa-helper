@@ -22,6 +22,11 @@ interface TxOutput {
   data: string;
 }
 
+interface TxInput {
+  txId: string;
+  index: string;
+}
+
 const emptyOutput = (): TxOutput => ({
   type: 'token',
   address: '',
@@ -43,24 +48,35 @@ export const SnapSendTransactionStage: React.FC = () => {
   const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
 
   const [outputs, setOutputs] = useState<TxOutput[]>([emptyOutput()]);
+  const [inputs, setInputs] = useState<TxInput[]>([]);
+  const [changeAddress, setChangeAddress] = useState('');
+  const [pushTx, setPushTx] = useState(true);
 
-  const builtOutputs = useMemo(
-    () =>
-      outputs.map((o) =>
-        o.type === 'data'
-          ? { data: o.data }
-          : { address: o.address, value: o.value, token: o.token },
-      ),
-    [outputs],
-  );
+  const params = useMemo(() => {
+    const builtOutputs = outputs.map((o) =>
+      o.type === 'data'
+        ? { data: o.data }
+        : { address: o.address, value: o.value, token: o.token },
+    );
+    const p: Record<string, unknown> = { outputs: builtOutputs };
+    if (changeAddress.trim()) p.changeAddress = changeAddress.trim();
+    if (!pushTx) p.push_tx = false;
+    if (inputs.length > 0) {
+      p.inputs = inputs.map((inp) => ({
+        txId: inp.txId,
+        index: Number(inp.index),
+      }));
+    }
+    return p;
+  }, [outputs, changeAddress, pushTx, inputs]);
 
   const liveRequest = useMemo(
-    () => ({ method: 'htr_sendTransaction', params: { outputs: builtOutputs } }),
-    [builtOutputs],
+    () => ({ method: 'htr_sendTransaction', params }),
+    [params],
   );
 
   const handleExecute = () =>
-    execute((h) => h.sendTransaction(builtOutputs as Record<string, unknown>[]));
+    execute((h) => h.sendTransaction(params));
 
   const addOutput = () => setOutputs([...outputs, emptyOutput()]);
   const removeOutput = (i: number) =>
@@ -68,6 +84,14 @@ export const SnapSendTransactionStage: React.FC = () => {
   const updateOutput = (i: number, field: keyof TxOutput, value: string) =>
     setOutputs(
       outputs.map((o, idx) => (idx === i ? { ...o, [field]: value } : o)),
+    );
+
+  const addInput = () => setInputs([...inputs, { txId: '', index: '0' }]);
+  const removeInput = (i: number) =>
+    setInputs(inputs.filter((_, idx) => idx !== i));
+  const updateInput = (i: number, field: keyof TxInput, value: string) =>
+    setInputs(
+      inputs.map((inp, idx) => (idx === i ? { ...inp, [field]: value } : inp)),
     );
 
   const fillSnapAddr = (i: number) => {
@@ -210,6 +234,75 @@ export const SnapSendTransactionStage: React.FC = () => {
           <button onClick={addOutput} className="btn-secondary py-1.5 px-3 text-sm">
             + Add Output
           </button>
+
+          {/* Change Address */}
+          <div className="border border-gray-200 rounded p-4 space-y-3">
+            <span className="text-sm font-medium">Change Address (optional)</span>
+            <input
+              type="text"
+              value={changeAddress}
+              onChange={(e) => setChangeAddress(e.target.value)}
+              placeholder="Address to receive change"
+              className="input"
+            />
+          </div>
+
+          {/* Push Transaction */}
+          <div className="border border-gray-200 rounded p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={pushTx}
+                onChange={(e) => setPushTx(e.target.checked)}
+                className="checkbox checkbox-primary"
+              />
+              <span className="text-sm font-medium">Push Transaction</span>
+            </label>
+            <p className="text-xs text-muted mt-1">
+              When unchecked, the signed transaction is returned without broadcasting.
+            </p>
+          </div>
+
+          {/* Inputs (UTXO selection) */}
+          <div className="border border-gray-200 rounded p-4 space-y-3">
+            <span className="text-sm font-medium">Inputs &mdash; UTXO selection (optional)</span>
+            {inputs.map((inp, i) => (
+              <div key={i} className="border border-gray-200 rounded p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium">Input {i + 1}</span>
+                  <button
+                    onClick={() => removeInput(i)}
+                    className="btn-secondary py-1 px-2 text-xs"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Transaction ID</label>
+                  <input
+                    type="text"
+                    value={inp.txId}
+                    onChange={(e) => updateInput(i, 'txId', e.target.value)}
+                    placeholder="txId"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Output Index</label>
+                  <input
+                    type="text"
+                    value={inp.index}
+                    onChange={(e) => updateInput(i, 'index', e.target.value)}
+                    placeholder="0"
+                    className="input"
+                  />
+                </div>
+              </div>
+            ))}
+            <button onClick={addInput} className="btn-secondary py-1.5 px-3 text-sm">
+              + Add Input
+            </button>
+          </div>
         </SnapMethodCard>
       )}
     </div>

@@ -11,6 +11,7 @@ import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { TransactionResponseDisplay } from '../common/TransactionResponseDisplay';
 import { safeStringify } from '../../utils/betHelpers';
+import { RpcResponseType } from '../../constants/snap';
 
 /* ------------------------------------------------------------------ */
 /*  JSON Syntax Highlighting                                          */
@@ -364,7 +365,7 @@ function RenderGetWalletInformation({ data }: { data: { network?: string; addres
   );
 }
 
-/** type 8 - htr_signWithAddress */
+/** type 1 - htr_signWithAddress */
 function RenderSignWithAddress({ data }: { data: { signature?: string; address?: string; message?: string } }) {
   return (
     <div className="space-y-3">
@@ -375,7 +376,7 @@ function RenderSignWithAddress({ data }: { data: { signature?: string; address?:
   );
 }
 
-/** type 9 - htr_signOracleData */
+/** type 7 - htr_signOracleData */
 function RenderSignOracleData({ data }: { data: Record<string, unknown> }) {
   const { signature, oracle_data, ...rest } = data;
   return (
@@ -439,63 +440,63 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({
     let formatted: React.ReactNode = null;
 
     switch (type) {
-      case 2: // getAddress
+      case RpcResponseType.GetAddress:
         if (inner && typeof inner === 'object') {
           formatted = <RenderGetAddress data={inner as Parameters<typeof RenderGetAddress>[0]['data']} />;
         }
         break;
 
-      case 3: // getBalance
+      case RpcResponseType.GetBalance:
         if (Array.isArray(inner)) {
           formatted = <RenderGetBalance data={inner} />;
         }
         break;
 
-      case 4: // getConnectedNetwork
+      case RpcResponseType.GetConnectedNetwork:
         if (inner && typeof inner === 'object') {
           formatted = <RenderGetNetwork data={inner as Parameters<typeof RenderGetNetwork>[0]['data']} />;
         }
         break;
 
-      case 5: // getUtxos
+      case RpcResponseType.GetUtxos:
         if (inner && typeof inner === 'object') {
           formatted = <RenderGetUtxos data={inner as Parameters<typeof RenderGetUtxos>[0]['data']} />;
         }
         break;
 
-      case 8: // signWithAddress
+      case RpcResponseType.SignWithAddress:
         if (inner && typeof inner === 'object') {
           formatted = <RenderSignWithAddress data={inner as Parameters<typeof RenderSignWithAddress>[0]['data']} />;
         }
         break;
 
-      case 9: // signOracleData
+      case RpcResponseType.SignOracleData:
         if (inner && typeof inner === 'object') {
           formatted = <RenderSignOracleData data={inner as Record<string, unknown>} />;
         }
         break;
 
-      case 10: // changeNetwork
+      case RpcResponseType.ChangeNetwork:
         if (inner && typeof inner === 'object') {
           formatted = <RenderChangeNetwork data={inner as Parameters<typeof RenderChangeNetwork>[0]['data']} />;
         }
         break;
 
-      case 11: // getXpub
+      case RpcResponseType.GetXpub:
         if (inner && typeof inner === 'object') {
           formatted = <RenderGetXpub data={inner as Parameters<typeof RenderGetXpub>[0]['data']} />;
         }
         break;
 
-      case 12: // getWalletInformation
+      case RpcResponseType.GetWalletInformation:
         if (inner && typeof inner === 'object') {
           formatted = <RenderGetWalletInformation data={inner as Parameters<typeof RenderGetWalletInformation>[0]['data']} />;
         }
         break;
 
       default:
-        // For envelope types we don't specifically handle,
-        // check if the inner response is transaction-like
+        // Transaction-like responses (sendTransaction, createToken,
+        // sendNanoContractTx, createNanoContractCreateTokenTx)
         if (isTransactionLike(inner)) {
           formatted = <TransactionResponseDisplay response={inner} network="testnet" />;
         }

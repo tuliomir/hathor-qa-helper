@@ -46,8 +46,8 @@ export const createSnapHandlers = (
     getUtxos: (params?: Record<string, unknown>) =>
       invoke('htr_getUtxos', params ?? {}),
 
-    sendTransaction: (outputs: Record<string, unknown>[]) =>
-      invoke('htr_sendTransaction', { outputs }),
+    sendTransaction: (params: Record<string, unknown>) =>
+      invoke('htr_sendTransaction', params),
 
     signWithAddress: (message: string, addressIndex: number) =>
       invoke('htr_signWithAddress', { message, addressIndex }),

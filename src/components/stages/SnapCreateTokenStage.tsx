@@ -8,6 +8,7 @@ import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import Select from '../common/Select';
 
 export const SnapCreateTokenStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } =
@@ -24,6 +25,8 @@ export const SnapCreateTokenStage: React.FC = () => {
   const [createMelt, setCreateMelt] = useState(false);
   const [meltAuthorityAddress, setMeltAuthorityAddress] = useState('');
   const [allowExternalMelt, setAllowExternalMelt] = useState(false);
+  const [version, setVersion] = useState('');
+  const [pushTx, setPushTx] = useState(true);
   const [dataEntries, setDataEntries] = useState<string[]>([]);
 
   const params = useMemo(() => {
@@ -42,6 +45,8 @@ export const SnapCreateTokenStage: React.FC = () => {
     if (createMelt && meltAuthorityAddress.trim())
       p.melt_authority_address = meltAuthorityAddress;
     if (createMelt) p.allow_external_melt_authority_address = allowExternalMelt;
+    if (version) p.version = version;
+    if (!pushTx) p.push_tx = false;
     const filtered = dataEntries.filter((d) => d.trim() !== '');
     if (filtered.length > 0) p.data = filtered;
     return p;
@@ -49,7 +54,7 @@ export const SnapCreateTokenStage: React.FC = () => {
     name, symbol, amount, address, changeAddress,
     createMint, mintAuthorityAddress, allowExternalMint,
     createMelt, meltAuthorityAddress, allowExternalMelt,
-    dataEntries,
+    version, pushTx, dataEntries,
   ]);
 
   const liveRequest = useMemo(
@@ -88,6 +93,14 @@ export const SnapCreateTokenStage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium mb-1.5">Amount</label>
             <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="100" className="input" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Token Version</label>
+            <Select value={version} onChange={(e) => setVersion(e.target.value)}>
+              <option value="">Default</option>
+              <option value="token_version:fee_token">Fee-based</option>
+              <option value="token_version:deposit_token">Deposit-based</option>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Address (optional)</label>
@@ -133,6 +146,12 @@ export const SnapCreateTokenStage: React.FC = () => {
               </div>
             </>
           )}
+
+          {/* Push Transaction */}
+          <div className="flex items-center gap-2">
+            <input type="checkbox" checked={pushTx} onChange={(e) => setPushTx(e.target.checked)} className="checkbox checkbox-primary" id="snapPushTx" />
+            <label htmlFor="snapPushTx" className="text-sm cursor-pointer">Push Transaction</label>
+          </div>
 
           {/* Data Entries */}
           <div>
