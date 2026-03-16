@@ -244,12 +244,27 @@ export const STAGE_GROUPS: StageGroup[] = [
     id: 'snaps',
     title: 'MetaMask Snaps',
     stages: [
+      // 1. Connection
       {
         id: 'snap-connection',
         title: 'Snap Connection',
         description: 'Connect to MetaMask Snap and configure snap origin',
         icon: '🦊',
       },
+      // 2. No-approval reads
+      {
+        id: 'snap-get-connected-network',
+        title: 'Get Network',
+        description: 'Get the connected network information via Snap',
+        icon: '🌐',
+      },
+      {
+        id: 'snap-get-wallet-info',
+        title: 'Wallet Information',
+        description: 'Get wallet network and address via Snap',
+        icon: '📋',
+      },
+      // 3. Read-only (require approval)
       {
         id: 'snap-get-address',
         title: 'Get Address',
@@ -263,23 +278,18 @@ export const STAGE_GROUPS: StageGroup[] = [
         icon: '💰',
       },
       {
-        id: 'snap-get-connected-network',
-        title: 'Get Network',
-        description: 'Get the connected network information via Snap',
-        icon: '🌐',
-      },
-      {
         id: 'snap-get-utxos',
         title: 'Get UTXOs',
         description: 'Retrieve unspent transaction outputs via Snap',
         icon: '📦',
       },
       {
-        id: 'snap-send-transaction',
-        title: 'Send Transaction',
-        description: 'Send a transaction with outputs via Snap',
-        icon: '📤',
+        id: 'snap-get-xpub',
+        title: 'Get Xpub',
+        description: 'Retrieve the wallet extended public key via Snap',
+        icon: '🔑',
       },
+      // 4. Signatures (no side effects)
       {
         id: 'snap-sign-with-address',
         title: 'Sign with Address',
@@ -287,11 +297,31 @@ export const STAGE_GROUPS: StageGroup[] = [
         icon: '✍️',
       },
       {
+        id: 'snap-sign-oracle-data',
+        title: 'Sign Oracle Data',
+        description: 'Sign oracle data for a nano contract via Snap',
+        icon: '🔮',
+      },
+      // 5. Transactions & token creation
+      {
+        id: 'snap-send-transaction',
+        title: 'Send Transaction',
+        description: 'Send a transaction with outputs via Snap',
+        icon: '📤',
+      },
+      {
         id: 'snap-create-token',
         title: 'Create Token',
         description: 'Create a new custom token via Snap',
         icon: '🪙',
       },
+      {
+        id: 'snap-change-network',
+        title: 'Change Network',
+        description: 'Change the connected network via Snap',
+        icon: '🔄',
+      },
+      // 6. Nano contract stages
       {
         id: 'snap-send-nano-contract-tx',
         title: 'Nano Contract TX',
@@ -303,30 +333,6 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'NC + Create Token',
         description: 'Create a nano contract with token creation via Snap',
         icon: '🔗',
-      },
-      {
-        id: 'snap-sign-oracle-data',
-        title: 'Sign Oracle Data',
-        description: 'Sign oracle data for a nano contract via Snap',
-        icon: '🔮',
-      },
-      {
-        id: 'snap-change-network',
-        title: 'Change Network',
-        description: 'Change the connected network via Snap',
-        icon: '🔄',
-      },
-      {
-        id: 'snap-get-xpub',
-        title: 'Get Xpub',
-        description: 'Retrieve the wallet extended public key via Snap',
-        icon: '🔑',
-      },
-      {
-        id: 'snap-get-wallet-info',
-        title: 'Wallet Information',
-        description: 'Get wallet network and address via Snap',
-        icon: '📋',
       },
     ],
   },
