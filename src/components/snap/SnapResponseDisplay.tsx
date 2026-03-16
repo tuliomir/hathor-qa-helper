@@ -343,14 +343,31 @@ function RenderSignWithAddress({ data }: { data: Record<string, unknown> }) {
 
 /** type 7 - htr_signOracleData */
 function RenderSignOracleData({ data }: { data: Record<string, unknown> }) {
-  const { signature, oracle_data, ...rest } = data;
+  const signedData = data.signedData && typeof data.signedData === 'object'
+    ? data.signedData as Record<string, unknown>
+    : null;
+
   return (
     <div className="space-y-3">
-      {signature && <FieldBox label="signature" value={String(signature)} copyable />}
-      {oracle_data && <FieldBox label="oracle_data" value={String(oracle_data)} copyable />}
-      {Object.entries(rest).map(([k, v]) => (
-        <FieldBox key={k} label={k} value={typeof v === 'object' ? safeStringify(v, 2) as string : String(v)} />
-      ))}
+      <FieldBox label="data" value={safeDisplayValue(data.data)} />
+      <FieldBox label="oracle" value={safeDisplayValue(data.oracle)} copyable />
+
+      {signedData && (
+        <div className="border border-gray-300 rounded overflow-hidden">
+          <div className="bg-gray-100 px-3 py-2 border-b border-gray-300">
+            <span className="text-sm font-semibold text-primary">Signed Data</span>
+          </div>
+          <div className="p-3 space-y-3">
+            <FieldBox label="type" value={safeDisplayValue(signedData.type)} />
+            <FieldBox label="value" value={safeDisplayValue(signedData.value)} />
+            <FieldBox label="signature" value={safeDisplayValue(signedData.signature)} copyable />
+          </div>
+        </div>
+      )}
+
+      {!signedData && data.signature && (
+        <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable />
+      )}
     </div>
   );
 }

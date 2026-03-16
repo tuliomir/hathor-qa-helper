@@ -7,7 +7,6 @@
 
 import React, { useState } from 'react';
 import { ExplorerLink } from './ExplorerLink';
-import type { NetworkType } from '../../constants/network';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -53,7 +52,7 @@ export interface TransactionResponseDisplayProps {
   /** The transaction response data */
   response: unknown;
   /** Network type for explorer links */
-  network: NetworkType;
+  network: string;
   /** Optional: Show NC-specific fields like nc_id, nc_method */
   showNcFields?: boolean;
   /** Optional: Custom label for the hash (e.g., "Nano Contract ID" vs "Transaction Hash") */

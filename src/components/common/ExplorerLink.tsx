@@ -5,12 +5,13 @@
  */
 
 import React from 'react';
-import { DEFAULT_NETWORK, NETWORK_CONFIG, type NetworkType } from '../../constants/network';
+import { DEFAULT_NETWORK } from '../../constants/network';
+import { resolveExplorerUrl } from '../../utils/networkHelpers';
 
 export interface ExplorerLinkProps {
   hash: string;
   specificPage?: 'nc_detail' | 'token_detail';
-  network?: NetworkType;
+  network?: string;
   className?: string;
   children?: React.ReactNode;
 }
@@ -22,7 +23,7 @@ export const ExplorerLink: React.FC<ExplorerLinkProps> = ({
   className = '',
   children,
 }) => {
-  const baseUrl = NETWORK_CONFIG[network].explorerUrl;
+  const baseUrl = resolveExplorerUrl(network);
 
   // Determine the path based on specificPage prop
   let path: string;
