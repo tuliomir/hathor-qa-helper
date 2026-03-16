@@ -60,7 +60,7 @@ export const SnapCreateTokenStage: React.FC = () => {
   const [createMelt, setCreateMelt] = useState(false);
   const [meltAuthorityAddress, setMeltAuthorityAddress] = useState('');
   const [allowExternalMelt, setAllowExternalMelt] = useState(false);
-  const [version, setVersion] = useState('');
+  const [version, setVersion] = useState('deposit');
   const [pushTx, setPushTx] = useState(true);
   const [dataEntries, setDataEntries] = useState<string[]>([]);
 
@@ -132,9 +132,8 @@ export const SnapCreateTokenStage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium mb-1.5">Token Version</label>
             <Select value={version} onChange={(e) => setVersion(e.target.value)}>
-              <option value="">Default</option>
-              <option value="token_version:fee_token">Fee-based</option>
-              <option value="token_version:deposit_token">Deposit-based</option>
+              <option value="deposit">Deposit-based</option>
+              <option value="fee">Fee-based</option>
             </Select>
           </div>
           <div>

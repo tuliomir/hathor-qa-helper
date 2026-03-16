@@ -19,6 +19,34 @@ import type { SnapMethodData } from '../store/slices/snapMethodsSlice';
 import { createSnapHandlers } from '../services/snapHandlers';
 import { extractErrorMessage } from '../utils/errorUtils';
 
+/**
+ * Detect responses that look like errors — MetaMask may resolve instead of
+ * reject for some snap error types, returning the error as a response object.
+ *
+ * The snap stringifies ALL responses via JSONBigInt.stringify(), so error
+ * responses may arrive as JSON strings, not objects.
+ */
+function isErrorLikeResponse(response: unknown): boolean {
+  let obj: Record<string, unknown> | null = null;
+
+  if (response && typeof response === 'object') {
+    obj = response as Record<string, unknown>;
+  } else if (typeof response === 'string') {
+    try {
+      const parsed = JSON.parse(response);
+      if (parsed && typeof parsed === 'object') obj = parsed;
+    } catch { /* not JSON */ }
+  }
+
+  if (!obj) return false;
+
+  // JSON-RPC error shape: { error: { code, message } }
+  if (obj.error && typeof obj.error === 'object') return true;
+  // Snap error shape: { code: negative number, message }
+  if (typeof obj.code === 'number' && obj.code < 0 && typeof obj.message === 'string') return true;
+  return false;
+}
+
 export function useSnapMethod(methodKey: string) {
   const dispatch = useDispatch<AppDispatch>();
   const isSnapConnected = useSelector(selectIsSnapConnected);
@@ -61,6 +89,22 @@ export function useSnapMethod(methodKey: string) {
           }),
         );
 
+        // Guard: detect error-like responses that MetaMask may resolve
+        // instead of reject (e.g., snap errors returned as response objects
+        // or stringified error JSON from the snap)
+        if (isErrorLikeResponse(response)) {
+          // Parse string responses so extractErrorMessage can dig into them
+          const parsed = typeof response === 'string'
+            ? (() => { try { return JSON.parse(response); } catch { return response; } })()
+            : response;
+          const errorMessage = extractErrorMessage(parsed);
+          console.error(`[snap:${methodKey}] Error-like response:`, parsed);
+          dispatch(
+            setSnapMethodError({ methodKey, error: errorMessage, duration }),
+          );
+          throw parsed; // Throw the parsed object so isSnapUserRejection can detect rejections
+        }
+
         dispatch(
           setSnapMethodResponse({ methodKey, response, duration }),
         );
@@ -69,6 +113,7 @@ export function useSnapMethod(methodKey: string) {
       } catch (error) {
         const duration = Date.now() - startTime;
         const errorMessage = extractErrorMessage(error);
+        console.error(`[snap:${methodKey}] Error:`, error);
 
         dispatch(
           setSnapMethodError({ methodKey, error: errorMessage, duration }),

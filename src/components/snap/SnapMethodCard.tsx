@@ -115,6 +115,7 @@ export const SnapMethodCard: React.FC<SnapMethodCardProps> = ({
         'success',
       );
     } catch (err) {
+      console.error(`[SnapMethodCard:${title}] Caught error:`, err);
       if (isUserRejection(err)) {
         setRejected(true);
         showToast('Request rejected in MetaMask', 'warning', { duration: 4000 });
