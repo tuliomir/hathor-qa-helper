@@ -245,6 +245,17 @@ export const SnapSendTransactionStage: React.FC = () => {
               placeholder="Address to receive change"
               className="input"
             />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { if (snapAddress) setChangeAddress(snapAddress); }}
+                disabled={!snapAddress}
+                className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+                title="Use address 0 from the connected Snap wallet"
+              >
+                Snap Addr0
+              </button>
+            </div>
           </div>
 
           {/* Push Transaction */}

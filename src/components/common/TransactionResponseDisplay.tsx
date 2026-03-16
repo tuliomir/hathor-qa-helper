@@ -5,8 +5,9 @@
  * with formatted sections for hash, metadata, inputs, outputs, etc.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ExplorerLink } from './ExplorerLink';
+import CopyButton from './CopyButton';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -68,8 +69,6 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
   hashLabel = 'Transaction Hash',
   hashExplorerPage,
 }) => {
-  const [fullTxExpanded, setFullTxExpanded] = useState(false);
-
   // Render Buffer object
   const renderBuffer = (buffer: { type: string; data: number[] }) => {
     if (buffer.type !== 'Buffer' || !Array.isArray(buffer.data)) {
@@ -152,11 +151,15 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
         {/* Transaction/NC Hash */}
         {tx.hash && (
           <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
+            <div className="bg-green-100 px-3 py-2 border-b border-green-200 flex items-center justify-between">
               <span className="text-sm font-semibold text-green-800">{hashLabel}</span>
+              <div className="flex items-center gap-1.5">
+                <CopyButton text={tx.hash} label="Copy" />
+                <ExplorerLink hash={tx.hash} network={network} specificPage={hashExplorerPage} />
+              </div>
             </div>
             <div className="px-3 py-2">
-              <ExplorerLink hash={tx.hash} network={network} specificPage={hashExplorerPage} />
+              <span className="font-mono text-xs break-all">{tx.hash}</span>
             </div>
           </div>
         )}
@@ -168,7 +171,16 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
               <span className="text-sm font-semibold text-green-800">Nano Contract Details</span>
             </div>
             <div className="px-3 py-2 space-y-1 text-sm">
-              {tx.nc_id && <div><strong>NC ID:</strong> <ExplorerLink hash={tx.nc_id} network={network} specificPage="nc_detail" /></div>}
+              {tx.nc_id && (
+                <div>
+                  <strong>NC ID:</strong>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-mono text-xs break-all">{tx.nc_id}</span>
+                    <CopyButton text={tx.nc_id} label="Copy" />
+                    <ExplorerLink hash={tx.nc_id} network={network} specificPage="nc_detail" />
+                  </div>
+                </div>
+              )}
               {tx.nc_method && <div><strong>Method:</strong> {tx.nc_method}</div>}
               {tx.nc_pubkey && <div><strong>Public Key:</strong> <span className="font-mono text-xs">{tx.nc_pubkey}</span></div>}
             </div>
@@ -204,7 +216,14 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
               {tx.inputs.map((input, idx) => (
                 <div key={idx} className="text-xs border-b border-gray-200 last:border-0 pb-2">
                   <div className="font-semibold mb-1">Input {idx}</div>
-                  <div><strong>Hash:</strong> <ExplorerLink hash={input.hash} network={network} /></div>
+                  <div>
+                    <strong>Hash:</strong>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="font-mono text-2xs break-all">{input.hash}</span>
+                      <CopyButton text={input.hash} label="Copy" />
+                      <ExplorerLink hash={input.hash} network={network} />
+                    </div>
+                  </div>
                   <div><strong>Index:</strong> {input.index}</div>
                   {input.data && (
                     <div className="mt-1">
@@ -274,7 +293,9 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
             </div>
             <div className="px-3 py-2 space-y-1">
               {tx.parents.map((parent, idx) => (
-                <div key={idx} className="text-xs">
+                <div key={idx} className="flex items-center gap-1.5 text-xs">
+                  <span className="font-mono text-2xs break-all">{parent}</span>
+                  <CopyButton text={parent} label="Copy" />
                   <ExplorerLink hash={parent} network={network} />
                 </div>
               ))}
@@ -292,7 +313,9 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
             </div>
             <div className="px-3 py-2 space-y-1">
               {tx.tokens.map((token, idx) => (
-                <div key={idx} className="text-xs">
+                <div key={idx} className="flex items-center gap-1.5 text-xs">
+                  <span className="font-mono text-2xs break-all">{token}</span>
+                  <CopyButton text={token} label="Copy" />
                   <ExplorerLink hash={token} specificPage="token_detail" network={network} />
                 </div>
               ))}
@@ -300,23 +323,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
           </div>
         )}
 
-        {/* Full Transaction Object - Collapsible */}
-        <div className="bg-white border border-green-200 rounded overflow-hidden">
-          <button
-            onClick={() => setFullTxExpanded(!fullTxExpanded)}
-            className="w-full bg-green-100 px-3 py-2 border-b border-green-200 flex items-center justify-between hover:bg-green-200 transition-colors"
-          >
-            <span className="text-sm font-semibold text-green-800">Full Transaction Object</span>
-            <span className="text-green-800">{fullTxExpanded ? '▼' : '▶'}</span>
-          </button>
-          {fullTxExpanded && (
-            <div className="max-h-64 overflow-y-auto px-3 py-2">
-              <pre className="text-xs font-mono text-gray-700 text-left">
-                {safeStringify(tx, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
+        {/* Full TX JSON is accessible via the parent's "Show Raw" toggle */}
       </div>
     );
   };
