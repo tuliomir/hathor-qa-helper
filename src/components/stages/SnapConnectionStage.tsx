@@ -7,16 +7,19 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useRequestSnap, useMetaMaskContext } from '@hathor/snap-utils';
+import { useRequestSnap, useInvokeSnap, useMetaMaskContext } from '@hathor/snap-utils';
 import type { AppDispatch } from '../../store';
 import {
   setSnapConnected,
   setSnapOrigin,
+  setSnapWalletInfo,
   setSnapError,
   resetSnap,
   selectSnapOrigin,
   selectIsSnapConnected,
   selectInstalledSnap,
+  selectSnapAddress,
+  selectSnapNetwork,
 } from '../../store/slices/snapSlice';
 import { DEFAULT_SNAP_ORIGIN, SNAP_ORIGIN_NPM } from '../../constants/snap';
 import CopyButton from '../common/CopyButton';
@@ -31,12 +34,16 @@ export const SnapConnectionStage: React.FC = () => {
   const snapOrigin = useSelector(selectSnapOrigin);
   const isConnected = useSelector(selectIsSnapConnected);
   const installedSnap = useSelector(selectInstalledSnap);
+  const snapAddress = useSelector(selectSnapAddress);
+  const snapNetwork = useSelector(selectSnapNetwork);
 
   const [originInput, setOriginInput] = useState(snapOrigin || DEFAULT_SNAP_ORIGIN);
   const [isConnecting, setIsConnecting] = useState(false);
   const [hasMetaMask, setHasMetaMask] = useState<boolean | null>(null);
+  const [isFetchingWalletInfo, setIsFetchingWalletInfo] = useState(false);
 
   const requestSnap = useRequestSnap(originInput);
+  const invokeSnap = useInvokeSnap(originInput);
   const { installedSnap: contextSnap, error: contextError } = useMetaMaskContext();
 
   // Detect MetaMask via EIP-6963
@@ -86,6 +93,27 @@ export const SnapConnectionStage: React.FC = () => {
     }
   }, [contextError, dispatch]);
 
+  const fetchWalletInfo = useCallback(async () => {
+    setIsFetchingWalletInfo(true);
+    try {
+      const [addrRes, netRes] = await Promise.all([
+        invokeSnap({ method: 'htr_getAddress', params: { type: 'index', index: 0 } }),
+        invokeSnap({ method: 'htr_getConnectedNetwork' }),
+      ]);
+      const addrParsed = typeof addrRes === 'string' ? JSON.parse(addrRes) : addrRes;
+      const netParsed = typeof netRes === 'string' ? JSON.parse(netRes) : netRes;
+      const address = addrParsed?.response?.address ?? null;
+      const network = netParsed?.response?.network ?? null;
+      if (address && network) {
+        dispatch(setSnapWalletInfo({ address, network }));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch snap wallet info:', err);
+    } finally {
+      setIsFetchingWalletInfo(false);
+    }
+  }, [dispatch, invokeSnap]);
+
   const handleConnect = useCallback(async () => {
     setIsConnecting(true);
     dispatch(setSnapOrigin(originInput));
@@ -100,6 +128,13 @@ export const SnapConnectionStage: React.FC = () => {
       setIsConnecting(false);
     }
   }, [dispatch, originInput, requestSnap, showToast]);
+
+  // Auto-fetch wallet info once connected and not yet fetched
+  useEffect(() => {
+    if (isConnected && !snapAddress && !isFetchingWalletInfo) {
+      fetchWalletInfo();
+    }
+  }, [isConnected, snapAddress, isFetchingWalletInfo, fetchWalletInfo]);
 
   const handleDisconnect = () => {
     dispatch(resetSnap());
@@ -218,6 +253,24 @@ export const SnapConnectionStage: React.FC = () => {
                 <div className="text-xs text-muted mb-1">Origin</div>
                 <div className="font-mono text-xs break-all">{snapOrigin}</div>
               </div>
+              {snapNetwork && (
+                <div>
+                  <div className="text-xs text-muted mb-1">Network</div>
+                  <div className="font-mono text-xs">{snapNetwork}</div>
+                </div>
+              )}
+              {snapAddress && (
+                <div>
+                  <div className="text-xs text-muted mb-1">Address (index 0)</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-mono text-xs break-all">{snapAddress}</div>
+                    <CopyButton text={snapAddress} label="Copy address" />
+                  </div>
+                </div>
+              )}
+              {isFetchingWalletInfo && (
+                <div className="text-xs text-muted italic">Fetching wallet info...</div>
+              )}
             </div>
           </div>
         )}

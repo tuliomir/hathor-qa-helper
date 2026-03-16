@@ -5,9 +5,13 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useWalletStore } from '../../hooks/useWalletStore';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { selectSnapAddress } from '../../store/slices/snapSlice';
+import type { RootState } from '../../store';
 import Select from '../common/Select';
 
 interface TxOutput {
@@ -21,7 +25,7 @@ interface TxOutput {
 const emptyOutput = (): TxOutput => ({
   type: 'token',
   address: '',
-  value: '',
+  value: '1',
   token: '00',
   data: '',
 });
@@ -29,6 +33,14 @@ const emptyOutput = (): TxOutput => ({
 export const SnapSendTransactionStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } =
     useSnapMethod('sendTransaction');
+
+  const snapAddress = useSelector(selectSnapAddress);
+  const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
+  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
+  const { getWallet } = useWalletStore();
+
+  const testWallet = testWalletId ? getWallet(testWalletId) : null;
+  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
 
   const [outputs, setOutputs] = useState<TxOutput[]>([emptyOutput()]);
 
@@ -57,6 +69,26 @@ export const SnapSendTransactionStage: React.FC = () => {
     setOutputs(
       outputs.map((o, idx) => (idx === i ? { ...o, [field]: value } : o)),
     );
+
+  const fillSnapAddr = (i: number) => {
+    if (snapAddress) updateOutput(i, 'address', snapAddress);
+  };
+
+  const fillTestAddr = async (i: number) => {
+    if (!testWallet?.instance) return;
+    try {
+      const address = await testWallet.instance.getAddressAtIndex(0);
+      updateOutput(i, 'address', address);
+    } catch { /* ignore */ }
+  };
+
+  const fillFundAddr = async (i: number) => {
+    if (!fundingWallet?.instance) return;
+    try {
+      const address = await fundingWallet.instance.getAddressAtIndex(0);
+      updateOutput(i, 'address', address);
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="max-w-300 mx-auto">
@@ -110,6 +142,35 @@ export const SnapSendTransactionStage: React.FC = () => {
                       placeholder="Recipient address"
                       className="input"
                     />
+                    <div className="flex gap-2 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => fillSnapAddr(i)}
+                        disabled={!snapAddress}
+                        className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+                        title="Use address 0 from the connected Snap wallet"
+                      >
+                        Snap Addr0
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fillTestAddr(i)}
+                        disabled={!testWallet?.instance}
+                        className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+                        title="Use address 0 from the test wallet"
+                      >
+                        Test Addr0
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fillFundAddr(i)}
+                        disabled={!fundingWallet?.instance}
+                        className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+                        title="Use address 0 from the funding wallet"
+                      >
+                        Fund Addr0
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Value</label>

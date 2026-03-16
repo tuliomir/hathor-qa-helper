@@ -13,7 +13,7 @@ export const SnapSignWithAddressStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } =
     useSnapMethod('signWithAddress');
 
-  const [message, setMessage] = useState<string>('');
+  const [message, setMessage] = useState<string>('Hello, Hathor!');
   const [addressIndex, setAddressIndex] = useState<number>(0);
 
   const liveRequest = useMemo(
