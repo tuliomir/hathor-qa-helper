@@ -22,6 +22,7 @@ import {
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcWalletInformationCard } from '../rpc/RpcWalletInformationCard';
 import { RpcConnectedNetworkCard } from '../rpc/RpcConnectedNetworkCard';
+import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -135,33 +136,7 @@ export const BasicInfoStage: React.FC = () => {
         Test basic RPC methods to retrieve wallet information
       </p>
 
-      {/* Connection Status Info */}
-      {!isConnected && (
-        <div className="card-primary mb-7.5 bg-blue-50 border border-info">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-info flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-blue-900 m-0">Not Connected</p>
-              <p className="text-sm text-blue-800 mt-1 mb-0">
-                Please connect your wallet in the Connection stage to enable RPC testing.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {!isConnected && <RpcNotConnectedBanner />}
 
       {/* Wallet Information Card */}
       {isConnected && rpcHandlers && (
