@@ -6,7 +6,7 @@
  * 2. Send HTR transactions requiring multiple signatures with manual signer selection
  */
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MdCheckCircle, MdError, MdPending, MdPlayArrow, MdQrCode, MdRefresh, MdSend, MdStop } from 'react-icons/md';
 import QRCode from 'react-qr-code';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -55,6 +55,32 @@ export default function MultisigWalletManagement() {
   const [signingParticipantId, setSigningParticipantId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [qrAddress, setQrAddress] = useState<string | null>(null);
+
+  // Max balance across all ready multisig wallets (they share the same addresses,
+  // so the largest value is the most up-to-date). Stored as human-readable HTR string.
+  const maxBalanceHtr = useMemo(() => {
+    let maxRaw = 0n;
+    for (const p of readyParticipants) {
+      if (p.balance) {
+        try {
+          const val = BigInt(p.balance);
+          if (val > maxRaw) maxRaw = val;
+        } catch { /* skip invalid */ }
+      }
+    }
+    if (maxRaw === 0n) return '';
+    // Convert from smallest unit to human-readable (2 decimal places)
+    const whole = maxRaw / 100n;
+    const frac = maxRaw % 100n;
+    return `${whole}.${frac.toString().padStart(2, '0')}`;
+  }, [readyParticipants]);
+
+  // Auto-fill amount with the full balance when wallets become ready
+  useEffect(() => {
+    if (maxBalanceHtr && !amount && transaction.step === 'idle') {
+      setAmount(maxBalanceHtr);
+    }
+  }, [maxBalanceHtr]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handlers
   const handleStartParticipant = async (participantId: string) => {
@@ -526,16 +552,28 @@ export default function MultisigWalletManagement() {
 
         <div className="mb-4">
           <label className="block mb-1.5 font-bold">Amount (HTR):</label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            step="0.01"
-            min="0.01"
-            disabled={transaction.step !== 'idle'}
-            className="input"
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0.01"
+              disabled={transaction.step !== 'idle'}
+              className="input flex-1"
+            />
+            {maxBalanceHtr && transaction.step === 'idle' && (
+              <button
+                type="button"
+                onClick={() => setAmount(maxBalanceHtr)}
+                className="btn-secondary px-3 whitespace-nowrap"
+                title={`Fill with max balance: ${maxBalanceHtr} HTR`}
+              >
+                Max ({maxBalanceHtr})
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Selected Signers Info */}
