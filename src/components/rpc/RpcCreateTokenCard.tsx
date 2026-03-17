@@ -14,6 +14,7 @@ import { RpcRequestPreview } from './RpcRequestPreview';
 import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
 import type { NetworkType } from '../../constants/network';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { BASE_NAME, BASE_SYMBOL, VERSION_DEFAULTS, swapVersionSuffix } from '../../utils/createTokenDefaults';
 
 export interface RpcCreateTokenCardProps {
   onExecute: (params: CreateTokenParams) => Promise<{ request: unknown; response: unknown }>;
@@ -48,15 +49,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
 
-  // Base name/symbol before version suffix
-  const BASE_NAME = 'Test Token';
-  const BASE_SYMBOL = 'TST';
-
-  const VERSION_DEFAULTS: Record<CreateTokenVersion, { nameSuffix: string; symbolSuffix: string; amount: string }> = {
-    '':      { nameSuffix: '',            symbolSuffix: '',  amount: '100' },
-    deposit: { nameSuffix: ' - Deposit',  symbolSuffix: 'D', amount: '100' },
-    fee:     { nameSuffix: ' - Fee',      symbolSuffix: 'F', amount: '9999' },
-  };
+  // Imported from utils for testability — see createTokenDefaults.ts
 
   // Form state — defaults to deposit version
   const [params, setParams] = useState<CreateTokenParams>(() => {
@@ -139,27 +132,10 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   const handleFieldChange = (field: keyof CreateTokenParams, value: string | boolean) => {
     if (field === 'version') {
       const newVersion = value as CreateTokenVersion;
-      const oldVersion = params.version;
-      const oldDefaults = VERSION_DEFAULTS[oldVersion];
-      const newDefaults = VERSION_DEFAULTS[newVersion];
-
-      // Swap name suffix if the current name ends with the old suffix
-      let newName = params.name;
-      if (params.name.endsWith(oldDefaults.nameSuffix)) {
-        newName = params.name.slice(0, -oldDefaults.nameSuffix.length) + newDefaults.nameSuffix;
-      }
-
-      // Swap symbol suffix if the current symbol ends with the old suffix
-      let newSymbol = params.symbol;
-      if (params.symbol.endsWith(oldDefaults.symbolSuffix)) {
-        newSymbol = params.symbol.slice(0, -oldDefaults.symbolSuffix.length) + newDefaults.symbolSuffix;
-      }
-      newSymbol = newSymbol.slice(0, 5);
-
-      // Swap amount if it still matches the old default
-      const newAmount = params.amount === oldDefaults.amount ? newDefaults.amount : params.amount;
-
-      setParams({ ...params, version: newVersion, name: newName, symbol: newSymbol, amount: newAmount });
+      const { name, symbol, amount } = swapVersionSuffix(
+        params.name, params.version, newVersion, params.symbol, params.amount,
+      );
+      setParams({ ...params, version: newVersion, name, symbol, amount });
       return;
     }
     setParams({ ...params, [field]: value });
