@@ -18,7 +18,7 @@ const initialState: DeepLinkState = {
   deepLinkUrl: null,
   title: 'Scan QR Code',
   toastId: null,
-  deepLinksEnabled: true, // Enabled by default
+  deepLinksEnabled: false, // Disabled by default
 };
 
 const deepLinkSlice = createSlice({
