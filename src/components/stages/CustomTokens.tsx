@@ -159,6 +159,9 @@ function WalletTokensDisplay({
   const [isAllConfigStringsModalOpen, setIsAllConfigStringsModalOpen] = useState(false);
   // Token UIDs fetched directly from wallet instance (more reliable than Redux store)
   const [fetchedTokenUids, setFetchedTokenUids] = useState<string[]>([]);
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
 	// Refresh the tokens when page is opened
 	useEffect(() => {
@@ -201,11 +204,15 @@ function WalletTokensDisplay({
     .map((uid) => allTokens.find((t) => t.uid === uid))
     .filter((t): t is Token => t !== undefined)
     .sort((a, b) => {
-      // Sort by timestamp (newer first), fallback to uid if no timestamp
-      if (a.timestamp && b.timestamp) {
-        return b.timestamp - a.timestamp;
-      }
-      return 0;
+      // Sort by timestamp (newer first). Tokens without timestamps are sorted
+      // by their position in fetchedTokenUids (reversed — wallet returns oldest first).
+      if (a.timestamp && b.timestamp) return b.timestamp - a.timestamp;
+      if (a.timestamp && !b.timestamp) return -1;
+      if (!a.timestamp && b.timestamp) return 1;
+      // Both lack timestamps: use reverse index order (later = newer)
+      const idxA = fetchedTokenUids.indexOf(a.uid);
+      const idxB = fetchedTokenUids.indexOf(b.uid);
+      return idxB - idxA;
     });
 
   // Load all token balances for filtering
@@ -243,6 +250,18 @@ function WalletTokensDisplay({
         return balance === undefined || balance > 0n;
       })
     : walletTokens;
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredTokens.length / PAGE_SIZE));
+  const paginatedTokens = filteredTokens.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [hideZeroBalance, filteredTokens.length]);
 
   // Auto-select first token when wallet changes or tokens load
   useEffect(() => {
@@ -644,7 +663,10 @@ function WalletTokensDisplay({
       {walletTokens.length > 0 && (
         <div className="card-primary mb-7.5">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-bold m-0">Custom Tokens</h3>
+            <h3 className="text-lg font-bold m-0">
+              Custom Tokens
+              <span className="text-sm font-normal text-muted ml-2">({filteredTokens.length})</span>
+            </h3>
             <div className="flex items-center gap-3">
               <div className="form-control">
                 <label className="label cursor-pointer gap-2 p-0">
@@ -685,7 +707,7 @@ function WalletTokensDisplay({
                 </tr>
               </thead>
               <tbody>
-                {filteredTokens.map((token) => (
+                {paginatedTokens.map((token) => (
                   <TokenRow
                     key={token.uid}
                     token={token}
@@ -699,6 +721,48 @@ function WalletTokensDisplay({
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
+              <p className="text-sm text-muted m-0">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTokens.length)} of {filteredTokens.length} tokens
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <span className="text-sm font-medium px-3">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                >
+                  Last
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
