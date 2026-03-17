@@ -3,11 +3,15 @@
  *
  * Shared hook for snap method stages. Provides invokeSnap, dry-run state,
  * snap connection check, and Redux dispatch helpers for snap method results.
+ *
+ * IMPORTANT: We bypass @hathor/snap-utils' useInvokeSnap/useRequest because
+ * useRequest swallows errors (catches and returns null). Instead we call
+ * provider.request() directly so errors propagate through the promise chain.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useInvokeSnap, useMetaMaskContext } from '@hathor/snap-utils';
+import { useMetaMaskContext } from '@hathor/snap-utils';
 import type { AppDispatch, RootState } from '../store';
 import { selectIsSnapConnected, selectSnapOrigin } from '../store/slices/snapSlice';
 import {
@@ -19,34 +23,6 @@ import type { SnapMethodData } from '../store/slices/snapMethodsSlice';
 import { createSnapHandlers } from '../services/snapHandlers';
 import { extractErrorMessage } from '../utils/errorUtils';
 
-/**
- * Detect responses that look like errors — MetaMask may resolve instead of
- * reject for some snap error types, returning the error as a response object.
- *
- * The snap stringifies ALL responses via JSONBigInt.stringify(), so error
- * responses may arrive as JSON strings, not objects.
- */
-function isErrorLikeResponse(response: unknown): boolean {
-  let obj: Record<string, unknown> | null = null;
-
-  if (response && typeof response === 'object') {
-    obj = response as Record<string, unknown>;
-  } else if (typeof response === 'string') {
-    try {
-      const parsed = JSON.parse(response);
-      if (parsed && typeof parsed === 'object') obj = parsed;
-    } catch { /* not JSON */ }
-  }
-
-  if (!obj) return false;
-
-  // JSON-RPC error shape: { error: { code, message } }
-  if (obj.error && typeof obj.error === 'object') return true;
-  // Snap error shape: { code: negative number, message }
-  if (typeof obj.code === 'number' && obj.code < 0 && typeof obj.message === 'string') return true;
-  return false;
-}
-
 export function useSnapMethod(methodKey: string) {
   const dispatch = useDispatch<AppDispatch>();
   const isSnapConnected = useSelector(selectIsSnapConnected);
@@ -56,36 +32,32 @@ export function useSnapMethod(methodKey: string) {
     (state: RootState) => state.snapMethods.methods[methodKey],
   );
 
-  const invokeSnap = useInvokeSnap(snapOrigin || undefined);
-  const { error: metaMaskContextError } = useMetaMaskContext();
+  const { provider } = useMetaMaskContext();
 
-  // Track whether we're in the middle of an execute call
-  const executingRef = useRef(false);
-
-  // Fallback: if MetaMask context captures an error that didn't propagate
-  // through the promise chain, dispatch it to Redux so the UI shows it.
-  // This mirrors the web-wallet's approach of monitoring context error state.
-  useEffect(() => {
-    if (metaMaskContextError && executingRef.current) {
-      const errorMessage = metaMaskContextError instanceof Error
-        ? metaMaskContextError.message
-        : String(metaMaskContextError);
-      console.error(`[snap:${methodKey}] MetaMask context error (fallback):`, metaMaskContextError);
-      dispatch(
-        setSnapMethodError({ methodKey, error: errorMessage, duration: 0 }),
-      );
-    }
-  }, [metaMaskContextError, dispatch, methodKey]);
+  // Bypass useInvokeSnap/useRequest — call provider.request() directly
+  // so MetaMask errors throw instead of being swallowed and returned as null.
+  const invokeSnapDirect = useCallback(
+    async ({ method, params }: { method: string; params?: Record<string, unknown> }) => {
+      if (!provider) throw new Error('MetaMask provider not available');
+      return provider.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapOrigin,
+          request: params ? { method, params } : { method },
+        },
+      });
+    },
+    [provider, snapOrigin],
+  );
 
   const handlers = useMemo(
-    () => createSnapHandlers(invokeSnap, isDryRun),
-    [invokeSnap, isDryRun],
+    () => createSnapHandlers(invokeSnapDirect, isDryRun),
+    [invokeSnapDirect, isDryRun],
   );
 
   const execute = useCallback(
     async (handlerFn: (handlers: ReturnType<typeof createSnapHandlers>) => Promise<{ request: { method: string; params?: Record<string, unknown> }; response: unknown }>) => {
       const startTime = Date.now();
-      executingRef.current = true;
 
       dispatch(
         setSnapMethodRequest({
@@ -109,22 +81,6 @@ export function useSnapMethod(methodKey: string) {
           }),
         );
 
-        // Guard: detect error-like responses that MetaMask may resolve
-        // instead of reject (e.g., snap errors returned as response objects
-        // or stringified error JSON from the snap)
-        if (isErrorLikeResponse(response)) {
-          // Parse string responses so extractErrorMessage can dig into them
-          const parsed = typeof response === 'string'
-            ? (() => { try { return JSON.parse(response); } catch { return response; } })()
-            : response;
-          const errorMessage = extractErrorMessage(parsed);
-          console.error(`[snap:${methodKey}] Error-like response:`, parsed);
-          dispatch(
-            setSnapMethodError({ methodKey, error: errorMessage, duration }),
-          );
-          throw parsed; // Throw the parsed object so isSnapUserRejection can detect rejections
-        }
-
         dispatch(
           setSnapMethodResponse({ methodKey, response, duration }),
         );
@@ -140,8 +96,6 @@ export function useSnapMethod(methodKey: string) {
         );
 
         throw error;
-      } finally {
-        executingRef.current = false;
       }
     },
     [dispatch, handlers, isDryRun, methodKey],

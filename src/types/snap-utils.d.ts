@@ -14,8 +14,13 @@ declare module '@hathor/snap-utils' {
     initialPermissions: Record<string, unknown>;
   }
 
+  /** Minimal EIP-1193 provider shape used by MetaMask */
+  export interface Eip1193Provider {
+    request: (args: { method: string; params?: unknown }) => Promise<unknown>;
+  }
+
   export interface MetaMaskContextType {
-    provider: unknown;
+    provider: Eip1193Provider | null;
     installedSnap: Snap | null;
     error: Error | null;
     setInstalledSnap: (snap: Snap | null) => void;

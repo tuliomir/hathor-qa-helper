@@ -26,6 +26,11 @@ export default defineConfig({
       name: 'preview',
       use: { baseURL: 'http://localhost:4173' },
     },
+    {
+      name: 'snap-e2e',
+      testMatch: 'snap-*.spec.ts',
+      use: { baseURL: 'http://localhost:5173' },
+    },
   ],
 
   webServer: {
