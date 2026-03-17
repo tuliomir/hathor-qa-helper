@@ -312,17 +312,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           </div>
         )}
 
-        {/* Full Transaction Object */}
-        <div className="bg-white border border-green-200 rounded overflow-hidden">
-          <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-            <span className="text-sm font-semibold text-green-800">Full Transaction</span>
-          </div>
-          <div className="max-h-64 overflow-y-auto px-3 py-2">
-            <pre className="text-xs font-mono text-gray-700 text-left">
-              {safeStringify(responseData, 2) as string}
-            </pre>
-          </div>
-        </div>
+        {/* Full TX JSON is accessible via the parent's "Show Raw" toggle */}
       </div>
     );
   };
