@@ -372,13 +372,33 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
                             </button>
                           </div>
                         </div>
-                        <input
-                          value={output.value || ''}
-                          onChange={(e) => handleOutputChange(index, 'value', e.target.value)}
-                          placeholder="Amount (in tokens)"
-                          className="input"
-                          type="number"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            value={output.value || ''}
+                            onChange={(e) => handleOutputChange(index, 'value', e.target.value)}
+                            placeholder="Amount (in tokens)"
+                            className="input flex-1"
+                            type="number"
+                          />
+                          {testWallet && output.token && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const bal = await testWallet.getBalance(output.token || '00');
+                                  const unlocked = bal?.[0]?.balance?.unlocked ?? 0n;
+                                  handleOutputChange(index, 'value', unlocked.toString());
+                                } catch (err) {
+                                  console.error('Failed to get token balance:', err);
+                                }
+                              }}
+                              className="btn-secondary px-3 whitespace-nowrap text-sm"
+                              title="Fill with full token balance"
+                            >
+                              Max
+                            </button>
+                          )}
+                        </div>
                         <div>
                           <label className="block mb-1 text-xs font-medium text-muted">Token:</label>
                           <Select

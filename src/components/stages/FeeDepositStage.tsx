@@ -255,6 +255,7 @@ export const FeeDepositStage: React.FC = () => {
           setPushTx={setPushTx}
           feeTokens={feeTokens}
           feeTokensLoading={feeTokensLoading}
+          walletInstance={testWallet?.instance ?? null}
           isDryRun={isDryRun}
           initialRequest={feeDepositData.request}
           initialResponse={feeDepositData.rawResponse}

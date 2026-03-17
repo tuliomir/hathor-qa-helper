@@ -37,6 +37,7 @@ export interface RpcFeeDepositCardProps {
   setPushTx: (value: boolean) => void;
   feeTokens?: { uid: string; symbol: string; name?: string }[];
   feeTokensLoading?: boolean;
+  walletInstance?: { getBalance: (uid: string) => Promise<Array<{ balance?: { unlocked?: bigint } }>> } | null;
   initialRequest?: { method: string; params: unknown } | null;
   initialResponse?: unknown | null;
   initialError?: string | null;
@@ -63,6 +64,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
   setPushTx,
   feeTokens = [],
   feeTokensLoading = false,
+  walletInstance = null,
   initialRequest = null,
   initialResponse = null,
   initialError = null,
@@ -367,13 +369,33 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium mb-1.5">Amount</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="E.g., 10"
-              className="input"
-            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="E.g., 10"
+                className="input flex-1"
+              />
+              {walletInstance && feeToken && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const bal = await walletInstance.getBalance(feeToken);
+                      const unlocked = bal?.[0]?.balance?.unlocked ?? 0n;
+                      setAmount(unlocked.toString());
+                    } catch (err) {
+                      console.error('Failed to get token balance:', err);
+                    }
+                  }}
+                  className="btn-secondary px-3 whitespace-nowrap text-sm"
+                  title="Fill with full token balance"
+                >
+                  Max
+                </button>
+              )}
+            </div>
             <p className="text-xs text-muted mt-1">
               Amount to deposit (in token's smallest unit)
             </p>
