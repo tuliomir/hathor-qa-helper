@@ -69,27 +69,49 @@ export const BetInitializeStage: React.FC = () => {
     getAddress();
   }, [testWallet]);
 
-  // Compute wallet tokens (include native token + custom tokens from Redux)
+  // Compute wallet tokens with non-zero balance (needed for deposit after initialize)
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
-  const walletTokens = React.useMemo(() => {
-    const tokens = [
-      {
-        uid: NATIVE_TOKEN_UID,
-        symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
-        name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
-      },
-    ];
+  const [walletTokens, setWalletTokens] = useState<{ uid: string; symbol: string; name: string }[]>([
+    { uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name },
+  ]);
 
-    if (testWallet?.tokenUids) {
-      const customTokens = testWallet.tokenUids
-        .filter((uid) => uid !== NATIVE_TOKEN_UID)
-        .map((uid) => allTokens.find((t) => t.uid === uid))
-        .filter((t): t is { uid: string; name: string; symbol: string } => t !== undefined);
+  useEffect(() => {
+    const loadTokensWithBalance = async () => {
+      const tokens: { uid: string; symbol: string; name: string }[] = [];
 
-      tokens.push(...customTokens);
-    }
+      // Always include HTR if it has balance
+      if (testWallet?.instance) {
+        try {
+          const htrBal = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+          if (htrBal?.[0]?.balance?.unlocked > 0n) {
+            tokens.push({ uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name });
+          }
+        } catch { /* include HTR as fallback */
+          tokens.push({ uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name });
+        }
+      } else {
+        tokens.push({ uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name });
+      }
 
-    return tokens;
+      // Check custom tokens
+      if (testWallet?.instance && testWallet.tokenUids) {
+        for (const uid of testWallet.tokenUids) {
+          if (uid === NATIVE_TOKEN_UID) continue;
+          const tokenInfo = allTokens.find((t) => t.uid === uid);
+          if (!tokenInfo) continue;
+          try {
+            const bal = await testWallet.instance.getBalance(uid);
+            if (bal?.[0]?.balance?.unlocked > 0n) {
+              tokens.push({ uid: tokenInfo.uid, symbol: tokenInfo.symbol, name: tokenInfo.name });
+            }
+          } catch { /* skip tokens that fail balance check */ }
+        }
+      }
+
+      setWalletTokens(tokens);
+    };
+
+    loadTokensWithBalance();
   }, [testWallet, allTokens]);
 
   // Derive oracle address from selected index

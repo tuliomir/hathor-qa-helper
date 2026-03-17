@@ -413,49 +413,45 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
               />
               <span className="text-sm">Create Mint Authority</span>
             </div>
-            {params.create_mint && (
-              <>
-                <div>
-                  <input
-                    value={params.mint_authority_address}
-                    onChange={(e) => handleFieldChange('mint_authority_address', e.target.value)}
-                    placeholder="Mint Authority Address (optional)"
-                    className="input w-full"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => populateAddress('mint_authority_address')}
-                      disabled={!walletAddress}
-                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                      title="Populate with address 0 from test wallet"
-                    >
-                      Use Addr0
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => populateExternalAddress('mint_authority_address')}
-                      disabled={!fundingWalletAddress}
-                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                      title="Populate with address 0 from funding wallet"
-                    >
-                      Use external addr
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={params.allow_external_mint_authority_address}
-                    onChange={(e) =>
-                      handleFieldChange('allow_external_mint_authority_address', e.target.checked)
-                    }
-                    className="checkbox"
-                  />
-                  <span className="text-sm">Allow External Mint Authority</span>
-                </div>
-              </>
-            )}
+            <div>
+              <input
+                value={params.mint_authority_address}
+                onChange={(e) => handleFieldChange('mint_authority_address', e.target.value)}
+                placeholder="Mint Authority Address (optional)"
+                className="input w-full"
+              />
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => populateAddress('mint_authority_address')}
+                  disabled={!walletAddress}
+                  className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                  title="Populate with address 0 from test wallet"
+                >
+                  Use Addr0
+                </button>
+                <button
+                  type="button"
+                  onClick={() => populateExternalAddress('mint_authority_address')}
+                  disabled={!fundingWalletAddress}
+                  className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                  title="Populate with address 0 from funding wallet"
+                >
+                  Use external addr
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={params.allow_external_mint_authority_address}
+                onChange={(e) =>
+                  handleFieldChange('allow_external_mint_authority_address', e.target.checked)
+                }
+                className="checkbox"
+              />
+              <span className="text-sm">Allow External Mint Authority</span>
+            </div>
           </div>
 
           {/* Melt Settings */}
@@ -470,49 +466,45 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
               />
               <span className="text-sm">Create Melt Authority</span>
             </div>
-            {params.create_melt && (
-              <>
-                <div>
-                  <input
-                    value={params.melt_authority_address}
-                    onChange={(e) => handleFieldChange('melt_authority_address', e.target.value)}
-                    placeholder="Melt Authority Address (optional)"
-                    className="input w-full"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => populateAddress('melt_authority_address')}
-                      disabled={!walletAddress}
-                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                      title="Populate with address 0 from test wallet"
-                    >
-                      Use Addr0
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => populateExternalAddress('melt_authority_address')}
-                      disabled={!fundingWalletAddress}
-                      className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                      title="Populate with address 0 from funding wallet"
-                    >
-                      Use external addr
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={params.allow_external_melt_authority_address}
-                    onChange={(e) =>
-                      handleFieldChange('allow_external_melt_authority_address', e.target.checked)
-                    }
-                    className="checkbox"
-                  />
-                  <span className="text-sm">Allow External Melt Authority</span>
-                </div>
-              </>
-            )}
+            <div>
+              <input
+                value={params.melt_authority_address}
+                onChange={(e) => handleFieldChange('melt_authority_address', e.target.value)}
+                placeholder="Melt Authority Address (optional)"
+                className="input w-full"
+              />
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => populateAddress('melt_authority_address')}
+                  disabled={!walletAddress}
+                  className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                  title="Populate with address 0 from test wallet"
+                >
+                  Use Addr0
+                </button>
+                <button
+                  type="button"
+                  onClick={() => populateExternalAddress('melt_authority_address')}
+                  disabled={!fundingWalletAddress}
+                  className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                  title="Populate with address 0 from funding wallet"
+                >
+                  Use external addr
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={params.allow_external_melt_authority_address}
+                onChange={(e) =>
+                  handleFieldChange('allow_external_melt_authority_address', e.target.checked)
+                }
+                className="checkbox"
+              />
+              <span className="text-sm">Allow External Melt Authority</span>
+            </div>
           </div>
 
           {/* Data Array */}
