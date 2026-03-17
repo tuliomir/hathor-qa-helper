@@ -49,20 +49,32 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   const [requestExpanded, setRequestExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
 
-  // Form state
-  const [params, setParams] = useState<CreateTokenParams>({
-    name: 'Test Token',
-    symbol: 'TST',
-    amount: '100',
-    version: 'deposit' as CreateTokenVersion,
-    change_address: '',
-    create_mint: true,
-    mint_authority_address: '',
-    allow_external_mint_authority_address: false,
-    create_melt: true,
-    melt_authority_address: '',
-    allow_external_melt_authority_address: false,
-    data: [],
+  // Base name/symbol before version suffix
+  const BASE_NAME = 'Test Token';
+  const BASE_SYMBOL = 'TST';
+
+  const VERSION_DEFAULTS: Record<CreateTokenVersion, { nameSuffix: string; symbolSuffix: string; amount: string }> = {
+    deposit: { nameSuffix: ' - Deposit', symbolSuffix: 'D', amount: '100' },
+    fee:     { nameSuffix: ' - Fee',     symbolSuffix: 'F', amount: '9999' },
+  };
+
+  // Form state — defaults to deposit version
+  const [params, setParams] = useState<CreateTokenParams>(() => {
+    const v = VERSION_DEFAULTS.deposit;
+    return {
+      name: `${BASE_NAME}${v.nameSuffix}`,
+      symbol: `${BASE_SYMBOL}${v.symbolSuffix}`.slice(0, 5),
+      amount: v.amount,
+      version: 'deposit' as CreateTokenVersion,
+      change_address: '',
+      create_mint: true,
+      mint_authority_address: '',
+      allow_external_mint_authority_address: false,
+      create_melt: true,
+      melt_authority_address: '',
+      allow_external_melt_authority_address: false,
+      data: [],
+    };
   });
 
   // Pre-populate change_address with wallet address on mount
@@ -104,6 +116,31 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
 
   // Handler for simple field changes
   const handleFieldChange = (field: keyof CreateTokenParams, value: string | boolean) => {
+    if (field === 'version') {
+      const newVersion = value as CreateTokenVersion;
+      const oldVersion = params.version;
+      const oldDefaults = VERSION_DEFAULTS[oldVersion];
+      const newDefaults = VERSION_DEFAULTS[newVersion];
+
+      // Swap name suffix if the current name ends with the old suffix
+      let newName = params.name;
+      if (params.name.endsWith(oldDefaults.nameSuffix)) {
+        newName = params.name.slice(0, -oldDefaults.nameSuffix.length) + newDefaults.nameSuffix;
+      }
+
+      // Swap symbol suffix if the current symbol ends with the old suffix
+      let newSymbol = params.symbol;
+      if (params.symbol.endsWith(oldDefaults.symbolSuffix)) {
+        newSymbol = params.symbol.slice(0, -oldDefaults.symbolSuffix.length) + newDefaults.symbolSuffix;
+      }
+      newSymbol = newSymbol.slice(0, 5);
+
+      // Swap amount if it still matches the old default
+      const newAmount = params.amount === oldDefaults.amount ? newDefaults.amount : params.amount;
+
+      setParams({ ...params, version: newVersion, name: newName, symbol: newSymbol, amount: newAmount });
+      return;
+    }
     setParams({ ...params, [field]: value });
   };
 
