@@ -53,8 +53,9 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   const BASE_SYMBOL = 'TST';
 
   const VERSION_DEFAULTS: Record<CreateTokenVersion, { nameSuffix: string; symbolSuffix: string; amount: string }> = {
-    deposit: { nameSuffix: ' - Deposit', symbolSuffix: 'D', amount: '100' },
-    fee:     { nameSuffix: ' - Fee',     symbolSuffix: 'F', amount: '9999' },
+    '':      { nameSuffix: '',            symbolSuffix: '',  amount: '100' },
+    deposit: { nameSuffix: ' - Deposit',  symbolSuffix: 'D', amount: '100' },
+    fee:     { nameSuffix: ' - Fee',      symbolSuffix: 'F', amount: '9999' },
   };
 
   // Form state — defaults to deposit version
@@ -385,6 +386,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
               value={params.version}
               onChange={(e) => handleFieldChange('version', e.target.value)}
             >
+              <option value="">(none)</option>
               <option value="deposit">Deposit</option>
               <option value="fee">Fee</option>
             </Select>
