@@ -4,12 +4,12 @@
  * Card for testing htr_getAddress RPC call with type selection
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import Select from '../common/Select';
 import DryRunCheckbox from '../common/DryRunCheckbox';
-import SendToRawEditorButton from '../common/SendToRawEditorButton';
+import { RpcRequestPreview } from './RpcRequestPreview';
 import type { AddressRequestType } from '../../store/slices/getAddressSlice';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -55,14 +55,21 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [requestExpanded, setRequestExpanded] = useState(false);
   const { showToast } = useToast();
+
+  const liveRequest = useMemo(() => ({
+    method: 'htr_getAddress',
+    params: {
+      network: 'testnet',
+      type: requestType,
+      ...(requestType === 'index' ? { index: indexValue } : {}),
+    },
+  }), [requestType, indexValue]);
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-      setRequestExpanded(true);
     }
     if (initialResponse) {
       setResult(initialResponse);
@@ -89,7 +96,6 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
       // Store request and response separately
       setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
-      setRequestExpanded(true);
       setExpanded(true);
 
       console.log(`[RPC Request] Get Address`, request);
@@ -108,7 +114,6 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
       // Capture request params from error if available
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-        setRequestExpanded(true);
       }
 
       console.error(`[RPC Error] Get Address`, {
@@ -262,52 +267,10 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
         </div>
       </div>
 
-      {/* Request Info Section */}
-      {requestInfo && (
-        <div className="card-primary mb-7.5">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setRequestExpanded(!requestExpanded)}
-              className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
-            >
-              <span>{requestExpanded ? '▼' : '▶'}</span>
-              Request
-            </button>
-            <div className="flex items-center gap-3">
-              <SendToRawEditorButton requestJson={safeStringify(requestInfo, 2)} />
-              <CopyButton
-                text={safeStringify(requestInfo, 2)}
-                label="Copy request"
-              />
-            </div>
-          </div>
-
-          {requestExpanded && (
-            <div className="bg-blue-50 border border-blue-300 rounded p-4">
-              <div className="space-y-3">
-                <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                  <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-800">method</span>
-                  </div>
-                  <div className="px-3 py-2">
-                    <span className="text-sm font-mono text-blue-900">{requestInfo.method}</span>
-                  </div>
-                </div>
-                <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                  <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-800">params</span>
-                  </div>
-                  <div className="px-3 py-2 max-h-64 overflow-y-auto">
-                    <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
-                      {safeStringify(requestInfo.params, 2)}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Request Section */}
+      <div className="card-primary mb-7.5">
+        <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
+      </div>
 
       {/* Response Section */}
       {hasResult && (

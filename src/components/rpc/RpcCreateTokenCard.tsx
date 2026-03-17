@@ -4,13 +4,13 @@
  * Card component for testing htr_createToken RPC method
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { useToast } from '../../hooks/useToast';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import Select from '../common/Select';
-import SendToRawEditorButton from '../common/SendToRawEditorButton';
+import { RpcRequestPreview } from './RpcRequestPreview';
 import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
 import type { NetworkType } from '../../constants/network';
 import { extractErrorMessage } from '../../utils/errorUtils';
@@ -46,7 +46,6 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   const [error, setError] = useState<string | null>(initialError);
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(initialRequest);
   const [expanded, setExpanded] = useState(false);
-  const [requestExpanded, setRequestExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
 
   // Base name/symbol before version suffix
@@ -76,6 +75,27 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
       data: [],
     };
   });
+
+  const liveRequest = useMemo(() => {
+    const filteredParams: Record<string, unknown> = { network: 'testnet' };
+    // Include all non-empty fields from params
+    if (params.name) filteredParams.name = params.name;
+    if (params.symbol) filteredParams.symbol = params.symbol;
+    if (params.amount) filteredParams.amount = params.amount;
+    if (params.version) filteredParams.version = params.version;
+    if (params.change_address) filteredParams.change_address = params.change_address;
+    filteredParams.create_mint = params.create_mint;
+    if (params.mint_authority_address) filteredParams.mint_authority_address = params.mint_authority_address;
+    if (params.allow_external_mint_authority_address) filteredParams.allow_external_mint_authority_address = params.allow_external_mint_authority_address;
+    filteredParams.create_melt = params.create_melt;
+    if (params.melt_authority_address) filteredParams.melt_authority_address = params.melt_authority_address;
+    if (params.allow_external_melt_authority_address) filteredParams.allow_external_melt_authority_address = params.allow_external_melt_authority_address;
+    if (params.data.length > 0) filteredParams.data = params.data;
+    return {
+      method: 'htr_createToken',
+      params: filteredParams,
+    };
+  }, [params]);
 
   // Pre-populate change_address with wallet address on mount
   useEffect(() => {
@@ -175,7 +195,6 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
       // Store request and response separately
       setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
-      setRequestExpanded(true);
       setExpanded(true);
 
       showToast(
@@ -190,7 +209,6 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
       // Capture request params from error if available
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-        setRequestExpanded(true);
       }
 
       showToast(errorMessage, 'error');
@@ -575,48 +593,8 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           </button>
         </div>
 
-        {/* Request Section (Blue-themed) */}
-        {requestInfo && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setRequestExpanded(!requestExpanded)}
-                className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center"
-              >
-                {requestExpanded ? '▼' : '▶'} Request
-              </button>
-              <div className="flex items-center gap-3">
-                <SendToRawEditorButton requestJson={safeStringify(requestInfo, 2)} />
-                <CopyButton text={safeStringify(requestInfo, 2)} label="Copy request" />
-              </div>
-            </div>
-
-            {requestExpanded && (
-              <div className="bg-blue-50 border border-blue-300 rounded p-4">
-                <div className="space-y-2">
-                  <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                    <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                      <span className="text-sm font-semibold text-blue-800">method</span>
-                    </div>
-                    <div className="px-3 py-2">
-                      <span className="text-sm font-mono text-blue-900">{requestInfo.method}</span>
-                    </div>
-                  </div>
-                  <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                    <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                      <span className="text-sm font-semibold text-blue-800">params</span>
-                    </div>
-                    <div className="px-3 py-2 max-h-64 overflow-y-auto">
-                      <pre className="text-sm font-mono text-blue-900 text-left">
-                        {safeStringify(requestInfo.params, 2) as string}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Request Section */}
+        <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
 
         {/* Response Section */}
         {hasResult && (

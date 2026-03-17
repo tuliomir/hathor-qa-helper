@@ -4,11 +4,11 @@
  * Card component for testing htr_sendTransaction RPC method
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import CopyButton from '../common/CopyButton';
 import { useToast } from '../../hooks/useToast';
 import DryRunCheckbox from '../common/DryRunCheckbox';
-import SendToRawEditorButton from '../common/SendToRawEditorButton';
+import { RpcRequestPreview } from './RpcRequestPreview';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import type { SendTransactionOutput, SendTransactionOutputType } from '../../store/slices/sendTransactionSlice';
 import type { NetworkType } from '../../constants/network';
@@ -63,7 +63,6 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
   const [error, setError] = useState<string | null>(initialError);
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(initialRequest);
   const [expanded, setExpanded] = useState(false);
-  const [requestExpanded, setRequestExpanded] = useState(false);
 
   // Form state
   const [pushTx, setPushTx] = useState(initialFormData?.pushTx ?? false);
@@ -77,11 +76,26 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
     })) ?? [{ type: 'token', address: '', value: '', token: '00', data: '' }]
   );
 
+  const liveRequest = useMemo(() => {
+    const builtOutputs = outputs.map(o =>
+      o.type === 'data'
+        ? { data: o.data }
+        : { address: o.address, value: o.value, token: o.token }
+    );
+    return {
+      method: 'htr_sendTransaction',
+      params: {
+        network: 'testnet',
+        push_tx: pushTx,
+        outputs: builtOutputs,
+      },
+    };
+  }, [outputs, pushTx]);
+
   // Sync with initial values from Redux
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-      setRequestExpanded(true);
     }
     if (initialResponse) {
       setResult(initialResponse);
@@ -194,7 +208,6 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
       // Store request and response separately
       setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
-      setRequestExpanded(true);
       setExpanded(true);
 
       showToast(
@@ -209,7 +222,6 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
       // Capture request params from error if available
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-        setRequestExpanded(true);
       }
 
       showToast(errorMessage, 'error');
@@ -431,48 +443,8 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
           </button>
         </div>
 
-        {/* Request Section (Blue-themed) */}
-        {requestInfo && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setRequestExpanded(!requestExpanded)}
-                className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center"
-              >
-                {requestExpanded ? '▼' : '▶'} Request
-              </button>
-              <div className="flex items-center gap-3">
-                <SendToRawEditorButton requestJson={safeStringify(requestInfo, 2)} />
-                <CopyButton text={safeStringify(requestInfo, 2)} label="Copy request" />
-              </div>
-            </div>
-
-            {requestExpanded && (
-              <div className="bg-blue-50 border border-blue-300 rounded p-4">
-                <div className="space-y-2">
-                  <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                    <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                      <span className="text-sm font-semibold text-blue-800">method</span>
-                    </div>
-                    <div className="px-3 py-2">
-                      <span className="text-sm font-mono text-blue-900">{requestInfo.method}</span>
-                    </div>
-                  </div>
-                  <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                    <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                      <span className="text-sm font-semibold text-blue-800">params</span>
-                    </div>
-                    <div className="px-3 py-2 max-h-64 overflow-y-auto">
-                      <pre className="text-sm font-mono text-blue-900 text-left">
-                        {safeStringify(requestInfo.params, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Request Section */}
+        <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
 
         {/* Response Section */}
         {hasResult && (

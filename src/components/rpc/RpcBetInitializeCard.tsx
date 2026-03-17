@@ -9,8 +9,8 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
-import SendToRawEditorButton from '../common/SendToRawEditorButton';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
+import { RpcRequestPreview } from './RpcRequestPreview';
 import { getOracleBuffer, safeStringify } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
@@ -66,7 +66,6 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [requestExpanded, setRequestExpanded] = useState(true); // Always expanded for live view
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const [showRawResponse, setShowRawResponse] = useState(false);
 	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
@@ -87,7 +86,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-      setRequestExpanded(true);
+
     }
     if (initialResponse) {
       setResult(initialResponse);
@@ -167,7 +166,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       // Store request and response separately
       setRequestInfo(request as { method: string; params: unknown });
       setResult(response);
-      setRequestExpanded(true);
+
       setExpanded(true);
 
       console.log(`[RPC Request] Initialize Bet`, request);
@@ -186,7 +185,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       // Capture request params from error if available
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-        setRequestExpanded(true);
+  
       }
 
       console.error(`[RPC Error] Initialize Bet`, {
@@ -554,53 +553,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       </div>
 
       {/* Live Request Section */}
-      {liveRequest && (
-        <div className="card-primary mb-7.5">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setRequestExpanded(!requestExpanded)}
-              className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
-            >
-              <span>{requestExpanded ? '▼' : '▶'}</span>
-              Request {requestInfo ? '(Sent)' : '(Preview)'}
-            </button>
-            <div className="flex items-center gap-3">
-              <SendToRawEditorButton requestJson={safeStringify(liveRequest, 2) as string} />
-              <CopyButton text={safeStringify(liveRequest, 2) as string} label="Copy request" />
-            </div>
-          </div>
-
-          {requestExpanded && (
-            <div className="bg-blue-50 border border-blue-300 rounded p-4">
-              {!requestInfo && (
-                <p className="text-sm text-blue-800 mb-3">
-                  This is a live preview of the request that will be sent. It updates as you change the inputs above.
-                </p>
-              )}
-              <div className="space-y-3">
-                <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                  <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-800">method</span>
-                  </div>
-                  <div className="px-3 py-2">
-                    <span className="text-sm font-mono text-blue-900">{liveRequest.method}</span>
-                  </div>
-                </div>
-                <div className="bg-white border border-blue-200 rounded overflow-hidden">
-                  <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
-                    <span className="text-sm font-semibold text-blue-800">params</span>
-                  </div>
-                  <div className="px-3 py-2 max-h-64 overflow-y-auto">
-                    <pre className="text-sm font-mono text-blue-900 text-left whitespace-pre-wrap break-words m-0">
-                      {safeStringify(liveRequest.params, 2) as string}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
 
       {/* Response Section */}
       {hasResult && (
