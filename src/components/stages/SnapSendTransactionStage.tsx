@@ -50,7 +50,6 @@ export const SnapSendTransactionStage: React.FC = () => {
   const [outputs, setOutputs] = useState<TxOutput[]>([emptyOutput()]);
   const [inputs, setInputs] = useState<TxInput[]>([]);
   const [changeAddress, setChangeAddress] = useState('');
-  const [pushTx, setPushTx] = useState(true);
 
   const params = useMemo(() => {
     const builtOutputs = outputs.map((o) =>
@@ -60,7 +59,6 @@ export const SnapSendTransactionStage: React.FC = () => {
     );
     const p: Record<string, unknown> = { outputs: builtOutputs };
     if (changeAddress.trim()) p.changeAddress = changeAddress.trim();
-    if (!pushTx) p.push_tx = false;
     if (inputs.length > 0) {
       p.inputs = inputs.map((inp) => ({
         txId: inp.txId,
@@ -68,7 +66,7 @@ export const SnapSendTransactionStage: React.FC = () => {
       }));
     }
     return p;
-  }, [outputs, changeAddress, pushTx, inputs]);
+  }, [outputs, changeAddress, inputs]);
 
   const liveRequest = useMemo(
     () => ({ method: 'htr_sendTransaction', params }),
@@ -256,22 +254,6 @@ export const SnapSendTransactionStage: React.FC = () => {
                 Snap Addr0
               </button>
             </div>
-          </div>
-
-          {/* Push Transaction */}
-          <div className="border border-gray-200 rounded p-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={pushTx}
-                onChange={(e) => setPushTx(e.target.checked)}
-                className="checkbox checkbox-primary"
-              />
-              <span className="text-sm font-medium">Push Transaction</span>
-            </label>
-            <p className="text-xs text-muted mt-1">
-              When unchecked, the signed transaction is returned without broadcasting.
-            </p>
           </div>
 
           {/* Inputs (UTXO selection) */}

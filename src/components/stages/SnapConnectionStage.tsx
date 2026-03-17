@@ -27,6 +27,8 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import { useToast } from '../../hooks/useToast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
+const STORAGE_KEY_SNAP_ORIGIN = 'hathor_qa_snap_origin';
+
 export const SnapConnectionStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
@@ -37,14 +39,17 @@ export const SnapConnectionStage: React.FC = () => {
   const snapAddress = useSelector(selectSnapAddress);
   const snapNetwork = useSelector(selectSnapNetwork);
 
-  const [originInput, setOriginInput] = useState(snapOrigin || DEFAULT_SNAP_ORIGIN);
+  // Restore origin from localStorage on first load
+  const storedOrigin = localStorage.getItem(STORAGE_KEY_SNAP_ORIGIN);
+  const [originInput, setOriginInput] = useState(snapOrigin || storedOrigin || DEFAULT_SNAP_ORIGIN);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [hasMetaMask, setHasMetaMask] = useState<boolean | null>(null);
   const [isFetchingWalletInfo, setIsFetchingWalletInfo] = useState(false);
 
   const requestSnap = useRequestSnap(originInput);
   const invokeSnap = useInvokeSnap(originInput);
-  const { installedSnap: contextSnap, error: contextError } = useMetaMaskContext();
+  const { provider, installedSnap: contextSnap, error: contextError, setInstalledSnap } = useMetaMaskContext();
 
   // Detect MetaMask via EIP-6963
   useEffect(() => {
@@ -93,6 +98,41 @@ export const SnapConnectionStage: React.FC = () => {
     }
   }, [contextError, dispatch]);
 
+  // Auto-reconnect: on mount, check if snap is already installed in MetaMask
+  // via wallet_getSnaps (no user approval needed). This avoids requiring
+  // re-installation after page reload. Mirrors the web-wallet approach.
+  useEffect(() => {
+    if (isConnected || !provider || !storedOrigin) return;
+
+    const checkExistingSnap = async () => {
+      setIsReconnecting(true);
+      try {
+        const snaps = await provider.request({ method: 'wallet_getSnaps' }) as
+          Record<string, { id: string; version: string; enabled: boolean; blocked: boolean }> | null;
+
+        const snap = snaps?.[storedOrigin];
+        if (snap && snap.enabled && !snap.blocked) {
+          // Snap is installed and active — reconnect without install dialog
+          setInstalledSnap({ id: snap.id ?? storedOrigin, version: snap.version } as import('@hathor/snap-utils').Snap);
+          dispatch(
+            setSnapConnected({
+              installedSnap: { id: snap.id ?? storedOrigin, version: snap.version },
+              snapOrigin: storedOrigin,
+            }),
+          );
+          dispatch(setSnapOrigin(storedOrigin));
+        }
+      } catch (err) {
+        console.warn('Auto-reconnect check failed:', err);
+      } finally {
+        setIsReconnecting(false);
+      }
+    };
+
+    checkExistingSnap();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider]);
+
   const fetchWalletInfo = useCallback(async () => {
     setIsFetchingWalletInfo(true);
     try {
@@ -115,6 +155,7 @@ export const SnapConnectionStage: React.FC = () => {
     dispatch(setSnapOrigin(originInput));
     try {
       await requestSnap();
+      localStorage.setItem(STORAGE_KEY_SNAP_ORIGIN, originInput);
       showToast('Snap connected successfully', 'success');
       // Scroll sidebar to the snaps group so stages are visible
       setTimeout(() => {
@@ -138,6 +179,7 @@ export const SnapConnectionStage: React.FC = () => {
 
   const handleDisconnect = () => {
     dispatch(resetSnap());
+    localStorage.removeItem(STORAGE_KEY_SNAP_ORIGIN);
     showToast('Snap disconnected', 'success');
   };
 
@@ -225,7 +267,7 @@ export const SnapConnectionStage: React.FC = () => {
                 disabled={isConnecting || hasMetaMask === false}
                 className="btn-primary"
               >
-                {isConnecting ? 'Connecting...' : 'Connect Snap'}
+                {isConnecting ? 'Connecting...' : isReconnecting ? 'Reconnecting...' : 'Connect Snap'}
               </button>
             )}
           </div>

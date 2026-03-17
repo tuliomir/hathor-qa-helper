@@ -5,9 +5,9 @@
  * snap connection check, and Redux dispatch helpers for snap method results.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useInvokeSnap } from '@hathor/snap-utils';
+import { useInvokeSnap, useMetaMaskContext } from '@hathor/snap-utils';
 import type { AppDispatch, RootState } from '../store';
 import { selectIsSnapConnected, selectSnapOrigin } from '../store/slices/snapSlice';
 import {
@@ -57,6 +57,25 @@ export function useSnapMethod(methodKey: string) {
   );
 
   const invokeSnap = useInvokeSnap(snapOrigin || undefined);
+  const { error: metaMaskContextError } = useMetaMaskContext();
+
+  // Track whether we're in the middle of an execute call
+  const executingRef = useRef(false);
+
+  // Fallback: if MetaMask context captures an error that didn't propagate
+  // through the promise chain, dispatch it to Redux so the UI shows it.
+  // This mirrors the web-wallet's approach of monitoring context error state.
+  useEffect(() => {
+    if (metaMaskContextError && executingRef.current) {
+      const errorMessage = metaMaskContextError instanceof Error
+        ? metaMaskContextError.message
+        : String(metaMaskContextError);
+      console.error(`[snap:${methodKey}] MetaMask context error (fallback):`, metaMaskContextError);
+      dispatch(
+        setSnapMethodError({ methodKey, error: errorMessage, duration: 0 }),
+      );
+    }
+  }, [metaMaskContextError, dispatch, methodKey]);
 
   const handlers = useMemo(
     () => createSnapHandlers(invokeSnap, isDryRun),
@@ -66,6 +85,7 @@ export function useSnapMethod(methodKey: string) {
   const execute = useCallback(
     async (handlerFn: (handlers: ReturnType<typeof createSnapHandlers>) => Promise<{ request: { method: string; params?: Record<string, unknown> }; response: unknown }>) => {
       const startTime = Date.now();
+      executingRef.current = true;
 
       dispatch(
         setSnapMethodRequest({
@@ -120,6 +140,8 @@ export function useSnapMethod(methodKey: string) {
         );
 
         throw error;
+      } finally {
+        executingRef.current = false;
       }
     },
     [dispatch, handlers, isDryRun, methodKey],

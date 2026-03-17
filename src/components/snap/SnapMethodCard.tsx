@@ -132,7 +132,15 @@ export const SnapMethodCard: React.FC<SnapMethodCardProps> = ({
 
   const error = localError || methodData?.error || null;
   const response = methodData?.response ?? null;
-  const hasResult = response !== null || error !== null || rejected;
+
+  // Fallback rejection detection: if error landed in Redux but the throw
+  // didn't reach our catch (MetaMask context error path), detect it here.
+  const isErrorARejection = !rejected && error
+    ? /reject|denied|cancel|PromptRejectedError/i.test(error)
+    : false;
+  const effectiveRejected = rejected || isErrorARejection;
+
+  const hasResult = response !== null || error !== null || effectiveRejected;
 
   return (
     <>
@@ -226,10 +234,10 @@ export const SnapMethodCard: React.FC<SnapMethodCardProps> = ({
               className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
             >
               <span>{responseExpanded ? '▼' : '▶'}</span>
-              {rejected ? 'Request Rejected' : error ? 'Error Details' : 'Response'}
+              {effectiveRejected ? 'Request Rejected' : error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {response && !error && !rejected && (
+              {response && !error && !effectiveRejected && (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -253,7 +261,7 @@ export const SnapMethodCard: React.FC<SnapMethodCardProps> = ({
           {responseExpanded && (
             <div className="relative">
               {/* Rejection banner */}
-              {rejected ? (
+              {effectiveRejected ? (
                 <div className="bg-amber-50 border border-amber-300 rounded p-4">
                   <div className="flex items-start gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">

@@ -33,7 +33,6 @@ export const SnapCreateNcTokenStage: React.FC = () => {
   // Transaction options
   const [maxFee, setMaxFee] = useState('');
   const [contractPaysFees, setContractPaysFees] = useState(false);
-  const [pushTx, setPushTx] = useState(true);
 
   const params = useMemo(() => {
     let args: unknown[];
@@ -67,14 +66,12 @@ export const SnapCreateNcTokenStage: React.FC = () => {
     const p: Record<string, unknown> = { method, createTokenOptions, data };
     if (maxFee.trim()) p.max_fee = maxFee;
     if (contractPaysFees) p.contract_pays_fees = true;
-    if (!pushTx) p.push_tx = false;
 
     return p;
   }, [
     method, blueprintId, argsText, tokenName, tokenSymbol, tokenAmount,
     tokenAddress, changeAddress, contractPaysDeposit, createMint,
     mintAddress, allowExternalMint, createMelt, maxFee, contractPaysFees,
-    pushTx,
   ]);
 
   const liveRequest = useMemo(
@@ -174,10 +171,6 @@ export const SnapCreateNcTokenStage: React.FC = () => {
           <div className="flex items-center gap-2">
             <input type="checkbox" checked={contractPaysFees} onChange={(e) => setContractPaysFees(e.target.checked)} className="checkbox checkbox-primary" id="ncContractPaysFees" />
             <label htmlFor="ncContractPaysFees" className="text-sm cursor-pointer">Contract Pays Fees</label>
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" checked={pushTx} onChange={(e) => setPushTx(e.target.checked)} className="checkbox checkbox-primary" id="ncPushTx" />
-            <label htmlFor="ncPushTx" className="text-sm cursor-pointer">Push Transaction</label>
           </div>
         </SnapMethodCard>
       )}

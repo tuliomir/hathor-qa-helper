@@ -61,7 +61,6 @@ export const SnapCreateTokenStage: React.FC = () => {
   const [meltAuthorityAddress, setMeltAuthorityAddress] = useState('');
   const [allowExternalMelt, setAllowExternalMelt] = useState(false);
   const [version, setVersion] = useState('deposit');
-  const [pushTx, setPushTx] = useState(true);
   const [dataEntries, setDataEntries] = useState<string[]>([]);
 
   const params = useMemo(() => {
@@ -81,7 +80,6 @@ export const SnapCreateTokenStage: React.FC = () => {
       p.melt_authority_address = meltAuthorityAddress;
     if (createMelt) p.allow_external_melt_authority_address = allowExternalMelt;
     if (version) p.version = version;
-    if (!pushTx) p.push_tx = false;
     const filtered = dataEntries.filter((d) => d.trim() !== '');
     if (filtered.length > 0) p.data = filtered;
     return p;
@@ -89,7 +87,7 @@ export const SnapCreateTokenStage: React.FC = () => {
     name, symbol, amount, address, changeAddress,
     createMint, mintAuthorityAddress, allowExternalMint,
     createMelt, meltAuthorityAddress, allowExternalMelt,
-    version, pushTx, dataEntries,
+    version, dataEntries,
   ]);
 
   const liveRequest = useMemo(
@@ -184,12 +182,6 @@ export const SnapCreateTokenStage: React.FC = () => {
               </div>
             </>
           )}
-
-          {/* Push Transaction */}
-          <div className="flex items-center gap-2">
-            <input type="checkbox" checked={pushTx} onChange={(e) => setPushTx(e.target.checked)} className="checkbox checkbox-primary" id="snapPushTx" />
-            <label htmlFor="snapPushTx" className="text-sm cursor-pointer">Push Transaction</label>
-          </div>
 
           {/* Data Entries */}
           <div>

@@ -35,7 +35,6 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
   const [argsText, setArgsText] = useState('');
   const [maxFee, setMaxFee] = useState('');
   const [contractPaysFees, setContractPaysFees] = useState(false);
-  const [pushTx, setPushTx] = useState(true);
 
   const params = useMemo(() => {
     const p: Record<string, unknown> = { method };
@@ -61,10 +60,9 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
 
     if (maxFee.trim()) p.max_fee = maxFee;
     if (contractPaysFees) p.contract_pays_fees = true;
-    if (!pushTx) p.push_tx = false;
 
     return p;
-  }, [ncId, blueprintId, method, actions, argsText, maxFee, contractPaysFees, pushTx]);
+  }, [ncId, blueprintId, method, actions, argsText, maxFee, contractPaysFees]);
 
   const liveRequest = useMemo(
     () => ({ method: 'htr_sendNanoContractTx', params }),
@@ -160,11 +158,6 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
             <label className="text-sm font-medium">Contract Pays Fees</label>
           </div>
 
-          {/* Push Transaction */}
-          <div className="flex items-center gap-2">
-            <input type="checkbox" checked={pushTx} onChange={(e) => setPushTx(e.target.checked)} className="checkbox checkbox-primary" />
-            <label className="text-sm font-medium">Push Transaction</label>
-          </div>
         </SnapMethodCard>
       )}
     </div>
