@@ -11,7 +11,8 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
 
-const SWAP_TOKENS_URL = 'https://wallet.swap.allowed-tokens.hathor.network/';
+// Proxied via Vite dev server to avoid CORS — see vite.config.ts /swap-tokens
+const SWAP_TOKENS_URL = '/swap-tokens';
 
 interface SwapTokensApiResponse {
   networks: {

@@ -46,6 +46,11 @@ export default defineConfig({
         ws: true,
         rewrite: (path) => path.replace(/^\/hathor-node\/mainnet/, ''),
       },
+      '/swap-tokens': {
+        target: 'https://wallet.swap.allowed-tokens.hathor.network',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/swap-tokens/, '/'),
+      },
     },
   },
   optimizeDeps: {
