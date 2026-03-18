@@ -10,6 +10,7 @@ import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import { safeStringify } from '../../utils/betHelpers';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 export interface RpcSignOracleDataCardProps {
@@ -320,7 +321,8 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   return (
     <>
       {/* Input Fields Card */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Sign Oracle Data</h3>

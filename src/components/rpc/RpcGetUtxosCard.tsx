@@ -12,6 +12,7 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import type { UtxoData } from '../../store/slices/getUtxosSlice';
 import { DEFAULT_NETWORK, type NetworkType } from '../../constants/network';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 /**
@@ -251,7 +252,8 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
   return (
     <>
       {/* Execute Button */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold">Execute RPC Call</h3>

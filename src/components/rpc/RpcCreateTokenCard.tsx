@@ -13,6 +13,7 @@ import Select from '../common/Select';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
 import type { NetworkType } from '../../constants/network';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { BASE_NAME, BASE_SYMBOL, VERSION_DEFAULTS, swapVersionSuffix } from '../../utils/createTokenDefaults';
 
@@ -306,7 +307,8 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   return (
-    <div className="card-primary mb-7.5">
+    <div className="card-primary mb-7.5 relative">
+      {loading && <LoadingOverlay />}
       <div className="flex flex-col space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between">

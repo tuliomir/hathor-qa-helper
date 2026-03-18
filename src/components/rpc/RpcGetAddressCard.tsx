@@ -11,6 +11,7 @@ import Select from '../common/Select';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import type { AddressRequestType } from '../../store/slices/getAddressSlice';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 /**
@@ -203,7 +204,8 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
   return (
     <>
       {/* Request Configuration */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <h3 className="text-lg font-bold mb-3">Request Configuration</h3>
 
         {/* Type Selector */}

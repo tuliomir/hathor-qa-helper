@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 /**
@@ -338,7 +339,8 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   return (
     <>
       {/* Tokens Table */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold m-0">Tokens to Query</h3>
           {onRefresh && (

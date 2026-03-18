@@ -15,6 +15,7 @@ import type { NetworkType } from '../../constants/network';
 import Select from '../common/Select';
 // @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 interface Token {
@@ -243,7 +244,8 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
 
 
   return (
-    <div className="card-primary mb-7.5">
+    <div className="card-primary mb-7.5 relative">
+      {loading && <LoadingOverlay />}
       <div className="flex flex-col space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between">

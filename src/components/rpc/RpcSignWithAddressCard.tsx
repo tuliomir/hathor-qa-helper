@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 /**
@@ -258,7 +259,8 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   return (
     <>
       {/* Input Form */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <h3 className="text-lg font-bold mb-1">Sign with Address</h3>
         <p className="text-sm text-muted mb-4">Sign a message using a specific address from your wallet</p>
 

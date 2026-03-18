@@ -14,6 +14,7 @@ import { RpcRequestPreview } from './RpcRequestPreview';
 import { safeStringify } from '../../utils/betHelpers';
 import TxStatus from '../common/TxStatus.tsx'
 import { useAppSelector } from '../../store/hooks.ts'
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 export interface RpcBetDepositCardProps {
@@ -234,7 +235,8 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   return (
     <>
       {/* Input Fields Card */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Place Bet</h3>

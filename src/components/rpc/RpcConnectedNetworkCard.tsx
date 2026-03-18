@@ -9,6 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 /**
@@ -177,7 +178,8 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
   return (
     <>
       {/* Execute Button */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold">Execute RPC Call</h3>

@@ -17,6 +17,7 @@ import { NETWORK_CONFIG } from '../../constants/network';
 import { formatTimeUntil } from '../../utils/valuesUtils.ts'
 import TxStatus from '../common/TxStatus.tsx'
 import { useAppSelector } from '../../store/hooks.ts'
+import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 export interface RpcBetInitializeCardProps {
@@ -247,7 +248,8 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   return (
     <>
       {/* Input Fields Card */}
-      <div className="card-primary mb-7.5">
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Initialize Bet</h3>
