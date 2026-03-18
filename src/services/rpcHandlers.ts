@@ -427,16 +427,16 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       if (params.change_address && params.change_address.trim()) {
         invokeParams.change_address = params.change_address;
       }
-      if (params.create_mint && params.mint_authority_address && params.mint_authority_address.trim()) {
+      if (params.mint_authority_address && params.mint_authority_address.trim()) {
         invokeParams.mint_authority_address = params.mint_authority_address;
       }
-      if (params.create_mint) {
+      if (params.allow_external_mint_authority_address) {
         invokeParams.allow_external_mint_authority_address = params.allow_external_mint_authority_address;
       }
-      if (params.create_melt && params.melt_authority_address && params.melt_authority_address.trim()) {
+      if (params.melt_authority_address && params.melt_authority_address.trim()) {
         invokeParams.melt_authority_address = params.melt_authority_address;
       }
-      if (params.create_melt) {
+      if (params.allow_external_melt_authority_address) {
         invokeParams.allow_external_melt_authority_address = params.allow_external_melt_authority_address;
       }
       if (params.data && params.data.length > 0) {
