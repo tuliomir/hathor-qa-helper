@@ -103,6 +103,17 @@ export const SnapBetInitializeStage: React.FC = () => {
             <div>
               <label className="block text-sm font-medium mb-1.5">Oracle Address</label>
               <input type="text" value={oracleAddress} onChange={(e) => setOracleAddress(e.target.value)} placeholder="Oracle address (base58)" className="input" />
+              <div className="flex gap-2 mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => { if (snapAddress) setOracleAddress(snapAddress); }}
+                  disabled={!snapAddress}
+                  className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+                  title={snapAddress ? `Use ${snapAddress}` : 'Snap address not available'}
+                >
+                  Snap Addr0
+                </button>
+              </div>
               {intermediates.oracleBufferError && (
                 <p className="text-xs text-danger mt-1">{intermediates.oracleBufferError}</p>
               )}
