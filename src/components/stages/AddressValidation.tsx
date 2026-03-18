@@ -206,7 +206,9 @@ function WalletAddressDisplay({
     }
   };
 
-  // Handler for "Inject Initial Fund" — sends unlocked + locked outputs to address 0
+  // Handler for "Inject Initial Fund" — sends unlocked + locked outputs to address 0.
+  // Uses sendManyOutputsSendTransaction directly (not the template builder) because
+  // the template executor doesn't encode timelock into the output script.
   const handleInjectFund = async () => {
     if (!fundingWalletId || !wallet?.instance) return;
 
@@ -224,44 +226,22 @@ function WalletAddressDisplay({
       const fundAddr0 = await fundingWallet.instance.getAddressAtIndex(0);
       const timelockTs = Math.floor(new Date(injectTimestamp).getTime() / 1000);
 
-      const builder = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipient', value: addr0 })
-        .addSetVarAction({ name: 'changeAddr', value: fundAddr0 });
+      const outputs: Array<{ address: string; value: bigint; token: string; timelock?: number }> = [];
 
-      // Unlocked output
       if (injectUnlocked > 0) {
-        builder.addTokenOutput({
-          address: '{recipient}',
-          amount: BigInt(injectUnlocked),
-          token: NATIVE_TOKEN_UID,
-        });
+        outputs.push({ address: addr0, value: BigInt(injectUnlocked), token: NATIVE_TOKEN_UID });
       }
-
-      // Locked output with timelock
       if (injectLocked > 0) {
-        builder.addTokenOutput({
-          address: '{recipient}',
-          amount: BigInt(injectLocked),
-          token: NATIVE_TOKEN_UID,
-          timelock: timelockTs,
-        });
+        outputs.push({ address: addr0, value: BigInt(injectLocked), token: NATIVE_TOKEN_UID, timelock: timelockTs });
       }
 
-      builder.addCompleteAction({ changeAddress: '{changeAddr}' });
-      const template = builder.build();
+      if (outputs.length === 0) return;
 
-      await sendTransaction(
-        template,
-        {
-          fromWalletId: fundingWalletId,
-          fromWallet: fundingWallet,
-          toAddress: addr0,
-          amount: injectUnlocked + injectLocked,
-          tokenUid: NATIVE_TOKEN_UID,
-          tokenSymbol: 'HTR',
-        },
-        WALLET_CONFIG.DEFAULT_PIN_CODE,
-      );
+      const sendTx = await fundingWallet.instance.sendManyOutputsSendTransaction(outputs, {
+        changeAddress: fundAddr0,
+        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+      });
+      await sendTx.runFromMining();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to inject funds';
       setInjectError(msg);
