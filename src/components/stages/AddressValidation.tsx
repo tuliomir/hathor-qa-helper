@@ -72,6 +72,16 @@ function WalletAddressDisplay({
 		symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol
 	});
 
+  // Inject initial fund state
+  const [injectUnlocked, setInjectUnlocked] = useState(10);
+  const [injectLocked, setInjectLocked] = useState(5);
+  const [injectTimestamp, setInjectTimestamp] = useState<string>(() => {
+    const date = new Date(Date.now() + 5 * 60 * 1000);
+    return date.toISOString().slice(0, 16);
+  });
+  const [isInjecting, setIsInjecting] = useState(false);
+  const [injectError, setInjectError] = useState<string | null>(null);
+
   // Auto-derive selected address when wallet is selected
   useEffect(() => {
     const deriveAddress = async () => {
@@ -191,6 +201,71 @@ function WalletAddressDisplay({
     } catch (err) {
       // Error is already handled by the hook
       console.error('Transaction error:', err);
+    }
+  };
+
+  // Handler for "Inject Initial Fund" — sends unlocked + locked outputs to address 0
+  const handleInjectFund = async () => {
+    if (!fundingWalletId || !wallet?.instance) return;
+
+    setIsInjecting(true);
+    setInjectError(null);
+
+    try {
+      const wallets = getAllWallets();
+      const fundingWallet = wallets.find(
+        (w) => w.metadata.id === fundingWalletId && w.status === 'ready',
+      );
+      if (!fundingWallet?.instance) throw new Error('Funding wallet not ready');
+
+      const addr0 = await wallet.instance.getAddressAtIndex(0);
+      const fundAddr0 = await fundingWallet.instance.getAddressAtIndex(0);
+      const timelockTs = Math.floor(new Date(injectTimestamp).getTime() / 1000);
+
+      const builder = TransactionTemplateBuilder.new()
+        .addSetVarAction({ name: 'recipient', value: addr0 })
+        .addSetVarAction({ name: 'changeAddr', value: fundAddr0 });
+
+      // Unlocked output
+      if (injectUnlocked > 0) {
+        builder.addTokenOutput({
+          address: '{recipient}',
+          amount: BigInt(injectUnlocked),
+          token: NATIVE_TOKEN_UID,
+        });
+      }
+
+      // Locked output with timelock
+      if (injectLocked > 0) {
+        builder.addTokenOutput({
+          address: '{recipient}',
+          amount: BigInt(injectLocked),
+          token: NATIVE_TOKEN_UID,
+          timelock: timelockTs,
+        });
+      }
+
+      builder.addCompleteAction({ changeAddress: '{changeAddr}' });
+      const template = builder.build();
+
+      await sendTransaction(
+        template,
+        {
+          fromWalletId: fundingWalletId,
+          fromWallet: fundingWallet,
+          toAddress: addr0,
+          amount: injectUnlocked + injectLocked,
+          tokenUid: NATIVE_TOKEN_UID,
+          tokenSymbol: 'HTR',
+        },
+        WALLET_CONFIG.DEFAULT_PIN_CODE,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to inject funds';
+      setInjectError(msg);
+      console.error('Inject fund error:', err);
+    } finally {
+      setIsInjecting(false);
     }
   };
 
@@ -366,6 +441,74 @@ function WalletAddressDisplay({
                   {isSending ? 'Sending...' : 'Send from Fund Wallet'}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Inject Initial Fund */}
+          <div className="card-primary mb-7.5">
+            <h3 className="text-lg font-bold mb-4">Inject Initial Fund</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Address</label>
+                <input
+                  type="text"
+                  value={derivedAddress ? `${derivedAddress.slice(0, 12)}...${derivedAddress.slice(-8)} (index 0)` : 'Deriving...'}
+                  disabled
+                  className="input bg-gray-50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Unlocked</label>
+                  <input
+                    type="number"
+                    value={injectUnlocked}
+                    onChange={(e) => setInjectUnlocked(parseInt(e.target.value) || 0)}
+                    min="0"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Locked</label>
+                  <input
+                    type="number"
+                    value={injectLocked}
+                    onChange={(e) => setInjectLocked(parseInt(e.target.value) || 0)}
+                    min="0"
+                    className="input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Timestamp (lock until)</label>
+                <input
+                  type="datetime-local"
+                  value={injectTimestamp}
+                  onChange={(e) => setInjectTimestamp(e.target.value)}
+                  className="input"
+                />
+                <p className="text-xs text-muted mt-1">
+                  Locked funds will be unavailable until this time (default: 5 min from now)
+                </p>
+              </div>
+
+              {injectError && (
+                <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">
+                  {injectError}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleInjectFund}
+                disabled={isInjecting || isSending || !fundingWalletId || (injectUnlocked === 0 && injectLocked === 0)}
+                className="btn-primary w-full"
+              >
+                {isInjecting ? 'Injecting...' : 'Inject Fund'}
+              </button>
             </div>
           </div>
         </>
