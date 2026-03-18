@@ -77,7 +77,9 @@ function WalletAddressDisplay({
   const [injectLocked, setInjectLocked] = useState(5);
   const [injectTimestamp, setInjectTimestamp] = useState<string>(() => {
     const date = new Date(Date.now() + 5 * 60 * 1000);
-    return date.toISOString().slice(0, 16);
+    // Format as local datetime for datetime-local input (YYYY-MM-DDTHH:MM)
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   });
   const [isInjecting, setIsInjecting] = useState(false);
   const [injectError, setInjectError] = useState<string | null>(null);
