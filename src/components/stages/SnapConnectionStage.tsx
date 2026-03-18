@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRequestSnap, useInvokeSnap, useMetaMaskContext } from '@hathor/snap-utils';
-import type { AppDispatch } from '../../store';
+import type { AppDispatch, RootState } from '../../store';
 import {
   setSnapConnected,
   setSnapOrigin,
@@ -22,6 +22,9 @@ import {
   selectSnapNetwork,
 } from '../../store/slices/snapSlice';
 import { DEFAULT_SNAP_ORIGIN, SNAP_ORIGIN_NPM } from '../../constants/snap';
+import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { WALLET_CONFIG } from '../../constants/network';
+import { useWalletStore } from '../../hooks/useWalletStore';
 import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { LoadingOverlay } from '../common/LoadingOverlay';
@@ -47,6 +50,58 @@ export const SnapConnectionStage: React.FC = () => {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [hasMetaMask, setHasMetaMask] = useState<boolean | null>(null);
   const [isFetchingWalletInfo, setIsFetchingWalletInfo] = useState(false);
+
+  // Funding wallet for inject fund feature
+  const { getWallet } = useWalletStore();
+  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
+  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
+
+  // Inject fund state
+  const [injectUnlocked, setInjectUnlocked] = useState(10);
+  const [injectLocked, setInjectLocked] = useState(5);
+  const [injectTimestamp, setInjectTimestamp] = useState<string>(() => {
+    const date = new Date(Date.now() + 5 * 60 * 1000);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  });
+  const [isInjecting, setIsInjecting] = useState(false);
+  const [injectError, setInjectError] = useState<string | null>(null);
+
+  const canInjectFund = isConnected && snapAddress && fundingWallet?.instance;
+
+  const handleInjectFund = async () => {
+    if (!snapAddress || !fundingWallet?.instance) return;
+
+    setIsInjecting(true);
+    setInjectError(null);
+
+    try {
+      const fundAddr0 = await fundingWallet.instance.getAddressAtIndex(0);
+      const timelockTs = Math.floor(new Date(injectTimestamp).getTime() / 1000);
+
+      const outputs: Array<{ address: string; value: bigint; token: string; timelock?: number }> = [];
+      if (injectUnlocked > 0) {
+        outputs.push({ address: snapAddress, value: BigInt(injectUnlocked), token: NATIVE_TOKEN_UID });
+      }
+      if (injectLocked > 0) {
+        outputs.push({ address: snapAddress, value: BigInt(injectLocked), token: NATIVE_TOKEN_UID, timelock: timelockTs });
+      }
+      if (outputs.length === 0) return;
+
+      const sendTx = await fundingWallet.instance.sendManyOutputsSendTransaction(outputs, {
+        changeAddress: fundAddr0,
+        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+      });
+      await sendTx.run();
+      showToast('Funds injected to snap wallet successfully', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to inject funds';
+      setInjectError(msg);
+      console.error('Inject fund error:', err);
+    } finally {
+      setIsInjecting(false);
+    }
+  };
 
   const requestSnap = useRequestSnap(originInput);
   const invokeSnap = useInvokeSnap(originInput);
@@ -332,6 +387,69 @@ export const SnapConnectionStage: React.FC = () => {
                 Toggle dry run for all snap method stages
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inject Fund — shown when snap connected + addr0 available + funding wallet ready */}
+      {canInjectFund && (
+        <div className="card-primary mb-7.5">
+          <h3 className="text-lg font-bold mb-4">Fund Snap Wallet</h3>
+          <p className="text-sm text-muted mb-4">
+            Send HTR from the funding wallet to the snap wallet address ({snapAddress.slice(0, 8)}...{snapAddress.slice(-6)})
+          </p>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Unlocked</label>
+                <input
+                  type="number"
+                  value={injectUnlocked}
+                  onChange={(e) => setInjectUnlocked(parseInt(e.target.value) || 0)}
+                  min="0"
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Locked</label>
+                <input
+                  type="number"
+                  value={injectLocked}
+                  onChange={(e) => setInjectLocked(parseInt(e.target.value) || 0)}
+                  min="0"
+                  className="input"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Timestamp (lock until)</label>
+              <input
+                type="datetime-local"
+                value={injectTimestamp}
+                onChange={(e) => setInjectTimestamp(e.target.value)}
+                className="input"
+              />
+              <p className="text-xs text-muted mt-1">
+                Locked funds unavailable until this time (default: 5 min from now)
+              </p>
+            </div>
+
+            {injectError && (
+              <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">
+                {injectError}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleInjectFund}
+              disabled={isInjecting || (injectUnlocked === 0 && injectLocked === 0)}
+              className="btn-primary w-full"
+            >
+              {isInjecting ? 'Injecting...' : 'Inject Fund'}
+            </button>
           </div>
         </div>
       )}
