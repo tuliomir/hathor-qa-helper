@@ -11,6 +11,7 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import { NETWORK_CONFIG } from '../../constants/network';
+import { getOracleBuffer } from '../../utils/betHelpers';
 
 export const SnapBetInitializeStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } =
@@ -30,7 +31,11 @@ export const SnapBetInitializeStage: React.FC = () => {
   useEffect(() => { if (snapAddress && !oracleAddress) setOracleAddress(snapAddress); }, [snapAddress]);
 
   const params = useMemo(() => {
-    const oracleScript = oracleAddress; // raw address, snap handles encoding
+    // Convert base58 oracle address to hex-encoded P2PKH script buffer
+    let oracleScript = '';
+    try {
+      if (oracleAddress.trim()) oracleScript = getOracleBuffer(oracleAddress);
+    } catch { /* leave empty — live preview will show the issue */ }
     const ts = deadline ? Math.floor(new Date(deadline).getTime() / 1000) : 0;
     return {
       method: 'initialize',
