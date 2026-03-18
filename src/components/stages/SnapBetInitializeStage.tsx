@@ -30,12 +30,19 @@ export const SnapBetInitializeStage: React.FC = () => {
 
   useEffect(() => { if (snapAddress && !oracleAddress) setOracleAddress(snapAddress); }, [snapAddress]);
 
+  // Convert oracle address to hex buffer — show error if conversion fails
+  const [oracleBufferError, setOracleBufferError] = useState<string | null>(null);
+
   const params = useMemo(() => {
-    // Convert base58 oracle address to hex-encoded P2PKH script buffer
     let oracleScript = '';
-    try {
-      if (oracleAddress.trim()) oracleScript = getOracleBuffer(oracleAddress);
-    } catch { /* leave empty — live preview will show the issue */ }
+    if (oracleAddress.trim()) {
+      try {
+        oracleScript = getOracleBuffer(oracleAddress);
+        setOracleBufferError(null);
+      } catch (err) {
+        setOracleBufferError(err instanceof Error ? err.message : 'Invalid oracle address');
+      }
+    }
     const ts = deadline ? Math.floor(new Date(deadline).getTime() / 1000) : 0;
     return {
       method: 'initialize',
@@ -79,6 +86,9 @@ export const SnapBetInitializeStage: React.FC = () => {
           <div>
             <label className="block text-sm font-medium mb-1.5">Oracle Address</label>
             <input type="text" value={oracleAddress} onChange={(e) => setOracleAddress(e.target.value)} placeholder="Oracle address" className="input" />
+            {oracleBufferError && (
+              <p className="text-xs text-danger mt-1">{oracleBufferError}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Token UID</label>
