@@ -40,8 +40,9 @@ export const SnapBetInitializeStage: React.FC = () => {
     return {
       method: 'initialize',
       blueprint_id: blueprintId,
-      actions: [],
+      actions: [] as unknown[],
       args: [oracleScript, token, ts],
+      push_tx: true,
       nc_id: null,
     };
   }, [blueprintId, oracleAddress, token, deadline]);
