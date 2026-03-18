@@ -241,7 +241,9 @@ function WalletAddressDisplay({
         changeAddress: fundAddr0,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
       });
-      await sendTx.runFromMining();
+      // run() handles the full lifecycle: prepareTx → signTx → runFromMining.
+      // runFromMining() alone fails because the transaction isn't prepared yet.
+      await sendTx.run();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to inject funds';
       setInjectError(msg);
