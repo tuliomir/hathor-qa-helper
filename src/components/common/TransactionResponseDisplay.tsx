@@ -198,7 +198,12 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
               {tx.version !== undefined && <div><strong>Version:</strong> {tx.version}</div>}
               {tx.weight !== undefined && <div><strong>Weight:</strong> {typeof tx.weight === 'number' ? tx.weight.toFixed(2) : tx.weight}</div>}
               {tx.nonce !== undefined && <div><strong>Nonce:</strong> {tx.nonce}</div>}
-              {tx.timestamp !== undefined && <div><strong>Timestamp:</strong> {tx.timestamp}</div>}
+              {tx.timestamp !== undefined && (
+                <div>
+                  <strong>Timestamp:</strong>{' '}
+                  {new Date(tx.timestamp * 1000).toLocaleString()} ({tx.timestamp})
+                </div>
+              )}
               {tx.signalBits !== undefined && <div><strong>Signal Bits:</strong> {tx.signalBits}</div>}
             </div>
           </div>
