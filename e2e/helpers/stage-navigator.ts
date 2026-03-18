@@ -60,6 +60,15 @@ export const MAIN_QA_STAGES: StageEntry[] = [
   { id: 'snap-change-network', title: 'Change Network', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/change-network' },
   { id: 'snap-send-nano-contract-tx', title: 'Nano Contract TX', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/nano-contract-tx' },
   { id: 'snap-create-nc-token', title: 'NC + Create Token', groupTitle: 'MetaMask Snaps', url: '/tools/snaps/nc-create-token' },
+  // Snap Bet Nano Contract
+  { id: 'snap-bet-initialize', title: 'Initialize Bet', groupTitle: 'Snap Bet NC', url: '/tools/snap-bet-nc/initialize' },
+  { id: 'snap-bet-deposit', title: 'Place Bet', groupTitle: 'Snap Bet NC', url: '/tools/snap-bet-nc/deposit' },
+  { id: 'snap-set-bet-result', title: 'Set Bet Result', groupTitle: 'Snap Bet NC', url: '/tools/snap-bet-nc/set-result' },
+  { id: 'snap-bet-withdraw', title: 'Withdraw Prize', groupTitle: 'Snap Bet NC', url: '/tools/snap-bet-nc/withdraw' },
+  // Snap Fee Nano Contract
+  { id: 'snap-fee-initialize', title: 'Initialize Fee', groupTitle: 'Snap Fee NC', url: '/tools/snap-fee-nc/initialize' },
+  { id: 'snap-fee-deposit', title: 'Deposit Fee Token', groupTitle: 'Snap Fee NC', url: '/tools/snap-fee-nc/deposit' },
+  { id: 'snap-fee-withdraw', title: 'Withdraw Fee Token', groupTitle: 'Snap Fee NC', url: '/tools/snap-fee-nc/withdraw' },
 ];
 
 // ─── Mobile QA Sections (/mobile) ────────────────────────────────────────────

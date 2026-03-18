@@ -29,13 +29,13 @@ describe('stageRoutes', () => {
       }
     });
 
-    test('all 37 stages are covered', () => {
+    test('all stages are covered', () => {
       const totalStages = STAGE_GROUPS.reduce(
         (sum, group) => sum + group.stages.length,
         0,
       );
-      expect(totalStages).toBe(39);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(39);
+      expect(totalStages).toBe(46);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(46);
     });
   });
 

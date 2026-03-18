@@ -46,6 +46,13 @@ import { SnapSignOracleDataStage } from './stages/SnapSignOracleDataStage';
 import { SnapChangeNetworkStage } from './stages/SnapChangeNetworkStage';
 import { SnapGetXpubStage } from './stages/SnapGetXpubStage';
 import { SnapGetWalletInfoStage } from './stages/SnapGetWalletInfoStage';
+import { SnapBetInitializeStage } from './stages/SnapBetInitializeStage';
+import { SnapBetDepositStage } from './stages/SnapBetDepositStage';
+import { SnapSetBetResultStage } from './stages/SnapSetBetResultStage';
+import { SnapBetWithdrawStage } from './stages/SnapBetWithdrawStage';
+import { SnapFeeInitializeStage } from './stages/SnapFeeInitializeStage';
+import { SnapFeeDepositStage } from './stages/SnapFeeDepositStage';
+import { SnapFeeWithdrawStage } from './stages/SnapFeeWithdrawStage';
 
 const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'wallet-initialization': WalletInitialization,
@@ -87,6 +94,15 @@ const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'snap-change-network': SnapChangeNetworkStage,
   'snap-get-xpub': SnapGetXpubStage,
   'snap-get-wallet-info': SnapGetWalletInfoStage,
+  // Snap Bet Nano Contract
+  'snap-bet-initialize': SnapBetInitializeStage,
+  'snap-bet-deposit': SnapBetDepositStage,
+  'snap-set-bet-result': SnapSetBetResultStage,
+  'snap-bet-withdraw': SnapBetWithdrawStage,
+  // Snap Fee Nano Contract
+  'snap-fee-initialize': SnapFeeInitializeStage,
+  'snap-fee-deposit': SnapFeeDepositStage,
+  'snap-fee-withdraw': SnapFeeWithdrawStage,
 };
 
 export default function StageContent() {

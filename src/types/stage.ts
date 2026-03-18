@@ -5,12 +5,12 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management' | 'snap-connection' | 'snap-get-address' | 'snap-get-balance' | 'snap-get-connected-network' | 'snap-get-utxos' | 'snap-send-transaction' | 'snap-sign-with-address' | 'snap-create-token' | 'snap-send-nano-contract-tx' | 'snap-create-nc-token' | 'snap-sign-oracle-data' | 'snap-change-network' | 'snap-get-xpub' | 'snap-get-wallet-info';
+export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management' | 'snap-connection' | 'snap-get-address' | 'snap-get-balance' | 'snap-get-connected-network' | 'snap-get-utxos' | 'snap-send-transaction' | 'snap-sign-with-address' | 'snap-create-token' | 'snap-send-nano-contract-tx' | 'snap-create-nc-token' | 'snap-sign-oracle-data' | 'snap-change-network' | 'snap-get-xpub' | 'snap-get-wallet-info' | 'snap-bet-initialize' | 'snap-bet-deposit' | 'snap-set-bet-result' | 'snap-bet-withdraw' | 'snap-fee-initialize' | 'snap-fee-deposit' | 'snap-fee-withdraw';
 
 /**
  * Available stage groups
  */
-export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'fee-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig' | 'snaps';
+export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'fee-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig' | 'snaps' | 'snap-bet-nc' | 'snap-fee-nc';
 
 /**
  * Stage configuration
@@ -333,6 +333,60 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'NC + Create Token',
         description: 'Create a nano contract with token creation via Snap',
         icon: '🔗',
+      },
+    ],
+  },
+  {
+    id: 'snap-bet-nc',
+    title: 'Snap Bet NC',
+    stages: [
+      {
+        id: 'snap-bet-initialize',
+        title: 'Initialize Bet',
+        description: 'Initialize a bet nano contract via Snap',
+        icon: '🎲',
+      },
+      {
+        id: 'snap-bet-deposit',
+        title: 'Place Bet',
+        description: 'Place a bet on a nano contract via Snap',
+        icon: '💸',
+      },
+      {
+        id: 'snap-set-bet-result',
+        title: 'Set Bet Result',
+        description: 'Set the result for a bet nano contract via Snap',
+        icon: '⚖️',
+      },
+      {
+        id: 'snap-bet-withdraw',
+        title: 'Withdraw Prize',
+        description: 'Withdraw prize from a bet nano contract via Snap',
+        icon: '🏆',
+      },
+    ],
+  },
+  {
+    id: 'snap-fee-nc',
+    title: 'Snap Fee NC',
+    stages: [
+      {
+        id: 'snap-fee-initialize',
+        title: 'Initialize Fee',
+        description: 'Initialize a fee nano contract via Snap',
+        icon: '💎',
+      },
+      {
+        id: 'snap-fee-deposit',
+        title: 'Deposit Fee Token',
+        description: 'Deposit a fee-based token via Snap',
+        icon: '📥',
+      },
+      {
+        id: 'snap-fee-withdraw',
+        title: 'Withdraw Fee Token',
+        description: 'Withdraw a fee-based token via Snap',
+        icon: '📤',
       },
     ],
   },

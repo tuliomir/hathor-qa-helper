@@ -19,6 +19,8 @@ export const GROUP_SLUG_MAP: Record<GroupId, string> = {
   'auditing': 'auditing',
   'multisig': 'multisig',
   'snaps': 'snaps',
+  'snap-bet-nc': 'snap-bet-nc',
+  'snap-fee-nc': 'snap-fee-nc',
 };
 
 // ─── Stage slugs (group prefix stripped where redundant) ─────────────────────
@@ -71,6 +73,15 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   'snap-change-network': 'change-network',
   'snap-get-xpub': 'get-xpub',
   'snap-get-wallet-info': 'wallet-info',
+  // Snap Bet Nano Contract
+  'snap-bet-initialize': 'initialize',
+  'snap-bet-deposit': 'deposit',
+  'snap-set-bet-result': 'set-result',
+  'snap-bet-withdraw': 'withdraw',
+  // Snap Fee Nano Contract
+  'snap-fee-initialize': 'initialize',
+  'snap-fee-deposit': 'deposit',
+  'snap-fee-withdraw': 'withdraw',
 };
 
 // ─── Reverse lookup maps (built once at module load) ─────────────────────────
