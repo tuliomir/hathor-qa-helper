@@ -254,7 +254,7 @@ export const startWallet = createAsyncThunk(
       // Set up event listeners for all wallet events
       // Handler for 'new-tx' event
       const handleNewTx = async (tx: unknown) => {
-        console.log('New transaction received:', tx);
+        console.debug('New transaction received:', tx);
 
         // Store event in Redux
         dispatch(addWalletEvent({
@@ -268,7 +268,7 @@ export const startWallet = createAsyncThunk(
 
         // Check if the transaction has tokenName and tokenSymbol (custom token transaction)
         if (tx && typeof tx === 'object' && 'tokenName' in tx && 'tokenSymbol' in tx) {
-          console.log('Custom token transaction detected, refreshing tokens');
+          console.debug('Custom token transaction detected, refreshing tokens');
           // Refresh custom tokens for this wallet (with caching)
           dispatch(refreshWalletTokens(walletId));
         }
@@ -279,7 +279,7 @@ export const startWallet = createAsyncThunk(
 
       // Handler for 'update-tx' event
       const handleUpdateTx = async (tx: unknown) => {
-        console.log('Transaction update received:', tx);
+        console.debug('Transaction update received:', tx);
 
         // Store event in Redux
         dispatch(addWalletEvent({

@@ -31,7 +31,7 @@ export default function WalletAutoLoader() {
 
   // Debug log on mount
   useEffect(() => {
-    console.log('[WalletAutoLoader] Mounted', {
+    console.debug('[WalletAutoLoader] Mounted', {
       fundingWalletId,
       testWalletId,
       walletsCount: wallets.length,
@@ -42,37 +42,37 @@ export default function WalletAutoLoader() {
   useEffect(() => {
     const autoStartWallet = async (walletId: string | null, label: string) => {
       if (!walletId) {
-        console.log(`[WalletAutoLoader] No ${label} selected`);
+        console.debug(`[WalletAutoLoader] No ${label} selected`);
         return;
       }
 
       // Check if we're already starting this wallet
       if (startingWallets.current.has(walletId)) {
-        console.log(`[WalletAutoLoader] ${label} already starting, skipping`);
+        console.debug(`[WalletAutoLoader] ${label} already starting, skipping`);
         return;
       }
 
       // Find the wallet in the store
       const wallet = wallets.find((w) => w.metadata.id === walletId);
       if (!wallet) {
-        console.log(`[WalletAutoLoader] ${label} not found in store (id: ${walletId})`);
+        console.debug(`[WalletAutoLoader] ${label} not found in store (id: ${walletId})`);
         return;
       }
 
       // Only start if wallet is idle (not already connecting/syncing/ready/error)
       if (wallet.status !== 'idle') {
-        console.log(`[WalletAutoLoader] ${label} not idle (status: ${wallet.status})`);
+        console.debug(`[WalletAutoLoader] ${label} not idle (status: ${wallet.status})`);
         return;
       }
 
-      console.log(`[WalletAutoLoader] Auto-starting ${label}: ${wallet.metadata.friendlyName}`);
+      console.debug(`[WalletAutoLoader] Auto-starting ${label}: ${wallet.metadata.friendlyName}`);
 
       // Mark as starting to prevent duplicate attempts
       startingWallets.current.add(walletId);
 
       try {
         await dispatch(startWallet(walletId)).unwrap();
-        console.log(`[WalletAutoLoader] ${label} started successfully`);
+        console.debug(`[WalletAutoLoader] ${label} started successfully`);
       } catch (error) {
         console.error(`[WalletAutoLoader] Failed to start ${label}:`, error);
         // Remove from starting set so it can be retried
