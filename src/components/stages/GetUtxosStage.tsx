@@ -23,6 +23,8 @@ import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { WALLET_CONFIG } from '../../constants/network';
+import { computeScatterOutputs } from '../../utils/scatterFunds';
 import Select from '../common/Select';
 
 interface Token {
@@ -209,6 +211,59 @@ export const GetUtxosStage: React.FC = () => {
     }
   };
 
+  // Scatter funds state
+  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
+  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
+  const [isScattering, setIsScattering] = useState(false);
+  const [scatterError, setScatterError] = useState<string | null>(null);
+  const [scatterResult, setScatterResult] = useState<string | null>(null);
+
+  const handleScatterFunds = async () => {
+    if (!testWallet?.instance || !fundingWallet?.instance) return;
+
+    setIsScattering(true);
+    setScatterError(null);
+    setScatterResult(null);
+
+    try {
+      const addr0 = await testWallet.instance.getAddressAtIndex(0);
+      const fundAddr0 = await fundingWallet.instance.getAddressAtIndex(0);
+
+      // Get current HTR balance of the funding wallet
+      const balance = await fundingWallet.instance.getBalance(NATIVE_TOKEN_UID);
+      const unlocked = balance?.[0]?.balance?.unlocked ?? 0n;
+
+      // Reserve 1 HTR (100 units) for fees/change
+      const available = unlocked > 100n ? unlocked - 100n : 0n;
+
+      const amounts = computeScatterOutputs(available);
+      if (amounts.length === 0) {
+        setScatterError(`Not enough balance to scatter. Need at least 6 units, have ${available} available.`);
+        return;
+      }
+
+      // Build outputs — all go to the test wallet addr0
+      const outputs = amounts.map((amount) => ({
+        address: addr0,
+        value: amount,
+        token: NATIVE_TOKEN_UID,
+      }));
+
+      const sendTx = await fundingWallet.instance.sendManyOutputsSendTransaction(outputs, {
+        changeAddress: fundAddr0,
+        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+      });
+      await sendTx.run();
+
+      setScatterResult(`Scattered into ${amounts.length} UTXOs (amounts: ${amounts[0]}..${amounts[amounts.length - 1]})`);
+    } catch (err) {
+      setScatterError(err instanceof Error ? err.message : 'Failed to scatter funds');
+      console.error('Scatter funds error:', err);
+    } finally {
+      setIsScattering(false);
+    }
+  };
+
   const selectedToken = availableTokens.find((t) => t.uid === tokenUid);
 
   return (
@@ -345,6 +400,38 @@ export const GetUtxosStage: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {/* Scatter Funds */}
+          {fundingWallet?.instance && (
+            <div className="card-primary mb-7.5 bg-indigo-50 border border-indigo-300">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="text-base font-bold m-0 text-indigo-900">Scatter Funds</h3>
+                  <p className="text-xs text-indigo-700 mt-1 mb-0">
+                    Split the funding wallet's HTR into multiple UTXOs with distinct amounts
+                    (1, 2, 3, ...) sent to the test wallet for filter testing.
+                  </p>
+                </div>
+                <button
+                  onClick={handleScatterFunds}
+                  disabled={isScattering}
+                  className="btn-primary px-4 py-2 text-sm whitespace-nowrap"
+                >
+                  {isScattering ? 'Scattering...' : 'Scatter Funds'}
+                </button>
+              </div>
+              {scatterError && (
+                <div className="mt-2 p-2 bg-red-50 border border-danger rounded">
+                  <p className="text-xs text-red-900 m-0">{scatterError}</p>
+                </div>
+              )}
+              {scatterResult && (
+                <div className="mt-2 p-2 bg-green-50 border border-success rounded">
+                  <p className="text-xs text-green-900 m-0">{scatterResult}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Selected Token Info */}
           {selectedToken && (
