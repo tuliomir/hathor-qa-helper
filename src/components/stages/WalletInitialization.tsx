@@ -338,17 +338,16 @@ export default function WalletInitialization() {
   const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkType, status: string) => {
     const newNetwork: NetworkType = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
 
-    if (status === 'ready') {
-      // Stop the wallet first
+    // Stop the wallet if it's running in any state
+    if (status === 'ready' || status === 'connecting' || status === 'syncing') {
       await handleStopWallet(walletId);
-      // Update the network
-      updateNetwork(walletId, newNetwork);
-      // Start the wallet again
-      await handleStartWallet(walletId);
-    } else {
-      // Just update the network
-      updateNetwork(walletId, newNetwork);
     }
+
+    // Update the network
+    updateNetwork(walletId, newNetwork);
+
+    // Restart on the new network
+    await handleStartWallet(walletId);
   };
 
   // Return the first `n` words of the seed phrase (useful for compact display)
@@ -592,7 +591,16 @@ export default function WalletInitialization() {
                                 <MdStop />
                               </button>
                             ) : (
-                              <button disabled className="btn-secondary btn-square text-xs cursor-not-allowed opacity-60 p-2">
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Force stop "${wallet.metadata.friendlyName}"? It appears stuck in ${wallet.status} state.`)) {
+                                    handleStopWallet(wallet.metadata.id);
+                                  }
+                                }}
+                                title="Force stop (wallet appears stuck)"
+                                aria-label={`Force stop ${wallet.metadata.friendlyName}`}
+                                className="btn-warning btn-square text-xs p-2"
+                              >
                                 ⏳
                               </button>
                             )}

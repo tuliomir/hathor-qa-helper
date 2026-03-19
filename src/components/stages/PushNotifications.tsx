@@ -8,7 +8,7 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet, updateNetwork } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
-import NetworkSwapButton from '../common/NetworkSwapButton';
+import WalletNetworkControl from '../common/WalletNetworkControl';
 import type { NetworkType } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
 import type { WalletInfo } from '../../types/walletStore';
@@ -178,16 +178,32 @@ export default function PushNotifications() {
   const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkType, status: string) => {
     const newNetwork: NetworkType = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
 
-    if (status === 'ready') {
-      // Stop the wallet first
-      await dispatch(stopWallet(walletId)).unwrap();
+    // Stop the wallet if it's running (ready, connecting, or syncing)
+    if (status === 'ready' || status === 'connecting' || status === 'syncing') {
+      try {
+        await dispatch(stopWallet(walletId)).unwrap();
+      } catch (err) {
+        console.error('Failed to stop wallet before network swap:', err);
+      }
     }
 
     // Update the network
     dispatch(updateNetwork({ id: walletId, network: newNetwork }));
 
-    // Start the wallet again
-    await dispatch(startWallet(walletId)).unwrap();
+    // Start the wallet on the new network
+    try {
+      await dispatch(startWallet(walletId)).unwrap();
+    } catch (err) {
+      console.error('Failed to start wallet after network swap:', err);
+    }
+  };
+
+  const handleForceStop = async (walletId: string) => {
+    try {
+      await dispatch(stopWallet(walletId)).unwrap();
+    } catch (err) {
+      console.error('Failed to force stop wallet:', err);
+    }
   };
 
   const renderWalletCard = (wallet: WalletInfo | undefined, label: string, isOnMainnet: boolean) => {
@@ -220,13 +236,14 @@ export default function PushNotifications() {
 
             <div>
               <span className="text-sm font-bold text-muted">Network:</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="badge badge-lg">{wallet.metadata.network}</span>
-                <NetworkSwapButton
+              <div className="mt-1">
+                <WalletNetworkControl
                   walletId={wallet.metadata.id}
-                  currentNetwork={wallet.metadata.network}
-                  walletStatus={wallet.status}
-                  onSwap={handleSwapNetwork}
+                  network={wallet.metadata.network}
+                  status={wallet.status}
+                  error={wallet.error}
+                  onSwapNetwork={handleSwapNetwork}
+                  onForceStop={handleForceStop}
                 />
               </div>
             </div>
