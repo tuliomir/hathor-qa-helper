@@ -212,14 +212,12 @@ export const GetUtxosStage: React.FC = () => {
   };
 
   // Scatter funds state
-  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
-  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
   const [isScattering, setIsScattering] = useState(false);
   const [scatterError, setScatterError] = useState<string | null>(null);
   const [scatterResult, setScatterResult] = useState<string | null>(null);
 
   const handleScatterFunds = async () => {
-    if (!testWallet?.instance || !fundingWallet?.instance) return;
+    if (!testWallet?.instance) return;
 
     setIsScattering(true);
     setScatterError(null);
@@ -227,10 +225,9 @@ export const GetUtxosStage: React.FC = () => {
 
     try {
       const addr0 = await testWallet.instance.getAddressAtIndex(0);
-      const fundAddr0 = await fundingWallet.instance.getAddressAtIndex(0);
 
-      // Get current HTR balance of the funding wallet
-      const balance = await fundingWallet.instance.getBalance(NATIVE_TOKEN_UID);
+      // Use the test wallet's own balance to scatter
+      const balance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
       const unlocked = balance?.[0]?.balance?.unlocked ?? 0n;
 
       // Reserve 1 HTR (100 units) for fees/change
@@ -242,15 +239,15 @@ export const GetUtxosStage: React.FC = () => {
         return;
       }
 
-      // Build outputs — all go to the test wallet addr0
+      // Build outputs — send back to the test wallet's own addr0 as separate UTXOs
       const outputs = amounts.map((amount) => ({
         address: addr0,
         value: amount,
         token: NATIVE_TOKEN_UID,
       }));
 
-      const sendTx = await fundingWallet.instance.sendManyOutputsSendTransaction(outputs, {
-        changeAddress: fundAddr0,
+      const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(outputs, {
+        changeAddress: addr0,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
       });
       await sendTx.run();
@@ -402,14 +399,14 @@ export const GetUtxosStage: React.FC = () => {
           </div>
 
           {/* Scatter Funds */}
-          {fundingWallet?.instance && (
+          {testWallet?.instance && (
             <div className="card-primary mb-7.5 bg-indigo-50 border border-indigo-300">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <h3 className="text-base font-bold m-0 text-indigo-900">Scatter Funds</h3>
                   <p className="text-xs text-indigo-700 mt-1 mb-0">
-                    Split the funding wallet's HTR into multiple UTXOs with distinct amounts
-                    (1, 2, 3, ...) sent to the test wallet for filter testing.
+                    Split the test wallet's HTR into multiple UTXOs with distinct amounts
+                    (1, 2, 3, ...) for testing amount filters.
                   </p>
                 </div>
                 <button
