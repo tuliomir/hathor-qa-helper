@@ -8,8 +8,9 @@ import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
-import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { NATIVE_TOKEN_UID, FEE_PER_OUTPUT } from '@hathor/wallet-lib/lib/constants';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
+import { TokenVersion } from '@hathor/wallet-lib/lib/types';
 import { getConfigurationString } from '../../utils/tokenConfigString';
 import CopyButton from '../common/CopyButton';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
@@ -438,8 +439,16 @@ function WalletTokensDisplay({
       // Get the first address of the funding wallet for change
       const fundWalletFirstAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
+      // Check if the token is fee-based (requires fee header)
+      let isFeeToken = false;
+      try {
+        const tokenDetails = await fundingWallet.instance.getTokenDetails(selectedToken.uid);
+        isFeeToken = tokenDetails.tokenInfo.version === TokenVersion.FEE;
+      } catch { /* assume not fee-based if check fails */ }
+
       // Build the transaction template
-      const template = TransactionTemplateBuilder.new()
+      // Fee tokens require a FeeHeader: 1 unit per fee-token output (send + change = 2)
+      const builder = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: derivedAddress })
         .addSetVarAction({ name: 'changeAddr', value: fundWalletFirstAddress })
         .addTokenOutput({
@@ -449,8 +458,13 @@ function WalletTokensDisplay({
         })
         .addCompleteAction({
           changeAddress: '{changeAddr}'
-        })
-        .build();
+        });
+
+      if (isFeeToken) {
+        builder.addFee({ token: NATIVE_TOKEN_UID, amount: FEE_PER_OUTPUT * 2n });
+      }
+
+      const template = builder.build();
 
       // Send the transaction using the centralized hook
       await sendTransaction(
@@ -509,8 +523,15 @@ function WalletTokensDisplay({
       // Get the first address of the current wallet for change
       const currentWalletFirstAddress = await wallet.instance.getAddressAtIndex(0);
 
+      // Check if the token is fee-based (requires fee header)
+      let isFeeToken = false;
+      try {
+        const tokenDetails = await wallet.instance.getTokenDetails(selectedToken.uid);
+        isFeeToken = tokenDetails.tokenInfo.version === TokenVersion.FEE;
+      } catch { /* assume not fee-based if check fails */ }
+
       // Build the transaction template
-      const template = TransactionTemplateBuilder.new()
+      const builder = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: otherWalletAddress })
         .addSetVarAction({ name: 'changeAddr', value: currentWalletFirstAddress })
         .addTokenOutput({
@@ -520,8 +541,13 @@ function WalletTokensDisplay({
         })
         .addCompleteAction({
           changeAddress: '{changeAddr}'
-        })
-        .build();
+        });
+
+      if (isFeeToken) {
+        builder.addFee({ token: NATIVE_TOKEN_UID, amount: FEE_PER_OUTPUT * 2n });
+      }
+
+      const template = builder.build();
 
       // Send the transaction using the centralized hook
       await sendTransaction(
