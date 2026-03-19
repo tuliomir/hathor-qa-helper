@@ -536,15 +536,20 @@ export default function TestWalletCleanup() {
             setExecutionStep(`Token batch ${bIdx + 1}/${totalBatches}...`);
 
             try {
-              // Never include HTR in token batches — it's handled separately
+              // Pass existingHtrBalance=0n so the template does NOT select any
+              // existing HTR UTXOs (avoids hundreds of scattered inputs that
+              // caused the oversized-tx failure). Keep includeHtr=true so the
+              // template outputs the melt-produced HTR (1% deposit refund) to
+              // the funding wallet. Without this output, the validator rejects
+              // the tx with "invalid deficit of HTR".
               const batchTemplate = buildUnifiedCleanupTemplate(
                 batch.tokensToMelt,
                 batch.swapTokens,
                 batch.returnTokens,
                 testWalletAddr,
                 fundingAddr,
-                0n,
-                false,
+                0n,   // no existing HTR selection — avoids UTXO bloat
+                true, // always include HTR output for melt-produced amount
               );
 
               addDebugLog('template', `Token batch ${bIdx + 1}`, {

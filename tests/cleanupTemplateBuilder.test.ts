@@ -715,7 +715,56 @@ describe('buildUnifiedCleanupTemplate', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Scenario 22: Operation ordering with returns
+  // Scenario 22: Batched fallback — melt with includeHtr=false omits
+  // melt-produced HTR (causes "invalid deficit of HTR" on-chain)
+  // -------------------------------------------------------------------------
+  describe('batched fallback: includeHtr=false with melts', () => {
+    test('omits HTR output even though melts produce HTR — the deficit bug', () => {
+      // 900 meltable tokens → melts produce 9 HTR. But includeHtr=false
+      // means no HTR output at all → validator rejects with
+      // "invalid deficit of HTR. (amount=0, expected=9)"
+      const template = buildUnifiedCleanupTemplate(
+        [meltToken(TOKEN_A, 500), meltToken(TOKEN_B, 400)],
+        [],
+        [],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        0n,
+        false, // includeHtr=false — the old buggy fallback path
+      );
+
+      // No HTR select (expected)
+      expect(utxoSelectsFor(template, HTR_UID)).toHaveLength(0);
+      // No HTR output — the 9 produced HTR has nowhere to go!
+      expect(tokenOutputsFor(template, HTR_UID)).toHaveLength(0);
+    });
+
+    test('fix: includeHtr=true with existingHtrBalance=0 outputs melt-produced HTR without selecting HTR UTXOs', () => {
+      // The fix: pass existingHtrBalance=0n (skip bloated HTR UTXO selection)
+      // but includeHtr=true (output the melt-produced HTR to funding).
+      const template = buildUnifiedCleanupTemplate(
+        [meltToken(TOKEN_A, 500), meltToken(TOKEN_B, 400)],
+        [],
+        [],
+        TEST_ADDR,
+        FUNDING_ADDR,
+        0n,   // no existing HTR to select — avoids the hundreds of scattered UTXOs
+        true, // include HTR output for melt-produced amount
+      );
+
+      // No HTR UTXO select (existingHtrBalance=0 → skips addUtxoSelect)
+      expect(utxoSelectsFor(template, HTR_UID)).toHaveLength(0);
+
+      // HTR output = 0 existing + 5 (from 500) + 4 (from 400) = 9
+      const htrOutputs = tokenOutputsFor(template, HTR_UID);
+      expect(htrOutputs).toHaveLength(1);
+      expect(htrOutputs[0].amount).toBe(9n);
+      expect(htrOutputs[0].address).toBe('{fundingAddr}');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scenario 23: Operation ordering with returns
   // -------------------------------------------------------------------------
   describe('operation ordering with returns', () => {
     test('returns come after swaps and before HTR select', () => {
