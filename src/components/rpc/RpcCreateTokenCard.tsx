@@ -307,6 +307,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   return (
+    <>
     <div className="card-primary mb-7.5 relative">
       {loading && <LoadingOverlay />}
       <div className="flex flex-col space-y-3">
@@ -554,98 +555,99 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
             {loading ? 'Creating...' : 'Create Token'}
           </button>
         </div>
+      </div>
+    </div>
 
-        {/* Request Section */}
-        <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
+    {/* Request Section */}
+    <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
 
-        {/* Response Section */}
-        {hasResult && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between">
+    {/* Response Section */}
+    {hasResult && (
+      <div className="mt-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className={`text-sm font-medium flex items-center ${
+              error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
+            }`}
+          >
+            {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
+          </button>
+          <div className="flex items-center gap-2">
+            {(result && isCreateTokenResponse(typeof result === 'string' ? JSON.parse(result) : result)) ? (
               <button
-                onClick={() => setExpanded(!expanded)}
-                className={`text-sm font-medium flex items-center ${
-                  error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-                }`}
+                onClick={() => setShowRawResponse(!showRawResponse)}
+                className="btn-secondary py-1.5 px-3 text-sm"
               >
-                {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
+                {showRawResponse ? 'Show Formatted' : 'Show Raw'}
               </button>
-              <div className="flex items-center gap-2">
-                {(result && isCreateTokenResponse(typeof result === 'string' ? JSON.parse(result) : result)) ? (
-                  <button
-                    onClick={() => setShowRawResponse(!showRawResponse)}
-                    className="btn-secondary py-1.5 px-3 text-sm"
-                  >
-                    {showRawResponse ? 'Show Formatted' : 'Show Raw'}
-                  </button>
-                ) : null}
-                <CopyButton text={result ? safeStringify(result, 2) as string : error || ''} label="Copy response" />
-              </div>
-            </div>
+            ) : null}
+            <CopyButton text={result ? safeStringify(result, 2) as string : error || ''} label="Copy response" />
+          </div>
+        </div>
 
-            {expanded && (
-              <div className="relative">
-                {isDryRun && result === null ? (
-                  <div className="bg-purple-50 border border-purple-300 rounded p-4">
-                    <div className="flex items-center gap-2 text-purple-700 mb-2">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <span className="text-sm font-medium">Dry Run Mode</span>
+        {expanded && (
+          <div className="relative">
+            {isDryRun && result === null ? (
+              <div className="bg-purple-50 border border-purple-300 rounded p-4">
+                <div className="flex items-center gap-2 text-purple-700 mb-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span className="text-sm font-medium">Dry Run Mode</span>
+                </div>
+                <p className="text-sm text-purple-600">
+                  The request was generated but not sent to the RPC. Check the Request section above to see the parameters that would be sent.
+                </p>
+              </div>
+            ) : (
+              <>
+                {error ? (
+                  <div className="flex items-start gap-2 p-4 bg-red-50 border border-danger rounded">
+                    <svg className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-900 mb-1">Error occurred</p>
+                      <p className="text-sm text-red-700">{error}</p>
                     </div>
-                    <p className="text-sm text-purple-600">
-                      The request was generated but not sent to the RPC. Check the Request section above to see the parameters that would be sent.
-                    </p>
                   </div>
                 ) : (
-                  <>
-                    {error ? (
-                      <div className="flex items-start gap-2 p-4 bg-red-50 border border-danger rounded">
-                        <svg className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-red-900 mb-1">Error occurred</p>
-                          <p className="text-sm text-red-700">{error}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-green-50 border border-green-300 rounded p-4">
-                        <div className="flex items-center gap-2 text-green-700 mb-3">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="font-medium">Success</span>
-                        </div>
-                        {(() => {
-                          try {
-                            const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+                  <div className="bg-green-50 border border-green-300 rounded p-4">
+                    <div className="flex items-center gap-2 text-green-700 mb-3">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">Success</span>
+                    </div>
+                    {(() => {
+                      try {
+                        const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
 
-                            // Show raw or formatted based on toggle
-                            if (showRawResponse) {
-                              return renderRawJson(result);
-                            }
+                        // Show raw or formatted based on toggle
+                        if (showRawResponse) {
+                          return renderRawJson(result);
+                        }
 
-                            // Show formatted if it's the expected response type
-                            if (isCreateTokenResponse(parsedResult)) {
-                              return renderFormattedResponse(parsedResult);
-                            }
+                        // Show formatted if it's the expected response type
+                        if (isCreateTokenResponse(parsedResult)) {
+                          return renderFormattedResponse(parsedResult);
+                        }
 
-                            // Otherwise show raw
-                            return renderRawJson(result);
-                          } catch {
-                            return renderRawJson(result);
-                          }
-                        })()}
-                      </div>
-                    )}
-                  </>
+                        // Otherwise show raw
+                        return renderRawJson(result);
+                      } catch {
+                        return renderRawJson(result);
+                      }
+                    })()}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         )}
       </div>
-    </div>
+    )}
+  </>
   );
 };

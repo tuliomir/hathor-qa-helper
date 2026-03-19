@@ -244,6 +244,7 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
 
 
   return (
+    <>
     <div className="card-primary mb-7.5 relative">
       {loading && <LoadingOverlay />}
       <div className="flex flex-col space-y-3">
@@ -464,42 +465,43 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
             {loading ? 'Sending...' : 'Send Transaction'}
           </button>
         </div>
+      </div>
+    </div>
 
-        {/* Request Section */}
-        <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
+    {/* Request Section */}
+    <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
 
-        {/* Response Section */}
-        {hasResult && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className={`text-sm font-medium flex items-center ${
-                  error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-                }`}
-              >
-                {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
-              </button>
-              {!error && result ? (
-                <CopyButton text={safeStringify(result, 2)} label="Copy response" />
-              ) : null}
-            </div>
+    {/* Response Section */}
+    {hasResult && (
+      <div className="mt-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className={`text-sm font-medium flex items-center ${
+              error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
+            }`}
+          >
+            {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
+          </button>
+          {!error && result ? (
+            <CopyButton text={safeStringify(result, 2)} label="Copy response" />
+          ) : null}
+        </div>
 
-            {expanded && (
-              <div className={error ? 'bg-red-50 border border-red-300 rounded p-4' : 'bg-green-50 border border-green-300 rounded p-4'}>
-                {error ? (
-                  <div className="text-sm text-red-900 break-words">{error}</div>
-                ) : result ? (
-                  <TransactionResponseDisplay
-                    response={result}
-                    network={network}
-                  />
-                ) : null}
-              </div>
-            )}
+        {expanded && (
+          <div className={error ? 'bg-red-50 border border-red-300 rounded p-4' : 'bg-green-50 border border-green-300 rounded p-4'}>
+            {error ? (
+              <div className="text-sm text-red-900 break-words">{error}</div>
+            ) : result ? (
+              <TransactionResponseDisplay
+                response={result}
+                network={network}
+              />
+            ) : null}
           </div>
         )}
       </div>
-    </div>
+    )}
+  </>
   );
 };
