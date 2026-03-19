@@ -20,6 +20,7 @@ import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { useFeeTokens } from '../../hooks/useFeeTokens';
 
 export const FeeDepositStage: React.FC = () => {
@@ -170,13 +171,16 @@ export const FeeDepositStage: React.FC = () => {
         isDryRun,
       }));
 
+      // Serialize BigInt values before storing in Redux
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store response in Redux
       dispatch(setFeeDepositResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
-      return { request, response };
+      return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
 

@@ -25,6 +25,7 @@ import { RpcConnectedNetworkCard } from '../rpc/RpcConnectedNetworkCard';
 import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const BasicInfoStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -68,13 +69,16 @@ export const BasicInfoStage: React.FC = () => {
         isDryRun,
       }));
 
+      // Serialize BigInt values before storing in Redux
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store response in Redux
       dispatch(setWalletInformationResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
-      return { request, response };
+      return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
 
@@ -108,13 +112,16 @@ export const BasicInfoStage: React.FC = () => {
         isDryRun,
       }));
 
+      // Serialize BigInt values before storing in Redux
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store response in Redux
       dispatch(setConnectedNetworkResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
-      return { request, response };
+      return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
 

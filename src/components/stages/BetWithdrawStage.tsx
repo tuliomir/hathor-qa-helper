@@ -20,6 +20,7 @@ import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const BetWithdrawStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -176,13 +177,16 @@ export const BetWithdrawStage: React.FC = () => {
         isDryRun,
       }));
 
+      // Serialize BigInt values before storing in Redux
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store response in Redux
       dispatch(setBetWithdrawResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
-      return { request, response };
+      return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
 

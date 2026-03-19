@@ -21,6 +21,7 @@ import { NETWORK_CONFIG } from '../../constants/network';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
 export const BetInitializeStage: React.FC = () => {
@@ -190,22 +191,25 @@ export const BetInitializeStage: React.FC = () => {
         isDryRun,
       }));
 
+      // Serialize BigInt values before storing in Redux
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store response in Redux
       dispatch(setBetInitializeResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
       // Store the nano contract ID for use in other stages
-      if (response && typeof response === 'object' && 'response' in response && response.response && typeof response.response === 'object' && 'hash' in response.response) {
+      if (serializedResponse && typeof serializedResponse === 'object' && 'response' in serializedResponse && serializedResponse.response && typeof serializedResponse.response === 'object' && 'hash' in serializedResponse.response) {
         dispatch(setBetNanoContractId({
-          ncId: (response.response as { hash: string }).hash,
+          ncId: (serializedResponse.response as { hash: string }).hash,
           blueprintId,
           token,
         }));
       }
 
-      return { request, response };
+      return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
 

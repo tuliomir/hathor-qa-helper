@@ -18,6 +18,7 @@ import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
 import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 
 export const SignWithAddressStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -103,13 +104,16 @@ export const SignWithAddressStage: React.FC = () => {
         isDryRun,
       }));
 
+      // Serialize BigInt values before storing in Redux
+      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
+
       // Store response in Redux
       dispatch(setSignWithAddressResponse({
-        response,
+        response: serializedResponse,
         duration,
       }));
 
-      return { request, response };
+      return { request, response: serializedResponse };
     } catch (error) {
       const duration = Date.now() - startTime;
 
