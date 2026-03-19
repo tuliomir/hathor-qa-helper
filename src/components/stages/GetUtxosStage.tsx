@@ -270,6 +270,33 @@ export const GetUtxosStage: React.FC = () => {
         Retrieve unspent transaction outputs (UTXOs) for a specific token
       </p>
 
+      {/* Scatter Funds — compact utility at the top */}
+      {testWallet?.instance && (
+        <div className="card-primary mb-7.5 bg-gray-50 border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm font-medium text-gray-700">Scatter Funds</span>
+              <span className="text-xs text-muted ml-2">
+                Split HTR into distinct UTXOs (1, 2, 3, ...) for filter testing
+              </span>
+            </div>
+            <button
+              onClick={handleScatterFunds}
+              disabled={isScattering}
+              className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap"
+            >
+              {isScattering ? 'Scattering...' : 'Scatter'}
+            </button>
+          </div>
+          {scatterError && (
+            <p className="text-xs text-danger mt-2 mb-0">{scatterError}</p>
+          )}
+          {scatterResult && (
+            <p className="text-xs text-success mt-2 mb-0">{scatterResult}</p>
+          )}
+        </div>
+      )}
+
       {!isConnected && <RpcNotConnectedBanner />}
 
       {/* No Wallet Warning */}
@@ -397,38 +424,6 @@ export const GetUtxosStage: React.FC = () => {
               </p>
             </div>
           </div>
-
-          {/* Scatter Funds */}
-          {testWallet?.instance && (
-            <div className="card-primary mb-7.5 bg-indigo-50 border border-indigo-300">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h3 className="text-base font-bold m-0 text-indigo-900">Scatter Funds</h3>
-                  <p className="text-xs text-indigo-700 mt-1 mb-0">
-                    Split the test wallet's HTR into multiple UTXOs with distinct amounts
-                    (1, 2, 3, ...) for testing amount filters.
-                  </p>
-                </div>
-                <button
-                  onClick={handleScatterFunds}
-                  disabled={isScattering}
-                  className="btn-primary px-4 py-2 text-sm whitespace-nowrap"
-                >
-                  {isScattering ? 'Scattering...' : 'Scatter Funds'}
-                </button>
-              </div>
-              {scatterError && (
-                <div className="mt-2 p-2 bg-red-50 border border-danger rounded">
-                  <p className="text-xs text-red-900 m-0">{scatterError}</p>
-                </div>
-              )}
-              {scatterResult && (
-                <div className="mt-2 p-2 bg-green-50 border border-success rounded">
-                  <p className="text-xs text-green-900 m-0">{scatterResult}</p>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Selected Token Info */}
           {selectedToken && (
