@@ -9,6 +9,13 @@
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
+/**
+ * Maximum tokens to process per cleanup transaction.
+ * Each token adds 2-3 inputs; keeping this low prevents
+ * transactions from exceeding the tx mining service size limit.
+ */
+export const MAX_TOKENS_PER_BATCH = 15;
+
 export interface CleanupToken {
   uid: string;
   balance: bigint;
@@ -39,7 +46,9 @@ export function buildUnifiedCleanupTemplate(
   returnTokens: ReturnToken[],
   testWalletAddr: string,
   fundingAddr: string,
-  existingHtrBalance: bigint
+  existingHtrBalance: bigint,
+  /** When false, skip the HTR transfer (used in batched mode for non-final batches) */
+  includeHtr = true,
 ) {
   let builder = TransactionTemplateBuilder.new()
     .addSetVarAction({ name: 'fundingAddr', value: fundingAddr })
@@ -100,21 +109,23 @@ export function buildUnifiedCleanupTemplate(
       });
   }
 
-  // Select existing HTR (manually, not via addCompleteAction)
-  if (existingHtrBalance > 0n) {
-    builder = builder.addUtxoSelect({
-      fill: existingHtrBalance,
-      token: NATIVE_TOKEN_UID,
-    });
-  }
+  // Select existing HTR and transfer to funding wallet
+  // Skipped in batched mode for non-final batches (includeHtr=false)
+  if (includeHtr) {
+    if (existingHtrBalance > 0n) {
+      builder = builder.addUtxoSelect({
+        fill: existingHtrBalance,
+        token: NATIVE_TOKEN_UID,
+      });
+    }
 
-  // Output total HTR: existing + melt-produced
-  const totalHtrOutput = Number(existingHtrBalance) + totalHtrFromMelts;
-  if (totalHtrOutput > 0) {
-    builder = builder.addTokenOutput({
-      address: '{fundingAddr}',
-      amount: totalHtrOutput,
-    });
+    const totalHtrOutput = Number(existingHtrBalance) + totalHtrFromMelts;
+    if (totalHtrOutput > 0) {
+      builder = builder.addTokenOutput({
+        address: '{fundingAddr}',
+        amount: totalHtrOutput,
+      });
+    }
   }
 
   return builder.build();

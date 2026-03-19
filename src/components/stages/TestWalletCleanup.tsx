@@ -19,6 +19,7 @@ import { trackTokenFlow } from '../../services/tokenFlowTracker';
 import type { TokenFlowResult } from '../../types/tokenFlowTracker';
 import { waitForTxSettlement } from '../../utils/waitForTxSettlement';
 import { buildUnifiedCleanupTemplate, type ReturnToken } from '../../services/cleanupTemplateBuilder';
+import { splitIntoBatches } from '../../utils/cleanupBatching';
 import {
   getMeltableTokens,
   getSwapTokens,
@@ -507,17 +508,75 @@ export default function TestWalletCleanup() {
           }
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-          addDebugLog('error', 'Unified cleanup transaction failed', {
+          addDebugLog('error', 'Unified cleanup failed, trying batched fallback...', {
             error: errorMessage,
-            stack: err instanceof Error ? err.stack : undefined,
           });
-          newErrors.push(`Unified cleanup failed: ${errorMessage}`);
 
-          for (const token of [...tokensWithMeltAuthority, ...swapTokensToTransfer, ...tokensToReturn]) {
-            setMeltTxStatuses((prev) => [
-              ...prev,
-              { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
-            ]);
+          // Fallback: split into smaller batches and retry
+          const batches = splitIntoBatches(
+            tokensWithMeltAuthority,
+            swapTokensToTransfer,
+            returnTokensForTemplate,
+          );
+          addDebugLog('info', `Batched fallback: splitting into ${batches.length} batches`);
+
+          let batchFailed = false;
+          for (let bIdx = 0; bIdx < batches.length; bIdx++) {
+            if (batchFailed) break;
+            const batch = batches[bIdx];
+            setExecutionStep(`Cleanup batch ${bIdx + 1}/${batches.length}...`);
+
+            try {
+              const batchTemplate = buildUnifiedCleanupTemplate(
+                batch.tokensToMelt,
+                batch.swapTokens,
+                batch.returnTokens,
+                testWalletAddr,
+                fundingAddr,
+                batch.includeHtr ? htrBalance : 0n,
+                batch.includeHtr,
+              );
+
+              addDebugLog('template', `Batch ${bIdx + 1} template`, {
+                melt: batch.tokensToMelt.length,
+                swap: batch.swapTokens.length,
+                ret: batch.returnTokens.length,
+                includeHtr: batch.includeHtr,
+              });
+
+              const tx = await testWallet.instance.runTxTemplate(
+                batchTemplate,
+                WALLET_CONFIG.DEFAULT_PIN_CODE,
+              );
+
+              if (tx?.hash) {
+                addDebugLog('info', `Batch ${bIdx + 1} tx: ${tx.hash}`);
+                await waitForTxSettlement(tx.hash);
+
+                for (const token of [...batch.tokensToMelt, ...batch.swapTokens]) {
+                  setMeltTxStatuses((prev) => [
+                    ...prev,
+                    { tokenSymbol: token.symbol, txHash: tx.hash!, status: 'confirmed' },
+                  ]);
+                }
+              }
+            } catch (batchErr) {
+              const batchMsg = batchErr instanceof Error ? batchErr.message : 'Unknown error';
+              addDebugLog('error', `Batch ${bIdx + 1} failed: ${batchMsg}`);
+              newErrors.push(`Batch ${bIdx + 1}/${batches.length} failed: ${batchMsg}`);
+              batchFailed = true;
+
+              for (const token of [...batch.tokensToMelt, ...batch.swapTokens]) {
+                setMeltTxStatuses((prev) => [
+                  ...prev,
+                  { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
+                ]);
+              }
+            }
+          }
+
+          if (!batchFailed) {
+            setExecutionStep('Cleanup completed (batched)');
           }
         }
       } else {
