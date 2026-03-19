@@ -512,36 +512,45 @@ export default function TestWalletCleanup() {
             error: errorMessage,
           });
 
-          // Fallback: split into smaller batches and retry
+          // Fallback: token operations WITHOUT HTR, then separate HTR transfer.
+          // The unified tx failed likely because too many HTR UTXOs caused an
+          // oversized transaction. Separating HTR uses sendManyOutputsSendTransaction
+          // which handles UTXO selection natively (no template fill bloat).
           const batches = splitIntoBatches(
             tokensWithMeltAuthority,
             swapTokensToTransfer,
             returnTokensForTemplate,
           );
-          addDebugLog('info', `Batched fallback: splitting into ${batches.length} batches`);
+          const totalBatches = batches.length + (htrBalance > 0n ? 1 : 0);
+          addDebugLog('info', `Batched fallback: ${batches.length} token batch(es) + HTR transfer`);
 
           let batchFailed = false;
+
+          // Step 1: Token operations (melt/swap/return) without HTR
           for (let bIdx = 0; bIdx < batches.length; bIdx++) {
             if (batchFailed) break;
             const batch = batches[bIdx];
-            setExecutionStep(`Cleanup batch ${bIdx + 1}/${batches.length}...`);
+            const hasTokenWork = batch.tokensToMelt.length > 0 || batch.swapTokens.length > 0 || batch.returnTokens.length > 0;
+            if (!hasTokenWork) continue;
+
+            setExecutionStep(`Token batch ${bIdx + 1}/${totalBatches}...`);
 
             try {
+              // Never include HTR in token batches — it's handled separately
               const batchTemplate = buildUnifiedCleanupTemplate(
                 batch.tokensToMelt,
                 batch.swapTokens,
                 batch.returnTokens,
                 testWalletAddr,
                 fundingAddr,
-                batch.includeHtr ? htrBalance : 0n,
-                batch.includeHtr,
+                0n,
+                false,
               );
 
-              addDebugLog('template', `Batch ${bIdx + 1} template`, {
+              addDebugLog('template', `Token batch ${bIdx + 1}`, {
                 melt: batch.tokensToMelt.length,
                 swap: batch.swapTokens.length,
                 ret: batch.returnTokens.length,
-                includeHtr: batch.includeHtr,
               });
 
               const tx = await testWallet.instance.runTxTemplate(
@@ -550,7 +559,7 @@ export default function TestWalletCleanup() {
               );
 
               if (tx?.hash) {
-                addDebugLog('info', `Batch ${bIdx + 1} tx: ${tx.hash}`);
+                addDebugLog('info', `Token batch ${bIdx + 1} tx: ${tx.hash}`);
                 await waitForTxSettlement(tx.hash);
 
                 for (const token of [...batch.tokensToMelt, ...batch.swapTokens]) {
@@ -562,8 +571,8 @@ export default function TestWalletCleanup() {
               }
             } catch (batchErr) {
               const batchMsg = batchErr instanceof Error ? batchErr.message : 'Unknown error';
-              addDebugLog('error', `Batch ${bIdx + 1} failed: ${batchMsg}`);
-              newErrors.push(`Batch ${bIdx + 1}/${batches.length} failed: ${batchMsg}`);
+              addDebugLog('error', `Token batch ${bIdx + 1} failed: ${batchMsg}`);
+              newErrors.push(`Token batch ${bIdx + 1} failed: ${batchMsg}`);
               batchFailed = true;
 
               for (const token of [...batch.tokensToMelt, ...batch.swapTokens]) {
@@ -572,6 +581,58 @@ export default function TestWalletCleanup() {
                   { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
                 ]);
               }
+            }
+          }
+
+          // Step 2: Consolidate HTR within test wallet (many UTXOs → 1 UTXO)
+          // This avoids the oversized-tx issue when sending to funding wallet.
+          if (!batchFailed && htrBalance > 0n) {
+            setExecutionStep('Consolidating HTR UTXOs...');
+            addDebugLog('info', 'Consolidating HTR into a single UTXO...');
+
+            try {
+              const freshBalance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+              const freshHtr = freshBalance?.[0]?.balance?.unlocked ?? 0n;
+
+              if (freshHtr > 0n) {
+                // Send all HTR to self — wallet-lib selects UTXOs natively
+                const consolidateTx = await testWallet.instance.sendManyOutputsSendTransaction(
+                  [{ address: testWalletAddr, value: freshHtr, token: NATIVE_TOKEN_UID }],
+                  { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE },
+                );
+                await consolidateTx.run();
+                addDebugLog('info', `HTR consolidated: ${freshHtr} units into 1 UTXO`);
+                await waitForTxSettlement(consolidateTx.transaction?.hash);
+              }
+            } catch (consolidateErr) {
+              const msg = consolidateErr instanceof Error ? consolidateErr.message : 'Unknown error';
+              addDebugLog('error', `HTR consolidation failed: ${msg}`);
+              newErrors.push(`HTR consolidation failed: ${msg}`);
+              batchFailed = true;
+            }
+          }
+
+          // Step 3: Single HTR transfer to funding wallet (now just 1 UTXO)
+          if (!batchFailed && htrBalance > 0n) {
+            setExecutionStep('Transferring HTR to funding wallet...');
+            addDebugLog('info', 'Sending consolidated HTR to funding wallet...');
+
+            try {
+              const freshBalance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+              const freshHtr = freshBalance?.[0]?.balance?.unlocked ?? 0n;
+
+              if (freshHtr > 0n) {
+                const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(
+                  [{ address: fundingAddr, value: freshHtr, token: NATIVE_TOKEN_UID }],
+                  { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE },
+                );
+                await sendTx.run();
+                addDebugLog('info', `HTR sent to funding: ${freshHtr} units`);
+              }
+            } catch (htrErr) {
+              const htrMsg = htrErr instanceof Error ? htrErr.message : 'Unknown error';
+              addDebugLog('error', `HTR transfer failed: ${htrMsg}`);
+              newErrors.push(`HTR transfer failed: ${htrMsg}`);
             }
           }
 
