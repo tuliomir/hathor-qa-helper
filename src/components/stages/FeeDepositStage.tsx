@@ -47,7 +47,7 @@ export const FeeDepositStage: React.FC = () => {
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
   const [ncId, setNcId] = useState<string>(latestInitializedNcId || '');
   const [feeToken, setFeeToken] = useState<string>('');
-  const [amount, setAmount] = useState<string>('10');
+  const [amount, setAmount] = useState<string>('');
   const [changeAddress, setChangeAddress] = useState<string>('');
   const [addressIndex, setAddressIndex] = useState<number>(0);
   const [contractPaysFees, setContractPaysFees] = useState<boolean>(false);
@@ -67,6 +67,15 @@ export const FeeDepositStage: React.FC = () => {
       setFeeToken(feeTokens[0].uid);
     }
   }, [feeTokens, feeToken]);
+
+  // Auto-fill amount with full token balance when fee token is selected
+  useEffect(() => {
+    if (!feeToken || !testWallet?.instance || amount) return;
+    testWallet.instance.getBalance(feeToken).then((bal: Array<{ balance?: { unlocked?: bigint } }>) => {
+      const unlocked = bal?.[0]?.balance?.unlocked ?? 0n;
+      if (unlocked > 0n) setAmount(unlocked.toString());
+    }).catch(() => {});
+  }, [feeToken, testWallet]);
 
   // Save form state to Redux whenever it changes (for prepopulating withdraw)
   useEffect(() => {

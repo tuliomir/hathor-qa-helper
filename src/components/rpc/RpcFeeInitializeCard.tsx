@@ -91,7 +91,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
         {
           type: 'deposit',
           token: '00',
-          amount: amount || '10',
+          amount: amount || '2',
           changeAddress: changeAddress || '<change_address>',
         },
       ],
