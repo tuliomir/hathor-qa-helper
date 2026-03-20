@@ -41,39 +41,28 @@ export const BetWithdrawStage: React.FC = () => {
   // Get the actual wallet instance
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
+  // Derive initial values from deposit data (if bet was placed) or withdraw slice
+  const hasDepositData = !!(betDepositData.timestamp && !betDepositData.error && betDepositData.ncId);
+  const initialAmount = hasDepositData ? betDepositData.amount : betWithdrawData.amount;
+  const initialToken = hasDepositData ? betDepositData.token : betWithdrawData.token;
+  const initialAddressIndex = hasDepositData ? betDepositData.addressIndex : 0;
+  const initialNcId = hasDepositData ? betDepositData.ncId : (latestNcId || '');
+
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [ncId, setNcId] = useState<string>('');
+  const [ncId, setNcId] = useState<string>(initialNcId);
   const [withdrawAddress, setWithdrawAddress] = useState<string>('');
-  const [addressIndex, setAddressIndex] = useState<number>(0);
-  const [amount, setAmount] = useState<string>('1');
-  const [token, setToken] = useState<string>('00');
-  const [pushTx, setPushTx] = useState<boolean>(false);
+  const [addressIndex, setAddressIndex] = useState<number>(initialAddressIndex);
+  const [amount, setAmount] = useState<string>(initialAmount);
+  const [token, setToken] = useState<string>(initialToken);
+  const [pushTx, setPushTx] = useState<boolean>(betWithdrawData.pushTx);
 
-  // Initialize ncId from latest on mount or when it changes
+  // Update ncId from latest when it changes (e.g., user initialized a new bet)
   useEffect(() => {
     if (latestNcId && !ncId) {
       setNcId(latestNcId);
     }
   }, [latestNcId, ncId]);
-
-  // Initialize from Redux on mount
-  useEffect(() => {
-    // Prepopulate from Place Bet stage if it was used successfully
-    if (betDepositData.timestamp && !betDepositData.error && betDepositData.ncId) {
-      // Use deposit data as defaults (tester likely wants to withdraw what they deposited)
-      setNcId(betDepositData.ncId);
-      setAddressIndex(betDepositData.addressIndex);
-      setAmount(betDepositData.amount);
-      setToken(betDepositData.token);
-    } else {
-      // Fall back to persisted withdraw data or defaults
-      setAddressIndex(0);
-      setAmount(betWithdrawData.amount);
-      setToken(betWithdrawData.token);
-    }
-    setPushTx(betWithdrawData.pushTx);
-  }, []); // Only on mount
 
   // Save form state to Redux whenever it changes
   useEffect(() => {
