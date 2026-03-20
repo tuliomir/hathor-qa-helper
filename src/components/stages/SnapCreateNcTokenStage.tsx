@@ -8,6 +8,7 @@ import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { AddressInput } from '../common/AddressInput';
 
 export const SnapCreateNcTokenStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('createNcToken');
@@ -144,24 +145,18 @@ export const SnapCreateNcTokenStage: React.FC = () => {
             <label className="block text-sm font-medium mb-1.5">Amount</label>
             <input type="text" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)} className="input" />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Address (optional)</label>
-            <input
-              type="text"
-              value={tokenAddress}
-              onChange={(e) => setTokenAddress(e.target.value)}
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Change Address (optional)</label>
-            <input
-              type="text"
-              value={changeAddress}
-              onChange={(e) => setChangeAddress(e.target.value)}
-              className="input"
-            />
-          </div>
+          <AddressInput
+            label="Address (optional)"
+            value={tokenAddress}
+            onChange={setTokenAddress}
+            sources={['snap', 'test', 'fund', 'multisig']}
+          />
+          <AddressInput
+            label="Change Address (optional)"
+            value={changeAddress}
+            onChange={setChangeAddress}
+            sources={['snap', 'test', 'fund', 'multisig']}
+          />
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -188,15 +183,12 @@ export const SnapCreateNcTokenStage: React.FC = () => {
           </div>
           {createMint && (
             <>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Mint Authority Address</label>
-                <input
-                  type="text"
-                  value={mintAddress}
-                  onChange={(e) => setMintAddress(e.target.value)}
-                  className="input"
-                />
-              </div>
+              <AddressInput
+                label="Mint Authority Address"
+                value={mintAddress}
+                onChange={setMintAddress}
+                sources={['snap', 'test', 'fund', 'multisig']}
+              />
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"

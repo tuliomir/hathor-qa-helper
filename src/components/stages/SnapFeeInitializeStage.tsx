@@ -4,11 +4,12 @@
  * Tests htr_sendNanoContractTx (initialize) for the Fee nano contract via MetaMask Snap
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { AddressInput } from '../common/AddressInput';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import { NETWORK_CONFIG } from '../../constants/network';
 
@@ -20,10 +21,6 @@ export const SnapFeeInitializeStage: React.FC = () => {
   const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.feeBlueprintId);
   const [htrAmount, setHtrAmount] = useState('100');
   const [changeAddress, setChangeAddress] = useState(snapAddress ?? '');
-
-  useEffect(() => {
-    if (snapAddress && !changeAddress) setChangeAddress(snapAddress);
-  }, [snapAddress]);
 
   const params = useMemo(
     () => ({
@@ -76,16 +73,14 @@ export const SnapFeeInitializeStage: React.FC = () => {
               className="input"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Change Address</label>
-            <input
-              type="text"
-              value={changeAddress}
-              onChange={(e) => setChangeAddress(e.target.value)}
-              placeholder="Change address"
-              className="input"
-            />
-          </div>
+          <AddressInput
+            label="Change Address"
+            value={changeAddress}
+            onChange={setChangeAddress}
+            placeholder="Change address"
+            suggestedValue={snapAddress ?? undefined}
+            sources={['snap']}
+          />
         </SnapMethodCard>
       )}
     </div>

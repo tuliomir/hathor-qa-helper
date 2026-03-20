@@ -5,13 +5,10 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
-import { useWalletStore } from '../../hooks/useWalletStore';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
-import { selectSnapAddress } from '../../store/slices/snapSlice';
-import type { RootState } from '../../store';
+import { AddressInput } from '../common/AddressInput';
 import Select from '../common/Select';
 import TimelockPicker from '../common/TimelockPicker';
 import { timelockToUnix } from '../../utils/timelockUtils';
@@ -41,14 +38,6 @@ const emptyOutput = (): TxOutput => ({
 
 export const SnapSendTransactionStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('sendTransaction');
-
-  const snapAddress = useSelector(selectSnapAddress);
-  const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
-  const { getWallet } = useWalletStore();
-
-  const testWallet = testWalletId ? getWallet(testWalletId) : null;
-  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
 
   const [outputs, setOutputs] = useState<TxOutput[]>([emptyOutput()]);
   const [inputs, setInputs] = useState<TxInput[]>([]);
@@ -91,30 +80,6 @@ export const SnapSendTransactionStage: React.FC = () => {
   const updateInput = (i: number, field: keyof TxInput, value: string) =>
     setInputs(inputs.map((inp, idx) => (idx === i ? { ...inp, [field]: value } : inp)));
 
-  const fillSnapAddr = (i: number) => {
-    if (snapAddress) updateOutput(i, 'address', snapAddress);
-  };
-
-  const fillTestAddr = async (i: number) => {
-    if (!testWallet?.instance) return;
-    try {
-      const address = await testWallet.instance.getAddressAtIndex(0);
-      updateOutput(i, 'address', address);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const fillFundAddr = async (i: number) => {
-    if (!fundingWallet?.instance) return;
-    try {
-      const address = await fundingWallet.instance.getAddressAtIndex(0);
-      updateOutput(i, 'address', address);
-    } catch {
-      /* ignore */
-    }
-  };
-
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Send Transaction (Snap)</h1>
@@ -150,45 +115,13 @@ export const SnapSendTransactionStage: React.FC = () => {
               </div>
               {output.type === 'token' ? (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">Address</label>
-                    <input
-                      type="text"
-                      value={output.address}
-                      onChange={(e) => updateOutput(i, 'address', e.target.value)}
-                      placeholder="Recipient address"
-                      className="input"
-                    />
-                    <div className="flex gap-2 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => fillSnapAddr(i)}
-                        disabled={!snapAddress}
-                        className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
-                        title="Use address 0 from the connected Snap wallet"
-                      >
-                        Snap Addr0
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => fillTestAddr(i)}
-                        disabled={!testWallet?.instance}
-                        className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
-                        title="Use address 0 from the test wallet"
-                      >
-                        Test Addr0
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => fillFundAddr(i)}
-                        disabled={!fundingWallet?.instance}
-                        className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
-                        title="Use address 0 from the funding wallet"
-                      >
-                        Fund Addr0
-                      </button>
-                    </div>
-                  </div>
+                  <AddressInput
+                    label="Address"
+                    value={output.address}
+                    onChange={(v) => updateOutput(i, 'address', v)}
+                    placeholder="Recipient address"
+                    sources={['snap', 'test', 'fund', 'multisig']}
+                  />
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Value</label>
                     <input
@@ -232,26 +165,12 @@ export const SnapSendTransactionStage: React.FC = () => {
           {/* Change Address */}
           <div className="border border-gray-200 rounded p-4 space-y-3">
             <span className="text-sm font-medium">Change Address (optional)</span>
-            <input
-              type="text"
+            <AddressInput
               value={changeAddress}
-              onChange={(e) => setChangeAddress(e.target.value)}
+              onChange={setChangeAddress}
               placeholder="Address to receive change"
-              className="input"
+              sources={['snap']}
             />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (snapAddress) setChangeAddress(snapAddress);
-                }}
-                disabled={!snapAddress}
-                className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
-                title="Use address 0 from the connected Snap wallet"
-              >
-                Snap Addr0
-              </button>
-            </div>
           </div>
 
           {/* Inputs (UTXO selection) */}

@@ -4,11 +4,12 @@
  * Tests htr_sendNanoContractTx (bet) for the Bet nano contract via MetaMask Snap
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { AddressInput } from '../common/AddressInput';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 
 export const SnapBetDepositStage: React.FC = () => {
@@ -21,10 +22,6 @@ export const SnapBetDepositStage: React.FC = () => {
   const [amount, setAmount] = useState('100');
   const [token, setToken] = useState('00');
   const [address, setAddress] = useState(snapAddress ?? '');
-
-  useEffect(() => {
-    if (snapAddress && !address) setAddress(snapAddress);
-  }, [snapAddress]);
 
   const params = useMemo(
     () => ({
@@ -97,16 +94,14 @@ export const SnapBetDepositStage: React.FC = () => {
               className="input"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Address</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Your address"
-              className="input"
-            />
-          </div>
+          <AddressInput
+            label="Address"
+            value={address}
+            onChange={setAddress}
+            placeholder="Your address"
+            suggestedValue={snapAddress ?? undefined}
+            sources={['snap']}
+          />
         </SnapMethodCard>
       )}
     </div>

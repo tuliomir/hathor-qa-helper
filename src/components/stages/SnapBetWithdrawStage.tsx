@@ -4,11 +4,12 @@
  * Tests htr_sendNanoContractTx (withdraw) for the Bet nano contract via MetaMask Snap
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { AddressInput } from '../common/AddressInput';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 
 export const SnapBetWithdrawStage: React.FC = () => {
@@ -20,10 +21,6 @@ export const SnapBetWithdrawStage: React.FC = () => {
   const [withdrawAddress, setWithdrawAddress] = useState(snapAddress ?? '');
   const [amount, setAmount] = useState('');
   const [token, setToken] = useState('00');
-
-  useEffect(() => {
-    if (snapAddress && !withdrawAddress) setWithdrawAddress(snapAddress);
-  }, [snapAddress]);
 
   const params = useMemo(
     () => ({
@@ -66,16 +63,14 @@ export const SnapBetWithdrawStage: React.FC = () => {
               className="input"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Withdrawal Address</label>
-            <input
-              type="text"
-              value={withdrawAddress}
-              onChange={(e) => setWithdrawAddress(e.target.value)}
-              placeholder="Your address"
-              className="input"
-            />
-          </div>
+          <AddressInput
+            label="Withdrawal Address"
+            value={withdrawAddress}
+            onChange={setWithdrawAddress}
+            placeholder="Your address"
+            suggestedValue={snapAddress ?? undefined}
+            sources={['snap']}
+          />
           <div>
             <label className="block text-sm font-medium mb-1.5">Amount</label>
             <input
