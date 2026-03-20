@@ -11,10 +11,13 @@
 
 import React, { useState } from 'react';
 import CopyButton from '../common/CopyButton';
+import TxStatus from '../common/TxStatus';
+import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { SnapResponseDisplay } from './SnapResponseDisplay';
 import { safeStringify } from '../../utils/betHelpers';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../utils/snapResponseHelpers';
 import { useToast } from '../../hooks/useToast';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import type { SnapMethodData } from '../../store/slices/snapMethodsSlice';
@@ -152,6 +155,17 @@ export const SnapMethodCard: React.FC<SnapMethodCardProps> = ({
   const response = methodData?.response ?? null;
 
   const hasResult = response !== null || error !== null || rejected;
+
+  // Extract tx hash from transaction-like responses for status display
+  const txHash = (() => {
+    if (!response) return null;
+    const parsed = parseSnapResponse(response);
+    const inner = isSnapEnvelope(parsed) ? (parsed as { response: unknown }).response : parsed;
+    if (inner && typeof inner === 'object' && isTransactionLike(inner)) {
+      return (inner as Record<string, unknown>).hash as string | undefined ?? null;
+    }
+    return null;
+  })();
 
   return (
     <>
@@ -319,6 +333,19 @@ export const SnapMethodCard: React.FC<SnapMethodCardProps> = ({
                     </svg>
                     <span className="text-sm font-medium">Success</span>
                   </div>
+                  {txHash && (
+                    <div className="bg-green-50 border border-green-200 rounded p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-muted font-medium">Transaction Hash</span>
+                        <CopyButton text={txHash} label="Copy TX hash" />
+                        <TxStatus hash={txHash} />
+                        <ExplorerLink hash={txHash} network="testnet" />
+                      </div>
+                      <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
+                        {txHash}
+                      </div>
+                    </div>
+                  )}
                   <SnapResponseDisplay response={response} showRaw={showRawResponse} />
                 </div>
               )}
