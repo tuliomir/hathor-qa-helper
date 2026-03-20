@@ -10,7 +10,7 @@ import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { AddressInput } from '../common/AddressInput';
-import { selectSnapAddress } from '../../store/slices/snapSlice';
+import { selectSnapAddress, selectSnapUtxos } from '../../store/slices/snapSlice';
 import Select from '../common/Select';
 import TimelockPicker from '../common/TimelockPicker';
 import { timelockToUnix } from '../../utils/timelockUtils';
@@ -41,6 +41,7 @@ const emptyOutput = (): TxOutput => ({
 export const SnapSendTransactionStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('sendTransaction');
   const snapAddress = useSelector(selectSnapAddress);
+  const storedUtxos = useSelector(selectSnapUtxos);
 
   const [outputs, setOutputs] = useState<TxOutput[]>([emptyOutput()]);
   const [inputs, setInputs] = useState<TxInput[]>([]);
@@ -180,6 +181,46 @@ export const SnapSendTransactionStage: React.FC = () => {
           {/* Inputs (UTXO selection) */}
           <div className="border border-gray-200 rounded p-4 space-y-3">
             <span className="text-sm font-medium">Inputs &mdash; UTXO selection (optional)</span>
+
+            {/* Stored UTXOs from Get UTXOs stage */}
+            {storedUtxos.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="text-xs font-semibold text-blue-800 mb-2">
+                  Available UTXOs ({storedUtxos.length}) — from last Get UTXOs call
+                </p>
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {storedUtxos.filter((u) => !u.locked).map((utxo) => {
+                    const alreadyAdded = inputs.some(
+                      (inp) => inp.txId === utxo.txId && inp.index === String(utxo.index)
+                    );
+                    return (
+                      <div
+                        key={`${utxo.txId}-${utxo.index}`}
+                        className="flex items-center justify-between gap-2 bg-white rounded px-2 py-1.5 border border-blue-100"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-2xs font-mono text-gray-600 block truncate">{utxo.txId}</span>
+                          <span className="text-xs text-gray-800">
+                            idx {utxo.index} &middot; {utxo.amount} &middot; {utxo.token === '00' ? 'HTR' : utxo.token.slice(0, 8) + '…'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={alreadyAdded}
+                          onClick={() =>
+                            setInputs([...inputs, { txId: utxo.txId, index: String(utxo.index) }])
+                          }
+                          className="btn-secondary py-1 px-2 text-xs whitespace-nowrap"
+                        >
+                          {alreadyAdded ? 'Added' : 'Use'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {inputs.map((inp, i) => (
               <div key={i} className="border border-gray-200 rounded p-3 space-y-2">
                 <div className="flex items-center justify-between">

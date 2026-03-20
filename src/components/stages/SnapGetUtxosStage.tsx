@@ -5,11 +5,35 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { setSnapUtxos } from '../../store/slices/snapSlice';
+import type { SnapUtxo } from '../../store/slices/snapSlice';
+import type { AppDispatch } from '../../store';
+import { parseSnapResponse, isSnapEnvelope } from '../../utils/snapResponseHelpers';
+
+function extractUtxos(rawResponse: unknown): SnapUtxo[] {
+  const parsed = parseSnapResponse(rawResponse);
+  const inner = isSnapEnvelope(parsed) ? (parsed as { response: unknown }).response : parsed;
+  if (!inner || typeof inner !== 'object') return [];
+  const data = inner as Record<string, unknown>;
+  const utxos = Array.isArray(data.utxos) ? data.utxos : [];
+  return utxos
+    .filter((u: Record<string, unknown>) => u.tx_id && typeof u.tx_id === 'string')
+    .map((u: Record<string, unknown>) => ({
+      txId: u.tx_id as string,
+      index: Number(u.index ?? 0),
+      amount: Number(u.amount ?? 0),
+      token: typeof u.token === 'string' ? u.token : '00',
+      address: typeof u.address === 'string' ? u.address : '',
+      locked: !!u.locked,
+    }));
+}
 
 export const SnapGetUtxosStage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getUtxos');
 
   const [tokenUid, setTokenUid] = useState<string>('');
@@ -45,7 +69,16 @@ export const SnapGetUtxosStage: React.FC = () => {
 
   const liveRequest = useMemo(() => ({ method: 'htr_getUtxos', params }), [params]);
 
-  const handleExecute = () => execute((h) => h.getUtxos(params));
+  const handleExecute = async () => {
+    const result = await execute((h) => h.getUtxos(params));
+    const utxos = extractUtxos(result.response);
+    // If a token filter was used, tag UTXOs with it (response doesn't include token per-utxo)
+    const tagged = tokenUid.trim()
+      ? utxos.map((u) => ({ ...u, token: tokenUid.trim() }))
+      : utxos;
+    dispatch(setSnapUtxos(tagged));
+    return result;
+  };
 
   return (
     <div className="max-w-300 mx-auto">

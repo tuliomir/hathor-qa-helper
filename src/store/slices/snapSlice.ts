@@ -13,6 +13,15 @@ export interface InstalledSnap {
   version: string;
 }
 
+export interface SnapUtxo {
+  txId: string;
+  index: number;
+  amount: number;
+  token: string;
+  address: string;
+  locked: boolean;
+}
+
 export interface SnapState {
   isConnected: boolean;
   snapOrigin: string;
@@ -22,6 +31,8 @@ export interface SnapState {
   address: string | null;
   /** Network name reported by the snap */
   network: string | null;
+  /** UTXOs from last htr_getUtxos call, cleared on disconnect/network change */
+  utxos: SnapUtxo[];
 }
 
 const initialState: SnapState = {
@@ -31,6 +42,7 @@ const initialState: SnapState = {
   error: null,
   address: null,
   network: null,
+  utxos: [],
 };
 
 const snapSlice = createSlice({
@@ -47,8 +59,13 @@ const snapSlice = createSlice({
       state.snapOrigin = action.payload;
     },
     setSnapWalletInfo: (state, action: PayloadAction<{ address: string; network: string }>) => {
+      const networkChanged = state.network !== null && state.network !== action.payload.network;
       state.address = action.payload.address;
       state.network = action.payload.network;
+      if (networkChanged) state.utxos = [];
+    },
+    setSnapUtxos: (state, action: PayloadAction<SnapUtxo[]>) => {
+      state.utxos = action.payload;
     },
     setSnapError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
@@ -59,16 +76,19 @@ const snapSlice = createSlice({
       state.error = null;
       state.address = null;
       state.network = null;
+      state.utxos = [];
     },
   },
 });
 
-export const { setSnapConnected, setSnapOrigin, setSnapWalletInfo, setSnapError, resetSnap } = snapSlice.actions;
+export const { setSnapConnected, setSnapOrigin, setSnapWalletInfo, setSnapError, resetSnap, setSnapUtxos } =
+  snapSlice.actions;
 
 export const selectIsSnapConnected = (state: RootState) => state.snap.isConnected;
 export const selectSnapOrigin = (state: RootState) => state.snap.snapOrigin;
 export const selectInstalledSnap = (state: RootState) => state.snap.installedSnap;
 export const selectSnapAddress = (state: RootState) => state.snap.address;
 export const selectSnapNetwork = (state: RootState) => state.snap.network;
+export const selectSnapUtxos = (state: RootState) => state.snap.utxos;
 
 export default snapSlice.reducer;
