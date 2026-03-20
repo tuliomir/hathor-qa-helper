@@ -182,7 +182,11 @@ function RenderGetBalance({
               </div>
               <div>
                 <div className="text-xs text-muted mb-1">Lock Expires</div>
-                <div className="text-base font-semibold">{item.lockExpires ? String(item.lockExpires) : 'N/A'}</div>
+                <div className="text-base font-semibold">
+                  {item.lockExpires
+                    ? new Date(item.lockExpires * 1000).toLocaleString()
+                    : 'N/A'}
+                </div>
               </div>
             </div>
 
