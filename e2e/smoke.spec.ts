@@ -9,7 +9,7 @@ test.use({ actionTimeout: 3_000 });
 
 test.describe('Main QA Stages', () => {
   for (const stage of MAIN_QA_STAGES) {
-    test(`loads stage: ${stage.title}`, async ({ page }) => {
+    test(`loads stage: ${stage.groupTitle} / ${stage.title}`, async ({ page }) => {
       const collector = createConsoleCollector(page);
 
       // Navigate directly to the stage URL
@@ -22,8 +22,8 @@ test.describe('Main QA Stages', () => {
       });
 
       // The sidebar stage button should be active (bg-primary)
-      const stageButton = groupContainer.locator('button', { hasText: stage.title }).filter({
-        has: page.locator('span', { hasText: stage.title }),
+      const stageButton = groupContainer.locator('button').filter({
+        has: page.locator('span', { hasText: new RegExp(`^${stage.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }),
       });
       await expect(stageButton).toHaveClass(/bg-primary/);
 
