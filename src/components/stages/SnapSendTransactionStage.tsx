@@ -46,6 +46,7 @@ export const SnapSendTransactionStage: React.FC = () => {
   const [outputs, setOutputs] = useState<TxOutput[]>([emptyOutput()]);
   const [inputs, setInputs] = useState<TxInput[]>([]);
   const [changeAddress, setChangeAddress] = useState('');
+  const [utxosExpanded, setUtxosExpanded] = useState(false);
 
   const params = useMemo(() => {
     const builtOutputs = outputs.map((o) => {
@@ -184,40 +185,47 @@ export const SnapSendTransactionStage: React.FC = () => {
 
             {/* Stored UTXOs from Get UTXOs stage */}
             {storedUtxos.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                <p className="text-xs font-semibold text-blue-800 mb-2">
-                  Available UTXOs ({storedUtxos.length}) — from last Get UTXOs call
-                </p>
-                <div className="max-h-48 overflow-y-auto space-y-1">
-                  {storedUtxos.filter((u) => !u.locked).map((utxo) => {
-                    const alreadyAdded = inputs.some(
-                      (inp) => inp.txId === utxo.txId && inp.index === String(utxo.index)
-                    );
-                    return (
-                      <div
-                        key={`${utxo.txId}-${utxo.index}`}
-                        className="flex items-center justify-between gap-2 bg-white rounded px-2 py-1.5 border border-blue-100"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-2xs font-mono text-gray-600 block truncate">{utxo.txId}</span>
-                          <span className="text-xs text-gray-800">
-                            idx {utxo.index} &middot; {utxo.amount} &middot; {utxo.token === '00' ? 'HTR' : utxo.token.slice(0, 8) + '…'}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={alreadyAdded}
-                          onClick={() =>
-                            setInputs([...inputs, { txId: utxo.txId, index: String(utxo.index) }])
-                          }
-                          className="btn-secondary py-1 px-2 text-xs whitespace-nowrap"
+              <div className="bg-blue-50 border border-blue-200 rounded">
+                <button
+                  type="button"
+                  onClick={() => setUtxosExpanded(!utxosExpanded)}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-blue-800 flex items-center gap-2 hover:bg-blue-100 rounded"
+                >
+                  <span>{utxosExpanded ? '▼' : '▶'}</span>
+                  Show known UTXOs ({storedUtxos.filter((u) => !u.locked).length})
+                </button>
+                {utxosExpanded && (
+                  <div className="px-3 pb-3 max-h-48 overflow-y-auto space-y-1">
+                    {storedUtxos.filter((u) => !u.locked).map((utxo) => {
+                      const alreadyAdded = inputs.some(
+                        (inp) => inp.txId === utxo.txId && inp.index === String(utxo.index)
+                      );
+                      return (
+                        <div
+                          key={`${utxo.txId}-${utxo.index}`}
+                          className="flex items-center justify-between gap-2 bg-white rounded px-2 py-1.5 border border-blue-100"
                         >
-                          {alreadyAdded ? 'Added' : 'Use'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-2xs font-mono text-gray-600 block truncate">{utxo.txId}</span>
+                            <span className="text-xs text-gray-800">
+                              idx {utxo.index} &middot; {utxo.amount} &middot; {utxo.token === '00' ? 'HTR' : utxo.token.slice(0, 8) + '…'}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={alreadyAdded}
+                            onClick={() =>
+                              setInputs([...inputs, { txId: utxo.txId, index: String(utxo.index) }])
+                            }
+                            className="btn-secondary py-1 px-2 text-xs whitespace-nowrap"
+                          >
+                            {alreadyAdded ? 'Added' : 'Use'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
