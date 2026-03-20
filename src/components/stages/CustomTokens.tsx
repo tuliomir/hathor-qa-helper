@@ -231,7 +231,7 @@ function WalletTokensDisplay({
       await Promise.all(
         walletTokens.map(async (token) => {
           try {
-            const bal = await wallet.instance.getBalance(token.uid);
+            const bal = await wallet.instance!.getBalance(token.uid);
             balances.set(token.uid, bal[0]?.balance?.unlocked || 0n);
           } catch (err) {
             console.error(`Failed to load balance for token ${token.uid}:`, err);
@@ -386,7 +386,7 @@ function WalletTokensDisplay({
 
     try {
       const currentAddress = await wallet.instance.getCurrentAddress();
-      setAddressIndex(currentAddress.index);
+      if (currentAddress.index != null) setAddressIndex(currentAddress.index);
     } catch (err) {
       setMeltError(err instanceof Error ? err.message : 'Failed to get first empty address');
     } finally {

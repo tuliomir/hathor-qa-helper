@@ -82,7 +82,7 @@ export default function PushNotifications() {
             if (!tokenInfo) return null;
 
             try {
-              const balanceData = await fundingWallet.instance.getBalance(uid);
+              const balanceData = await fundingWallet.instance!.getBalance(uid);
               const balance = balanceData[0]?.balance?.unlocked || 0n;
 
               return {

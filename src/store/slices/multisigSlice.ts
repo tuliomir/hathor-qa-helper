@@ -5,7 +5,6 @@
  */
 
 import { createAsyncThunk, createSelector, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-// @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import SendTransaction from '@hathor/wallet-lib/lib/new/sendTransaction.js';
@@ -107,7 +106,7 @@ export const startMultisigParticipant = createAsyncThunk(
         password: WALLET_CONFIG.DEFAULT_PASSWORD,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
         multisig: {
-          pubkeys: MULTISIG_CONFIG.pubkeys,
+          pubkeys: [...MULTISIG_CONFIG.pubkeys],
           numSignatures: MULTISIG_CONFIG.numSignatures,
         },
       });

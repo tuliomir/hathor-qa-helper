@@ -51,7 +51,7 @@ export function useSendTransaction() {
       const hWallet = fromWallet.instance;
 
       // Build and sign the transaction
-      const tx = await hWallet.buildTxTemplate(template, {
+      const tx = await hWallet.buildTxTemplate(template as Parameters<typeof hWallet.buildTxTemplate>[0], {
         signTx: true,
         pinCode,
       });

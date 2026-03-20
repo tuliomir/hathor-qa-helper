@@ -137,7 +137,7 @@ function WalletAddressDisplay({
 
     try {
       const currentAddress = await wallet.instance.getCurrentAddress();
-      onIndexChange(currentAddress.index);
+      if (currentAddress.index != null) onIndexChange(currentAddress.index);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get first empty address');
     } finally {

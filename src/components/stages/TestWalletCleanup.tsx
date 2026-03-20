@@ -133,7 +133,7 @@ export default function TestWalletCleanup() {
 
     try {
       // Get HTR balance
-      const htrBalanceData = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+      const htrBalanceData = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
       const htrBal = htrBalanceData[0]?.balance?.unlocked || 0n;
       setHtrBalance(htrBal);
 
@@ -147,13 +147,13 @@ export default function TestWalletCleanup() {
 
           try {
             // Get balance
-            const balanceData = await testWallet.instance.getBalance(uid);
+            const balanceData = await testWallet.instance!.getBalance(uid);
             const balance = balanceData[0]?.balance?.unlocked || 0n;
 
             if (balance === 0n) return null;
 
             // Check if this is a fee token (version FEE) — never move, costs HTR to transfer
-            const storedToken = await testWallet.instance.storage.getToken(uid);
+            const storedToken = await testWallet.instance!.storage.getToken(uid);
             if (storedToken?.version === TokenVersion.FEE) {
               return {
                 uid,
@@ -189,7 +189,7 @@ export default function TestWalletCleanup() {
             }
 
             // Check melt authority
-            const meltAuthority = await testWallet.instance.getMeltAuthority(uid, {
+            const meltAuthority = await testWallet.instance!.getMeltAuthority(uid, {
               many: false,
               only_available_utxos: true,
             });
@@ -294,8 +294,8 @@ export default function TestWalletCleanup() {
 
     try {
       // Get destination address in Test Wallet
-      const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
-      const fundingWalletAddress = await fundingWallet.instance.getAddressAtIndex(0);
+      const testWalletAddress = await testWallet.instance!.getAddressAtIndex(0);
+      const fundingWalletAddress = await fundingWallet.instance!.getAddressAtIndex(0);
 
       // Build transaction to send tokens FROM Funding Wallet TO Test Wallet
       const template = TransactionTemplateBuilder.new()
@@ -311,14 +311,14 @@ export default function TestWalletCleanup() {
         })
         .build();
 
-      const tx = await fundingWallet.instance.buildTxTemplate(template, {
+      const tx = await fundingWallet.instance!.buildTxTemplate(template, {
         signTx: true,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
       });
 
       const { SendTransaction } = await import('@hathor/wallet-lib');
       const sendTx = new SendTransaction({
-        storage: fundingWallet.instance.storage,
+        storage: fundingWallet.instance!.storage,
         transaction: tx,
       });
 
@@ -409,8 +409,8 @@ export default function TestWalletCleanup() {
         })),
       });
 
-      const testWalletAddr = await testWallet.instance.getAddressAtIndex(0);
-      const fundingAddr = await fundingWallet.instance.getAddressAtIndex(0);
+      const testWalletAddr = await testWallet.instance!.getAddressAtIndex(0);
+      const fundingAddr = await fundingWallet.instance!.getAddressAtIndex(0);
 
       addDebugLog('info', 'Addresses', {
         testWalletAddr,
@@ -465,7 +465,7 @@ export default function TestWalletCleanup() {
           });
 
           addDebugLog('info', 'Calling runTxTemplate for unified cleanup...');
-          const tx = await testWallet.instance.runTxTemplate(unifiedTemplate, WALLET_CONFIG.DEFAULT_PIN_CODE);
+          const tx = await testWallet.instance!.runTxTemplate(unifiedTemplate, WALLET_CONFIG.DEFAULT_PIN_CODE);
 
           addDebugLog('tx', 'Unified cleanup transaction result', {
             hash: tx?.hash,
@@ -553,17 +553,15 @@ export default function TestWalletCleanup() {
                 ret: batch.returnTokens.length,
               });
 
-              const tx = await testWallet.instance.runTxTemplate(batchTemplate, WALLET_CONFIG.DEFAULT_PIN_CODE);
+              const tx = await testWallet.instance!.runTxTemplate(batchTemplate, WALLET_CONFIG.DEFAULT_PIN_CODE);
 
               if (tx?.hash) {
                 addDebugLog('info', `Token batch ${bIdx + 1} tx: ${tx.hash}`);
                 await waitForTxSettlement(tx.hash);
 
                 for (const token of [...batch.tokensToMelt, ...batch.swapTokens]) {
-                  setMeltTxStatuses((prev) => [
-                    ...prev,
-                    { tokenSymbol: token.symbol, txHash: tx.hash!, status: 'confirmed' },
-                  ]);
+                  const sym = tokensToMelt.find((t) => t.uid === token.uid)?.symbol ?? token.uid.slice(0, 8);
+                  setMeltTxStatuses((prev) => [...prev, { tokenSymbol: sym, txHash: tx.hash!, status: 'confirmed' }]);
                 }
               }
             } catch (batchErr) {
@@ -573,7 +571,8 @@ export default function TestWalletCleanup() {
               batchFailed = true;
 
               for (const token of [...batch.tokensToMelt, ...batch.swapTokens]) {
-                setMeltTxStatuses((prev) => [...prev, { tokenSymbol: token.symbol, txHash: '', status: 'failed' }]);
+                const sym = tokensToMelt.find((t) => t.uid === token.uid)?.symbol ?? token.uid.slice(0, 8);
+                setMeltTxStatuses((prev) => [...prev, { tokenSymbol: sym, txHash: '', status: 'failed' }]);
               }
             }
           }
@@ -585,18 +584,18 @@ export default function TestWalletCleanup() {
             addDebugLog('info', 'Consolidating HTR into a single UTXO...');
 
             try {
-              const freshBalance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+              const freshBalance = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
               const freshHtr = freshBalance?.[0]?.balance?.unlocked ?? 0n;
 
               if (freshHtr > 0n) {
                 // Send all HTR to self — wallet-lib selects UTXOs natively
-                const consolidateTx = await testWallet.instance.sendManyOutputsSendTransaction(
+                const consolidateTx = await testWallet.instance!.sendManyOutputsSendTransaction(
                   [{ address: testWalletAddr, value: freshHtr, token: NATIVE_TOKEN_UID }],
                   { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE }
                 );
                 await consolidateTx.run();
                 addDebugLog('info', `HTR consolidated: ${freshHtr} units into 1 UTXO`);
-                await waitForTxSettlement(consolidateTx.transaction?.hash);
+                await waitForTxSettlement(consolidateTx.transaction!.hash!);
               }
             } catch (consolidateErr) {
               const msg = consolidateErr instanceof Error ? consolidateErr.message : 'Unknown error';
@@ -612,11 +611,11 @@ export default function TestWalletCleanup() {
             addDebugLog('info', 'Sending consolidated HTR to funding wallet...');
 
             try {
-              const freshBalance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+              const freshBalance = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
               const freshHtr = freshBalance?.[0]?.balance?.unlocked ?? 0n;
 
               if (freshHtr > 0n) {
-                const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(
+                const sendTx = await testWallet.instance!.sendManyOutputsSendTransaction(
                   [{ address: fundingAddr, value: freshHtr, token: NATIVE_TOKEN_UID }],
                   { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE }
                 );
@@ -651,7 +650,7 @@ export default function TestWalletCleanup() {
       setExecutionStep('');
 
       // Reload preview data
-      const htrBalanceData = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
+      const htrBalanceData = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
       setHtrBalance(htrBalanceData[0]?.balance?.unlocked || 0n);
 
       // Reload tokens
@@ -662,12 +661,12 @@ export default function TestWalletCleanup() {
           if (!tokenInfo) return null;
 
           try {
-            const balanceData = await testWallet.instance.getBalance(uid);
+            const balanceData = await testWallet.instance!.getBalance(uid);
             const balance = balanceData[0]?.balance?.unlocked || 0n;
             if (balance === 0n) return null;
 
             // Check if this is a fee token
-            const storedToken = await testWallet.instance.storage.getToken(uid);
+            const storedToken = await testWallet.instance!.storage.getToken(uid);
             if (storedToken?.version === TokenVersion.FEE) {
               return {
                 uid,
@@ -701,7 +700,7 @@ export default function TestWalletCleanup() {
               };
             }
 
-            const meltAuthority = await testWallet.instance.getMeltAuthority(uid, {
+            const meltAuthority = await testWallet.instance!.getMeltAuthority(uid, {
               many: false,
               only_available_utxos: true,
             });
@@ -1273,7 +1272,8 @@ export default function TestWalletCleanup() {
                 .filter((t) => !t.canReturnToSender && !t.hasMeltAuthority)
                 .map((token) => {
                   const remainingAmount = Number(token.balance);
-                  const hasFlowData = token.tokenFlow && token.tokenFlow.addressFlows.length > 0;
+                  const fullToken = tokensToMelt.find((t) => t.uid === token.uid);
+                  const hasFlowData = fullToken?.tokenFlow && fullToken.tokenFlow.addressFlows.length > 0;
 
                   return (
                     <div key={token.uid} className="mb-4 last:mb-0 bg-white rounded p-3">
@@ -1289,7 +1289,7 @@ export default function TestWalletCleanup() {
                         <div className="border-t border-orange-200 pt-2 mt-2">
                           <div className="text-xs text-orange-800 font-semibold mb-2">Token Origin:</div>
                           <div className="space-y-2">
-                            {token.tokenFlow!.addressFlows.map((flow, idx) => (
+                            {fullToken!.tokenFlow!.addressFlows.map((flow, idx) => (
                               <div key={idx} className="bg-orange-50 rounded px-2 py-1.5 text-xs">
                                 <div className="flex justify-between items-start">
                                   <div className="font-mono" title={flow.address}>

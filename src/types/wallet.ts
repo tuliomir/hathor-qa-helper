@@ -2,7 +2,6 @@
  * Type definitions for wallet-related structures
  */
 
-// @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import type { NetworkType } from '../constants/network';
 

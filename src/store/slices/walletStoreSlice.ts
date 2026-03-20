@@ -7,7 +7,6 @@ import { createAsyncThunk, createSelector, createSlice, type PayloadAction } fro
 import type { WalletMetadata } from '../../types/walletStore';
 import type { WalletStatus } from '../../types/wallet';
 import type { RootState } from '../index';
-// @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
 import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG } from '../../constants/network';
@@ -243,7 +242,7 @@ export const startWallet = createAsyncThunk(
                 uid,
                 name: tokenDetails.tokenInfo.name,
                 symbol: tokenDetails.tokenInfo.symbol,
-                timestamp: tokenDetails.tokenInfo.timestamp,
+                timestamp: (tokenDetails.tokenInfo as Record<string, unknown>).timestamp as number | undefined,
               })
             );
           }
@@ -449,7 +448,7 @@ export const refreshWalletTokens = createAsyncThunk(
                 uid,
                 name: tokenDetails.tokenInfo.name,
                 symbol: tokenDetails.tokenInfo.symbol,
-                timestamp: tokenDetails.tokenInfo.timestamp,
+                timestamp: (tokenDetails.tokenInfo as Record<string, unknown>).timestamp as number | undefined,
               })
             );
           }

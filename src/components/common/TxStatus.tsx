@@ -174,8 +174,12 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
           const firstBlock = response.meta.first_block;
 
           // Spread response.tx to preserve nc_* fields for nano contract detection
+          const { nc_method, nc_blueprint_id, nc_id, ...restTx } = response.tx;
           const txStatus = getTransactionStatus({
-            ...response.tx,
+            ...restTx,
+            nc_method: nc_method ?? undefined,
+            nc_blueprint_id: nc_blueprint_id ?? undefined,
+            nc_id: nc_id ?? undefined,
             first_block: firstBlock,
             is_voided: isVoided,
           });
@@ -223,8 +227,12 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
         const response = await walletInstance.getFullTxById(hash);
         if (response.success && response.meta?.first_block) {
           const isVoided = response.meta.voided_by && response.meta.voided_by.length > 0;
+          const { nc_method: ncm, nc_blueprint_id: ncb, nc_id: nci, ...restTx2 } = response.tx;
           const txStatus = getTransactionStatus({
-            ...response.tx,
+            ...restTx2,
+            nc_method: ncm ?? undefined,
+            nc_blueprint_id: ncb ?? undefined,
+            nc_id: nci ?? undefined,
             first_block: response.meta.first_block,
             is_voided: isVoided,
           });

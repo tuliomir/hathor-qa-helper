@@ -6,7 +6,6 @@
  * Push Notifications stages.
  */
 
-import React from 'react';
 import type { NetworkType } from '../../constants/network';
 import NetworkSwapButton from './NetworkSwapButton';
 

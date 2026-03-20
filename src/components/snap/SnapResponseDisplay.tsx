@@ -365,9 +365,9 @@ function RenderSignWithAddress({ data }: { data: Record<string, unknown> }) {
     data.address && typeof data.address === 'object' ? (data.address as Record<string, unknown>).address : data.address;
   return (
     <div className="space-y-3">
-      {data.signature && <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable />}
-      {addressVal && <FieldBox label="address" value={safeDisplayValue(addressVal)} copyable />}
-      {data.message && <FieldBox label="message" value={safeDisplayValue(data.message)} />}
+      {data.signature ? <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable /> : null}
+      {addressVal ? <FieldBox label="address" value={safeDisplayValue(addressVal)} copyable /> : null}
+      {data.message ? <FieldBox label="message" value={safeDisplayValue(data.message)} /> : null}
     </div>
   );
 }
@@ -395,9 +395,9 @@ function RenderSignOracleData({ data }: { data: Record<string, unknown> }) {
         </div>
       )}
 
-      {!signedData && data.signature && (
+      {!signedData && data.signature ? (
         <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable />
-      )}
+      ) : null}
     </div>
   );
 }

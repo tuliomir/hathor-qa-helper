@@ -99,7 +99,7 @@ export default function WalletAddressSelector({
 
     try {
       const currentAddress = await wallet.instance.getCurrentAddress();
-      setAddressIndex(currentAddress.index);
+      if (currentAddress.index != null) setAddressIndex(currentAddress.index);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get first empty address');
     } finally {

@@ -77,7 +77,7 @@ export function isSnapUserRejection(err: unknown): boolean {
   // Error subclasses from MetaMask may have .data as non-enumerable.
   if (err instanceof Error) {
     for (const key of ['data', 'cause', 'originalError', 'error']) {
-      const nested = (err as Record<string, unknown>)[key];
+      const nested = (err as unknown as Record<string, unknown>)[key];
       if (nested && typeof nested === 'object') {
         const nestedMsgs = collectMessages(nested);
         if (nestedMsgs.some((msg) => REJECTION_RE.test(msg) || REJECTION_TYPE_RE.test(msg))) {

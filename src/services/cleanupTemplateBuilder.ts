@@ -8,6 +8,7 @@
 
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { AuthorityType } from '@hathor/wallet-lib/lib/types';
 
 /**
  * Maximum tokens to process per cleanup transaction.
@@ -71,9 +72,9 @@ export function buildUnifiedCleanupTemplate(
 
     builder = builder
       .addUtxoSelect({ fill: token.meltableAmount, token: token.uid })
-      .addAuthoritySelect({ authority: 'melt', token: token.uid })
+      .addAuthoritySelect({ authority: AuthorityType.MELT, token: token.uid })
       .addAuthorityOutput({
-        authority: 'melt',
+        authority: AuthorityType.MELT,
         token: token.uid,
         address: '{testAddr}',
       });

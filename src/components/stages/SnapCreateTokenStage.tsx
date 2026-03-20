@@ -12,6 +12,7 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import type { RootState } from '../../store';
+import type { WalletInfo } from '../../types/walletStore';
 import Select from '../common/Select';
 
 /** Reusable row of quick-fill address buttons */
@@ -22,8 +23,8 @@ function AddressButtons({
   onFill,
 }: {
   snapAddress: string | null;
-  testWallet: { instance?: { getAddressAtIndex: (i: number) => Promise<string> } } | null;
-  fundingWallet: { instance?: { getAddressAtIndex: (i: number) => Promise<string> } } | null;
+  testWallet: WalletInfo | null;
+  fundingWallet: WalletInfo | null;
   onFill: (addr: string) => void;
 }) {
   const fillTest = async () => {
@@ -84,8 +85,8 @@ export const SnapCreateTokenStage: React.FC = () => {
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
   const { getWallet } = useWalletStore();
-  const testWallet = testWalletId ? getWallet(testWalletId) : null;
-  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
+  const testWallet = (testWalletId ? getWallet(testWalletId) : null) ?? null;
+  const fundingWallet = (fundingWalletId ? getWallet(fundingWalletId) : null) ?? null;
 
   const [name, setName] = useState('Test Snaps Token');
   const [symbol, setSymbol] = useState('TSNT');
