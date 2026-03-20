@@ -8,7 +8,7 @@ import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import type { WalletInfo } from '../../types/walletStore';
-import { NATIVE_TOKEN_UID, FEE_PER_OUTPUT } from '@hathor/wallet-lib/lib/constants';
+import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { TokenVersion } from '@hathor/wallet-lib/lib/types';
 import { getConfigurationString } from '../../utils/tokenConfigString';
@@ -447,8 +447,7 @@ function WalletTokensDisplay({
       } catch { /* assume not fee-based if check fails */ }
 
       // Build the transaction template
-      // Fee tokens require a FeeHeader: 1 unit per fee-token output (send + change = 2)
-      const builder = TransactionTemplateBuilder.new()
+      const template = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: derivedAddress })
         .addSetVarAction({ name: 'changeAddr', value: fundWalletFirstAddress })
         .addTokenOutput({
@@ -457,14 +456,10 @@ function WalletTokensDisplay({
           token: selectedToken.uid
         })
         .addCompleteAction({
-          changeAddress: '{changeAddr}'
-        });
-
-      if (isFeeToken) {
-        builder.addFee({ token: NATIVE_TOKEN_UID, amount: FEE_PER_OUTPUT * 2n });
-      }
-
-      const template = builder.build();
+          changeAddress: '{changeAddr}',
+          calculateFee: isFeeToken,
+        })
+        .build();
 
       // Send the transaction using the centralized hook
       await sendTransaction(
@@ -531,7 +526,7 @@ function WalletTokensDisplay({
       } catch { /* assume not fee-based if check fails */ }
 
       // Build the transaction template
-      const builder = TransactionTemplateBuilder.new()
+      const template = TransactionTemplateBuilder.new()
         .addSetVarAction({ name: 'recipientAddr', value: otherWalletAddress })
         .addSetVarAction({ name: 'changeAddr', value: currentWalletFirstAddress })
         .addTokenOutput({
@@ -540,14 +535,10 @@ function WalletTokensDisplay({
           token: selectedToken.uid
         })
         .addCompleteAction({
-          changeAddress: '{changeAddr}'
-        });
-
-      if (isFeeToken) {
-        builder.addFee({ token: NATIVE_TOKEN_UID, amount: FEE_PER_OUTPUT * 2n });
-      }
-
-      const template = builder.build();
+          changeAddress: '{changeAddr}',
+          calculateFee: isFeeToken,
+        })
+        .build();
 
       // Send the transaction using the centralized hook
       await sendTransaction(
@@ -877,16 +868,31 @@ function WalletTokensDisplay({
             <label htmlFor="amount-input" className="block mb-1.5 font-bold">
               Payment Amount:
             </label>
-            <input
-              id="amount-input"
-              type="number"
-              min="1"
-              step="1"
-              value={amount}
-              onChange={handleAmountChange}
-              className="input"
-              placeholder="Enter amount"
-            />
+            <div className="flex gap-2">
+              <input
+                id="amount-input"
+                type="number"
+                min="1"
+                step="1"
+                value={amount}
+                onChange={handleAmountChange}
+                className="input flex-1"
+                placeholder="Enter amount"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const balance = tokenBalances.get(selectedToken.uid);
+                  if (balance != null && balance > 0n) {
+                    setAmount(Number(balance));
+                  }
+                }}
+                className="btn-secondary px-3 whitespace-nowrap text-sm"
+                title="Fill with full token balance"
+              >
+                Max
+              </button>
+            </div>
             <p className="text-muted text-xs mt-1.5 mb-0">
               Enter a positive integer for the payment amount ({selectedToken.symbol} tokens)
             </p>
