@@ -5,10 +5,12 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { AddressInput } from '../common/AddressInput';
+import { selectSnapAddress } from '../../store/slices/snapSlice';
 import Select from '../common/Select';
 import TimelockPicker from '../common/TimelockPicker';
 import { timelockToUnix } from '../../utils/timelockUtils';
@@ -38,6 +40,7 @@ const emptyOutput = (): TxOutput => ({
 
 export const SnapSendTransactionStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('sendTransaction');
+  const snapAddress = useSelector(selectSnapAddress);
 
   const [outputs, setOutputs] = useState<TxOutput[]>([emptyOutput()]);
   const [inputs, setInputs] = useState<TxInput[]>([]);
@@ -169,6 +172,7 @@ export const SnapSendTransactionStage: React.FC = () => {
               value={changeAddress}
               onChange={setChangeAddress}
               placeholder="Address to receive change"
+              suggestedValue={snapAddress ?? undefined}
               sources={['snap']}
             />
           </div>

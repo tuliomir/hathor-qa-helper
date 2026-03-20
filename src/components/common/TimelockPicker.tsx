@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { defaultTimelockValue } from '../../utils/timelockUtils';
 
 interface TimelockPickerProps {
   value: string;
@@ -28,7 +29,23 @@ const TimelockPicker: React.FC<TimelockPickerProps> = ({
     <div className={className}>
       <label className="block mb-1 text-xs font-medium text-muted">{label}</label>
       <input type="datetime-local" value={value} onChange={(e) => onChange(e.target.value)} className="input w-full" />
-      <p className="text-xs text-muted mt-1">{hint}</p>
+      <div className="flex items-center gap-2 mt-1.5">
+        <button
+          type="button"
+          onClick={() => onChange(defaultTimelockValue(1))}
+          className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+        >
+          +1 min
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(defaultTimelockValue(5))}
+          className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+        >
+          +5 min
+        </button>
+        <span className="text-xs text-muted">{hint}</span>
+      </div>
     </div>
   );
 };
