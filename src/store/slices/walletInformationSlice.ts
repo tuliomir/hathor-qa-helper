@@ -51,10 +51,7 @@ const walletInformationSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setWalletInformationResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setWalletInformationResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
@@ -73,10 +70,7 @@ const walletInformationSlice = createSlice({
         state.response = null;
       }
     },
-    setWalletInformationError: (
-      state,
-      action: PayloadAction<{ error: string; duration: number }>
-    ) => {
+    setWalletInformationError: (state, action: PayloadAction<{ error: string; duration: number }>) => {
       state.error = action.payload.error;
       state.duration = action.payload.duration;
       state.response = null;

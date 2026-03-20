@@ -16,11 +16,7 @@ import { extractErrorMessage } from '../../utils/errorUtils';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 export interface RpcGetBalanceCardProps {
@@ -55,10 +51,13 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
 
-  const liveRequest = useMemo(() => ({
-    method: 'htr_getBalance',
-    params: { network: 'testnet', tokens: tokens.map(t => t.uid) },
-  }), [tokens]);
+  const liveRequest = useMemo(
+    () => ({
+      method: 'htr_getBalance',
+      params: { network: 'testnet', tokens: tokens.map((t) => t.uid) },
+    }),
+    [tokens]
+  );
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -92,10 +91,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
       console.log(`[RPC Request] Get Balance`, request);
       console.log(`[RPC Success] Get Balance`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Get Balance executed successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Get Balance executed successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -123,16 +119,21 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
 
   // Check if result is a balance response
   const isBalanceResponse = (data: unknown): data is { type: number; response: unknown[] } => {
-    return !!(data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 3 && 'response' in data && Array.isArray((data as { response?: unknown }).response));
+    return !!(
+      data &&
+      typeof data === 'object' &&
+      'type' in data &&
+      (data as { type?: number }).type === 3 &&
+      'response' in data &&
+      Array.isArray((data as { response?: unknown }).response)
+    );
   };
 
   // Render raw JSON view
   const renderRawJson = (data: unknown) => {
     return (
       <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50">
-        <pre className="text-sm font-mono text-left whitespace-pre-wrap break-words m-0">
-          {safeStringify(data, 2)}
-        </pre>
+        <pre className="text-sm font-mono text-left whitespace-pre-wrap break-words m-0">{safeStringify(data, 2)}</pre>
       </div>
     );
   };
@@ -191,15 +192,11 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
                   <div className="grid grid-cols-2 gap-4 mb-3">
                     <div className="bg-green-50 border border-green-200 rounded p-3">
                       <div className="text-xs text-muted mb-1">Unlocked Balance</div>
-                      <div className="text-xl font-bold text-green-700">
-                        {item.balance?.unlocked || '0'}
-                      </div>
+                      <div className="text-xl font-bold text-green-700">{item.balance?.unlocked || '0'}</div>
                     </div>
                     <div className="bg-gray-50 border border-gray-200 rounded p-3">
                       <div className="text-xs text-muted mb-1">Locked Balance</div>
-                      <div className="text-xl font-bold text-gray-700">
-                        {item.balance?.locked || '0'}
-                      </div>
+                      <div className="text-xl font-bold text-gray-700">{item.balance?.locked || '0'}</div>
                     </div>
                   </div>
 
@@ -227,15 +224,11 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
                           <div className="text-xs space-y-1">
                             <div className="flex justify-between">
                               <span className="text-muted">Mint:</span>
-                              <span className="font-mono">
-                                {item.tokenAuthorities.unlocked?.mint || '0'}
-                              </span>
+                              <span className="font-mono">{item.tokenAuthorities.unlocked?.mint || '0'}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted">Melt:</span>
-                              <span className="font-mono">
-                                {item.tokenAuthorities.unlocked?.melt || '0'}
-                              </span>
+                              <span className="font-mono">{item.tokenAuthorities.unlocked?.melt || '0'}</span>
                             </div>
                           </div>
                         </div>
@@ -244,15 +237,11 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
                           <div className="text-xs space-y-1">
                             <div className="flex justify-between">
                               <span className="text-muted">Mint:</span>
-                              <span className="font-mono">
-                                {item.tokenAuthorities.locked?.mint || '0'}
-                              </span>
+                              <span className="font-mono">{item.tokenAuthorities.locked?.mint || '0'}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted">Melt:</span>
-                              <span className="font-mono">
-                                {item.tokenAuthorities.locked?.melt || '0'}
-                              </span>
+                              <span className="font-mono">{item.tokenAuthorities.locked?.melt || '0'}</span>
                             </div>
                           </div>
                         </div>
@@ -284,13 +273,9 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
                     <div className="divide-y divide-gray-200">
                       {Object.entries(item).map(([propKey, propValue]) => (
                         <div key={propKey} className="px-3 py-2 flex items-start gap-3">
-                          <span className="text-muted text-sm font-medium flex-shrink-0 min-w-[120px]">
-                            {propKey}:
-                          </span>
+                          <span className="text-muted text-sm font-medium flex-shrink-0 min-w-[120px]">{propKey}:</span>
                           <span className="text-sm font-mono break-all flex-1 overflow-x-auto">
-                            {typeof propValue === 'object'
-                              ? safeStringify(propValue, 2)
-                              : String(propValue)}
+                            {typeof propValue === 'object' ? safeStringify(propValue, 2) : String(propValue)}
                           </span>
                         </div>
                       ))}
@@ -344,18 +329,12 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold m-0">Tokens to Query</h3>
           {onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="btn-primary py-1.5 px-4 text-sm"
-            >
+            <button onClick={onRefresh} disabled={isRefreshing} className="btn-primary py-1.5 px-4 text-sm">
               {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           )}
         </div>
-        <p className="text-sm text-muted mb-4">
-          The following tokens will be queried for balance information:
-        </p>
+        <p className="text-sm text-muted mb-4">The following tokens will be queried for balance information:</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-gray-300">
@@ -415,7 +394,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {(result && isBalanceResponse(typeof result === 'string' ? JSON.parse(result) : result)) ? (
+              {result && isBalanceResponse(typeof result === 'string' ? JSON.parse(result) : result) ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -423,10 +402,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
               ) : null}
-              <CopyButton
-                text={result ? safeStringify(result, 2) as string : error || ''}
-                label="Copy response"
-              />
+              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
             </div>
           </div>
 
@@ -435,19 +411,14 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

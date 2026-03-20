@@ -65,7 +65,6 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-
     }
     if (initialResponse) {
       setResult(initialResponse);
@@ -128,10 +127,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
       console.log(`[RPC Request] Sign Oracle Data`, request);
       console.log(`[RPC Success] Sign Oracle Data`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Data signed successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Data signed successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -140,7 +136,6 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
 
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-  
       }
 
       console.error(`[RPC Error] Sign Oracle Data`, {
@@ -190,7 +185,14 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
 
   // Helper to check if an object is a Buffer
   const isBuffer = (obj: unknown): obj is { type: string; data: number[] } => {
-    return !!(obj && typeof obj === 'object' && 'type' in obj && (obj as { type?: string }).type === 'Buffer' && 'data' in obj && Array.isArray((obj as { data?: unknown }).data));
+    return !!(
+      obj &&
+      typeof obj === 'object' &&
+      'type' in obj &&
+      (obj as { type?: string }).type === 'Buffer' &&
+      'data' in obj &&
+      Array.isArray((obj as { data?: unknown }).data)
+    );
   };
 
   // Helper to render Buffer in a compact way
@@ -202,7 +204,8 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
         <span className="text-muted">Buffer({dataLength} bytes)</span>
         {dataLength > 0 && (
           <span className="text-xs text-muted ml-2">
-            [{preview}{dataLength > 8 ? '...' : ''}]
+            [{preview}
+            {dataLength > 8 ? '...' : ''}]
           </span>
         )}
       </div>
@@ -326,18 +329,11 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Sign Oracle Data</h3>
-            <p className="text-sm text-muted mt-1">
-              Sign data as the oracle for a nano contract
-            </p>
+            <p className="text-sm text-muted mt-1">Sign data as the oracle for a nano contract</p>
           </div>
           {isDryRun && (
             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-300">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
               </svg>
               DRY RUN
@@ -363,12 +359,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
                 className="btn-secondary px-4 flex items-center gap-2"
                 title="Select latest initialized nano contract"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
                     d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
@@ -378,9 +369,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
                 Select
               </button>
             </div>
-            <p className="text-xs text-muted mt-1">
-              The nano contract ID for which to sign the data
-            </p>
+            <p className="text-xs text-muted mt-1">The nano contract ID for which to sign the data</p>
           </div>
 
           {/* Oracle Address Index */}
@@ -394,9 +383,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               placeholder="0"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              Index of the address to use as the oracle
-            </p>
+            <p className="text-xs text-muted mt-1">Index of the address to use as the oracle</p>
           </div>
 
           {/* Data to Sign */}
@@ -409,9 +396,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               placeholder="E.g., Result_1"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              The data/result to sign (e.g., the bet result)
-            </p>
+            <p className="text-xs text-muted mt-1">The data/result to sign (e.g., the bet result)</p>
           </div>
         </div>
 
@@ -424,91 +409,85 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
       </div>
 
       {/* Signed Data Display (if available) */}
-      {result && !error && (() => {
-        try {
-          const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
-          const responseData = parsedResult?.response;
+      {result &&
+        !error &&
+        (() => {
+          try {
+            const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
+            const responseData = parsedResult?.response;
 
-          if (!responseData) return null;
+            if (!responseData) return null;
 
-          return (
-            <div className="card-primary mb-7.5">
-              <div className="bg-green-50 border border-green-300 rounded p-4">
-                <div className="flex items-center gap-2 text-green-700 mb-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="font-medium">Data signed successfully</span>
-                </div>
+            return (
+              <div className="card-primary mb-7.5">
+                <div className="bg-green-50 border border-green-300 rounded p-4">
+                  <div className="flex items-center gap-2 text-green-700 mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="font-medium">Data signed successfully</span>
+                  </div>
 
-                <div className="space-y-3">
-                  {/* Data Signed */}
-                  {responseData.data && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-muted font-medium">Data Signed</span>
-                        <CopyButton text={responseData.data} label="Copy" />
+                  <div className="space-y-3">
+                    {/* Data Signed */}
+                    {responseData.data && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-muted font-medium">Data Signed</span>
+                          <CopyButton text={responseData.data} label="Copy" />
+                        </div>
+                        <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm">
+                          {responseData.data}
+                        </div>
                       </div>
-                      <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm">
-                        {responseData.data}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Oracle Address */}
-                  {responseData.oracle && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-muted font-medium">Oracle Address</span>
-                        <CopyButton text={responseData.oracle} label="Copy" />
+                    {/* Oracle Address */}
+                    {responseData.oracle && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-muted font-medium">Oracle Address</span>
+                          <CopyButton text={responseData.oracle} label="Copy" />
+                        </div>
+                        <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-all">
+                          {responseData.oracle}
+                        </div>
                       </div>
-                      <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-all">
-                        {responseData.oracle}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Oracle Signature */}
-                  {signedData && (
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-muted font-medium">Oracle Signature (for Set Bet Result)</span>
-                        <CopyButton text={signedData} label="Copy signature" />
+                    {/* Oracle Signature */}
+                    {signedData && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-muted font-medium">Oracle Signature (for Set Bet Result)</span>
+                          <CopyButton text={signedData} label="Copy signature" />
+                        </div>
+                        <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
+                          {signedData}
+                        </div>
                       </div>
-                      <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
-                        {signedData}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Send to Set Bet Result button */}
-                  {signedData && onSendToSetBetResult && (
-                    <div className="pt-2">
-                      <button
-                        onClick={handleSendToSetBetResult}
-                        className="btn-primary w-full"
-                      >
-                        🔮 Send to Set Bet Result
-                      </button>
-                    </div>
-                  )}
+                    {/* Send to Set Bet Result button */}
+                    {signedData && onSendToSetBetResult && (
+                      <div className="pt-2">
+                        <button onClick={handleSendToSetBetResult} className="btn-primary w-full">
+                          🔮 Send to Set Bet Result
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        } catch {
-          return null;
-        }
-      })()}
+            );
+          } catch {
+            return null;
+          }
+        })()}
 
       {/* Intermediates Section */}
       <div className="card-primary mb-7.5">
@@ -535,20 +514,14 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
                     <span className="text-sm font-semibold text-yellow-800">
                       Oracle Address (from index {addressIndex})
                     </span>
-                    {oracleAddress && (
-                      <CopyButton text={oracleAddress} label="Copy" />
-                    )}
+                    {oracleAddress && <CopyButton text={oracleAddress} label="Copy" />}
                   </div>
                 </div>
                 <div className="px-3 py-2">
                   {oracleAddress ? (
-                    <span className="text-sm font-mono text-yellow-900 break-all">
-                      {oracleAddress}
-                    </span>
+                    <span className="text-sm font-mono text-yellow-900 break-all">{oracleAddress}</span>
                   ) : (
-                    <span className="text-sm text-muted italic">
-                      Deriving oracle address from wallet...
-                    </span>
+                    <span className="text-sm text-muted italic">Deriving oracle address from wallet...</span>
                   )}
                 </div>
               </div>
@@ -572,7 +545,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {(result && !error) ? (
+              {result && !error ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -580,10 +553,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
               ) : null}
-              <CopyButton
-                text={result ? safeStringify(result, 2) as string : error || ''}
-                label="Copy response"
-              />
+              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
             </div>
           </div>
 
@@ -592,19 +562,14 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

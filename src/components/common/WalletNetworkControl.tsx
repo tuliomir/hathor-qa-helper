@@ -33,12 +33,7 @@ export default function WalletNetworkControl({
     <div>
       <div className="flex items-center gap-2">
         <span className="badge badge-lg">{network}</span>
-        <NetworkSwapButton
-          walletId={walletId}
-          currentNetwork={network}
-          walletStatus={status}
-          onSwap={onSwapNetwork}
-        />
+        <NetworkSwapButton walletId={walletId} currentNetwork={network} walletStatus={status} onSwap={onSwapNetwork} />
       </div>
 
       {/* Error message */}

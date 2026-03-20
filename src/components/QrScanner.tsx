@@ -41,49 +41,53 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
     let scanningActive = true;
 
     video.onloadedmetadata = () => {
-      video.play().then(() => {
-        console.log('Video playing, starting QR detection');
+      video
+        .play()
+        .then(() => {
+          console.log('Video playing, starting QR detection');
 
-        // Start continuous QR code detection
-        const scanFrame = () => {
-          if (!videoRef.current || hasScanned || !scanningActive) return;
+          // Start continuous QR code detection
+          const scanFrame = () => {
+            if (!videoRef.current || hasScanned || !scanningActive) return;
 
-          codeReader.decodeOnceFromVideoElement(videoRef.current)
-            .then((result) => {
-              if (result && !hasScanned && scanningActive) {
-                console.log('QR Code scanned:', result.getText());
-                setHasScanned(true);
-                scanningActive = false;
+            codeReader
+              .decodeOnceFromVideoElement(videoRef.current)
+              .then((result) => {
+                if (result && !hasScanned && scanningActive) {
+                  console.log('QR Code scanned:', result.getText());
+                  setHasScanned(true);
+                  scanningActive = false;
 
-                // Stop camera immediately after successful scan
-                if (streamRef.current) {
-                  streamRef.current.getTracks().forEach((track) => {
-                    track.stop();
-                    console.log('Track stopped after scan:', track.kind);
-                  });
+                  // Stop camera immediately after successful scan
+                  if (streamRef.current) {
+                    streamRef.current.getTracks().forEach((track) => {
+                      track.stop();
+                      console.log('Track stopped after scan:', track.kind);
+                    });
+                  }
+
+                  onScan(result.getText());
+                } else if (scanningActive && !hasScanned) {
+                  // Continue scanning if no result or already scanned
+                  setTimeout(scanFrame, 100);
                 }
+              })
+              .catch((err) => {
+                // Continue scanning on error (usually means no QR code in view)
+                if (err.name !== 'NotFoundException' && !hasScanned && scanningActive) {
+                  console.error('Decode error:', err);
+                }
+                if (scanningActive && !hasScanned) {
+                  setTimeout(scanFrame, 100);
+                }
+              });
+          };
 
-                onScan(result.getText());
-              } else if (scanningActive && !hasScanned) {
-                // Continue scanning if no result or already scanned
-                setTimeout(scanFrame, 100);
-              }
-            })
-            .catch((err) => {
-              // Continue scanning on error (usually means no QR code in view)
-              if (err.name !== 'NotFoundException' && !hasScanned && scanningActive) {
-                console.error('Decode error:', err);
-              }
-              if (scanningActive && !hasScanned) {
-                setTimeout(scanFrame, 100);
-              }
-            });
-        };
-
-        scanFrame();
-      }).catch((err) => {
-        console.error('Video play error:', err);
-      });
+          scanFrame();
+        })
+        .catch((err) => {
+          console.error('Video play error:', err);
+        });
     };
 
     setIsLoading(false);
@@ -300,7 +304,9 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
           )}
 
           {error && (
-            <div style={{ color: '#dc3545', fontSize: '16px', textAlign: 'center', padding: '20px', position: 'absolute' }}>
+            <div
+              style={{ color: '#dc3545', fontSize: '16px', textAlign: 'center', padding: '20px', position: 'absolute' }}
+            >
               <div style={{ marginBottom: '10px' }}>⚠️</div>
               {error}
             </div>
@@ -308,7 +314,6 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
 
           {!error && !isLoading && (
             <>
-
               {/* Framing guide */}
               <div
                 style={{
@@ -342,42 +347,50 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
                 </div>
 
                 {/* Corner markers */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-3px',
-                  left: '-3px',
-                  width: '30px',
-                  height: '30px',
-                  borderTop: '5px solid #00ff00',
-                  borderLeft: '5px solid #00ff00',
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  top: '-3px',
-                  right: '-3px',
-                  width: '30px',
-                  height: '30px',
-                  borderTop: '5px solid #00ff00',
-                  borderRight: '5px solid #00ff00',
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-3px',
-                  left: '-3px',
-                  width: '30px',
-                  height: '30px',
-                  borderBottom: '5px solid #00ff00',
-                  borderLeft: '5px solid #00ff00',
-                }} />
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-3px',
-                  right: '-3px',
-                  width: '30px',
-                  height: '30px',
-                  borderBottom: '5px solid #00ff00',
-                  borderRight: '5px solid #00ff00',
-                }} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-3px',
+                    left: '-3px',
+                    width: '30px',
+                    height: '30px',
+                    borderTop: '5px solid #00ff00',
+                    borderLeft: '5px solid #00ff00',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-3px',
+                    right: '-3px',
+                    width: '30px',
+                    height: '30px',
+                    borderTop: '5px solid #00ff00',
+                    borderRight: '5px solid #00ff00',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-3px',
+                    left: '-3px',
+                    width: '30px',
+                    height: '30px',
+                    borderBottom: '5px solid #00ff00',
+                    borderLeft: '5px solid #00ff00',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-3px',
+                    right: '-3px',
+                    width: '30px',
+                    height: '30px',
+                    borderBottom: '5px solid #00ff00',
+                    borderRight: '5px solid #00ff00',
+                  }}
+                />
               </div>
             </>
           )}
@@ -388,8 +401,8 @@ export default function QrScanner({ onScan, onCancel }: QrScannerProps) {
           {isLoading
             ? 'Starting camera...'
             : hasScanned
-            ? 'QR code detected! Processing...'
-            : 'Position the QR code within the frame to scan automatically'}
+              ? 'QR code detected! Processing...'
+              : 'Position the QR code within the frame to scan automatically'}
         </div>
 
         {/* Control buttons */}

@@ -13,8 +13,7 @@ export const addressesSection: SectionConfig = {
     {
       id: 'step-1',
       title: 'Copy address and receive HTR',
-      instructions:
-        `Go to \`Settings\` on the bottom-left corner, then \`Change Network\`.
+      instructions: `Go to \`Settings\` on the bottom-left corner, then \`Change Network\`.
 
 Select \`testnet\` and change to it.
 
@@ -27,19 +26,20 @@ Verify the transaction appears with **updated balance** and that the **receiving
       id: 'step-3',
       title: 'View all addresses',
       instructions:
-        'View all addresses and confirm the transaction count is correct.'
-        + '\n\nCopy one of the addresses and use it in the search input to test the search functionality.'
-        + '\n\n🔍 Validate only the correct address is shown on the results.',
+        'View all addresses and confirm the transaction count is correct.' +
+        '\n\nCopy one of the addresses and use it in the search input to test the search functionality.' +
+        '\n\n🔍 Validate only the correct address is shown on the results.',
       tool: { componentKey: 'AddressListViewer' },
     },
     {
       id: 'step-5',
       title: 'Generate new address',
-      instructions: 'Go back to the dashboard and **generate a new address**. Verify the change is reflected.'
-      + '\n\nCopy the current address and paste it below to confirm it\'s a valid one.'
-      + '\n\nClick \'QR Code\', take a print of it and paste the it on the component validator below.'
-      + '\n\nDownload the QR code image and upload it on the validator below.'
-      + '\n\n🔍 Validate that the filename also matches the address.',
+      instructions:
+        'Go back to the dashboard and **generate a new address**. Verify the change is reflected.' +
+        "\n\nCopy the current address and paste it below to confirm it's a valid one." +
+        "\n\nClick 'QR Code', take a print of it and paste the it on the component validator below." +
+        '\n\nDownload the QR code image and upload it on the validator below.' +
+        '\n\n🔍 Validate that the filename also matches the address.',
       tool: { componentKey: 'AddressQRValidator' },
     },
   ],

@@ -75,12 +75,8 @@ const swapTokensSlice = createSlice({
         if (action.payload === null) return; // Was already cached
         const { networks } = action.payload;
         // Store UIDs excluding native HTR ("00")
-        state.mainnet = networks.mainnet.tokens
-          .map((t) => t.uid)
-          .filter((uid) => uid !== '00');
-        state.testnet = networks.testnet.tokens
-          .map((t) => t.uid)
-          .filter((uid) => uid !== '00');
+        state.mainnet = networks.mainnet.tokens.map((t) => t.uid).filter((uid) => uid !== '00');
+        state.testnet = networks.testnet.tokens.map((t) => t.uid).filter((uid) => uid !== '00');
         state.status = 'succeeded';
       })
       .addCase(fetchSwapTokens.rejected, (state, action) => {

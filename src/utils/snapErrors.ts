@@ -50,14 +50,13 @@ export function isSnapUserRejection(err: unknown): boolean {
   // Plain string
   if (typeof err === 'string') return REJECTION_RE.test(err);
 
-  const obj = (typeof err === 'object') ? err as Record<string, unknown> : null;
+  const obj = typeof err === 'object' ? (err as Record<string, unknown>) : null;
 
   // Code 4001 = MetaMask's own rejection
   if (obj && typeof obj.code === 'number' && obj.code === 4001) return true;
 
   // Check top-level message (Error instances and plain objects)
-  const topMessage = err instanceof Error ? err.message
-    : (obj && typeof obj.message === 'string' ? obj.message : '');
+  const topMessage = err instanceof Error ? err.message : obj && typeof obj.message === 'string' ? obj.message : '';
   if (topMessage && REJECTION_RE.test(topMessage)) return true;
 
   // Check for PromptRejectedError errorType anywhere in the structure
@@ -70,9 +69,7 @@ export function isSnapUserRejection(err: unknown): boolean {
 
   // Deep check: collect all messages from nested data/cause structure
   const messages = collectMessages(err);
-  if (messages.some(
-    (msg) => REJECTION_RE.test(msg) || REJECTION_TYPE_RE.test(msg),
-  )) {
+  if (messages.some((msg) => REJECTION_RE.test(msg) || REJECTION_TYPE_RE.test(msg))) {
     return true;
   }
 
@@ -83,7 +80,7 @@ export function isSnapUserRejection(err: unknown): boolean {
       const nested = (err as Record<string, unknown>)[key];
       if (nested && typeof nested === 'object') {
         const nestedMsgs = collectMessages(nested);
-        if (nestedMsgs.some(msg => REJECTION_RE.test(msg) || REJECTION_TYPE_RE.test(msg))) {
+        if (nestedMsgs.some((msg) => REJECTION_RE.test(msg) || REJECTION_TYPE_RE.test(msg))) {
           return true;
         }
       }

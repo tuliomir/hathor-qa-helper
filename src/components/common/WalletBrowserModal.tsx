@@ -6,7 +6,17 @@
  */
 
 import { useMemo, useState } from 'react';
-import { MdSync, MdDelete, MdEdit, MdFilterList, MdPlayArrow, MdQrCode, MdSearch, MdSort, MdStop, } from 'react-icons/md';
+import {
+  MdSync,
+  MdDelete,
+  MdEdit,
+  MdFilterList,
+  MdPlayArrow,
+  MdQrCode,
+  MdSearch,
+  MdSort,
+  MdStop,
+} from 'react-icons/md';
 import { useAppDispatch } from '../../store/hooks';
 import { exportWalletsToCloud, importWalletsFromCloud } from '../../store/slices/walletStoreSlice';
 import type { WalletInfo } from '../../types/walletStore';
@@ -112,9 +122,7 @@ export default function WalletBrowserModal({
         parts.push(`${exportResult.filtered} filtered`);
       }
 
-      const message = parts.length > 0
-        ? `Sync complete: ${parts.join(', ')}`
-        : 'Sync complete: everything up to date';
+      const message = parts.length > 0 ? `Sync complete: ${parts.join(', ')}` : 'Sync complete: everything up to date';
 
       setSyncResult({ success: true, message });
       // Clear success message after 5 seconds
@@ -250,9 +258,7 @@ export default function WalletBrowserModal({
 
     return (
       <div className="text-xs mt-1 space-y-0.5">
-        <div className="text-success">
-          HTR: {formatBalance(htrBalance)}
-        </div>
+        <div className="text-success">HTR: {formatBalance(htrBalance)}</div>
         {customTokenCount > 0 && (
           <div className="text-info">
             +{customTokenCount} token{customTokenCount > 1 ? 's' : ''}
@@ -281,9 +287,7 @@ export default function WalletBrowserModal({
                 onClick={handleCloudSync}
                 disabled={isSyncing}
                 className={`btn flex items-center gap-2 ${
-                  isSyncing
-                    ? 'btn-secondary cursor-not-allowed opacity-60'
-                    : 'btn-info'
+                  isSyncing ? 'btn-secondary cursor-not-allowed opacity-60' : 'btn-info'
                 }`}
                 title="Sync wallets between this machine and cloud"
               >
@@ -299,9 +303,7 @@ export default function WalletBrowserModal({
                   onClick={onScanForLostFunds}
                   disabled={scanState?.isScanning}
                   className={`btn flex items-center gap-2 ${
-                    scanState?.isScanning
-                      ? 'btn-secondary cursor-not-allowed opacity-60'
-                      : 'btn-primary'
+                    scanState?.isScanning ? 'btn-secondary cursor-not-allowed opacity-60' : 'btn-primary'
                   }`}
                 >
                   <MdSearch size={18} />
@@ -331,10 +333,7 @@ export default function WalletBrowserModal({
                 <span className="font-medium">
                   {syncResult.success ? '✓' : '✗'} {syncResult.message}
                 </span>
-                <button
-                  onClick={() => setSyncResult(null)}
-                  className="text-current opacity-60 hover:opacity-100"
-                >
+                <button onClick={() => setSyncResult(null)} className="text-current opacity-60 hover:opacity-100">
                   ×
                 </button>
               </div>
@@ -347,9 +346,7 @@ export default function WalletBrowserModal({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                   <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                  <span className="font-medium">
-                    Scanning: {scanState.currentWalletName || '...'}
-                  </span>
+                  <span className="font-medium">Scanning: {scanState.currentWalletName || '...'}</span>
                 </div>
                 <span className="text-sm text-muted">
                   {scanState.scannedCount} of {scanState.totalWallets} wallets
@@ -370,10 +367,7 @@ export default function WalletBrowserModal({
           {/* Search and Filters */}
           <div className="p-4 border-b border-gray-200">
             <div className="relative">
-              <MdSearch
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
+              <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
                 placeholder="Search by name, seed words, or address..."
@@ -445,10 +439,7 @@ export default function WalletBrowserModal({
                 </thead>
                 <tbody>
                   {sortedWallets.map((wallet) => (
-                    <tr
-                      key={wallet.metadata.id}
-                      className={`table-row ${getRowBackgroundColor(wallet.status)}`}
-                    >
+                    <tr key={wallet.metadata.id} className={`table-row ${getRowBackgroundColor(wallet.status)}`}>
                       <td className="p-3">
                         <strong>{wallet.metadata.friendlyName}</strong>
                         {wallet.metadata.lastUsedAt && (
@@ -495,9 +486,7 @@ export default function WalletBrowserModal({
                             Balance: {formatBalance(wallet.balance ?? 0n)} HTR
                           </div>
                         )}
-                        {wallet.error && (
-                          <div className="text-xs text-danger mt-1">{wallet.error}</div>
-                        )}
+                        {wallet.error && <div className="text-xs text-danger mt-1">{wallet.error}</div>}
                         {/* Show scan results for non-ready wallets */}
                         {wallet.status !== 'ready' && renderScanInfo(wallet.metadata.id)}
                       </td>
@@ -510,7 +499,9 @@ export default function WalletBrowserModal({
 
                           if (displayAddress) {
                             return (
-                              <div className={`flex items-center gap-2 ${isStoredOnly ? 'text-muted' : 'text-success'}`}>
+                              <div
+                                className={`flex items-center gap-2 ${isStoredOnly ? 'text-muted' : 'text-success'}`}
+                              >
                                 <span className="break-all">{truncateAddress(displayAddress)}</span>
                                 <CopyButton
                                   text={displayAddress}
@@ -553,9 +544,7 @@ export default function WalletBrowserModal({
                           )}
 
                           <button
-                            onClick={() =>
-                              onEditWallet(wallet.metadata.id, wallet.metadata.friendlyName)
-                            }
+                            onClick={() => onEditWallet(wallet.metadata.id, wallet.metadata.friendlyName)}
                             title="Rename"
                             aria-label={`Rename ${wallet.metadata.friendlyName}`}
                             className="btn-warning btn-square text-xs p-2"

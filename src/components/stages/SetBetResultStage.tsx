@@ -8,10 +8,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-	setSetBetResultError,
-	setSetBetResultFormData,
-	setSetBetResultRequest,
-	setSetBetResultResponse,
+  setSetBetResultError,
+  setSetBetResultFormData,
+  setSetBetResultRequest,
+  setSetBetResultResponse,
 } from '../../store/slices/setBetResultSlice';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { clearSetBetResultNavigation, navigateToSignOracleData } from '../../store/slices/navigationSlice';
@@ -187,20 +187,24 @@ export const SetBetResultStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setSetBetResultRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setSetBetResultRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setSetBetResultResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setSetBetResultResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -211,10 +215,12 @@ export const SetBetResultStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setSetBetResultError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setSetBetResultError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -231,9 +237,7 @@ export const SetBetResultStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Set Bet Result RPC</h1>
-      <p className="text-muted mb-7.5">
-        Set the result for a bet nano contract (oracle action)
-      </p>
+      <p className="text-muted mb-7.5">Set the result for a bet nano contract (oracle action)</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -258,9 +262,8 @@ export const SetBetResultStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -343,9 +346,7 @@ export const SetBetResultStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {setBetResultData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {setBetResultData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {setBetResultData.duration}ms</span>
                 )}
               </p>
             </div>

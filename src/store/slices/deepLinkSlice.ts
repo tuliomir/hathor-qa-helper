@@ -65,17 +65,12 @@ export const {
 export default deepLinkSlice.reducer;
 
 // Selectors
-export const selectDeepLinkModalOpen = (state: { deepLink: DeepLinkState }) =>
-  state.deepLink.isModalOpen;
+export const selectDeepLinkModalOpen = (state: { deepLink: DeepLinkState }) => state.deepLink.isModalOpen;
 
-export const selectDeepLinkUrl = (state: { deepLink: DeepLinkState }) =>
-  state.deepLink.deepLinkUrl;
+export const selectDeepLinkUrl = (state: { deepLink: DeepLinkState }) => state.deepLink.deepLinkUrl;
 
-export const selectDeepLinkTitle = (state: { deepLink: DeepLinkState }) =>
-  state.deepLink.title;
+export const selectDeepLinkTitle = (state: { deepLink: DeepLinkState }) => state.deepLink.title;
 
-export const selectDeepLinkToastId = (state: { deepLink: DeepLinkState }) =>
-  state.deepLink.toastId;
+export const selectDeepLinkToastId = (state: { deepLink: DeepLinkState }) => state.deepLink.toastId;
 
-export const selectDeepLinksEnabled = (state: { deepLink: DeepLinkState }) =>
-  state.deepLink.deepLinksEnabled;
+export const selectDeepLinksEnabled = (state: { deepLink: DeepLinkState }) => state.deepLink.deepLinksEnabled;

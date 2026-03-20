@@ -48,10 +48,6 @@ const betNanoContractSlice = createSlice({
   },
 });
 
-export const {
-  setBetNanoContractId,
-  setBetBlueprintId,
-  clearBetNanoContractData,
-} = betNanoContractSlice.actions;
+export const { setBetNanoContractId, setBetBlueprintId, clearBetNanoContractData } = betNanoContractSlice.actions;
 
 export default betNanoContractSlice.reducer;

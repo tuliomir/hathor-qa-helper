@@ -8,14 +8,14 @@ import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-	type AddressRequestType,
-	clearGetAddressData,
-	setGetAddressError,
-	setGetAddressRequest,
-	setGetAddressResponse,
-	setIndexValue,
-	setRequestType,
-	setValidationStatus,
+  type AddressRequestType,
+  clearGetAddressData,
+  setGetAddressError,
+  setGetAddressRequest,
+  setGetAddressResponse,
+  setIndexValue,
+  setRequestType,
+  setValidationStatus,
 } from '../../store/slices/getAddressSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcGetAddressCard } from '../rpc/RpcGetAddressCard';
@@ -76,20 +76,24 @@ export const GetAddressStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setGetAddressRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setGetAddressRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setGetAddressResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setGetAddressResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -100,10 +104,12 @@ export const GetAddressStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setGetAddressError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setGetAddressError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -126,9 +132,11 @@ export const GetAddressStage: React.FC = () => {
       }
 
       // Skip validation if already validating or completed
-      if (getAddressData.validationStatus === 'validating' ||
-          getAddressData.validationStatus === 'match' ||
-          getAddressData.validationStatus === 'mismatch') {
+      if (
+        getAddressData.validationStatus === 'validating' ||
+        getAddressData.validationStatus === 'match' ||
+        getAddressData.validationStatus === 'mismatch'
+      ) {
         return;
       }
 
@@ -136,34 +144,40 @@ export const GetAddressStage: React.FC = () => {
         dispatch(setValidationStatus({ status: 'validating' }));
 
         // Derive the address locally from the wallet
-        const localAddress = await testWallet.instance.getAddressAtIndex(
-          getAddressData.response.index
-        );
+        const localAddress = await testWallet.instance.getAddressAtIndex(getAddressData.response.index);
 
         // Compare with RPC response
         const matches = localAddress === getAddressData.response.address;
 
-        dispatch(setValidationStatus({
-          status: matches ? 'match' : 'mismatch',
-          localAddress,
-        }));
+        dispatch(
+          setValidationStatus({
+            status: matches ? 'match' : 'mismatch',
+            localAddress,
+          })
+        );
       } catch (error) {
         console.error('Failed to validate address:', error);
-        dispatch(setValidationStatus({
-          status: 'mismatch',
-        }));
+        dispatch(
+          setValidationStatus({
+            status: 'mismatch',
+          })
+        );
       }
     };
 
     validateAddress();
-  }, [getAddressData.response, getAddressData.validationStatus, getAddressData.isDryRun, testWallet?.instance, dispatch]);
+  }, [
+    getAddressData.response,
+    getAddressData.validationStatus,
+    getAddressData.isDryRun,
+    testWallet?.instance,
+    dispatch,
+  ]);
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Get Address RPC</h1>
-      <p className="text-muted mb-7.5">
-        Retrieve wallet addresses using different request types
-      </p>
+      <p className="text-muted mb-7.5">Retrieve wallet addresses using different request types</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -228,7 +242,8 @@ export const GetAddressStage: React.FC = () => {
                     <span className="font-semibold text-lg">Address matches local Wallet</span>
                   </div>
                   <p className="text-sm text-green-800 mt-2 mb-0">
-                    The address from the RPC response matches the locally derived address at index {getAddressData.response.index}.
+                    The address from the RPC response matches the locally derived address at index{' '}
+                    {getAddressData.response.index}.
                   </p>
                 </div>
               )}
@@ -322,9 +337,7 @@ export const GetAddressStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {getAddressData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {getAddressData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {getAddressData.duration}ms</span>
                 )}
               </p>
             </div>

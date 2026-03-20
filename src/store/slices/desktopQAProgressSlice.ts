@@ -4,7 +4,7 @@
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { DesktopQALocation, DesktopQAProgress, DesktopQAStepStatus, } from '../../types/desktopQA';
+import type { DesktopQALocation, DesktopQAProgress, DesktopQAStepStatus } from '../../types/desktopQA';
 
 const STORAGE_KEY = 'desktop-qa-progress';
 
@@ -110,10 +110,7 @@ const desktopQAProgressSlice = createSlice({
     /**
      * Initialize progress for a section (creates empty step entries if not exists)
      */
-    initializeSectionProgress: (
-      state,
-      action: PayloadAction<{ sectionId: string; stepIds: string[] }>
-    ) => {
+    initializeSectionProgress: (state, action: PayloadAction<{ sectionId: string; stepIds: string[] }>) => {
       const { sectionId, stepIds } = action.payload;
 
       if (!state.sections[sectionId]) {
@@ -133,12 +130,8 @@ const desktopQAProgressSlice = createSlice({
   },
 });
 
-export const {
-  setStepStatus,
-  setCurrentLocation,
-  resetProgress,
-  initializeSectionProgress,
-} = desktopQAProgressSlice.actions;
+export const { setStepStatus, setCurrentLocation, resetProgress, initializeSectionProgress } =
+  desktopQAProgressSlice.actions;
 
 export default desktopQAProgressSlice.reducer;
 
@@ -154,10 +147,7 @@ export const selectStepStatus = (
   return state.desktopQAProgress.sections[sectionId]?.steps[stepId]?.status || 'pending';
 };
 
-export const selectSectionProgress = (
-  state: { desktopQAProgress: DesktopQAProgress },
-  sectionId: string
-) => {
+export const selectSectionProgress = (state: { desktopQAProgress: DesktopQAProgress }, sectionId: string) => {
   return state.desktopQAProgress.sections[sectionId] || { steps: {} };
 };
 
@@ -171,9 +161,7 @@ export const selectCompletedStepsCount = (
   return Object.values(section.steps).filter((step) => step.status === 'completed').length;
 };
 
-export const selectTotalCompletedSteps = (
-  state: { desktopQAProgress: DesktopQAProgress }
-): number => {
+export const selectTotalCompletedSteps = (state: { desktopQAProgress: DesktopQAProgress }): number => {
   let total = 0;
   for (const section of Object.values(state.desktopQAProgress.sections)) {
     total += Object.values(section.steps).filter((step) => step.status === 'completed').length;

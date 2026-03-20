@@ -12,13 +12,13 @@ import { getGroupForStage, STAGE_GROUPS } from '../types/stage';
 
 export const GROUP_SLUG_MAP: Record<GroupId, string> = {
   'main-qa': 'main',
-  'rpc': 'rpc',
+  rpc: 'rpc',
   'bet-nano-contracts': 'bet-nc',
   'fee-nano-contracts': 'fee-nc',
   'push-notifications': 'notifications',
-  'auditing': 'auditing',
-  'multisig': 'multisig',
-  'snaps': 'snaps',
+  auditing: 'auditing',
+  multisig: 'multisig',
+  snaps: 'snaps',
   'snap-bet-nc': 'snap-bet-nc',
   'snap-fee-nc': 'snap-fee-nc',
 };
@@ -87,7 +87,7 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
 // ─── Reverse lookup maps (built once at module load) ─────────────────────────
 
 const REVERSE_GROUP_SLUG: Record<string, GroupId> = Object.fromEntries(
-  Object.entries(GROUP_SLUG_MAP).map(([id, slug]) => [slug, id as GroupId]),
+  Object.entries(GROUP_SLUG_MAP).map(([id, slug]) => [slug, id as GroupId])
 ) as Record<string, GroupId>;
 
 const REVERSE_STAGE_SLUG: Map<string, Map<string, StageId>> = new Map();
@@ -117,10 +117,7 @@ export function getStageUrl(stageId: StageId): string {
 }
 
 /** Resolve a pair of URL slugs back to a StageId (or null if invalid). */
-export function getStageIdFromSlugs(
-  groupSlug: string,
-  stageSlug: string,
-): StageId | null {
+export function getStageIdFromSlugs(groupSlug: string, stageSlug: string): StageId | null {
   const stageMap = REVERSE_STAGE_SLUG.get(groupSlug);
   return stageMap?.get(stageSlug) ?? null;
 }

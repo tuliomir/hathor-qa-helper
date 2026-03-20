@@ -9,12 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../store';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import {
-  setCurrentRequest,
-  addHistoryEntry,
-  clearHistory,
-  removeHistoryEntry,
-} from '../../store/slices/rawRpcSlice';
+import { setCurrentRequest, addHistoryEntry, clearHistory, removeHistoryEntry } from '../../store/slices/rawRpcSlice';
 import { clearRawRpcEditorNavigation } from '../../store/slices/navigationSlice';
 import { HATHOR_TESTNET_CHAIN } from '../../constants/walletConnect';
 import CopyButton from '../common/CopyButton';
@@ -25,11 +20,7 @@ import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 /**
@@ -152,12 +143,14 @@ export const RawRpcEditorStage: React.FC = () => {
       setResponseExpanded(true);
 
       // Add to history
-      dispatch(addHistoryEntry({
-        request: currentRequest,
-        response: responseStr,
-        error: null,
-        duration,
-      }));
+      dispatch(
+        addHistoryEntry({
+          request: currentRequest,
+          response: responseStr,
+          error: null,
+          duration,
+        })
+      );
 
       showToast('RPC request successful', 'success');
     } catch (err) {
@@ -168,12 +161,14 @@ export const RawRpcEditorStage: React.FC = () => {
       setResponseExpanded(true);
 
       // Add to history
-      dispatch(addHistoryEntry({
-        request: currentRequest,
-        response: null,
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        addHistoryEntry({
+          request: currentRequest,
+          response: null,
+          error: errorMessage,
+          duration,
+        })
+      );
 
       showToast(`RPC request failed: ${errorMessage}`, 'error');
     } finally {
@@ -182,14 +177,17 @@ export const RawRpcEditorStage: React.FC = () => {
   }, [currentRequest, walletConnect.client, walletConnect.session, dispatch, showToast, validateJson]);
 
   // Load request from history
-  const handleLoadFromHistory = useCallback((requestJson: string) => {
-    dispatch(setCurrentRequest(requestJson));
-    showToast('Request loaded from history', 'success');
-  }, [dispatch, showToast]);
+  const handleLoadFromHistory = useCallback(
+    (requestJson: string) => {
+      dispatch(setCurrentRequest(requestJson));
+      showToast('Request loaded from history', 'success');
+    },
+    [dispatch, showToast]
+  );
 
   // Toggle history item expansion
   const toggleHistoryItem = useCallback((id: string) => {
-    setExpandedHistoryItems(prev => {
+    setExpandedHistoryItems((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -203,9 +201,7 @@ export const RawRpcEditorStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Raw RPC Editor</h1>
-      <p className="text-muted mb-7.5">
-        Send raw JSON RPC requests directly to the wallet
-      </p>
+      <p className="text-muted mb-7.5">Send raw JSON RPC requests directly to the wallet</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -214,16 +210,10 @@ export const RawRpcEditorStage: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-bold m-0">Request JSON</h3>
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleValidate}
-              className="btn-secondary text-sm px-3 py-1"
-            >
+            <button onClick={handleValidate} className="btn-secondary text-sm px-3 py-1">
               Validate
             </button>
-            <button
-              onClick={handleFormat}
-              className="btn-secondary text-sm px-3 py-1"
-            >
+            <button onClick={handleFormat} className="btn-secondary text-sm px-3 py-1">
               Format
             </button>
             <CopyButton text={currentRequest} label="Copy" />
@@ -245,12 +235,7 @@ export const RawRpcEditorStage: React.FC = () => {
 
         {jsonError && (
           <div className="mt-2 text-sm text-danger flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
                 d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
@@ -262,11 +247,7 @@ export const RawRpcEditorStage: React.FC = () => {
         )}
 
         <div className="mt-4 flex justify-end">
-          <button
-            onClick={handleExecute}
-            disabled={loading || !isConnected}
-            className="btn-primary"
-          >
+          <button onClick={handleExecute} disabled={loading || !isConnected} className="btn-primary">
             {loading ? 'Executing...' : 'Execute'}
           </button>
         </div>
@@ -283,10 +264,7 @@ export const RawRpcEditorStage: React.FC = () => {
               <span>{responseExpanded ? '▼' : '▶'}</span>
               {lastError ? 'Error' : 'Response'}
             </button>
-            <CopyButton
-              text={lastResponse || lastError || ''}
-              label="Copy"
-            />
+            <CopyButton text={lastResponse || lastError || ''} label="Copy" />
           </div>
 
           {responseExpanded && (
@@ -310,12 +288,7 @@ export const RawRpcEditorStage: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-success">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path
                         fillRule="evenodd"
                         d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -367,9 +340,7 @@ export const RawRpcEditorStage: React.FC = () => {
               history.map((entry) => (
                 <div
                   key={entry.id}
-                  className={`border rounded overflow-hidden ${
-                    entry.error ? 'border-danger' : 'border-gray-300'
-                  }`}
+                  className={`border rounded overflow-hidden ${entry.error ? 'border-danger' : 'border-gray-300'}`}
                 >
                   {/* Header */}
                   <div
@@ -379,9 +350,7 @@ export const RawRpcEditorStage: React.FC = () => {
                     onClick={() => toggleHistoryItem(entry.id)}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted">
-                        {formatTimestamp(entry.timestamp)}
-                      </span>
+                      <span className="text-xs text-muted">{formatTimestamp(entry.timestamp)}</span>
                       <span className="text-sm font-mono font-medium">
                         {(() => {
                           try {
@@ -392,19 +361,11 @@ export const RawRpcEditorStage: React.FC = () => {
                           }
                         })()}
                       </span>
-                      {entry.duration !== null && (
-                        <span className="text-xs text-muted">
-                          {entry.duration}ms
-                        </span>
-                      )}
+                      {entry.duration !== null && <span className="text-xs text-muted">{entry.duration}ms</span>}
                       {entry.error ? (
-                        <span className="text-xs px-2 py-0.5 bg-red-100 text-danger rounded">
-                          Error
-                        </span>
+                        <span className="text-xs px-2 py-0.5 bg-red-100 text-danger rounded">Error</span>
                       ) : (
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-success rounded">
-                          Success
-                        </span>
+                        <span className="text-xs px-2 py-0.5 bg-green-100 text-success rounded">Success</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -428,9 +389,7 @@ export const RawRpcEditorStage: React.FC = () => {
                       >
                         Remove
                       </button>
-                      <span className="text-muted">
-                        {expandedHistoryItems.has(entry.id) ? '▼' : '▶'}
-                      </span>
+                      <span className="text-muted">{expandedHistoryItems.has(entry.id) ? '▼' : '▶'}</span>
                     </div>
                   </div>
 
@@ -464,12 +423,16 @@ export const RawRpcEditorStage: React.FC = () => {
                           </span>
                           <CopyButton text={entry.response || entry.error || ''} label="Copy" />
                         </div>
-                        <div className={`border rounded p-2 overflow-auto max-h-40 ${
-                          entry.error ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
-                        }`}>
-                          <pre className={`text-xs font-mono m-0 whitespace-pre-wrap break-words ${
-                            entry.error ? 'text-red-900' : 'text-green-900'
-                          }`}>
+                        <div
+                          className={`border rounded p-2 overflow-auto max-h-40 ${
+                            entry.error ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
+                          }`}
+                        >
+                          <pre
+                            className={`text-xs font-mono m-0 whitespace-pre-wrap break-words ${
+                              entry.error ? 'text-red-900' : 'text-green-900'
+                            }`}
+                          >
                             {entry.error || entry.response}
                           </pre>
                         </div>

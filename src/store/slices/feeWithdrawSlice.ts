@@ -43,10 +43,7 @@ const feeWithdrawSlice = createSlice({
   name: 'feeWithdraw',
   initialState,
   reducers: {
-    setFeeWithdrawRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setFeeWithdrawRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -55,10 +52,7 @@ const feeWithdrawSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setFeeWithdrawResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setFeeWithdrawResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
       state.duration = action.payload.duration;

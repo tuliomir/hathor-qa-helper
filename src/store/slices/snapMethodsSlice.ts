@@ -47,7 +47,7 @@ const snapMethodsSlice = createSlice({
         method: string;
         params: unknown;
         isDryRun: boolean;
-      }>,
+      }>
     ) => {
       const { methodKey, method, params, isDryRun } = action.payload;
       state.methods[methodKey] = {
@@ -59,7 +59,7 @@ const snapMethodsSlice = createSlice({
     },
     setSnapMethodResponse: (
       state,
-      action: PayloadAction<{ methodKey: string; response: unknown; duration: number }>,
+      action: PayloadAction<{ methodKey: string; response: unknown; duration: number }>
     ) => {
       const { methodKey, response, duration } = action.payload;
       const existing = state.methods[methodKey];
@@ -70,10 +70,7 @@ const snapMethodsSlice = createSlice({
         existing.error = null;
       }
     },
-    setSnapMethodError: (
-      state,
-      action: PayloadAction<{ methodKey: string; error: string; duration: number }>,
-    ) => {
+    setSnapMethodError: (state, action: PayloadAction<{ methodKey: string; error: string; duration: number }>) => {
       const { methodKey, error, duration } = action.payload;
       const existing = state.methods[methodKey];
       if (existing) {
@@ -89,11 +86,7 @@ const snapMethodsSlice = createSlice({
   },
 });
 
-export const {
-  setSnapMethodRequest,
-  setSnapMethodResponse,
-  setSnapMethodError,
-  clearSnapMethodData,
-} = snapMethodsSlice.actions;
+export const { setSnapMethodRequest, setSnapMethodResponse, setSnapMethodError, clearSnapMethodData } =
+  snapMethodsSlice.actions;
 
 export default snapMethodsSlice.reducer;

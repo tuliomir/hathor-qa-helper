@@ -9,9 +9,9 @@ export const NETWORK_CONFIG = {
       ? 'http://localhost:5173/hathor-node/testnet/v1a/'
       : 'https://node1.testnet.hathor.network/v1a/',
     explorerUrl: 'https://explorer.testnet.hathor.network/',
-	  betBlueprintId: '0000019865eda743812c566ce6ad3ac49c5f90796b73aa2792a09b7655ac5a5e',
-	  feeBlueprintId: '00000000f9f4b9c025cfd757e1cbd662b3eefdc44e0a16cc54906ccf07f8ba8c',
-	  authorityBlueprintId: '00000478ac24158fb576d7eb77cdce19cb7facf43838b71f7e0bf6421bc12977',
+    betBlueprintId: '0000019865eda743812c566ce6ad3ac49c5f90796b73aa2792a09b7655ac5a5e',
+    feeBlueprintId: '00000000f9f4b9c025cfd757e1cbd662b3eefdc44e0a16cc54906ccf07f8ba8c',
+    authorityBlueprintId: '00000478ac24158fb576d7eb77cdce19cb7facf43838b71f7e0bf6421bc12977',
   },
   MAINNET: {
     name: 'mainnet',

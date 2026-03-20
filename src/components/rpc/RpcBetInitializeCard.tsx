@@ -14,9 +14,9 @@ import { RpcRequestPreview } from './RpcRequestPreview';
 import { getOracleBuffer, safeStringify } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { NETWORK_CONFIG } from '../../constants/network';
-import { formatTimeUntil } from '../../utils/valuesUtils.ts'
-import TxStatus from '../common/TxStatus.tsx'
-import { useAppSelector } from '../../store/hooks.ts'
+import { formatTimeUntil } from '../../utils/valuesUtils.ts';
+import TxStatus from '../common/TxStatus.tsx';
+import { useAppSelector } from '../../store/hooks.ts';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -69,7 +69,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const [showRawResponse, setShowRawResponse] = useState(false);
-	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
+  const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
   const { showToast } = useToast();
 
   // Live request building - calculate request and intermediates on every input change
@@ -87,7 +87,6 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-
     }
     if (initialResponse) {
       setResult(initialResponse);
@@ -138,11 +137,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       method: 'initialize',
       blueprint_id: blueprintId || '<blueprint_id>',
       actions: [],
-      args: [
-        oracleBuffer || '<oracle_script>',
-        token || '<token>',
-        timestamp !== null ? timestamp : '<timestamp>',
-      ],
+      args: [oracleBuffer || '<oracle_script>', token || '<token>', timestamp !== null ? timestamp : '<timestamp>'],
       push_tx: pushTx,
       nc_id: null,
     };
@@ -173,10 +168,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       console.log(`[RPC Request] Initialize Bet`, request);
       console.log(`[RPC Success] Initialize Bet`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Bet initialized successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Bet initialized successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -186,7 +178,6 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       // Capture request params from error if available
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-  
       }
 
       console.error(`[RPC Error] Initialize Bet`, {
@@ -259,12 +250,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           </div>
           {isDryRun && (
             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-300">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 002-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
               </svg>
               DRY RUN
@@ -292,38 +278,29 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-primary transition-colors"
                   title="View blueprint in explorer"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
                     <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                   </svg>
                 </a>
               )}
             </div>
-            <p className="text-xs text-muted mt-1">
-              The blueprint ID for the bet nano contract
-            </p>
+            <p className="text-xs text-muted mt-1">The blueprint ID for the bet nano contract</p>
           </div>
 
           {/* Oracle Address */}
-	        <div>
-		        <label className="block text-sm font-medium mb-1.5">Change Oracle Address Index</label>
-		        <input
-			        type="number"
-			        value={addressIndex}
-			        onChange={(e) => setAddressIndex(parseInt(e.target.value) || 0)}
-			        min="0"
-			        placeholder="0"
-			        className="input"
-		        />
-		        <p className="text-xs text-muted mt-1">
-			        Index of the address to use as the oracle address
-		        </p>
-	        </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Change Oracle Address Index</label>
+            <input
+              type="number"
+              value={addressIndex}
+              onChange={(e) => setAddressIndex(parseInt(e.target.value) || 0)}
+              min="0"
+              placeholder="0"
+              className="input"
+            />
+            <p className="text-xs text-muted mt-1">Index of the address to use as the oracle address</p>
+          </div>
 
           {/* Token */}
           <div>
@@ -366,9 +343,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                 className="input"
               />
             )}
-            <p className="text-xs text-muted mt-1">
-              Token used for placing bets
-            </p>
+            <p className="text-xs text-muted mt-1">Token used for placing bets</p>
           </div>
 
           {/* Deadline */}
@@ -387,12 +362,8 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               granularity="minute"
               hourCycle={24}
             />
-            <p className="text-xs text-muted mt-1">
-              Last time users can place a bet
-            </p>
-            <p className="text-xs text-muted mt-1">
-              Time until this deadline: {formatTimeUntil(deadline)}
-            </p>
+            <p className="text-xs text-muted mt-1">Last time users can place a bet</p>
+            <p className="text-xs text-muted mt-1">Time until this deadline: {formatTimeUntil(deadline)}</p>
           </div>
 
           {/* Push TX Checkbox */}
@@ -423,12 +394,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
         <div className="card-primary mb-7.5">
           <div className="bg-green-50 border border-green-300 rounded p-4">
             <div className="flex items-center gap-2 text-green-700 mb-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -442,8 +408,8 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                 <span className="text-xs text-muted font-medium">Nano Contract ID</span>
                 <div className="flex items-center gap-1">
                   <CopyButton text={(result as { response: { hash: string } }).response.hash} label="Copy NC ID" />
-	                <TxStatus hash={(result as { response: { hash: string } }).response.hash} walletId={testWalletId} />
-	                <ExplorerLink hash={(result as { response: { hash: string } }).response.hash} />
+                  <TxStatus hash={(result as { response: { hash: string } }).response.hash} walletId={testWalletId} />
+                  <ExplorerLink hash={(result as { response: { hash: string } }).response.hash} />
                 </div>
               </div>
               <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
@@ -472,55 +438,40 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               These values are calculated automatically from your inputs and will be used in the request.
             </p>
             <div className="space-y-3">
-
-	            {/* Oracle Address */}
-	            <div className="bg-white border border-yellow-200 rounded overflow-hidden">
-		            <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
-			            <div className="flex items-center justify-between">
+              {/* Oracle Address */}
+              <div className="bg-white border border-yellow-200 rounded overflow-hidden">
+                <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-yellow-800">
                       Oracle Address (from index {addressIndex})
                     </span>
-				            {oracleAddress && (
-					            <CopyButton text={oracleAddress} label="Copy" />
-				            )}
-			            </div>
-		            </div>
-		            <div className="px-3 py-2">
-			            {oracleAddress ? (
-				            <span className="text-sm font-mono text-yellow-900 break-all">
-                      {oracleAddress}
-                    </span>
-			            ) : (
-				            <span className="text-sm text-muted italic">
-                      Deriving oracle address from wallet...
-                    </span>
-			            )}
-		            </div>
-	            </div>
+                    {oracleAddress && <CopyButton text={oracleAddress} label="Copy" />}
+                  </div>
+                </div>
+                <div className="px-3 py-2">
+                  {oracleAddress ? (
+                    <span className="text-sm font-mono text-yellow-900 break-all">{oracleAddress}</span>
+                  ) : (
+                    <span className="text-sm text-muted italic">Deriving oracle address from wallet...</span>
+                  )}
+                </div>
+              </div>
 
               {/* Oracle Buffer */}
               <div className="bg-white border border-yellow-200 rounded overflow-hidden">
                 <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-yellow-800">
-                      Oracle Script (from address)
-                    </span>
-                    {intermediates.oracleBuffer && (
-                      <CopyButton text={intermediates.oracleBuffer} label="Copy" />
-                    )}
+                    <span className="text-sm font-semibold text-yellow-800">Oracle Script (from address)</span>
+                    {intermediates.oracleBuffer && <CopyButton text={intermediates.oracleBuffer} label="Copy" />}
                   </div>
                 </div>
                 <div className="px-3 py-2">
                   {intermediates.oracleBufferError ? (
                     <span className="text-sm text-red-600">{intermediates.oracleBufferError}</span>
                   ) : intermediates.oracleBuffer ? (
-                    <span className="text-sm font-mono text-yellow-900 break-all">
-                      {intermediates.oracleBuffer}
-                    </span>
+                    <span className="text-sm font-mono text-yellow-900 break-all">{intermediates.oracleBuffer}</span>
                   ) : (
-                    <span className="text-sm text-muted italic">
-                      Enter oracle address to calculate
-                    </span>
+                    <span className="text-sm text-muted italic">Enter oracle address to calculate</span>
                   )}
                 </div>
               </div>
@@ -529,9 +480,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               <div className="bg-white border border-yellow-200 rounded overflow-hidden">
                 <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-yellow-800">
-                      Unix Timestamp (from deadline)
-                    </span>
+                    <span className="text-sm font-semibold text-yellow-800">Unix Timestamp (from deadline)</span>
                     {intermediates.timestamp !== null && (
                       <CopyButton text={intermediates.timestamp.toString()} label="Copy" />
                     )}
@@ -539,13 +488,9 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                 </div>
                 <div className="px-3 py-2">
                   {intermediates.timestamp !== null ? (
-                    <span className="text-sm font-mono text-yellow-900">
-                      {intermediates.timestamp}
-                    </span>
+                    <span className="text-sm font-mono text-yellow-900">{intermediates.timestamp}</span>
                   ) : (
-                    <span className="text-sm text-muted italic">
-                      Enter deadline to calculate
-                    </span>
+                    <span className="text-sm text-muted italic">Enter deadline to calculate</span>
                   )}
                 </div>
               </div>
@@ -569,7 +514,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {(result && !error) ? (
+              {result && !error ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -577,10 +522,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
               ) : null}
-              <CopyButton
-                text={result ? safeStringify(result, 2) as string : error || ''}
-                label="Copy response"
-              />
+              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
             </div>
           </div>
 
@@ -589,19 +531,14 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 002-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (
@@ -669,7 +606,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
                                     <span className="text-xs text-muted font-medium">Nano Contract ID (Hash)</span>
                                     <div className="flex items-center gap-1">
                                       <CopyButton text={hash} label="Copy ID" />
-	                                    <TxStatus hash={hash} walletId={testWalletId} />
+                                      <TxStatus hash={hash} walletId={testWalletId} />
                                       <ExplorerLink hash={hash} specificPage="nc_detail" />
                                     </div>
                                   </div>

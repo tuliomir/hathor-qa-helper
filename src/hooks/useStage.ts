@@ -20,14 +20,13 @@ export function useStage(): StageContextValue {
   const navigate = useNavigate();
 
   const currentStage: StageId =
-    (groupSlug && stageSlug && getStageIdFromSlugs(groupSlug, stageSlug)) ||
-    'wallet-initialization';
+    (groupSlug && stageSlug && getStageIdFromSlugs(groupSlug, stageSlug)) || 'wallet-initialization';
 
   const setCurrentStage = useCallback(
     (stageId: StageId) => {
       navigate(getStageUrl(stageId));
     },
-    [navigate],
+    [navigate]
   );
 
   return {

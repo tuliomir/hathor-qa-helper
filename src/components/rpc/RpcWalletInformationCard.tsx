@@ -16,11 +16,7 @@ import { extractErrorMessage } from '../../utils/errorUtils';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 export interface RpcWalletInformationCardProps {
@@ -48,10 +44,13 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
   const [expanded, setExpanded] = useState(false);
   const { showToast } = useToast();
 
-  const liveRequest = useMemo(() => ({
-    method: 'htr_getWalletInformation',
-    params: { network: 'testnet' },
-  }), []);
+  const liveRequest = useMemo(
+    () => ({
+      method: 'htr_getWalletInformation',
+      params: { network: 'testnet' },
+    }),
+    []
+  );
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -116,7 +115,13 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
 
   // Check if result is a wallet information response
   const isWalletInfoResponse = (data: unknown): data is { type: number; response: unknown } => {
-    return !!(data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 12 && 'response' in data);
+    return !!(
+      data &&
+      typeof data === 'object' &&
+      'type' in data &&
+      (data as { type?: number }).type === 12 &&
+      'response' in data
+    );
   };
 
   // Render result
@@ -212,10 +217,7 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
               <span>{expanded ? '▼' : '▶'}</span>
               {error ? 'Error Details' : 'Response'}
             </button>
-            <CopyButton
-              text={result ? safeStringify(result, 2) : error || ''}
-              label="Copy response"
-            />
+            <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
           </div>
 
           {expanded && (
@@ -223,19 +225,14 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

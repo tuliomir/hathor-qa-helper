@@ -16,11 +16,7 @@ import { extractErrorMessage } from '../../utils/errorUtils';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 export interface RpcConnectedNetworkCardProps {
@@ -48,10 +44,13 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
   const [expanded, setExpanded] = useState(false);
   const { showToast } = useToast();
 
-  const liveRequest = useMemo(() => ({
-    method: 'htr_getConnectedNetwork',
-    params: { network: 'testnet' },
-  }), []);
+  const liveRequest = useMemo(
+    () => ({
+      method: 'htr_getConnectedNetwork',
+      params: { network: 'testnet' },
+    }),
+    []
+  );
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -149,9 +148,7 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
                 <CopyButton text={info.genesisHash || ''} label="Copy" />
               </div>
               <div className="px-3 py-2">
-                <span className="text-sm font-mono break-all">
-                  {info.genesisHash || '(empty string)'}
-                </span>
+                <span className="text-sm font-mono break-all">{info.genesisHash || '(empty string)'}</span>
               </div>
             </div>
           </div>
@@ -214,10 +211,7 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
               <span>{expanded ? '▼' : '▶'}</span>
               {error ? 'Error Details' : 'Response'}
             </button>
-            <CopyButton
-              text={result ? safeStringify(result, 2) : error || ''}
-              label="Copy response"
-            />
+            <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
           </div>
 
           {expanded && (
@@ -225,19 +219,14 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

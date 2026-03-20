@@ -10,8 +10,7 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 
 export const SnapSignWithAddressStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('signWithAddress');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('signWithAddress');
 
   const [message, setMessage] = useState<string>('Hello, Hathor!');
   const [addressIndex, setAddressIndex] = useState<number>(0);
@@ -21,18 +20,15 @@ export const SnapSignWithAddressStage: React.FC = () => {
       method: 'htr_signWithAddress',
       params: { message: message || '<message>', addressIndex },
     }),
-    [message, addressIndex],
+    [message, addressIndex]
   );
 
-  const handleExecute = () =>
-    execute((h) => h.signWithAddress(message, addressIndex));
+  const handleExecute = () => execute((h) => h.signWithAddress(message, addressIndex));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Sign with Address (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Sign a message using a specific address via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Sign a message using a specific address via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 

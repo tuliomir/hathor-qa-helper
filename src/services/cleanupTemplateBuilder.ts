@@ -48,7 +48,7 @@ export function buildUnifiedCleanupTemplate(
   fundingAddr: string,
   existingHtrBalance: bigint,
   /** When false, skip the HTR transfer (used in batched mode for non-final batches) */
-  includeHtr = true,
+  includeHtr = true
 ) {
   let builder = TransactionTemplateBuilder.new()
     .addSetVarAction({ name: 'fundingAddr', value: fundingAddr })
@@ -86,13 +86,11 @@ export function buildUnifiedCleanupTemplate(
     const amount = Number(token.balance);
     if (amount <= 0) continue;
 
-    builder = builder
-      .addUtxoSelect({ fill: amount, token: token.uid })
-      .addTokenOutput({
-        address: '{fundingAddr}',
-        amount,
-        token: token.uid,
-      });
+    builder = builder.addUtxoSelect({ fill: amount, token: token.uid }).addTokenOutput({
+      address: '{fundingAddr}',
+      amount,
+      token: token.uid,
+    });
   }
 
   // Return-to-sender transfers: select UTXOs + output to original sender
@@ -100,13 +98,11 @@ export function buildUnifiedCleanupTemplate(
     if (token.amount <= 0) continue;
     const varName = returnAddressVars.get(token.recipientAddress)!;
 
-    builder = builder
-      .addUtxoSelect({ fill: token.amount, token: token.uid })
-      .addTokenOutput({
-        address: `{${varName}}`,
-        amount: token.amount,
-        token: token.uid,
-      });
+    builder = builder.addUtxoSelect({ fill: token.amount, token: token.uid }).addTokenOutput({
+      address: `{${varName}}`,
+      amount: token.amount,
+      token: token.uid,
+    });
   }
 
   // Select existing HTR and transfer to funding wallet

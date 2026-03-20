@@ -15,17 +15,10 @@ interface AllConfigStringsModalProps {
   walletName: string;
 }
 
-export default function AllConfigStringsModal({
-  isOpen,
-  onClose,
-  tokens,
-  walletName,
-}: AllConfigStringsModalProps) {
+export default function AllConfigStringsModal({ isOpen, onClose, tokens, walletName }: AllConfigStringsModalProps) {
   // Generate all configuration strings, separated by double line breaks
   const allConfigStrings = useMemo(() => {
-    return tokens
-      .map((token) => getConfigurationString(token.uid, token.name, token.symbol))
-      .join('\n\n');
+    return tokens.map((token) => getConfigurationString(token.uid, token.name, token.symbol)).join('\n\n');
   }, [tokens]);
 
   if (!isOpen) return null;
@@ -33,10 +26,7 @@ export default function AllConfigStringsModal({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -79,11 +69,7 @@ export default function AllConfigStringsModal({
                     <div className="flex-1 p-4 bg-gray-100 rounded font-mono text-xs break-all whitespace-pre-wrap max-h-96 overflow-y-auto">
                       {allConfigStrings}
                     </div>
-                    <CopyButton
-                      text={allConfigStrings}
-                      label="Copy All"
-                      className="flex-shrink-0"
-                    />
+                    <CopyButton text={allConfigStrings} label="Copy All" className="flex-shrink-0" />
                   </div>
                 </div>
 
@@ -105,10 +91,7 @@ export default function AllConfigStringsModal({
 
           {/* Footer */}
           <div className="flex items-center justify-end p-6 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="btn btn-ghost px-6 py-2"
-            >
+            <button onClick={onClose} className="btn btn-ghost px-6 py-2">
               Close
             </button>
           </div>

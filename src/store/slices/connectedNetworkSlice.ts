@@ -51,10 +51,7 @@ const connectedNetworkSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setConnectedNetworkResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setConnectedNetworkResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
@@ -73,10 +70,7 @@ const connectedNetworkSlice = createSlice({
         state.response = null;
       }
     },
-    setConnectedNetworkError: (
-      state,
-      action: PayloadAction<{ error: string; duration: number }>
-    ) => {
+    setConnectedNetworkError: (state, action: PayloadAction<{ error: string; duration: number }>) => {
       state.error = action.payload.error;
       state.duration = action.payload.duration;
       state.response = null;

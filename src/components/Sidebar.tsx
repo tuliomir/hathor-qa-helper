@@ -25,9 +25,7 @@ function AccordionGroup({ group, isExpanded, onToggle, currentStage, onStageClic
         onClick={onToggle}
         className="w-full p-3 flex items-center justify-between bg-light hover:bg-gray-200 transition-colors duration-150"
       >
-        <span className="text-sm font-bold text-muted uppercase tracking-wider">
-          {group.title}
-        </span>
+        <span className="text-sm font-bold text-muted uppercase tracking-wider">{group.title}</span>
         <FiChevronDown
           className={`text-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
           size={18}
@@ -36,13 +34,11 @@ function AccordionGroup({ group, isExpanded, onToggle, currentStage, onStageClic
 
       {/* Accordion Content - using CSS Grid for smooth animation */}
       <div
-        className={`grid transition-all duration-200 ease-out ${
-          isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-        }`}
+        className={`grid transition-all duration-200 ease-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
       >
         <div className="overflow-hidden">
           <div className="p-2 flex flex-col gap-2">
-            {group.stages.map(stage => {
+            {group.stages.map((stage) => {
               const isActive = currentStage === stage.id;
               return (
                 <button
@@ -50,9 +46,10 @@ function AccordionGroup({ group, isExpanded, onToggle, currentStage, onStageClic
                   onClick={() => onStageClick(stage.id)}
                   className={`
                     p-4 rounded-lg border-2 cursor-pointer text-left transition-all duration-200
-                    ${isActive
-                      ? 'bg-primary text-white border-primary-dark font-bold'
-                      : 'bg-white text-dark border-border hover:bg-gray-100 hover:border-gray-400'
+                    ${
+                      isActive
+                        ? 'bg-primary text-white border-primary-dark font-bold'
+                        : 'bg-white text-dark border-border hover:bg-gray-100 hover:border-gray-400'
                     }
                   `}
                 >
@@ -60,9 +57,7 @@ function AccordionGroup({ group, isExpanded, onToggle, currentStage, onStageClic
                     <span className="text-xl">{stage.icon}</span>
                     <span className="text-base">{stage.title}</span>
                   </div>
-                  <div className={`text-xs ml-7.5 ${isActive ? 'opacity-90' : 'opacity-70'}`}>
-                    {stage.description}
-                  </div>
+                  <div className={`text-xs ml-7.5 ${isActive ? 'opacity-90' : 'opacity-70'}`}>{stage.description}</div>
                 </button>
               );
             })}
@@ -81,12 +76,12 @@ export default function Sidebar() {
   useEffect(() => {
     const groupId = getGroupForStage(currentStage);
     if (groupId && !expandedGroups.has(groupId)) {
-      setExpandedGroups(prev => new Set([...prev, groupId]));
+      setExpandedGroups((prev) => new Set([...prev, groupId]));
     }
   }, [currentStage, expandedGroups]);
 
   const handleGroupToggle = (groupId: GroupId) => {
-    setExpandedGroups(prev => {
+    setExpandedGroups((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(groupId)) {
         newSet.delete(groupId);
@@ -112,7 +107,7 @@ export default function Sidebar() {
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-5">
         <div className="flex flex-col gap-3">
-          {STAGE_GROUPS.map(group => (
+          {STAGE_GROUPS.map((group) => (
             <AccordionGroup
               key={group.id}
               group={group}

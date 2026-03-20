@@ -18,10 +18,7 @@ export default function DesktopQAHeader() {
     <div className="fixed top-0 left-0 right-0 z-40 h-14 bg-gradient-to-r from-blue-600 to-cyan-700 text-white shadow-md">
       <div className="px-6 h-14 flex items-center justify-between w-full">
         <div className="flex items-center gap-4">
-          <Link
-            to="/"
-            className="flex items-center gap-2 text-white hover:text-white/80 transition-colors"
-          >
+          <Link to="/" className="flex items-center gap-2 text-white hover:text-white/80 transition-colors">
             <MdArrowBack size={20} />
             <span className="text-sm font-medium">Main QA</span>
           </Link>
@@ -47,10 +44,7 @@ export default function DesktopQAHeader() {
             </span>
           </div>
           <div className="w-32 h-2 bg-white/30 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white transition-all duration-300"
-              style={{ width: `${progressPercentage}%` }}
-            />
+            <div className="h-full bg-white transition-all duration-300" style={{ width: `${progressPercentage}%` }} />
           </div>
           <span className="text-sm font-bold">{progressPercentage}%</span>
         </div>

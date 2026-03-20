@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useState } from 'react';
-import { findWalletByAddress, getAddressesForWallet, getAllAddresses, } from '../services/addressDatabase';
+import { findWalletByAddress, getAddressesForWallet, getAllAddresses } from '../services/addressDatabase';
 import type { AddressRecord } from '../types/addressDatabase';
 
 interface UseAddressLookupResult {

@@ -19,23 +19,19 @@ export const SnapGetBalanceStage: React.FC = () => {
       method: 'htr_getBalance',
       params: { tokens: tokens.filter((t) => t.trim() !== '') },
     }),
-    [tokens],
+    [tokens]
   );
 
-  const handleExecute = () =>
-    execute((h) => h.getBalance(tokens.filter((t) => t.trim() !== '')));
+  const handleExecute = () => execute((h) => h.getBalance(tokens.filter((t) => t.trim() !== '')));
 
   const addToken = () => setTokens([...tokens, '']);
   const removeToken = (i: number) => setTokens(tokens.filter((_, idx) => idx !== i));
-  const updateToken = (i: number, value: string) =>
-    setTokens(tokens.map((t, idx) => (idx === i ? value : t)));
+  const updateToken = (i: number, value: string) => setTokens(tokens.map((t, idx) => (idx === i ? value : t)));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Get Balance (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Query token balances via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Query token balances via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -60,10 +56,7 @@ export const SnapGetBalanceStage: React.FC = () => {
                   className="input flex-1"
                 />
                 {tokens.length > 1 && (
-                  <button
-                    onClick={() => removeToken(i)}
-                    className="btn-secondary py-1.5 px-3 text-sm"
-                  >
+                  <button onClick={() => removeToken(i)} className="btn-secondary py-1.5 px-3 text-sm">
                     Remove
                   </button>
                 )}

@@ -13,9 +13,9 @@ export const VERSION_DEFAULTS: Record<
   CreateTokenVersion,
   { nameSuffix: string; symbolSuffix: string; amount: string }
 > = {
-  '':      { nameSuffix: '',           symbolSuffix: '',  amount: '100' },
+  '': { nameSuffix: '', symbolSuffix: '', amount: '100' },
   deposit: { nameSuffix: ' - Deposit', symbolSuffix: 'D', amount: '100' },
-  fee:     { nameSuffix: ' - Fee',     symbolSuffix: 'F', amount: '9999' },
+  fee: { nameSuffix: ' - Fee', symbolSuffix: 'F', amount: '9999' },
 };
 
 /**
@@ -33,7 +33,7 @@ export function swapVersionSuffix(
   oldVersion: CreateTokenVersion,
   newVersion: CreateTokenVersion,
   currentSymbol = '',
-  currentAmount?: string,
+  currentAmount?: string
 ): { name: string; symbol: string; amount: string } {
   const oldDefaults = VERSION_DEFAULTS[oldVersion];
   const newDefaults = VERSION_DEFAULTS[newVersion];

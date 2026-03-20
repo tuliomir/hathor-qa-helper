@@ -59,9 +59,7 @@ function SectionItem({
 }) {
   const dispatch = useAppDispatch();
   const currentLocation = useAppSelector(selectCurrentLocation);
-  const completedCount = useAppSelector((state) =>
-    selectCompletedStepsCount(state, section.id)
-  );
+  const completedCount = useAppSelector((state) => selectCompletedStepsCount(state, section.id));
   const totalSteps = section.steps.length;
   const isCurrentSection = currentLocation.sectionId === section.id;
 
@@ -85,9 +83,7 @@ function SectionItem({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {completedCount === totalSteps && totalSteps > 0 && (
-            <MdCheckCircle className="text-success" size={20} />
-          )}
+          {completedCount === totalSteps && totalSteps > 0 && <MdCheckCircle className="text-success" size={20} />}
           {isExpanded ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
         </div>
       </button>
@@ -144,8 +140,7 @@ export default function DesktopQASidebar() {
     if (prevSectionId !== currentSectionId) {
       // Check if the previous section is fully completed
       const prevSectionStatus = sectionCompletionMap[prevSectionId];
-      const isPrevSectionComplete =
-        prevSectionStatus && prevSectionStatus.completed === prevSectionStatus.total;
+      const isPrevSectionComplete = prevSectionStatus && prevSectionStatus.completed === prevSectionStatus.total;
 
       setExpandedSections((prev) => {
         const next = new Set(prev);
@@ -186,9 +181,7 @@ export default function DesktopQASidebar() {
     <aside className="w-72 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
       <div className="py-4">
         <div className="px-4 mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-muted uppercase tracking-wide m-0">
-            Sections
-          </h2>
+          <h2 className="text-sm font-bold text-muted uppercase tracking-wide m-0">Sections</h2>
           <span className="text-sm font-medium text-blue-600">
             {currentSectionIndex}/{totalSections}
           </span>

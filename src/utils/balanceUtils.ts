@@ -5,7 +5,7 @@
  */
 
 import { numberUtils } from '@hathor/wallet-lib';
-import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants'
+import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
 
 /**
  * Formats a BigInt balance to a display string
@@ -14,10 +14,7 @@ import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants'
  * @param decimalPlaces - Number of decimal places (default: 2 for HTR)
  * @returns Formatted balance string (e.g., "1,234.56")
  */
-export function formatBalance(
-  balance: bigint | string | undefined,
-  decimalPlaces: number = DECIMAL_PLACES
-): string {
+export function formatBalance(balance: bigint | string | undefined, decimalPlaces: number = DECIMAL_PLACES): string {
   if (balance === undefined) return '0.00';
   // Ensure prettyValue receives a bigint (convert from string when necessary)
   if (typeof balance === 'string') {

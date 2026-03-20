@@ -9,8 +9,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 
 export interface RawRpcHistoryEntry {
   id: string;
-  request: string;  // Raw JSON string
-  response: string | null;  // Raw JSON string response
+  request: string; // Raw JSON string
+  response: string | null; // Raw JSON string response
   error: string | null;
   timestamp: number;
   duration: number | null;
@@ -24,12 +24,16 @@ export interface RawRpcState {
 }
 
 const initialState: RawRpcState = {
-  currentRequest: JSON.stringify({
-    method: 'htr_getWalletInformation',
-    params: {
-      network: 'testnet',
+  currentRequest: JSON.stringify(
+    {
+      method: 'htr_getWalletInformation',
+      params: {
+        network: 'testnet',
+      },
     },
-  }, null, 2),
+    null,
+    2
+  ),
   history: [],
 };
 
@@ -67,16 +71,11 @@ const rawRpcSlice = createSlice({
     },
 
     removeHistoryEntry: (state, action: PayloadAction<string>) => {
-      state.history = state.history.filter(entry => entry.id !== action.payload);
+      state.history = state.history.filter((entry) => entry.id !== action.payload);
     },
   },
 });
 
-export const {
-  setCurrentRequest,
-  addHistoryEntry,
-  clearHistory,
-  removeHistoryEntry,
-} = rawRpcSlice.actions;
+export const { setCurrentRequest, addHistoryEntry, clearHistory, removeHistoryEntry } = rawRpcSlice.actions;
 
 export default rawRpcSlice.reducer;

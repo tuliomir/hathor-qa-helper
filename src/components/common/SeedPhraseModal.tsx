@@ -13,21 +13,13 @@ interface SeedPhraseModalProps {
   walletName: string;
 }
 
-export default function SeedPhraseModal({
-  isOpen,
-  onClose,
-  seedPhrase,
-  walletName,
-}: SeedPhraseModalProps) {
+export default function SeedPhraseModal({ isOpen, onClose, seedPhrase, walletName }: SeedPhraseModalProps) {
   if (!isOpen) return null;
 
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -56,9 +48,7 @@ export default function SeedPhraseModal({
             <div className="mb-6">
               <h3 className="text-lg font-bold mb-3">Seed Phrase (24 words)</h3>
               <div className="flex items-start gap-2">
-                <div className="flex-1 p-3 bg-gray-100 rounded font-mono text-sm break-words">
-                  {seedPhrase}
-                </div>
+                <div className="flex-1 p-3 bg-gray-100 rounded font-mono text-sm break-words">{seedPhrase}</div>
                 <CopyButton text={seedPhrase} label="Copy seed phrase" className="flex-shrink-0" />
               </div>
             </div>
@@ -77,10 +67,7 @@ export default function SeedPhraseModal({
 
           {/* Footer */}
           <div className="flex items-center justify-end p-6 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="btn btn-ghost px-6 py-2"
-            >
+            <button onClick={onClose} className="btn btn-ghost px-6 py-2">
               Close
             </button>
           </div>

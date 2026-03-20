@@ -26,9 +26,7 @@ export function useScrollPreservation() {
   const previousStageRef = useRef<StageId>(currentStage);
 
   // Get saved scroll position for current stage (default to 0 if not visited before)
-  const savedPosition = useAppSelector(
-    (state) => state.stage.scrollPositions[currentStage] ?? 0
-  );
+  const savedPosition = useAppSelector((state) => state.stage.scrollPositions[currentStage] ?? 0);
 
   // Save previous stage's scroll position when stage changes
   useEffect(() => {
@@ -36,10 +34,12 @@ export function useScrollPreservation() {
 
     // If stage changed, save the scroll position of the previous stage
     if (previousStage !== currentStage && scrollContainerRef.current) {
-      dispatch(saveScrollPosition({
-        stageId: previousStage,
-        position: scrollContainerRef.current.scrollTop,
-      }));
+      dispatch(
+        saveScrollPosition({
+          stageId: previousStage,
+          position: scrollContainerRef.current.scrollTop,
+        })
+      );
     }
 
     // Update the ref to track current stage for next change

@@ -44,7 +44,9 @@ function useTokenBalance(walletInstance: unknown | null, tokenUid: string, refre
       setError(null);
 
       try {
-        const bal = await (walletInstance as { getBalance: (tokenUid: string) => Promise<Array<{ balance?: { unlocked?: bigint } }>> }).getBalance(tokenUid);
+        const bal = await (
+          walletInstance as { getBalance: (tokenUid: string) => Promise<Array<{ balance?: { unlocked?: bigint } }>> }
+        ).getBalance(tokenUid);
         if (isMounted) {
           setBalance(bal[0]?.balance?.unlocked || 0n);
           setIsLoading(false);
@@ -132,7 +134,7 @@ function WalletTokensDisplay({
   wallet,
   fundingWalletId,
   testWalletId,
-  isTestWallet
+  isTestWallet,
 }: {
   wallet: WalletInfo;
   fundingWalletId: string | null;
@@ -164,10 +166,10 @@ function WalletTokensDisplay({
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
 
-	// Refresh the tokens when page is opened
-	useEffect(() => {
-		handleRefresh().catch(e => console.error('Failed refresh', e));
-	}, []);
+  // Refresh the tokens when page is opened
+  useEffect(() => {
+    handleRefresh().catch((e) => console.error('Failed refresh', e));
+  }, []);
 
   // Fetch tokens directly from wallet instance (more reliable than Redux store)
   // This catches tokens received from other wallets that may not be in wallet.tokenUids
@@ -254,10 +256,7 @@ function WalletTokensDisplay({
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredTokens.length / PAGE_SIZE));
-  const paginatedTokens = filteredTokens.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  const paginatedTokens = filteredTokens.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -338,7 +337,7 @@ function WalletTokensDisplay({
       try {
         const meltAuthority = await wallet.instance.getMeltAuthority(selectedTokenUid, {
           many: false,
-          only_available_utxos: true
+          only_available_utxos: true,
         });
         setHasMeltAuthority(meltAuthority && meltAuthority.length > 0);
       } catch (err) {
@@ -428,9 +427,7 @@ function WalletTokensDisplay({
     try {
       // Get the funding wallet
       const wallets = getAllWallets();
-      const fundingWallet = wallets.find(
-        (w) => w.metadata.id === fundingWalletId && w.status === 'ready'
-      );
+      const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
 
       if (!fundingWallet || !fundingWallet.instance) {
         throw new Error('Funding wallet not found or not ready');
@@ -444,7 +441,9 @@ function WalletTokensDisplay({
       try {
         const tokenDetails = await fundingWallet.instance.getTokenDetails(selectedToken.uid);
         isFeeToken = tokenDetails.tokenInfo.version === TokenVersion.FEE;
-      } catch { /* assume not fee-based if check fails */ }
+      } catch {
+        /* assume not fee-based if check fails */
+      }
 
       // Build the transaction template
       const template = TransactionTemplateBuilder.new()
@@ -453,7 +452,7 @@ function WalletTokensDisplay({
         .addTokenOutput({
           address: '{recipientAddr}',
           amount: BigInt(amount),
-          token: selectedToken.uid
+          token: selectedToken.uid,
         })
         .addCompleteAction({
           changeAddress: '{changeAddr}',
@@ -470,7 +469,7 @@ function WalletTokensDisplay({
           toAddress: derivedAddress,
           amount,
           tokenUid: selectedToken.uid,
-          tokenSymbol: selectedToken.symbol
+          tokenSymbol: selectedToken.symbol,
         },
         WALLET_CONFIG.DEFAULT_PIN_CODE
       );
@@ -491,7 +490,7 @@ function WalletTokensDisplay({
         uid: selectedToken.uid,
         name: selectedToken.name,
         symbol: selectedToken.symbol,
-      }
+      },
     });
   };
 
@@ -504,7 +503,7 @@ function WalletTokensDisplay({
         uid: selectedToken.uid,
         name: selectedToken.name,
         symbol: selectedToken.symbol,
-      }
+      },
     });
   };
 
@@ -523,7 +522,9 @@ function WalletTokensDisplay({
       try {
         const tokenDetails = await wallet.instance.getTokenDetails(selectedToken.uid);
         isFeeToken = tokenDetails.tokenInfo.version === TokenVersion.FEE;
-      } catch { /* assume not fee-based if check fails */ }
+      } catch {
+        /* assume not fee-based if check fails */
+      }
 
       // Build the transaction template
       const template = TransactionTemplateBuilder.new()
@@ -532,7 +533,7 @@ function WalletTokensDisplay({
         .addTokenOutput({
           address: '{recipientAddr}',
           amount: BigInt(amount),
-          token: selectedToken.uid
+          token: selectedToken.uid,
         })
         .addCompleteAction({
           changeAddress: '{changeAddr}',
@@ -549,7 +550,7 @@ function WalletTokensDisplay({
           toAddress: otherWalletAddress,
           amount,
           tokenUid: selectedToken.uid,
-          tokenSymbol: selectedToken.symbol
+          tokenSymbol: selectedToken.symbol,
         },
         WALLET_CONFIG.DEFAULT_PIN_CODE
       );
@@ -586,12 +587,12 @@ function WalletTokensDisplay({
         return;
       }
 
-	    console.log({ balanceNum, maxMeltable, token: selectedToken.symbol });
+      console.log({ balanceNum, maxMeltable, token: selectedToken.symbol });
 
       // Confirm with user
       const confirmed = window.confirm(
         `Are you sure you want to melt ${maxMeltable} ${selectedToken.symbol} tokens?\n\n` +
-        `This operation is IRREVERSIBLE. The tokens will be converted back to HTR.`
+          `This operation is IRREVERSIBLE. The tokens will be converted back to HTR.`
       );
 
       if (!confirmed) {
@@ -604,16 +605,12 @@ function WalletTokensDisplay({
       const address0 = await wallet.instance.getAddressAtIndex(0);
 
       // Execute melt transaction
-      const sendTx = await wallet.instance.meltTokensSendTransaction(
-        selectedToken.uid,
-        BigInt(maxMeltable),
-        {
-          pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
-          changeAddress: address0,
-          meltAuthorityAddress: address0,
-          createAnotherMelt: true,
-        }
-      );
+      const sendTx = await wallet.instance.meltTokensSendTransaction(selectedToken.uid, BigInt(maxMeltable), {
+        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+        changeAddress: address0,
+        meltAuthorityAddress: address0,
+        createAnotherMelt: true,
+      });
 
       // Run the transaction
       await sendTx.runFromMining();
@@ -666,13 +663,9 @@ function WalletTokensDisplay({
       {walletTokens.length === 0 && (
         <div className="card-primary mb-7.5 text-center">
           <p className="m-0 text-muted">No custom tokens found for this wallet.</p>
-	        <button
-		        onClick={handleRefresh}
-		        disabled={isRefreshing}
-		        className="btn-primary mt-4 py-1.5 px-4 text-sm"
-	        >
-		        {isRefreshing ? 'Refreshing...' : 'Refresh'}
-	        </button>
+          <button onClick={handleRefresh} disabled={isRefreshing} className="btn-primary mt-4 py-1.5 px-4 text-sm">
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
         </div>
       )}
 
@@ -704,11 +697,7 @@ function WalletTokensDisplay({
               >
                 Export All
               </button>
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="btn-primary py-1.5 px-4 text-sm"
-              >
+              <button onClick={handleRefresh} disabled={isRefreshing} className="btn-primary py-1.5 px-4 text-sm">
                 {isRefreshing ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
@@ -743,7 +732,8 @@ function WalletTokensDisplay({
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
               <p className="text-sm text-muted m-0">
-                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTokens.length)} of {filteredTokens.length} tokens
+                Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTokens.length)}{' '}
+                of {filteredTokens.length} tokens
               </p>
               <div className="flex items-center gap-1">
                 <button
@@ -783,23 +773,20 @@ function WalletTokensDisplay({
         </div>
       )}
 
-	    {/* Token Uid String Display */}
-	    {selectedTokenUid && (
-		    <div className="card-primary mb-7.5">
-			    <div className="mb-3 text-center">
-				    <h3 className="text-lg font-bold m-0">Token UID String</h3>
-			    </div>
+      {/* Token Uid String Display */}
+      {selectedTokenUid && (
+        <div className="card-primary mb-7.5">
+          <div className="mb-3 text-center">
+            <h3 className="text-lg font-bold m-0">Token UID String</h3>
+          </div>
 
-			    {/* Configuration String */}
-			    <div className="flex items-center justify-center gap-2 mb-7.5">
-				    <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
-					    {selectedTokenUid}
-				    </p>
-				    <CopyButton text={selectedTokenUid} label="Copy config string" className="ml-2" />
-			    </div>
-
-		    </div>
-	    )}
+          {/* Configuration String */}
+          <div className="flex items-center justify-center gap-2 mb-7.5">
+            <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">{selectedTokenUid}</p>
+            <CopyButton text={selectedTokenUid} label="Copy config string" className="ml-2" />
+          </div>
+        </div>
+      )}
 
       {/* Configuration String Display */}
       {configString && selectedTokenUid && selectedToken && (
@@ -810,9 +797,7 @@ function WalletTokensDisplay({
 
           {/* Configuration String */}
           <div className="flex items-center justify-center gap-2 mb-7.5">
-            <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
-              {configString}
-            </p>
+            <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">{configString}</p>
             <CopyButton text={configString} label="Copy config string" className="ml-2" />
           </div>
 
@@ -973,12 +958,8 @@ function WalletTokensDisplay({
           {isTestWallet && selectedToken && (
             <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
               <div className="mb-3 text-center">
-                <h3 className="text-lg font-bold m-0 text-red-900">
-                  Melt Tokens (Irreversible)
-                </h3>
-                <p className="text-sm text-red-700 mt-2 mb-0">
-                  Destroy tokens and convert them back to HTR
-                </p>
+                <h3 className="text-lg font-bold m-0 text-red-900">Melt Tokens (Irreversible)</h3>
+                <p className="text-sm text-red-700 mt-2 mb-0">Destroy tokens and convert them back to HTR</p>
               </div>
 
               {/* Loading overlay for melting */}
@@ -998,12 +979,8 @@ function WalletTokensDisplay({
               {/* Melt authority check */}
               {!hasMeltAuthority ? (
                 <div className="p-4 bg-white border border-red-300 rounded text-center">
-                  <p className="m-0 text-red-800">
-                    This wallet does not have melt authority for this token.
-                  </p>
-                  <p className="text-sm text-red-600 mt-2 mb-0">
-                    Only wallets with melt authority can destroy tokens.
-                  </p>
+                  <p className="m-0 text-red-800">This wallet does not have melt authority for this token.</p>
+                  <p className="text-sm text-red-600 mt-2 mb-0">Only wallets with melt authority can destroy tokens.</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
@@ -1011,9 +988,7 @@ function WalletTokensDisplay({
                     <p className="text-sm text-red-800 mb-2">
                       <strong>Warning:</strong> Melting tokens is an irreversible operation.
                     </p>
-                    <p className="text-sm text-red-700 mb-2">
-                      • Tokens can only be melted in multiples of 100
-                    </p>
+                    <p className="text-sm text-red-700 mb-2">• Tokens can only be melted in multiples of 100</p>
                     <p className="text-sm text-red-700 mb-2">
                       • Melted tokens are converted back to HTR at a rate of 100 tokens = 1 HTR
                     </p>
@@ -1068,9 +1043,7 @@ export default function CustomTokens() {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Custom Tokens</h1>
-      <p className="text-muted mb-7.5">
-        View custom tokens for the funding and test wallets.
-      </p>
+      <p className="text-muted mb-7.5">View custom tokens for the funding and test wallets.</p>
 
       {noWalletsSelected ? (
         <div className="p-10 text-center border-2 border-dashed border-warning rounded-lg bg-yellow-50 text-yellow-800">

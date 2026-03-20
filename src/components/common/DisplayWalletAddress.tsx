@@ -75,9 +75,7 @@ function WalletAddressDisplay({ walletType }: WalletAddressDisplayProps) {
   return (
     <div className="card-primary">
       <h3 className="text-lg font-bold mb-2">{label} Wallet Address</h3>
-      <p className="text-xs text-muted mb-3">
-        {wallet.metadata.friendlyName} - Address at index 0
-      </p>
+      <p className="text-xs text-muted mb-3">{wallet.metadata.friendlyName} - Address at index 0</p>
 
       {isLoading ? (
         <div className="p-4 bg-gray-50 rounded-lg text-center">

@@ -18,11 +18,7 @@ import { extractErrorMessage } from '../../utils/errorUtils';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 export interface RpcGetAddressCardProps {
@@ -58,14 +54,17 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const { showToast } = useToast();
 
-  const liveRequest = useMemo(() => ({
-    method: 'htr_getAddress',
-    params: {
-      network: 'testnet',
-      type: requestType,
-      ...(requestType === 'index' ? { index: indexValue } : {}),
-    },
-  }), [requestType, indexValue]);
+  const liveRequest = useMemo(
+    () => ({
+      method: 'htr_getAddress',
+      params: {
+        network: 'testnet',
+        type: requestType,
+        ...(requestType === 'index' ? { index: indexValue } : {}),
+      },
+    }),
+    [requestType, indexValue]
+  );
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -89,10 +88,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
     setRequestInfo(null);
 
     try {
-      const { request, response } = await onExecute(
-        requestType,
-        requestType === 'index' ? indexValue : undefined
-      );
+      const { request, response } = await onExecute(requestType, requestType === 'index' ? indexValue : undefined);
 
       // Store request and response separately
       setRequestInfo(request as { method: string; params: unknown });
@@ -102,10 +98,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
       console.log(`[RPC Request] Get Address`, request);
       console.log(`[RPC Success] Get Address`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Address retrieved successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Address retrieved successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -133,7 +126,13 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
 
   // Check if result is a get address response
   const isGetAddressResponse = (data: unknown): data is { type: number; response: unknown } => {
-    return !!(data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 2 && 'response' in data);
+    return !!(
+      data &&
+      typeof data === 'object' &&
+      'type' in data &&
+      (data as { type?: number }).type === 2 &&
+      'response' in data
+    );
   };
 
   // Render result
@@ -210,13 +209,8 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
 
         {/* Type Selector */}
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-muted mb-2">
-            Address Type
-          </label>
-          <Select
-            value={requestType}
-            onChange={(e) => onRequestTypeChange(e.target.value as AddressRequestType)}
-          >
+          <label className="block text-sm font-semibold text-muted mb-2">Address Type</label>
+          <Select value={requestType} onChange={(e) => onRequestTypeChange(e.target.value as AddressRequestType)}>
             <option value="first_empty">First Empty</option>
             <option value="index">By Index</option>
             <option value="client">Client</option>
@@ -231,9 +225,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
         {/* Index Input - Only visible when type is "index" */}
         {requestType === 'index' && (
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-muted mb-2">
-              Address Index
-            </label>
+            <label className="block text-sm font-semibold text-muted mb-2">Address Index</label>
             <input
               type="number"
               min="0"
@@ -242,9 +234,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
               className="input w-full"
               placeholder="Enter address index"
             />
-            <p className="text-xs text-muted mt-1">
-              The index of the address to retrieve (starting from 0)
-            </p>
+            <p className="text-xs text-muted mt-1">The index of the address to retrieve (starting from 0)</p>
           </div>
         )}
       </div>
@@ -285,10 +275,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
               <span>{expanded ? '▼' : '▶'}</span>
               {error ? 'Error Details' : 'Response'}
             </button>
-            <CopyButton
-              text={result ? safeStringify(result, 2) : error || ''}
-              label="Copy response"
-            />
+            <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
           </div>
 
           {expanded && (
@@ -296,19 +283,14 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

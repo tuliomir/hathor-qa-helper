@@ -49,10 +49,7 @@ const signOracleDataSlice = createSlice({
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
     },
-    setSignOracleDataResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setSignOracleDataResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.response = action.payload.response;
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
@@ -70,10 +67,7 @@ const signOracleDataSlice = createSlice({
         // If extraction fails, signedData stays null
       }
     },
-    setSignOracleDataError: (
-      state,
-      action: PayloadAction<{ error: string; duration: number }>
-    ) => {
+    setSignOracleDataError: (state, action: PayloadAction<{ error: string; duration: number }>) => {
       state.error = action.payload.error;
       state.response = null;
       state.rawResponse = null;

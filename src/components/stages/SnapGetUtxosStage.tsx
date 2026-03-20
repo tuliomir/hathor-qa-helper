@@ -32,21 +32,25 @@ export const SnapGetUtxosStage: React.FC = () => {
     if (maximumAmount.trim()) p.maximumAmount = parseInt(maximumAmount);
     if (onlyAvailableUtxos) p.onlyAvailableUtxos = true;
     return p;
-  }, [tokenUid, maxUtxos, amountSmallerThan, amountBiggerThan, filterAddress, authorities, maximumAmount, onlyAvailableUtxos]);
+  }, [
+    tokenUid,
+    maxUtxos,
+    amountSmallerThan,
+    amountBiggerThan,
+    filterAddress,
+    authorities,
+    maximumAmount,
+    onlyAvailableUtxos,
+  ]);
 
-  const liveRequest = useMemo(
-    () => ({ method: 'htr_getUtxos', params }),
-    [params],
-  );
+  const liveRequest = useMemo(() => ({ method: 'htr_getUtxos', params }), [params]);
 
   const handleExecute = () => execute((h) => h.getUtxos(params));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Get UTXOs (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Retrieve unspent transaction outputs via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Retrieve unspent transaction outputs via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 

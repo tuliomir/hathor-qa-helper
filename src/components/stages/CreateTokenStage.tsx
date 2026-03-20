@@ -125,17 +125,21 @@ export const CreateTokenStage: React.FC = () => {
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store request in Redux
-      dispatch(setCreateTokenRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setCreateTokenRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Store response in Redux (with BigInt converted to strings)
-      dispatch(setCreateTokenResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setCreateTokenResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       // If token was created successfully (not dry run and response exists), refresh wallet tokens
       if (!isDryRun && response && testWalletId) {
@@ -161,10 +165,12 @@ export const CreateTokenStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setCreateTokenError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setCreateTokenError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -200,9 +206,8 @@ export const CreateTokenStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -246,9 +251,7 @@ export const CreateTokenStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {createTokenData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {createTokenData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {createTokenData.duration}ms</span>
                 )}
               </p>
             </div>

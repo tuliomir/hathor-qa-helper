@@ -121,39 +121,47 @@ export const FeeInitializeStage: React.FC = () => {
     const startTime = Date.now();
 
     try {
-      const { request, response } = await rpcHandlers.getRpcFeeInitialize(
-        blueprintId,
-        amount,
-        changeAddress,
-        pushTx,
-      );
+      const { request, response } = await rpcHandlers.getRpcFeeInitialize(blueprintId, amount, changeAddress, pushTx);
       const duration = Date.now() - startTime;
 
       // Clear deep link notification after RPC response
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setFeeInitializeRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setFeeInitializeRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setFeeInitializeResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setFeeInitializeResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       // Store the nano contract ID for use in other stages
-      if (serializedResponse && typeof serializedResponse === 'object' && 'response' in serializedResponse && serializedResponse.response && typeof serializedResponse.response === 'object' && 'hash' in serializedResponse.response) {
-        dispatch(setFeeNanoContractId({
-          ncId: (serializedResponse.response as { hash: string }).hash,
-          blueprintId,
-        }));
+      if (
+        serializedResponse &&
+        typeof serializedResponse === 'object' &&
+        'response' in serializedResponse &&
+        serializedResponse.response &&
+        typeof serializedResponse.response === 'object' &&
+        'hash' in serializedResponse.response
+      ) {
+        dispatch(
+          setFeeNanoContractId({
+            ncId: (serializedResponse.response as { hash: string }).hash,
+            blueprintId,
+          })
+        );
       }
 
       return { request, response: serializedResponse };
@@ -165,10 +173,12 @@ export const FeeInitializeStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setFeeInitializeError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setFeeInitializeError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -177,9 +187,7 @@ export const FeeInitializeStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Initialize Fee RPC</h1>
-      <p className="text-muted mb-7.5">
-        Initialize a new fee nano contract with an HTR deposit
-      </p>
+      <p className="text-muted mb-7.5">Initialize a new fee nano contract with an HTR deposit</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -204,9 +212,8 @@ export const FeeInitializeStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -256,9 +263,7 @@ export const FeeInitializeStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {feeInitializeData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {feeInitializeData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {feeInitializeData.duration}ms</span>
                 )}
               </p>
             </div>

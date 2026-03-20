@@ -52,10 +52,7 @@ const getAddressSlice = createSlice({
   name: 'getAddress',
   initialState,
   reducers: {
-    setGetAddressRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setGetAddressRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -64,10 +61,7 @@ const getAddressSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setGetAddressResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setGetAddressResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
@@ -88,10 +82,7 @@ const getAddressSlice = createSlice({
         state.response = null;
       }
     },
-    setGetAddressError: (
-      state,
-      action: PayloadAction<{ error: string; duration: number }>
-    ) => {
+    setGetAddressError: (state, action: PayloadAction<{ error: string; duration: number }>) => {
       state.error = action.payload.error;
       state.duration = action.payload.duration;
       state.response = null;

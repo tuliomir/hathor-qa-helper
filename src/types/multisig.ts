@@ -37,14 +37,7 @@ export interface CollectedSignature {
 /**
  * State machine for multisig transaction flow
  */
-export type MultisigTransactionStep =
-  | 'idle'
-  | 'creating'
-  | 'signing'
-  | 'assembling'
-  | 'sending'
-  | 'complete'
-  | 'error';
+export type MultisigTransactionStep = 'idle' | 'creating' | 'signing' | 'assembling' | 'sending' | 'complete' | 'error';
 
 /**
  * State for an in-progress multisig transaction

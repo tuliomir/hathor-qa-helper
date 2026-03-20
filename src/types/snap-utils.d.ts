@@ -36,12 +36,7 @@ declare module '@hathor/snap-utils' {
 
   export function useMetaMaskContext(): MetaMaskContextType;
 
-  export function useRequestSnap(
-    snapId?: string,
-    version?: string,
-  ): () => Promise<void>;
+  export function useRequestSnap(snapId?: string, version?: string): () => Promise<void>;
 
-  export function useInvokeSnap(
-    snapId?: string,
-  ): (params: InvokeSnapParams) => Promise<unknown>;
+  export function useInvokeSnap(snapId?: string): (params: InvokeSnapParams) => Promise<unknown>;
 }

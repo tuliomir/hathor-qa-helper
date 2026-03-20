@@ -10,8 +10,7 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 
 export const SnapGetNetworkStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('getConnectedNetwork');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getConnectedNetwork');
 
   const liveRequest = useMemo(() => ({ method: 'htr_getConnectedNetwork' }), []);
 
@@ -20,9 +19,7 @@ export const SnapGetNetworkStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Get Network (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Get the connected network information via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Get the connected network information via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 

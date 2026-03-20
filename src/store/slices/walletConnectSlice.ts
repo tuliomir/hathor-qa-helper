@@ -79,57 +79,54 @@ const getWeb3Modal = async () => {
 };
 
 // Initialize WalletConnect client
-export const initializeWalletConnect = createAsyncThunk(
-  'walletConnect/initialize',
-  async (_, { dispatch }) => {
-    // Dynamic import to avoid SES lockdown conflicts
-    const { initializeClient } = await import('../../services/walletConnectClient');
-    const client = await initializeClient();
+export const initializeWalletConnect = createAsyncThunk('walletConnect/initialize', async (_, { dispatch }) => {
+  // Dynamic import to avoid SES lockdown conflicts
+  const { initializeClient } = await import('../../services/walletConnectClient');
+  const client = await initializeClient();
 
-    // Subscribe to events
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    client.on('session_ping', (args: any) => {
-      console.log('[WalletConnect] session_ping', args);
-    });
+  // Subscribe to events
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client.on('session_ping', (args: any) => {
+    console.log('[WalletConnect] session_ping', args);
+  });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    client.on('session_event', (args: any) => {
-      console.log('[WalletConnect] session_event', args);
-    });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client.on('session_event', (args: any) => {
+    console.log('[WalletConnect] session_event', args);
+  });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    client.on('session_update', ({ topic, params }: { topic: string; params: any }) => {
-      console.log('[WalletConnect] session_update', { topic, params });
-      const { namespaces } = params;
-      const _session = client.session.get(topic);
-      const updatedSession = { ..._session, namespaces };
-      dispatch(sessionConnected(updatedSession));
-    });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client.on('session_update', ({ topic, params }: { topic: string; params: any }) => {
+    console.log('[WalletConnect] session_update', { topic, params });
+    const { namespaces } = params;
+    const _session = client.session.get(topic);
+    const updatedSession = { ..._session, namespaces };
+    dispatch(sessionConnected(updatedSession));
+  });
 
-    client.on('session_delete', () => {
-      console.log('[WalletConnect] session_delete');
-      dispatch(resetSession());
-    });
+  client.on('session_delete', () => {
+    console.log('[WalletConnect] session_delete');
+    dispatch(resetSession());
+  });
 
-    // Check for persisted session
-    const pairings = client.pairing.getAll({ active: true });
-    if (client.session.length) {
-      const lastKeyIndex = client.session.keys.length - 1;
-      const _session = client.session.get(client.session.keys[lastKeyIndex]);
-      return {
-        client,
-        session: _session,
-        pairings,
-      };
-    }
-
+  // Check for persisted session
+  const pairings = client.pairing.getAll({ active: true });
+  if (client.session.length) {
+    const lastKeyIndex = client.session.keys.length - 1;
+    const _session = client.session.get(client.session.keys[lastKeyIndex]);
     return {
       client,
-      session: null,
+      session: _session,
       pairings,
     };
   }
-);
+
+  return {
+    client,
+    session: null,
+    pairings,
+  };
+});
 
 // Connect to WalletConnect
 export const connectWalletConnect = createAsyncThunk<
@@ -200,9 +197,7 @@ export const connectWalletConnect = createAsyncThunk<
     // - DeepLink modal provides the QR code for mobile devices to open Hathor Wallet
     // Only show deeplink modal/toast if deeplinks are enabled
     if (deepLinksEnabled) {
-      const { generateHathorWalletConnectionDeepLink } = await import(
-        '../../services/walletConnectClient'
-      );
+      const { generateHathorWalletConnectionDeepLink } = await import('../../services/walletConnectClient');
       const deepLinkUrl = generateHathorWalletConnectionDeepLink(uri);
       dispatch(setDeepLink({ url: deepLinkUrl, title: 'Connect to Hathor Wallet' }));
       dispatch(showDeepLinkModal());
@@ -234,27 +229,26 @@ export const connectWalletConnect = createAsyncThunk<
 });
 
 // Disconnect from WalletConnect
-export const disconnectWalletConnect = createAsyncThunk<
-  void,
-  void,
-  { state: { walletConnect: WalletConnectState } }
->('walletConnect/disconnect', async (_, { getState }) => {
-  const { client, session } = getState().walletConnect;
+export const disconnectWalletConnect = createAsyncThunk<void, void, { state: { walletConnect: WalletConnectState } }>(
+  'walletConnect/disconnect',
+  async (_, { getState }) => {
+    const { client, session } = getState().walletConnect;
 
-  if (!client) {
-    throw new Error('WalletConnect is not initialized');
-  }
-  if (!session) {
-    throw new Error('Session is not connected');
-  }
+    if (!client) {
+      throw new Error('WalletConnect is not initialized');
+    }
+    if (!session) {
+      throw new Error('Session is not connected');
+    }
 
-  // Dynamic import to avoid SES lockdown conflicts
-  const { getSdkError } = await import('@walletconnect/utils');
-  await client.disconnect({
-    topic: session.topic,
-    reason: getSdkError('USER_DISCONNECTED'),
-  });
-});
+    // Dynamic import to avoid SES lockdown conflicts
+    const { getSdkError } = await import('@walletconnect/utils');
+    await client.disconnect({
+      topic: session.topic,
+      reason: getSdkError('USER_DISCONNECTED'),
+    });
+  }
+);
 
 const walletConnectSlice = createSlice({
   name: 'walletConnect',
@@ -352,8 +346,7 @@ export const { sessionConnected, resetSession, setError } = walletConnectSlice.a
 export default walletConnectSlice.reducer;
 
 // Selectors
-export const selectWalletConnectSession = (state: { walletConnect: WalletConnectState }) =>
-  state.walletConnect.session;
+export const selectWalletConnectSession = (state: { walletConnect: WalletConnectState }) => state.walletConnect.session;
 
 export const selectIsWalletConnectConnected = (state: { walletConnect: WalletConnectState }) =>
   !!state.walletConnect.session;

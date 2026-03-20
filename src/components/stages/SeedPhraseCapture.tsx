@@ -160,8 +160,8 @@ export default function SeedPhraseCapture() {
       <div className="card-primary">
         <h2 className="text-xl font-bold mb-2">Seed Phrase Capture</h2>
         <p className="text-muted text-sm mb-4">
-          Paste a screenshot of the seed words screen or use the camera to capture it.
-          The OCR will extract the seed words automatically.
+          Paste a screenshot of the seed words screen or use the camera to capture it. The OCR will extract the seed
+          words automatically.
         </p>
 
         <div className="mb-4">
@@ -178,10 +178,7 @@ export default function SeedPhraseCapture() {
                 Camera
               </button>
               {seedInput && (
-                <button
-                  onClick={handleCopy}
-                  className="btn btn-secondary text-xs flex items-center gap-1"
-                >
+                <button onClick={handleCopy} className="btn btn-secondary text-xs flex items-center gap-1">
                   {copied ? <MdCheck size={16} /> : <MdContentCopy size={16} />}
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
@@ -210,16 +207,16 @@ export default function SeedPhraseCapture() {
 
         {/* Validation Status */}
         {seedInput && (
-          <div className={`p-3 rounded-lg ${isValid ? 'bg-green-50 border border-success' : 'bg-red-50 border border-danger'}`}>
+          <div
+            className={`p-3 rounded-lg ${isValid ? 'bg-green-50 border border-success' : 'bg-red-50 border border-danger'}`}
+          >
             {isValid ? (
               <p className="text-success text-sm m-0 font-medium">
                 Valid seed phrase ({seedInput.trim().split(/\s+/).length} words)
               </p>
             ) : (
               <>
-                <p className="text-danger text-sm m-0 mb-2">
-                  {validationError}
-                </p>
+                <p className="text-danger text-sm m-0 mb-2">{validationError}</p>
                 {invalidWords.length > 0 && (
                   <div className="text-danger text-xs">
                     <div className="font-bold mb-1">Invalid words:</div>
@@ -380,10 +377,7 @@ export default function SeedPhraseCapture() {
       )}
 
       {showOcrReferenceModal && ocrSourceImageUrl && (
-        <OCRReferenceModal
-          imageDataUrl={ocrSourceImageUrl}
-          onClose={() => setShowOcrReferenceModal(false)}
-        />
+        <OCRReferenceModal imageDataUrl={ocrSourceImageUrl} onClose={() => setShowOcrReferenceModal(false)} />
       )}
     </div>
   );

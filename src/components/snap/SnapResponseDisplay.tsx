@@ -12,7 +12,12 @@ import { ExplorerLink } from '../common/ExplorerLink';
 import { TransactionResponseDisplay } from '../common/TransactionResponseDisplay';
 import { safeStringify } from '../../utils/betHelpers';
 import { RpcResponseType } from '../../constants/snap';
-import { parseSnapResponse, isSnapEnvelope, isTransactionLike, safeDisplayValue } from '../../utils/snapResponseHelpers';
+import {
+  parseSnapResponse,
+  isSnapEnvelope,
+  isTransactionLike,
+  safeDisplayValue,
+} from '../../utils/snapResponseHelpers';
 
 /* ------------------------------------------------------------------ */
 /*  JSON Syntax Highlighting                                          */
@@ -34,16 +39,36 @@ function JsonHighlight({ json }: { json: string }) {
 
     const [full, key, str, bool, nil, num] = match;
     if (key !== undefined) {
-      parts.push(<span key={match.index} className="text-indigo-600">{key}</span>);
+      parts.push(
+        <span key={match.index} className="text-indigo-600">
+          {key}
+        </span>
+      );
       parts.push(':');
     } else if (str !== undefined) {
-      parts.push(<span key={match.index} className="text-emerald-600">{full}</span>);
+      parts.push(
+        <span key={match.index} className="text-emerald-600">
+          {full}
+        </span>
+      );
     } else if (bool !== undefined) {
-      parts.push(<span key={match.index} className="text-amber-600">{full}</span>);
+      parts.push(
+        <span key={match.index} className="text-amber-600">
+          {full}
+        </span>
+      );
     } else if (nil !== undefined) {
-      parts.push(<span key={match.index} className="text-gray-400">{full}</span>);
+      parts.push(
+        <span key={match.index} className="text-gray-400">
+          {full}
+        </span>
+      );
     } else if (num !== undefined) {
-      parts.push(<span key={match.index} className="text-blue-600">{full}</span>);
+      parts.push(
+        <span key={match.index} className="text-blue-600">
+          {full}
+        </span>
+      );
     }
 
     lastIndex = match.index + full.length;
@@ -66,7 +91,12 @@ function JsonHighlight({ json }: { json: string }) {
 /*  Field Box (reusable labeled field, matches RPC card style)        */
 /* ------------------------------------------------------------------ */
 
-function FieldBox({ label, value, copyable = false, mono = true }: {
+function FieldBox({
+  label,
+  value,
+  copyable = false,
+  mono = true,
+}: {
   label: string;
   value: React.ReactNode;
   copyable?: boolean;
@@ -76,14 +106,10 @@ function FieldBox({ label, value, copyable = false, mono = true }: {
     <div className="bg-white border border-gray-300 rounded overflow-hidden">
       <div className="bg-gray-100 px-3 py-2 border-b border-gray-300 flex items-center justify-between">
         <span className="text-sm font-semibold text-primary">{label}</span>
-        {copyable && typeof value === 'string' && (
-          <CopyButton text={value} label="Copy" />
-        )}
+        {copyable && typeof value === 'string' && <CopyButton text={value} label="Copy" />}
       </div>
       <div className="px-3 py-2">
-        <span className={`text-sm break-all ${mono ? 'font-mono' : ''}`}>
-          {value ?? 'N/A'}
-        </span>
+        <span className={`text-sm break-all ${mono ? 'font-mono' : ''}`}>{value ?? 'N/A'}</span>
       </div>
     </div>
   );
@@ -105,16 +131,20 @@ function RenderGetAddress({ data }: { data: Record<string, unknown> }) {
 }
 
 /** type 3 - htr_getBalance */
-function RenderGetBalance({ data }: { data: Array<{
-  token: { id?: string; name: string; symbol: string; version?: number };
-  balance: { unlocked: number | string; locked: number | string };
-  tokenAuthorities?: {
-    unlocked?: { mint: boolean | number; melt: boolean | number };
-    locked?: { mint: boolean | number; melt: boolean | number };
-  };
-  transactions?: number;
-  lockExpires?: number | null;
-}> }) {
+function RenderGetBalance({
+  data,
+}: {
+  data: Array<{
+    token: { id?: string; name: string; symbol: string; version?: number };
+    balance: { unlocked: number | string; locked: number | string };
+    tokenAuthorities?: {
+      unlocked?: { mint: boolean | number; melt: boolean | number };
+      locked?: { mint: boolean | number; melt: boolean | number };
+    };
+    transactions?: number;
+    lockExpires?: number | null;
+  }>;
+}) {
   if (data.length === 0) {
     return <div className="text-sm text-muted italic p-3">No balance data</div>;
   }
@@ -128,9 +158,7 @@ function RenderGetBalance({ data }: { data: Array<{
             <h4 className="text-lg font-bold text-primary m-0">
               {item.token?.name || 'Unknown Token'} ({item.token?.symbol || 'N/A'})
             </h4>
-            <p className="text-xs text-muted font-mono mt-1 mb-0 break-all">
-              {item.token?.id || 'Unknown ID'}
-            </p>
+            <p className="text-xs text-muted font-mono mt-1 mb-0 break-all">{item.token?.id || 'Unknown ID'}</p>
           </div>
 
           <div className="px-4 py-3 bg-white">
@@ -154,9 +182,7 @@ function RenderGetBalance({ data }: { data: Array<{
               </div>
               <div>
                 <div className="text-xs text-muted mb-1">Lock Expires</div>
-                <div className="text-base font-semibold">
-                  {item.lockExpires ? String(item.lockExpires) : 'N/A'}
-                </div>
+                <div className="text-base font-semibold">{item.lockExpires ? String(item.lockExpires) : 'N/A'}</div>
               </div>
             </div>
 
@@ -207,7 +233,11 @@ function RenderGetNetwork({ data }: { data: Record<string, unknown> }) {
     <div className="space-y-3">
       <FieldBox label="network" value={safeDisplayValue(data.network)} />
       {data.genesisHash !== undefined && (
-        <FieldBox label="genesisHash" value={safeDisplayValue(data.genesisHash, '(empty)')} copyable={!!data.genesisHash} />
+        <FieldBox
+          label="genesisHash"
+          value={safeDisplayValue(data.genesisHash, '(empty)')}
+          copyable={!!data.genesisHash}
+        />
       )}
     </div>
   );
@@ -215,7 +245,7 @@ function RenderGetNetwork({ data }: { data: Record<string, unknown> }) {
 
 /** type 5 - htr_getUtxos */
 function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
-  const utxos = Array.isArray(data.utxos) ? data.utxos as Record<string, unknown>[] : [];
+  const utxos = Array.isArray(data.utxos) ? (data.utxos as Record<string, unknown>[]) : [];
   return (
     <div className="space-y-4">
       {/* Summary Statistics */}
@@ -275,9 +305,11 @@ function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
                   <div>
                     <span className="text-muted">Status:</span>
                     <p className="mt-1 mb-0">
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                        utxo.locked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                          utxo.locked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}
+                      >
                         {utxo.locked ? 'Locked' : 'Available'}
                       </span>
                     </p>
@@ -329,9 +361,8 @@ function RenderGetWalletInformation({ data }: { data: Record<string, unknown> })
 /** type 1 - htr_signWithAddress */
 function RenderSignWithAddress({ data }: { data: Record<string, unknown> }) {
   // The snap may return address as an object {address, index, addressPath} or a string
-  const addressVal = data.address && typeof data.address === 'object'
-    ? (data.address as Record<string, unknown>).address
-    : data.address;
+  const addressVal =
+    data.address && typeof data.address === 'object' ? (data.address as Record<string, unknown>).address : data.address;
   return (
     <div className="space-y-3">
       {data.signature && <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable />}
@@ -343,9 +374,8 @@ function RenderSignWithAddress({ data }: { data: Record<string, unknown> }) {
 
 /** type 7 - htr_signOracleData */
 function RenderSignOracleData({ data }: { data: Record<string, unknown> }) {
-  const signedData = data.signedData && typeof data.signedData === 'object'
-    ? data.signedData as Record<string, unknown>
-    : null;
+  const signedData =
+    data.signedData && typeof data.signedData === 'object' ? (data.signedData as Record<string, unknown>) : null;
 
   return (
     <div className="space-y-3">
@@ -396,10 +426,7 @@ interface SnapResponseDisplayProps {
   showRaw?: boolean;
 }
 
-export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({
-  response,
-  showRaw = false,
-}) => {
+export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({ response, showRaw = false }) => {
   const parsed = parseSnapResponse(response);
 
   // Raw mode: highlighted JSON

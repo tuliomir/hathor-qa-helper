@@ -31,10 +31,7 @@ export default function TxUpdateEvents() {
   }, [allEvents, filterWalletId]);
 
   // Paginate filtered events
-  const paginatedEvents = filteredEvents.slice(
-    currentPage * pageSize,
-    (currentPage + 1) * pageSize
-  );
+  const paginatedEvents = filteredEvents.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const totalPages = Math.ceil(filteredEvents.length / pageSize);
 
   // Truncate hash for display
@@ -85,9 +82,7 @@ export default function TxUpdateEvents() {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Tx Update Events</h1>
-      <p className="text-muted mb-7.5">
-        Monitor real-time wallet events from all active wallets
-      </p>
+      <p className="text-muted mb-7.5">Monitor real-time wallet events from all active wallets</p>
 
       {/* Filter Controls */}
       <div className="card-primary mb-6">
@@ -123,8 +118,8 @@ export default function TxUpdateEvents() {
 
         {filteredEvents.length === 0 ? (
           <p className="text-muted text-sm">
-            No events yet. Events will appear here when wallets emit new-tx, update-tx, state, or
-            more-addresses-loaded events.
+            No events yet. Events will appear here when wallets emit new-tx, update-tx, state, or more-addresses-loaded
+            events.
           </p>
         ) : (
           <>
@@ -150,16 +145,12 @@ export default function TxUpdateEvents() {
                       >
                         <td className="py-2 px-3">
                           <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${getEventTypeColor(
-                              event.eventType
-                            )}`}
+                            className={`px-2 py-0.5 rounded text-xs font-medium ${getEventTypeColor(event.eventType)}`}
                           >
                             {event.eventType}
                           </span>
                         </td>
-                        <td className="py-2 px-3 text-xs">
-                          {dateFormatter.parseTimestamp(event.timestamp / 1000)}
-                        </td>
+                        <td className="py-2 px-3 text-xs">{dateFormatter.parseTimestamp(event.timestamp / 1000)}</td>
                         <td className="py-2 px-3 text-xs" title={event.walletId}>
                           {truncateHash(getWalletName(event.walletId))}
                         </td>

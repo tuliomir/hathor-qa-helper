@@ -21,9 +21,7 @@ export interface CleanupTokenInfo {
 
 /** Tokens that have melt authority and can be melted (excludes swap and fee tokens) */
 export function getMeltableTokens(tokens: CleanupTokenInfo[]): CleanupTokenInfo[] {
-  return tokens.filter(
-    (t) => !t.isSwapToken && !t.isFeeToken && t.hasMeltAuthority && t.meltableAmount > 0
-  );
+  return tokens.filter((t) => !t.isSwapToken && !t.isFeeToken && t.hasMeltAuthority && t.meltableAmount > 0);
 }
 
 /** Swap tokens that will be transferred to the funding wallet */

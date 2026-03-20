@@ -90,12 +90,7 @@ export default function ImageZoomPan({
       ctx.strokeStyle = '#007bff';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
-      ctx.strokeRect(
-        x + cropRect.x * zoom,
-        y + cropRect.y * zoom,
-        cropRect.width * zoom,
-        cropRect.height * zoom
-      );
+      ctx.strokeRect(x + cropRect.x * zoom, y + cropRect.y * zoom, cropRect.width * zoom, cropRect.height * zoom);
 
       // Semi-transparent overlay outside crop area
       ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
@@ -281,43 +276,24 @@ export default function ImageZoomPan({
 
       {/* Zoom controls */}
       <div className="flex gap-2 items-center flex-wrap">
-        <button
-          onClick={handleZoomOut}
-          disabled={isProcessing}
-          className="btn btn-secondary text-xs px-3 py-1"
-        >
+        <button onClick={handleZoomOut} disabled={isProcessing} className="btn btn-secondary text-xs px-3 py-1">
           Zoom Out
         </button>
-        <button
-          onClick={handleZoomIn}
-          disabled={isProcessing}
-          className="btn btn-secondary text-xs px-3 py-1"
-        >
+        <button onClick={handleZoomIn} disabled={isProcessing} className="btn btn-secondary text-xs px-3 py-1">
           Zoom In
         </button>
-        <button
-          onClick={handleResetView}
-          disabled={isProcessing}
-          className="btn btn-secondary text-xs px-3 py-1"
-        >
+        <button onClick={handleResetView} disabled={isProcessing} className="btn btn-secondary text-xs px-3 py-1">
           Reset View
         </button>
         {showCropControls && cropRect && (
-          <button
-            onClick={handleClearCrop}
-            disabled={isProcessing}
-            className="btn btn-warning text-xs px-3 py-1"
-          >
+          <button onClick={handleClearCrop} disabled={isProcessing} className="btn btn-warning text-xs px-3 py-1">
             Clear Crop
           </button>
         )}
       </div>
 
       {/* Canvas container */}
-      <div
-        ref={containerRef}
-        className="flex-1 border-2 border-gray-300 rounded overflow-hidden relative bg-gray-100"
-      >
+      <div ref={containerRef} className="flex-1 border-2 border-gray-300 rounded overflow-hidden relative bg-gray-100">
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
@@ -343,9 +319,7 @@ export default function ImageZoomPan({
         <button
           onClick={handleExtract}
           disabled={isProcessing}
-          className={`btn text-sm font-bold ${
-            isProcessing ? 'btn-secondary cursor-not-allowed' : 'btn-primary'
-          }`}
+          className={`btn text-sm font-bold ${isProcessing ? 'btn-secondary cursor-not-allowed' : 'btn-primary'}`}
         >
           {isProcessing ? (
             <>

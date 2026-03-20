@@ -6,18 +6,18 @@
 import { useCallback, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
-	startWallet,
-	stopWallet,
-	updateWalletInitDuration,
-	walletInstancesMap,
+  startWallet,
+  stopWallet,
+  updateWalletInitDuration,
+  walletInstancesMap,
 } from '../store/slices/walletStoreSlice';
 import {
-	addScanError,
-	addScanResult,
-	completeScan,
-	startScan,
-	type TokenBalance,
-	updateScanProgress,
+  addScanError,
+  addScanResult,
+  completeScan,
+  startScan,
+  type TokenBalance,
+  updateScanProgress,
 } from '../store/slices/walletScanSlice';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
@@ -72,8 +72,7 @@ export function useScanForLostFunds() {
         // Start wallet if not already running
         if (wasIdle) {
           // Track this wallet for stopping later (unless it's fund/test wallet)
-          const shouldStopAfter =
-            walletId !== fundingWalletId && walletId !== testWalletId;
+          const shouldStopAfter = walletId !== fundingWalletId && walletId !== testWalletId;
           if (shouldStopAfter) {
             walletsToStopRef.current.add(walletId);
           }
@@ -93,10 +92,7 @@ export function useScanForLostFunds() {
 
         // Fetch HTR balance
         const htrBalanceData = await instance.getBalance(NATIVE_TOKEN_UID);
-        const htrBalance =
-          htrBalanceData && htrBalanceData[0]
-            ? htrBalanceData[0].balance.unlocked.toString()
-            : '0';
+        const htrBalance = htrBalanceData && htrBalanceData[0] ? htrBalanceData[0].balance.unlocked.toString() : '0';
 
         // Fetch all token UIDs
         const tokenUids: string[] = await instance.getTokens();
@@ -108,10 +104,7 @@ export function useScanForLostFunds() {
 
           try {
             const balanceData = await instance.getBalance(uid);
-            const balance =
-              balanceData && balanceData[0]
-                ? balanceData[0].balance.unlocked
-                : 0n;
+            const balance = balanceData && balanceData[0] ? balanceData[0].balance.unlocked : 0n;
 
             // Only include tokens with balance > 0
             if (balance > 0n) {
@@ -138,8 +131,7 @@ export function useScanForLostFunds() {
 
         return true;
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         dispatch(addScanError({ walletId, error: errorMessage }));
         return false;
       }

@@ -13,8 +13,8 @@ import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import { safeStringify } from '../../utils/betHelpers';
 import { NETWORK_CONFIG } from '../../constants/network';
-import TxStatus from '../common/TxStatus.tsx'
-import { useAppSelector } from '../../store/hooks.ts'
+import TxStatus from '../common/TxStatus.tsx';
+import { useAppSelector } from '../../store/hooks.ts';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -59,7 +59,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
   const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [showRawResponse, setShowRawResponse] = useState(false);
-	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
+  const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
   const { showToast } = useToast();
 
   // Live request building - calculate request on every input change
@@ -69,7 +69,6 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-
     }
     if (initialResponse) {
       setResult(initialResponse);
@@ -126,10 +125,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
       console.log(`[RPC Request] Initialize Fee`, request);
       console.log(`[RPC Success] Initialize Fee`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Fee initialized successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Fee initialized successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -139,7 +135,6 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
       // Capture request params from error if available
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-  
       }
 
       console.error(`[RPC Error] Initialize Fee`, {
@@ -206,18 +201,11 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Initialize Fee</h3>
-            <p className="text-sm text-muted mt-1">
-              Initialize a new fee nano contract with an HTR deposit
-            </p>
+            <p className="text-sm text-muted mt-1">Initialize a new fee nano contract with an HTR deposit</p>
           </div>
           {isDryRun && (
             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-300">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 002-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
               </svg>
               DRY RUN
@@ -245,21 +233,14 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-primary transition-colors"
                   title="View blueprint in explorer"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
                     <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                   </svg>
                 </a>
               )}
             </div>
-            <p className="text-xs text-muted mt-1">
-              The blueprint ID for the fee nano contract
-            </p>
+            <p className="text-xs text-muted mt-1">The blueprint ID for the fee nano contract</p>
           </div>
 
           {/* Amount */}
@@ -272,9 +253,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
               placeholder="10"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              HTR amount to deposit for initialization
-            </p>
+            <p className="text-xs text-muted mt-1">HTR amount to deposit for initialization</p>
           </div>
 
           {/* Address Index */}
@@ -288,9 +267,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
               placeholder="0"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              Index of the address to use as the change address
-            </p>
+            <p className="text-xs text-muted mt-1">Index of the address to use as the change address</p>
           </div>
 
           {/* Push TX Checkbox */}
@@ -321,12 +298,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
         <div className="card-primary mb-7.5">
           <div className="bg-green-50 border border-green-300 rounded p-4">
             <div className="flex items-center gap-2 text-green-700 mb-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -367,7 +339,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {(result && !error) ? (
+              {result && !error ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -375,10 +347,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
               ) : null}
-              <CopyButton
-                text={result ? safeStringify(result, 2) as string : error || ''}
-                label="Copy response"
-              />
+              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
             </div>
           </div>
 
@@ -387,19 +356,14 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 002-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

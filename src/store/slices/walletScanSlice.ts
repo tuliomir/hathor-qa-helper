@@ -100,9 +100,7 @@ const walletScanSlice = createSlice({
       state.currentWalletName = currentWalletName;
       state.scannedCount = scannedCount;
       state.estimatedRemainingMs = estimatedRemainingMs;
-      state.progress = state.totalWallets > 0
-        ? Math.round((scannedCount / state.totalWallets) * 100)
-        : 0;
+      state.progress = state.totalWallets > 0 ? Math.round((scannedCount / state.totalWallets) * 100) : 0;
     },
 
     /**
@@ -181,17 +179,14 @@ export default walletScanSlice.reducer;
 export const selectWalletScanState = (state: RootState) => state.walletScan;
 export const selectScanResults = (state: RootState) => state.walletScan.results;
 export const selectIsScanning = (state: RootState) => state.walletScan.isScanning;
-export const selectScanProgress = createSelector(
-  [selectWalletScanState],
-  (scanState) => ({
-    isScanning: scanState.isScanning,
-    progress: scanState.progress,
-    currentWalletName: scanState.currentWalletName,
-    estimatedRemainingMs: scanState.estimatedRemainingMs,
-    scannedCount: scanState.scannedCount,
-    totalWallets: scanState.totalWallets,
-  })
-);
+export const selectScanProgress = createSelector([selectWalletScanState], (scanState) => ({
+  isScanning: scanState.isScanning,
+  progress: scanState.progress,
+  currentWalletName: scanState.currentWalletName,
+  estimatedRemainingMs: scanState.estimatedRemainingMs,
+  scannedCount: scanState.scannedCount,
+  totalWallets: scanState.totalWallets,
+}));
 export const selectFilterHasBalance = (state: RootState) => state.walletScan.filterHasBalance;
 export const selectSortByBalance = (state: RootState) => state.walletScan.sortByBalance;
 export const selectScanErrors = (state: RootState) => state.walletScan.errors;
@@ -203,10 +198,7 @@ export const selectScanErrors = (state: RootState) => state.walletScan.errors;
  */
 export function calculateTotalValue(result: WalletScanResult): bigint {
   const htrBalance = BigInt(result.htrBalance || '0');
-  const customTokenTotal = result.customTokenBalances.reduce(
-    (sum, token) => sum + BigInt(token.balance || '0'),
-    0n
-  );
+  const customTokenTotal = result.customTokenBalances.reduce((sum, token) => sum + BigInt(token.balance || '0'), 0n);
   // 100 custom token units = 1 HTR unit
-  return htrBalance + (customTokenTotal / 100n);
+  return htrBalance + customTokenTotal / 100n;
 }

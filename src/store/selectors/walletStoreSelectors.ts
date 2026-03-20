@@ -28,10 +28,7 @@ interface StoredWalletInfo {
  * @param instance - Wallet instance from external map
  * @returns WalletInfo with balance as BigInt
  */
-function convertWalletData(
-  walletData: StoredWalletInfo,
-  instance: WalletInfo['instance']
-): WalletInfo {
+function convertWalletData(walletData: StoredWalletInfo, instance: WalletInfo['instance']): WalletInfo {
   return {
     ...walletData,
     instance,
@@ -48,10 +45,7 @@ export const selectWalletById = (state: RootState, id: string): WalletInfo | und
   if (!walletInfo) return undefined;
 
   // Return the wallet info with instance from external map and balance as BigInt
-  return convertWalletData(
-    walletInfo,
-    walletInstancesMap.get(id) || null
-  );
+  return convertWalletData(walletInfo, walletInstancesMap.get(id) || null);
 };
 
 /**
@@ -62,34 +56,19 @@ const selectWalletsRaw = (state: RootState) => state.walletStore.wallets;
 /**
  * Get all wallets as an array (memoized)
  */
-export const selectAllWallets = createSelector(
-  [selectWalletsRaw],
-  (wallets): WalletInfo[] => {
-    return Object.values(wallets).map((walletInfo) =>
-      convertWalletData(
-        walletInfo,
-        walletInstancesMap.get(walletInfo.metadata.id) || null
-      )
-    );
-  }
-);
+export const selectAllWallets = createSelector([selectWalletsRaw], (wallets): WalletInfo[] => {
+  return Object.values(wallets).map((walletInfo) =>
+    convertWalletData(walletInfo, walletInstancesMap.get(walletInfo.metadata.id) || null)
+  );
+});
 
 /**
  * Get wallets as a Map (for compatibility with old API) (memoized)
  */
-export const selectWalletsMap = createSelector(
-  [selectWalletsRaw],
-  (wallets): Map<string, WalletInfo> => {
-    const map = new Map<string, WalletInfo>();
-    Object.entries(wallets).forEach(([id, walletInfo]) => {
-      map.set(
-        id,
-        convertWalletData(
-          walletInfo,
-          walletInstancesMap.get(id) || null
-        )
-      );
-    });
-    return map;
-  }
-);
+export const selectWalletsMap = createSelector([selectWalletsRaw], (wallets): Map<string, WalletInfo> => {
+  const map = new Map<string, WalletInfo>();
+  Object.entries(wallets).forEach(([id, walletInfo]) => {
+    map.set(id, convertWalletData(walletInfo, walletInstancesMap.get(id) || null));
+  });
+  return map;
+});

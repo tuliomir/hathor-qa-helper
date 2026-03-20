@@ -75,9 +75,7 @@ export default function AddressQRValidator() {
    */
   const cleanAddress = (address: string): string => {
     const hathorPrefix = 'hathor:';
-    const cleaned = address.startsWith(hathorPrefix)
-      ? address.substring(hathorPrefix.length)
-      : address.trim();
+    const cleaned = address.startsWith(hathorPrefix) ? address.substring(hathorPrefix.length) : address.trim();
     return cleaned;
   };
 
@@ -105,7 +103,7 @@ export default function AddressQRValidator() {
     if (filename) {
       // Extract address from filename (remove extension)
       const filenameWithoutExt = filename.replace(/\.[^.]+$/, '');
-      filenameMatch = (filenameWithoutExt.indexOf(address) > -1);
+      filenameMatch = filenameWithoutExt.indexOf(address) > -1;
     }
 
     // Try to find which wallet this address belongs to
@@ -147,11 +145,7 @@ export default function AddressQRValidator() {
   /**
    * Process QR code from image data URL
    */
-  const processQRFromImage = async (
-    imageDataUrl: string,
-    source: 'qr-paste' | 'qr-file',
-    filename?: string
-  ) => {
+  const processQRFromImage = async (imageDataUrl: string, source: 'qr-paste' | 'qr-file', filename?: string) => {
     setIsProcessingQR(true);
     setValidationResult(null);
 
@@ -299,7 +293,9 @@ export default function AddressQRValidator() {
             className="p-8 border-2 border-dashed border-gray-300 rounded-lg text-center bg-gray-50 hover:bg-gray-100 transition-colors"
           >
             <p className="text-muted text-sm m-0">
-              Take a screenshot of the QR code and press <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+V</kbd> / <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Cmd+V</kbd> anywhere on this page
+              Take a screenshot of the QR code and press{' '}
+              <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+V</kbd> /{' '}
+              <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Cmd+V</kbd> anywhere on this page
             </p>
             {pastedImageUrl && (
               <div className="mt-4">
@@ -316,17 +312,8 @@ export default function AddressQRValidator() {
           <p className="text-xs text-muted mb-2">
             Upload a QR code image file. The filename will be compared with the address content.
           </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="btn btn-secondary px-4 py-2"
-          >
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary px-4 py-2">
             Choose File...
           </button>
         </div>
@@ -356,9 +343,7 @@ export default function AddressQRValidator() {
               <div className="mb-4">
                 <p className="text-xs text-muted mb-1">Address:</p>
                 <div className="flex items-center gap-2">
-                  <code className="text-xs p-2 bg-gray-100 rounded break-all flex-1">
-                    {validationResult.address}
-                  </code>
+                  <code className="text-xs p-2 bg-gray-100 rounded break-all flex-1">{validationResult.address}</code>
                   <CopyButton text={validationResult.address} label="" />
                 </div>
               </div>
@@ -374,7 +359,10 @@ export default function AddressQRValidator() {
                     <p className="text-sm text-green-800 mt-1 mb-0">
                       Belongs to <strong>{validationResult.walletName}</strong>
                       {validationResult.addressIndex !== undefined && (
-                        <> at index <strong>{validationResult.addressIndex}</strong></>
+                        <>
+                          {' '}
+                          at index <strong>{validationResult.addressIndex}</strong>
+                        </>
                       )}
                     </p>
                   </div>
@@ -398,9 +386,7 @@ export default function AddressQRValidator() {
             {validationResult.filename && (
               <div className="mt-4">
                 <p className="text-xs text-muted mb-1">Filename:</p>
-                <code className="text-xs p-2 bg-gray-100 rounded block mb-2">
-                  {validationResult.filename}
-                </code>
+                <code className="text-xs p-2 bg-gray-100 rounded block mb-2">{validationResult.filename}</code>
 
                 {validationResult.filenameMatch !== undefined && (
                   <div

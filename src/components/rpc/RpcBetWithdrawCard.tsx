@@ -12,8 +12,8 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import { safeStringify } from '../../utils/betHelpers';
-import { useAppSelector } from '../../store/hooks.ts'
-import TxStatus from '../common/TxStatus.tsx'
+import { useAppSelector } from '../../store/hooks.ts';
+import TxStatus from '../common/TxStatus.tsx';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -67,7 +67,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
   const [showRawResponse, setShowRawResponse] = useState(false);
   const { showToast } = useToast();
-	const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
+  const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId ?? undefined);
 
   // Live request building
   const [liveRequest, setLiveRequest] = useState<{ method: string; params: unknown } | null>(null);
@@ -76,7 +76,6 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-
     }
     if (initialResponse) {
       setResultData(initialResponse);
@@ -148,10 +147,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
       console.log(`[RPC Request] Withdraw Prize`, request);
       console.log(`[RPC Success] Withdraw Prize`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Prize withdrawn successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Prize withdrawn successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -160,7 +156,6 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
 
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-  
       }
 
       console.error(`[RPC Error] Withdraw Prize`, {
@@ -225,18 +220,11 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Withdraw Prize</h3>
-            <p className="text-sm text-muted mt-1">
-              Withdraw your prize from a bet nano contract
-            </p>
+            <p className="text-sm text-muted mt-1">Withdraw your prize from a bet nano contract</p>
           </div>
           {isDryRun && (
             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-300">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
               </svg>
               DRY RUN
@@ -262,12 +250,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
                 className="btn-secondary px-4 flex items-center gap-2"
                 title="Select latest initialized nano contract"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
                     d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
@@ -293,9 +276,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
               placeholder="0"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              Index of the address to use for withdrawal
-            </p>
+            <p className="text-xs text-muted mt-1">Index of the address to use for withdrawal</p>
           </div>
 
           {/* Amount */}
@@ -308,9 +289,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
               placeholder="E.g., 100"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              Amount to withdraw (in token's smallest unit)
-            </p>
+            <p className="text-xs text-muted mt-1">Amount to withdraw (in token's smallest unit)</p>
           </div>
 
           {/* Token */}
@@ -323,9 +302,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
               placeholder="Enter token ID (e.g., 00 for HTR)"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              Token used for the bet (default: 00 for HTR)
-            </p>
+            <p className="text-xs text-muted mt-1">Token used for the bet (default: 00 for HTR)</p>
           </div>
 
           {/* Push TX Checkbox */}
@@ -356,12 +333,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
         <div className="card-primary mb-7.5">
           <div className="bg-green-50 border border-green-300 rounded p-4">
             <div className="flex items-center gap-2 text-green-700 mb-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -374,8 +346,14 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs text-muted font-medium">Transaction Hash</span>
                 <div className="flex items-center gap-1">
-                  <CopyButton text={(resultData as { response: { hash: string } }).response.hash} label="Copy TX hash" />
-	                <TxStatus hash={(resultData as { response: { hash: string } }).response.hash} walletId={testWalletId} />
+                  <CopyButton
+                    text={(resultData as { response: { hash: string } }).response.hash}
+                    label="Copy TX hash"
+                  />
+                  <TxStatus
+                    hash={(resultData as { response: { hash: string } }).response.hash}
+                    walletId={testWalletId}
+                  />
                   <ExplorerLink hash={(resultData as { response: { hash: string } }).response.hash} />
                 </div>
               </div>
@@ -412,20 +390,14 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
                     <span className="text-sm font-semibold text-yellow-800">
                       Withdrawal Address (from index {addressIndex})
                     </span>
-                    {withdrawAddress && (
-                      <CopyButton text={withdrawAddress} label="Copy" />
-                    )}
+                    {withdrawAddress && <CopyButton text={withdrawAddress} label="Copy" />}
                   </div>
                 </div>
                 <div className="px-3 py-2">
                   {withdrawAddress ? (
-                    <span className="text-sm font-mono text-yellow-900 break-all">
-                      {withdrawAddress}
-                    </span>
+                    <span className="text-sm font-mono text-yellow-900 break-all">{withdrawAddress}</span>
                   ) : (
-                    <span className="text-sm text-muted italic">
-                      Deriving withdrawal address from wallet...
-                    </span>
+                    <span className="text-sm text-muted italic">Deriving withdrawal address from wallet...</span>
                   )}
                 </div>
               </div>
@@ -449,7 +421,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {(resultData && !error) ? (
+              {resultData && !error ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -458,7 +430,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
                 </button>
               ) : null}
               <CopyButton
-                text={resultData ? safeStringify(resultData, 2) as string : error || ''}
+                text={resultData ? (safeStringify(resultData, 2) as string) : error || ''}
                 label="Copy response"
               />
             </div>
@@ -469,19 +441,14 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
               {isDryRun && resultData === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

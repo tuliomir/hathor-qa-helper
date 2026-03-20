@@ -65,7 +65,9 @@ export default function MultisigWalletManagement() {
         try {
           const val = BigInt(p.balance);
           if (val > maxRaw) maxRaw = val;
-        } catch { /* skip invalid */ }
+        } catch {
+          /* skip invalid */
+        }
       }
     }
     if (maxRaw === 0n) return '';
@@ -201,7 +203,9 @@ export default function MultisigWalletManagement() {
     const newNetwork = network === 'TESTNET' ? 'MAINNET' : 'TESTNET';
 
     // Stop all running wallets first
-    const runningParticipants = participants.filter((p) => p.status === 'ready' || p.status === 'connecting' || p.status === 'syncing');
+    const runningParticipants = participants.filter(
+      (p) => p.status === 'ready' || p.status === 'connecting' || p.status === 'syncing'
+    );
     for (const p of runningParticipants) {
       try {
         await dispatch(stopMultisigParticipant(p.id)).unwrap();
@@ -254,8 +258,7 @@ export default function MultisigWalletManagement() {
     return addr.slice(0, start) + '...' + addr.slice(-end);
   };
 
-  const isSignerSelected = (participantId: string) =>
-    transaction.selectedSigners.includes(participantId);
+  const isSignerSelected = (participantId: string) => transaction.selectedSigners.includes(participantId);
 
   const hasSignedTransaction = (participantId: string) =>
     transaction.collectedSignatures.some((s) => s.participantId === participantId);
@@ -272,8 +275,7 @@ export default function MultisigWalletManagement() {
     transaction.selectedSigners.length >= MULTISIG_MIN_SIGNATURES;
 
   const canAssembleAndSend =
-    transaction.step === 'signing' &&
-    transaction.collectedSignatures.length >= MULTISIG_MIN_SIGNATURES;
+    transaction.step === 'signing' && transaction.collectedSignatures.length >= MULTISIG_MIN_SIGNATURES;
 
   const explorerUrl = NETWORK_CONFIG[network]?.explorerUrl || '';
 
@@ -281,8 +283,7 @@ export default function MultisigWalletManagement() {
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">MultiSig Wallet Management</h1>
       <p className="text-muted mb-7.5">
-        Manage multisig participant wallets (2-of-5 configuration) and send transactions requiring
-        multiple signatures.
+        Manage multisig participant wallets (2-of-5 configuration) and send transactions requiring multiple signatures.
       </p>
 
       {/* Configuration Info */}
@@ -306,17 +307,21 @@ export default function MultisigWalletManagement() {
             <div>
               <p className="font-bold text-blue-900 m-0">MultiSig Configuration</p>
               <p className="text-sm text-blue-800 mt-1 mb-0">
-                This is a <strong>{MULTISIG_MIN_SIGNATURES}-of-{MULTISIG_CONFIG.seeds.length}</strong>{' '}
-                multisig wallet. At least {MULTISIG_MIN_SIGNATURES} participants must sign each
-                transaction.
+                This is a{' '}
+                <strong>
+                  {MULTISIG_MIN_SIGNATURES}-of-{MULTISIG_CONFIG.seeds.length}
+                </strong>{' '}
+                multisig wallet. At least {MULTISIG_MIN_SIGNATURES} participants must sign each transaction.
               </p>
             </div>
           </div>
           {/* Network Toggle */}
           <div className="flex flex-col items-end gap-1">
-            <span className={`text-xs font-bold px-2 py-1 rounded ${
-              network === 'TESTNET' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
-            }`}>
+            <span
+              className={`text-xs font-bold px-2 py-1 rounded ${
+                network === 'TESTNET' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
+              }`}
+            >
               {network}
             </span>
             <button
@@ -348,10 +353,7 @@ export default function MultisigWalletManagement() {
             </thead>
             <tbody>
               {participants.map((participant) => (
-                <tr
-                  key={participant.id}
-                  className={`table-row ${getRowBackgroundColor(participant.status)}`}
-                >
+                <tr key={participant.id} className={`table-row ${getRowBackgroundColor(participant.status)}`}>
                   {/* Sign Checkbox */}
                   <td className="p-3 text-center">
                     <input
@@ -371,9 +373,7 @@ export default function MultisigWalletManagement() {
                   {/* Name */}
                   <td className="p-3">
                     <strong>{participant.friendlyName}</strong>
-                    <span className="text-xs text-muted ml-2">
-                      (Seed #{participant.seedIndex + 1})
-                    </span>
+                    <span className="text-xs text-muted ml-2">(Seed #{participant.seedIndex + 1})</span>
                   </td>
 
                   {/* Status */}
@@ -381,24 +381,19 @@ export default function MultisigWalletManagement() {
                     <div className="flex items-center gap-2">
                       {participant.status === 'ready' && <MdCheckCircle />}
                       {participant.status === 'error' && <MdError />}
-                      {(participant.status === 'connecting' ||
-                        participant.status === 'syncing') && (
+                      {(participant.status === 'connecting' || participant.status === 'syncing') && (
                         <MdPending className="animate-spin" />
                       )}
                       {participant.status}
                     </div>
-                    {participant.error && (
-                      <div className="text-xs text-danger mt-1">{participant.error}</div>
-                    )}
+                    {participant.error && <div className="text-xs text-danger mt-1">{participant.error}</div>}
                   </td>
 
                   {/* First Address */}
                   <td className="p-3">
                     {participant.firstAddress ? (
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs">
-                          {truncateAddress(participant.firstAddress)}
-                        </span>
+                        <span className="font-mono text-xs">{truncateAddress(participant.firstAddress)}</span>
                         <CopyButton
                           text={participant.firstAddress}
                           label={`Copy address for ${participant.friendlyName}`}
@@ -455,10 +450,7 @@ export default function MultisigWalletManagement() {
                           </button>
                         </>
                       ) : (
-                        <button
-                          disabled
-                          className="btn-secondary btn-square text-xs cursor-not-allowed opacity-60 p-2"
-                        >
+                        <button disabled className="btn-secondary btn-square text-xs cursor-not-allowed opacity-60 p-2">
                           <MdPending className="animate-spin" />
                         </button>
                       )}
@@ -474,9 +466,7 @@ export default function MultisigWalletManagement() {
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => {
-              participants
-                .filter((p) => p.status === 'idle')
-                .forEach((p) => handleStartParticipant(p.id));
+              participants.filter((p) => p.status === 'idle').forEach((p) => handleStartParticipant(p.id));
             }}
             disabled={participants.every((p) => p.status !== 'idle')}
             className="btn-primary text-sm"
@@ -485,9 +475,7 @@ export default function MultisigWalletManagement() {
           </button>
           <button
             onClick={() => {
-              participants
-                .filter((p) => p.status === 'ready')
-                .forEach((p) => handleStopParticipant(p.id));
+              participants.filter((p) => p.status === 'ready').forEach((p) => handleStopParticipant(p.id));
             }}
             disabled={participants.every((p) => p.status !== 'ready')}
             className="btn-secondary text-sm"
@@ -505,9 +493,8 @@ export default function MultisigWalletManagement() {
         {readyParticipants.length < MULTISIG_MIN_SIGNATURES && (
           <div className="mb-4 p-3 bg-yellow-50 border border-warning rounded-lg">
             <p className="text-warning text-sm m-0">
-              <strong>Note:</strong> At least {MULTISIG_MIN_SIGNATURES} participant wallets must be
-              started before sending transactions. Currently{' '}
-              {readyParticipants.length} ready.
+              <strong>Note:</strong> At least {MULTISIG_MIN_SIGNATURES} participant wallets must be started before
+              sending transactions. Currently {readyParticipants.length} ready.
             </p>
           </div>
         )}
@@ -579,8 +566,7 @@ export default function MultisigWalletManagement() {
         {/* Selected Signers Info */}
         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
           <div className="font-bold mb-2">
-            Selected Signers: {transaction.selectedSigners.length} /{' '}
-            {MULTISIG_MIN_SIGNATURES} required
+            Selected Signers: {transaction.selectedSigners.length} / {MULTISIG_MIN_SIGNATURES} required
           </div>
           {transaction.selectedSigners.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -601,9 +587,7 @@ export default function MultisigWalletManagement() {
               })}
             </div>
           ) : (
-            <p className="text-muted text-sm m-0">
-              Select participants from the table above to sign the transaction.
-            </p>
+            <p className="text-muted text-sm m-0">Select participants from the table above to sign the transaction.</p>
           )}
         </div>
 
@@ -627,9 +611,7 @@ export default function MultisigWalletManagement() {
               <span className="font-bold">Transaction Hex:</span>
               <CopyButton text={transaction.txHex} label="Copy transaction hex" />
             </div>
-            <div className="font-mono text-xs break-all max-h-20 overflow-y-auto">
-              {transaction.txHex}
-            </div>
+            <div className="font-mono text-xs break-all max-h-20 overflow-y-auto">{transaction.txHex}</div>
           </div>
         )}
 
@@ -637,8 +619,7 @@ export default function MultisigWalletManagement() {
         {transaction.step === 'signing' && (
           <div className="mb-4">
             <h3 className="font-bold mb-3">
-              Collect Signatures ({transaction.collectedSignatures.length} /{' '}
-              {MULTISIG_MIN_SIGNATURES} required)
+              Collect Signatures ({transaction.collectedSignatures.length} / {MULTISIG_MIN_SIGNATURES} required)
             </h3>
             <div className="space-y-2">
               {transaction.selectedSigners.map((signerId) => {
@@ -648,10 +629,7 @@ export default function MultisigWalletManagement() {
                 const isReady = signer?.status === 'ready';
 
                 return (
-                  <div
-                    key={signerId}
-                    className="flex items-center justify-between p-2 bg-white border rounded"
-                  >
+                  <div key={signerId} className="flex items-center justify-between p-2 bg-white border rounded">
                     <span className="font-medium">{signer?.friendlyName || signerId}</span>
                     {hasSigned ? (
                       <span className="text-success flex items-center gap-1">
@@ -743,9 +721,7 @@ export default function MultisigWalletManagement() {
         )}
 
         {/* Reset Button */}
-        {(transaction.step === 'complete' ||
-          transaction.step === 'error' ||
-          transaction.step === 'signing') && (
+        {(transaction.step === 'complete' || transaction.step === 'error' || transaction.step === 'signing') && (
           <button onClick={handleResetTransaction} className="btn-secondary w-full text-sm">
             Reset / New Transaction
           </button>
@@ -774,9 +750,7 @@ export default function MultisigWalletManagement() {
                 <QRCode value={qrAddress} size={180} />
               </div>
             </div>
-            <div className="font-mono text-xs break-all bg-gray-100 p-2 rounded mb-4">
-              {qrAddress}
-            </div>
+            <div className="font-mono text-xs break-all bg-gray-100 p-2 rounded mb-4">{qrAddress}</div>
             <div className="flex justify-center gap-2">
               <CopyButton text={qrAddress} label="Copy address" />
               <button className="btn btn-ghost btn-sm" onClick={() => setQrAddress(null)}>

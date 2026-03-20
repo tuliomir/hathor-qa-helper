@@ -11,12 +11,7 @@ import {
   setCurrentLocation,
 } from '../../store/slices/mobileQAProgressSlice';
 import { getSection, getStep, getNextStep, getPreviousStep } from '../../config/mobileQA';
-import {
-  MdCheckCircle,
-  MdNavigateNext,
-  MdNavigateBefore,
-  MdRadioButtonUnchecked,
-} from 'react-icons/md';
+import { MdCheckCircle, MdNavigateNext, MdNavigateBefore, MdRadioButtonUnchecked } from 'react-icons/md';
 
 /**
  * Simple markdown-like rendering for instructions
@@ -140,9 +135,7 @@ export default function MobileQAStepContent() {
           {/* Toggle Complete Button */}
           <button
             onClick={handleToggleComplete}
-            className={`btn flex items-center gap-2 ${
-              isCompleted ? 'btn-warning' : 'btn-success'
-            }`}
+            className={`btn flex items-center gap-2 ${isCompleted ? 'btn-warning' : 'btn-success'}`}
           >
             {isCompleted ? (
               <>

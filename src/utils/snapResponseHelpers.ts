@@ -11,7 +11,11 @@
  */
 export function parseSnapResponse(data: unknown): unknown {
   if (typeof data === 'string') {
-    try { return JSON.parse(data); } catch { return data; }
+    try {
+      return JSON.parse(data);
+    } catch {
+      return data;
+    }
   }
   return data;
 }
@@ -60,7 +64,11 @@ export function safeDisplayValue(value: unknown, fallback = 'N/A'): string {
   if (typeof value === 'bigint') return value.toString();
   if (Array.isArray(value)) return JSON.stringify(value);
   if (typeof value === 'object') {
-    try { return JSON.stringify(value, null, 2); } catch { return fallback; }
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return fallback;
+    }
   }
   return String(value);
 }

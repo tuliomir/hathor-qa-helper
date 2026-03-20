@@ -6,15 +6,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-	MdCamera,
-	MdDelete,
-	MdEdit,
-	MdPlayArrow,
-	MdQrCode,
-	MdStar,
-	MdStarBorder,
-	MdStop,
-	MdViewList
+  MdCamera,
+  MdDelete,
+  MdEdit,
+  MdPlayArrow,
+  MdQrCode,
+  MdStar,
+  MdStarBorder,
+  MdStop,
+  MdViewList,
 } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useScanForLostFunds } from '../../hooks/useScanForLostFunds';
@@ -22,12 +22,12 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
 import { setFundingWallet, setTestWallet } from '../../store/slices/walletSelectionSlice';
 import {
-	selectFilterHasBalance,
-	selectScanProgress,
-	selectScanResults,
-	selectSortByBalance,
-	toggleFilterHasBalance,
-	toggleSortByBalance,
+  selectFilterHasBalance,
+  selectScanProgress,
+  selectScanResults,
+  selectSortByBalance,
+  toggleFilterHasBalance,
+  toggleSortByBalance,
 } from '../../store/slices/walletScanSlice';
 import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
@@ -120,13 +120,13 @@ export default function WalletInitialization() {
       const startupPromises: Promise<void>[] = [];
 
       if (defaultFundWalletId) {
-        const wallet = allWallets.find(w => w.metadata.id === defaultFundWalletId);
+        const wallet = allWallets.find((w) => w.metadata.id === defaultFundWalletId);
         if (wallet && wallet.status === 'idle') {
           startupPromises.push(handleStartWallet(defaultFundWalletId));
         }
       }
       if (defaultTestWalletId && defaultTestWalletId !== defaultFundWalletId) {
-        const wallet = allWallets.find(w => w.metadata.id === defaultTestWalletId);
+        const wallet = allWallets.find((w) => w.metadata.id === defaultTestWalletId);
         if (wallet && wallet.status === 'idle') {
           startupPromises.push(handleStartWallet(defaultTestWalletId));
         }
@@ -358,13 +358,13 @@ export default function WalletInitialization() {
     return words.slice(0, n).join(' ') + '...';
   };
 
-	/**
-	 * Truncate an address for display, keeping start and end for recognizability
-	 * @param addr
-	 * @param start
-	 * @param end
-	 * @deprecated Use the function from utils instead
-	 */
+  /**
+   * Truncate an address for display, keeping start and end for recognizability
+   * @param addr
+   * @param start
+   * @param end
+   * @deprecated Use the function from utils instead
+   */
   const truncateAddress = (addr: string, start = 3, end = 8) => {
     if (!addr) return '';
     if (addr.length <= start + end + 3) return addr;
@@ -373,21 +373,29 @@ export default function WalletInitialization() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ready': return 'text-success';
-      case 'error': return 'text-danger';
+      case 'ready':
+        return 'text-success';
+      case 'error':
+        return 'text-danger';
       case 'connecting':
-      case 'syncing': return 'text-warning';
-      default: return 'text-muted';
+      case 'syncing':
+        return 'text-warning';
+      default:
+        return 'text-muted';
     }
   };
 
   const getRowBackgroundColor = (status: string) => {
     switch (status) {
-      case 'ready': return 'bg-green-50';
-      case 'error': return 'bg-red-50';
+      case 'ready':
+        return 'bg-green-50';
+      case 'error':
+        return 'bg-red-50';
       case 'connecting':
-      case 'syncing': return 'bg-yellow-50';
-      default: return '';
+      case 'syncing':
+        return 'bg-yellow-50';
+      default:
+        return '';
     }
   };
 
@@ -461,10 +469,7 @@ export default function WalletInitialization() {
             )}
           </h2>
           {hasMoreWallets && (
-            <button
-              onClick={() => setShowWalletBrowser(true)}
-              className="btn-primary flex items-center gap-2"
-            >
+            <button onClick={() => setShowWalletBrowser(true)} className="btn-primary flex items-center gap-2">
               <MdViewList size={18} />
               View All Wallets
             </button>
@@ -508,7 +513,11 @@ export default function WalletInitialization() {
                         <span className="break-words max-w-[20rem] block font-mono">
                           {firstNWords(wallet.metadata.seedWords, 3)}
                         </span>
-                        <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} className="text-muted" />
+                        <CopyButton
+                          text={wallet.metadata.seedWords}
+                          label={`Copy seed for ${wallet.metadata.friendlyName}`}
+                          className="text-muted"
+                        />
                         <button
                           onClick={() => setSeedModalWalletId(wallet.metadata.id)}
                           title="Show QR Code"
@@ -537,9 +546,7 @@ export default function WalletInitialization() {
                           Balance: {formatBalance(wallet.balance ?? 0n)} HTR
                         </div>
                       )}
-                      {wallet.error && (
-                        <div className="text-xs text-danger mt-1">{wallet.error}</div>
-                      )}
+                      {wallet.error && <div className="text-xs text-danger mt-1">{wallet.error}</div>}
                     </td>
                     <td className="p-3 font-mono text-2.5xs">
                       {(() => {
@@ -551,7 +558,11 @@ export default function WalletInitialization() {
                           return (
                             <div className={`flex items-center gap-2 ${isStoredOnly ? 'text-muted' : 'text-success'}`}>
                               <span className="break-all text-xs">{truncateAddress(displayAddress)}</span>
-                              <CopyButton text={displayAddress} label={`Copy address for ${wallet.metadata.friendlyName}`} className="text-muted" />
+                              <CopyButton
+                                text={displayAddress}
+                                label={`Copy address for ${wallet.metadata.friendlyName}`}
+                                className="text-muted"
+                              />
                             </div>
                           );
                         }
@@ -566,7 +577,13 @@ export default function WalletInitialization() {
                               {/* Keep Save text during edit for clarity */}
                               Save
                             </button>
-                            <button onClick={() => { setEditingId(null); setEditingName(''); }} className="btn-secondary text-xs">
+                            <button
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditingName('');
+                              }}
+                              className="btn-secondary text-xs"
+                            >
                               Cancel
                             </button>
                           </>
@@ -593,7 +610,11 @@ export default function WalletInitialization() {
                             ) : (
                               <button
                                 onClick={() => {
-                                  if (window.confirm(`Force stop "${wallet.metadata.friendlyName}"? It appears stuck in ${wallet.status} state.`)) {
+                                  if (
+                                    window.confirm(
+                                      `Force stop "${wallet.metadata.friendlyName}"? It appears stuck in ${wallet.status} state.`
+                                    )
+                                  ) {
                                     handleStopWallet(wallet.metadata.id);
                                   }
                                 }}
@@ -658,7 +679,9 @@ export default function WalletInitialization() {
             </Select>
             {fundingWalletId && (
               <button
-                onClick={() => handleSetDefaultFundWallet(defaultFundWalletId === fundingWalletId ? null : fundingWalletId)}
+                onClick={() =>
+                  handleSetDefaultFundWallet(defaultFundWalletId === fundingWalletId ? null : fundingWalletId)
+                }
                 className={`btn text-xs flex items-center gap-1 w-full ${
                   defaultFundWalletId === fundingWalletId ? 'btn-warning' : 'btn-secondary'
                 }`}
@@ -672,9 +695,7 @@ export default function WalletInitialization() {
           {/* Test Wallet Selection */}
           <div className="card-primary">
             <h2 className="text-xl font-bold mb-4">Select Wallet Being Tested</h2>
-            <p className="text-muted text-sm mb-4">
-              Choose a wallet to test. Sorted by lowest balance.
-            </p>
+            <p className="text-muted text-sm mb-4">Choose a wallet to test. Sorted by lowest balance.</p>
             <Select
               id="test-wallet-select"
               value={testWalletId || ''}
@@ -733,7 +754,8 @@ export default function WalletInitialization() {
             </label>
             <button
               onClick={() => setShowCamera(true)}
-              className="btn bg-info text-white hover:bg-cyan-600 text-xs flex items-center gap-1">
+              className="btn bg-info text-white hover:bg-cyan-600 text-xs flex items-center gap-1"
+            >
               <MdCamera />
               Open Camera
             </button>
@@ -746,7 +768,11 @@ export default function WalletInitialization() {
             onPaste={handlePaste}
             placeholder="Enter your 24-word seed phrase separated by spaces, or paste an image with seed words..."
             rows={3}
-            className={validationError ? 'input-error font-mono resize-y whitespace-pre-wrap break-words' : 'input font-mono resize-y whitespace-pre-wrap break-words'}
+            className={
+              validationError
+                ? 'input-error font-mono resize-y whitespace-pre-wrap break-words'
+                : 'input font-mono resize-y whitespace-pre-wrap break-words'
+            }
             style={{ minHeight: '4.5rem' }}
           />
           <p className="text-muted text-xs mt-2 mb-0">
@@ -827,11 +853,7 @@ export default function WalletInitialization() {
           <label htmlFor="network-select" className="block mb-1.5 font-bold">
             Network:
           </label>
-          <Select
-            id="network-select"
-            value={network}
-            onChange={handleNetworkChange}
-          >
+          <Select id="network-select" value={network} onChange={handleNetworkChange}>
             <option value="TESTNET">Testnet</option>
             <option value="MAINNET">Mainnet</option>
           </Select>
@@ -848,24 +870,41 @@ export default function WalletInitialization() {
 
       <div className="card-primary mb-7.5">
         <ul>
-          <li>Link to the official docs: <a href="https://docs.hathor.network/" target="_blank">Official Docs</a></li>
+          <li>
+            Link to the official docs:{' '}
+            <a href="https://docs.hathor.network/" target="_blank">
+              Official Docs
+            </a>
+          </li>
         </ul>
       </div>
 
-      {showCamera && <CameraCapture onCapture={(url) => { setShowCamera(false); setPastedImageUrl(url); }} onCancel={() => setShowCamera(false)} />}
-      {pastedImageUrl && <ImagePreview imageDataUrl={pastedImageUrl} onExtractText={handleExtractText} onCancel={() => setPastedImageUrl(null)} isProcessing={isProcessingOcr} />}
-      {showOcrReferenceModal && ocrSourceImageUrl && (
-        <OCRReferenceModal
-          imageDataUrl={ocrSourceImageUrl}
-          onClose={() => setShowOcrReferenceModal(false)}
+      {showCamera && (
+        <CameraCapture
+          onCapture={(url) => {
+            setShowCamera(false);
+            setPastedImageUrl(url);
+          }}
+          onCancel={() => setShowCamera(false)}
         />
+      )}
+      {pastedImageUrl && (
+        <ImagePreview
+          imageDataUrl={pastedImageUrl}
+          onExtractText={handleExtractText}
+          onCancel={() => setPastedImageUrl(null)}
+          isProcessing={isProcessingOcr}
+        />
+      )}
+      {showOcrReferenceModal && ocrSourceImageUrl && (
+        <OCRReferenceModal imageDataUrl={ocrSourceImageUrl} onClose={() => setShowOcrReferenceModal(false)} />
       )}
       {seedModalWalletId && (
         <SeedPhraseModal
           isOpen={!!seedModalWalletId}
           onClose={() => setSeedModalWalletId(null)}
-          seedPhrase={wallets.find(w => w.metadata.id === seedModalWalletId)?.metadata.seedWords || ''}
-          walletName={wallets.find(w => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
+          seedPhrase={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.seedWords || ''}
+          walletName={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
         />
       )}
       <WalletBrowserModal

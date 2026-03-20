@@ -10,8 +10,7 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 
 export const SnapCreateNcTokenStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('createNcToken');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('createNcToken');
 
   // NC params
   const [method, setMethod] = useState('initialize');
@@ -52,10 +51,8 @@ export const SnapCreateNcTokenStage: React.FC = () => {
     };
     if (tokenAddress.trim()) createTokenOptions.address = tokenAddress;
     if (changeAddress.trim()) createTokenOptions.change_address = changeAddress;
-    if (createMint && mintAddress.trim())
-      createTokenOptions.mint_authority_address = mintAddress;
-    if (createMint)
-      createTokenOptions.allow_external_mint_authority_address = allowExternalMint;
+    if (createMint && mintAddress.trim()) createTokenOptions.mint_authority_address = mintAddress;
+    if (createMint) createTokenOptions.allow_external_mint_authority_address = allowExternalMint;
 
     const data: Record<string, unknown> = {
       blueprint_id: blueprintId || '<blueprint_id>',
@@ -69,25 +66,31 @@ export const SnapCreateNcTokenStage: React.FC = () => {
 
     return p;
   }, [
-    method, blueprintId, argsText, tokenName, tokenSymbol, tokenAmount,
-    tokenAddress, changeAddress, contractPaysDeposit, createMint,
-    mintAddress, allowExternalMint, createMelt, maxFee, contractPaysFees,
+    method,
+    blueprintId,
+    argsText,
+    tokenName,
+    tokenSymbol,
+    tokenAmount,
+    tokenAddress,
+    changeAddress,
+    contractPaysDeposit,
+    createMint,
+    mintAddress,
+    allowExternalMint,
+    createMelt,
+    maxFee,
+    contractPaysFees,
   ]);
 
-  const liveRequest = useMemo(
-    () => ({ method: 'htr_createNanoContractCreateTokenTx', params }),
-    [params],
-  );
+  const liveRequest = useMemo(() => ({ method: 'htr_createNanoContractCreateTokenTx', params }), [params]);
 
-  const handleExecute = () =>
-    execute((h) => h.createNanoContractCreateTokenTx(params));
+  const handleExecute = () => execute((h) => h.createNanoContractCreateTokenTx(params));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">NC + Create Token (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Create a nano contract with simultaneous token creation via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Create a nano contract with simultaneous token creation via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -104,7 +107,13 @@ export const SnapCreateNcTokenStage: React.FC = () => {
           <h4 className="text-sm font-bold text-gray-700 mt-2">Nano Contract</h4>
           <div>
             <label className="block text-sm font-medium mb-1.5">Method</label>
-            <input type="text" value={method} onChange={(e) => setMethod(e.target.value)} placeholder="initialize" className="input" />
+            <input
+              type="text"
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              placeholder="initialize"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Blueprint ID</label>
@@ -112,7 +121,13 @@ export const SnapCreateNcTokenStage: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Args (JSON array)</label>
-            <textarea value={argsText} onChange={(e) => setArgsText(e.target.value)} placeholder='["arg1", "arg2"]' className="input min-h-16" rows={2} />
+            <textarea
+              value={argsText}
+              onChange={(e) => setArgsText(e.target.value)}
+              placeholder='["arg1", "arg2"]'
+              className="input min-h-16"
+              rows={2}
+            />
           </div>
 
           {/* Token Fields */}
@@ -131,35 +146,82 @@ export const SnapCreateNcTokenStage: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Address (optional)</label>
-            <input type="text" value={tokenAddress} onChange={(e) => setTokenAddress(e.target.value)} className="input" />
+            <input
+              type="text"
+              value={tokenAddress}
+              onChange={(e) => setTokenAddress(e.target.value)}
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Change Address (optional)</label>
-            <input type="text" value={changeAddress} onChange={(e) => setChangeAddress(e.target.value)} className="input" />
+            <input
+              type="text"
+              value={changeAddress}
+              onChange={(e) => setChangeAddress(e.target.value)}
+              className="input"
+            />
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" checked={contractPaysDeposit} onChange={(e) => setContractPaysDeposit(e.target.checked)} className="checkbox checkbox-primary" id="ncContractPays" />
-            <label htmlFor="ncContractPays" className="text-sm cursor-pointer">Contract Pays Token Deposit</label>
+            <input
+              type="checkbox"
+              checked={contractPaysDeposit}
+              onChange={(e) => setContractPaysDeposit(e.target.checked)}
+              className="checkbox checkbox-primary"
+              id="ncContractPays"
+            />
+            <label htmlFor="ncContractPays" className="text-sm cursor-pointer">
+              Contract Pays Token Deposit
+            </label>
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" checked={createMint} onChange={(e) => setCreateMint(e.target.checked)} className="checkbox checkbox-primary" id="ncCreateMint" />
-            <label htmlFor="ncCreateMint" className="text-sm cursor-pointer">Create Mint Authority</label>
+            <input
+              type="checkbox"
+              checked={createMint}
+              onChange={(e) => setCreateMint(e.target.checked)}
+              className="checkbox checkbox-primary"
+              id="ncCreateMint"
+            />
+            <label htmlFor="ncCreateMint" className="text-sm cursor-pointer">
+              Create Mint Authority
+            </label>
           </div>
           {createMint && (
             <>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Mint Authority Address</label>
-                <input type="text" value={mintAddress} onChange={(e) => setMintAddress(e.target.value)} className="input" />
+                <input
+                  type="text"
+                  value={mintAddress}
+                  onChange={(e) => setMintAddress(e.target.value)}
+                  className="input"
+                />
               </div>
               <div className="flex items-center gap-2">
-                <input type="checkbox" checked={allowExternalMint} onChange={(e) => setAllowExternalMint(e.target.checked)} className="checkbox checkbox-primary" id="ncExtMint" />
-                <label htmlFor="ncExtMint" className="text-sm cursor-pointer">Allow External Mint Authority</label>
+                <input
+                  type="checkbox"
+                  checked={allowExternalMint}
+                  onChange={(e) => setAllowExternalMint(e.target.checked)}
+                  className="checkbox checkbox-primary"
+                  id="ncExtMint"
+                />
+                <label htmlFor="ncExtMint" className="text-sm cursor-pointer">
+                  Allow External Mint Authority
+                </label>
               </div>
             </>
           )}
           <div className="flex items-center gap-2">
-            <input type="checkbox" checked={createMelt} onChange={(e) => setCreateMelt(e.target.checked)} className="checkbox checkbox-primary" id="ncCreateMelt" />
-            <label htmlFor="ncCreateMelt" className="text-sm cursor-pointer">Create Melt Authority</label>
+            <input
+              type="checkbox"
+              checked={createMelt}
+              onChange={(e) => setCreateMelt(e.target.checked)}
+              className="checkbox checkbox-primary"
+              id="ncCreateMelt"
+            />
+            <label htmlFor="ncCreateMelt" className="text-sm cursor-pointer">
+              Create Melt Authority
+            </label>
           </div>
 
           {/* Transaction Options */}
@@ -169,8 +231,16 @@ export const SnapCreateNcTokenStage: React.FC = () => {
             <input type="text" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} className="input" />
           </div>
           <div className="flex items-center gap-2">
-            <input type="checkbox" checked={contractPaysFees} onChange={(e) => setContractPaysFees(e.target.checked)} className="checkbox checkbox-primary" id="ncContractPaysFees" />
-            <label htmlFor="ncContractPaysFees" className="text-sm cursor-pointer">Contract Pays Fees</label>
+            <input
+              type="checkbox"
+              checked={contractPaysFees}
+              onChange={(e) => setContractPaysFees(e.target.checked)}
+              className="checkbox checkbox-primary"
+              id="ncContractPaysFees"
+            />
+            <label htmlFor="ncContractPaysFees" className="text-sm cursor-pointer">
+              Contract Pays Fees
+            </label>
           </div>
         </SnapMethodCard>
       )}

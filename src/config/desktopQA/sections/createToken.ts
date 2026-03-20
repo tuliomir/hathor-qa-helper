@@ -22,13 +22,16 @@ export const createTokenSection: SectionConfig = {
     {
       id: 'step-2',
       title: 'Verify symbol selection',
-      instructions: 'Verify that the **TST** symbol appears selected in the token bar.' +
+      instructions:
+        'Verify that the **TST** symbol appears selected in the token bar.' +
         '\n\n Confirm a single **"Token creation"** transaction appears showing **1.00** amount.' +
         '\n\nSwitch to the HTR token and verify a **"Token deposit"** transaction of **0.01 HTR** appears.',
-    },{
+    },
+    {
       id: 'step-3',
       title: 'View token deposit transaction',
-      instructions: 'Click on the token deposit transaction to view its details.' +
+      instructions:
+        'Click on the token deposit transaction to view its details.' +
         '\n\nVerify the transaction shows HTR input and created token outputs.' +
         '\n\nConfirm that **mint authority** and **melt authority** outputs are present.' +
         '\n\nVerify all inputs and outputs have **"Your address"** purple tags.' +

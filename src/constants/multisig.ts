@@ -28,13 +28,7 @@ export const MULTISIG_CONFIG = {
   ],
 
   /** Friendly names for each participant */
-  participantNames: [
-    'Alice',
-    'Bob',
-    'Carol',
-    'Dave',
-    'Eve',
-  ],
+  participantNames: ['Alice', 'Bob', 'Carol', 'Dave', 'Eve'],
 } as const;
 
 /** Total number of participants in the multisig */

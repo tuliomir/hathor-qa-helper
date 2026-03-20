@@ -11,10 +11,7 @@ interface OCRReferenceModalProps {
   onClose: () => void;
 }
 
-export default function OCRReferenceModal({
-  imageDataUrl,
-  onClose,
-}: OCRReferenceModalProps) {
+export default function OCRReferenceModal({ imageDataUrl, onClose }: OCRReferenceModalProps) {
   // Handle ESC key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -67,11 +64,7 @@ export default function OCRReferenceModal({
         </div>
 
         {/* Use shared ImageZoomPan component without crop controls */}
-        <ImageZoomPan
-          imageDataUrl={imageDataUrl}
-          showCropControls={false}
-          className="flex-1"
-        />
+        <ImageZoomPan imageDataUrl={imageDataUrl} showCropControls={false} className="flex-1" />
 
         <div
           style={{

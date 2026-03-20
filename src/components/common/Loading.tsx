@@ -4,11 +4,7 @@ interface LoadingProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-export default function Loading({
-  message = 'Loading...',
-  overlay = false,
-  size = 'medium'
-}: LoadingProps) {
+export default function Loading({ message = 'Loading...', overlay = false, size = 'medium' }: LoadingProps) {
   const sizeClasses = {
     small: 'w-6 h-6 border-2',
     medium: 'w-12 h-12 border-3',
@@ -29,9 +25,7 @@ export default function Loading({
   if (overlay) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="card-primary">
-          {spinner}
-        </div>
+        <div className="card-primary">{spinner}</div>
       </div>
     );
   }

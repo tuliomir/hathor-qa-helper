@@ -19,14 +19,12 @@ export const appUpdateSection: SectionConfig = {
     {
       id: 'step-2',
       title: 'Update code',
-      instructions:
-        'Update the code to run the latest version, **without resetting the wallet**.',
+      instructions: 'Update the code to run the latest version, **without resetting the wallet**.',
     },
     {
       id: 'step-3',
       title: 'Verify load',
-      instructions:
-        'You should be shown the PIN screen. Unlock the wallet and confirm load succeeded.',
+      instructions: 'You should be shown the PIN screen. Unlock the wallet and confirm load succeeded.',
     },
     {
       id: 'step-4',

@@ -20,9 +20,7 @@ export default function MobileQAToolPanel() {
         <div className="text-center text-muted p-8">
           <div className="text-4xl mb-4">📋</div>
           <p className="text-lg font-medium m-0">No embedded tool for this step</p>
-          <p className="text-sm mt-2 m-0">
-            Follow the instructions on the left to complete this step manually.
-          </p>
+          <p className="text-sm mt-2 m-0">Follow the instructions on the left to complete this step manually.</p>
         </div>
       </div>
     );
@@ -37,9 +35,7 @@ export default function MobileQAToolPanel() {
         <div className="text-center text-danger p-8">
           <div className="text-4xl mb-4">⚠️</div>
           <p className="text-lg font-medium m-0">Component not found</p>
-          <p className="text-sm mt-2 m-0">
-            The tool "{step.tool.componentKey}" could not be loaded.
-          </p>
+          <p className="text-sm mt-2 m-0">The tool "{step.tool.componentKey}" could not be loaded.</p>
         </div>
       </div>
     );

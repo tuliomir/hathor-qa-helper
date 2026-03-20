@@ -22,8 +22,10 @@ export default function QALayout() {
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
 
   // Show wallets that are idle, connecting, syncing, ready, or have errors
-  const shouldShowFundingWallet = fundingWallet && ['idle', 'connecting', 'syncing', 'ready', 'error'].includes(fundingWallet.status);
-  const shouldShowTestWallet = testWallet && ['idle', 'connecting', 'syncing', 'ready', 'error'].includes(testWallet.status);
+  const shouldShowFundingWallet =
+    fundingWallet && ['idle', 'connecting', 'syncing', 'ready', 'error'].includes(fundingWallet.status);
+  const shouldShowTestWallet =
+    testWallet && ['idle', 'connecting', 'syncing', 'ready', 'error'].includes(testWallet.status);
   const showAnyWallet = shouldShowFundingWallet || shouldShowTestWallet;
 
   const renderWalletInfo = (wallet: ReturnType<typeof getWallet>, label: string) => {
@@ -45,16 +47,10 @@ export default function QALayout() {
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold opacity-80">{label}:</span>
           <span className="text-base font-semibold">{wallet.metadata.friendlyName}</span>
-          <span className="text-xs bg-white/20 px-2 py-0.5 rounded">
-            {wallet.metadata.network}
-          </span>
+          <span className="text-xs bg-white/20 px-2 py-0.5 rounded">{wallet.metadata.network}</span>
         </div>
 
-        {isLoading && (
-          <div className="text-xs bg-yellow-400/30 px-2 py-0.5 rounded">
-            {getLoadingText()}
-          </div>
-        )}
+        {isLoading && <div className="text-xs bg-yellow-400/30 px-2 py-0.5 rounded">{getLoadingText()}</div>}
 
         {isError && (
           <div

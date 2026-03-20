@@ -13,7 +13,7 @@ import transactionUtils from '@hathor/wallet-lib/lib/utils/transaction.js';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { MULTISIG_CONFIG, MULTISIG_TOTAL_PARTICIPANTS } from '../../constants/multisig';
 import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG } from '../../constants/network';
-import type { CollectedSignature, MultisigParticipant, MultisigTransactionState, } from '../../types/multisig';
+import type { CollectedSignature, MultisigParticipant, MultisigTransactionState } from '../../types/multisig';
 import type { RootState } from '../index';
 
 /**
@@ -158,9 +158,7 @@ export const startMultisigParticipant = createAsyncThunk(
       // Cleanup on error
       const instance = multisigWalletInstancesMap.get(participantId);
       if (instance) {
-        await instance.stop().catch((err: unknown) =>
-          console.error('Error stopping wallet after failed start:', err)
-        );
+        await instance.stop().catch((err: unknown) => console.error('Error stopping wallet after failed start:', err));
         multisigWalletInstancesMap.delete(participantId);
       }
 
@@ -234,11 +232,7 @@ export const refreshParticipantBalance = createAsyncThunk(
 export const createMultisigTransaction = createAsyncThunk(
   'multisig/createTransaction',
   async (
-    {
-      fromParticipantId,
-      destination,
-      amount,
-    }: { fromParticipantId: string; destination: string; amount: string },
+    { fromParticipantId, destination, amount }: { fromParticipantId: string; destination: string; amount: string },
     { dispatch, getState }
   ) => {
     const state = getState() as RootState;
@@ -297,10 +291,7 @@ export const createMultisigTransaction = createAsyncThunk(
  */
 export const collectSignature = createAsyncThunk(
   'multisig/collectSignature',
-  async (
-    { participantId, txHex }: { participantId: string; txHex: string },
-    { dispatch }
-  ) => {
+  async ({ participantId, txHex }: { participantId: string; txHex: string }, { dispatch }) => {
     const instance = multisigWalletInstancesMap.get(participantId);
 
     if (!instance) {
@@ -327,11 +318,7 @@ export const collectSignature = createAsyncThunk(
 export const assembleAndSendTransaction = createAsyncThunk(
   'multisig/assembleAndSend',
   async (
-    {
-      participantId,
-      txHex,
-      signatures,
-    }: { participantId: string; txHex: string; signatures: string[] },
+    { participantId, txHex, signatures }: { participantId: string; txHex: string; signatures: string[] },
     { dispatch }
   ) => {
     const instance = multisigWalletInstancesMap.get(participantId);
@@ -405,10 +392,7 @@ const multisigSlice = createSlice({
       }
     },
 
-    updateParticipantBalance: (
-      state,
-      action: PayloadAction<{ id: string; balance?: string }>
-    ) => {
+    updateParticipantBalance: (state, action: PayloadAction<{ id: string; balance?: string }>) => {
       const { id, balance } = action.payload;
       const participant = state.participants[id];
 
@@ -492,18 +476,15 @@ export default multisigSlice.reducer;
  */
 const selectParticipantsRecord = (state: RootState) => state.multisig.participants;
 
-export const selectParticipants = createSelector(
-  [selectParticipantsRecord],
-  (participants) => Object.values(participants)
+export const selectParticipants = createSelector([selectParticipantsRecord], (participants) =>
+  Object.values(participants)
 );
 
-export const selectReadyParticipants = createSelector(
-  [selectParticipants],
-  (participants) => participants.filter((p) => p.status === 'ready')
+export const selectReadyParticipants = createSelector([selectParticipants], (participants) =>
+  participants.filter((p) => p.status === 'ready')
 );
 
-export const selectSelectedSigners = (state: RootState) =>
-  state.multisig.transaction.selectedSigners;
+export const selectSelectedSigners = (state: RootState) => state.multisig.transaction.selectedSigners;
 
 export const selectTransaction = (state: RootState) => state.multisig.transaction;
 

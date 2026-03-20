@@ -37,7 +37,6 @@ export const BetWithdrawStage: React.FC = () => {
   const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
   const latestNcId = betNanoContract.ncId;
 
-
   // Get the actual wallet instance
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
@@ -46,7 +45,7 @@ export const BetWithdrawStage: React.FC = () => {
   const initialAmount = hasDepositData ? betDepositData.amount : betWithdrawData.amount;
   const initialToken = hasDepositData ? betDepositData.token : betWithdrawData.token;
   const initialAddressIndex = hasDepositData ? betDepositData.addressIndex : 0;
-  const initialNcId = hasDepositData ? betDepositData.ncId : (latestNcId || '');
+  const initialNcId = hasDepositData ? betDepositData.ncId : latestNcId || '';
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
@@ -160,20 +159,24 @@ export const BetWithdrawStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setBetWithdrawRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setBetWithdrawRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setBetWithdrawResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setBetWithdrawResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -184,10 +187,12 @@ export const BetWithdrawStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setBetWithdrawError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setBetWithdrawError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -196,9 +201,7 @@ export const BetWithdrawStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Withdraw Prize RPC</h1>
-      <p className="text-muted mb-7.5">
-        Withdraw your prize from a bet nano contract after the result is set
-      </p>
+      <p className="text-muted mb-7.5">Withdraw your prize from a bet nano contract after the result is set</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -223,9 +226,8 @@ export const BetWithdrawStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -306,9 +308,7 @@ export const BetWithdrawStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {betWithdrawData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {betWithdrawData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {betWithdrawData.duration}ms</span>
                 )}
               </p>
             </div>

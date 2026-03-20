@@ -67,9 +67,7 @@ export default function TestWalletBalance() {
         </button>
       </div>
 
-      <p className="text-xs text-muted mb-3">
-        {testWallet.metadata.friendlyName}
-      </p>
+      <p className="text-xs text-muted mb-3">{testWallet.metadata.friendlyName}</p>
 
       <div className="p-4 bg-gray-50 rounded-lg text-center">
         <p className="text-3xl font-bold text-gray-900 m-0">

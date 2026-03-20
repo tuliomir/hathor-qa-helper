@@ -15,8 +15,7 @@ import { getOracleBuffer } from '../../utils/betHelpers';
 import CopyButton from '../common/CopyButton';
 
 export const SnapBetInitializeStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('snapBetInitialize');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapBetInitialize');
 
   const snapAddress = useSelector(selectSnapAddress);
 
@@ -31,7 +30,9 @@ export const SnapBetInitializeStage: React.FC = () => {
   });
   const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
 
-  useEffect(() => { if (snapAddress && !oracleAddress) setOracleAddress(snapAddress); }, [snapAddress]);
+  useEffect(() => {
+    if (snapAddress && !oracleAddress) setOracleAddress(snapAddress);
+  }, [snapAddress]);
 
   // Intermediate calculations — oracle buffer + timestamp
   const intermediates = useMemo(() => {
@@ -50,39 +51,35 @@ export const SnapBetInitializeStage: React.FC = () => {
     if (deadline) {
       try {
         timestamp = Math.floor(new Date(deadline).getTime() / 1000);
-      } catch { /* invalid date */ }
+      } catch {
+        /* invalid date */
+      }
     }
 
     return { oracleBuffer, oracleBufferError, timestamp };
   }, [oracleAddress, deadline]);
 
   // Build params using intermediates
-  const params = useMemo(() => ({
-    method: 'initialize',
-    blueprint_id: blueprintId,
-    actions: [] as unknown[],
-    args: [
-      intermediates.oracleBuffer || '',
-      token,
-      intermediates.timestamp ?? 0,
-    ],
-    push_tx: true,
-    nc_id: null,
-  }), [blueprintId, intermediates, token]);
-
-  const liveRequest = useMemo(
-    () => ({ method: 'htr_sendNanoContractTx', params }),
-    [params],
+  const params = useMemo(
+    () => ({
+      method: 'initialize',
+      blueprint_id: blueprintId,
+      actions: [] as unknown[],
+      args: [intermediates.oracleBuffer || '', token, intermediates.timestamp ?? 0],
+      push_tx: true,
+      nc_id: null,
+    }),
+    [blueprintId, intermediates, token]
   );
+
+  const liveRequest = useMemo(() => ({ method: 'htr_sendNanoContractTx', params }), [params]);
 
   const handleExecute = () => execute((h) => h.sendNanoContractTx(params));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Initialize Bet (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Initialize a Bet nano contract via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Initialize a Bet nano contract via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -98,15 +95,29 @@ export const SnapBetInitializeStage: React.FC = () => {
           >
             <div>
               <label className="block text-sm font-medium mb-1.5">Blueprint ID</label>
-              <input type="text" value={blueprintId} onChange={(e) => setBlueprintId(e.target.value)} placeholder="Bet blueprint ID" className="input" />
+              <input
+                type="text"
+                value={blueprintId}
+                onChange={(e) => setBlueprintId(e.target.value)}
+                placeholder="Bet blueprint ID"
+                className="input"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Oracle Address</label>
-              <input type="text" value={oracleAddress} onChange={(e) => setOracleAddress(e.target.value)} placeholder="Oracle address (base58)" className="input" />
+              <input
+                type="text"
+                value={oracleAddress}
+                onChange={(e) => setOracleAddress(e.target.value)}
+                placeholder="Oracle address (base58)"
+                className="input"
+              />
               <div className="flex gap-2 mt-1.5">
                 <button
                   type="button"
-                  onClick={() => { if (snapAddress) setOracleAddress(snapAddress); }}
+                  onClick={() => {
+                    if (snapAddress) setOracleAddress(snapAddress);
+                  }}
                   disabled={!snapAddress}
                   className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
                   title={snapAddress ? `Use ${snapAddress}` : 'Snap address not available'}
@@ -120,11 +131,22 @@ export const SnapBetInitializeStage: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Token UID</label>
-              <input type="text" value={token} onChange={(e) => setToken(e.target.value)} placeholder="00" className="input" />
+              <input
+                type="text"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="00"
+                className="input"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Deadline</label>
-              <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="input" />
+              <input
+                type="datetime-local"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="input"
+              />
             </div>
           </SnapMethodCard>
 
@@ -150,12 +172,8 @@ export const SnapBetInitializeStage: React.FC = () => {
                   <div className="bg-white border border-yellow-200 rounded overflow-hidden">
                     <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-yellow-800">
-                          Oracle Script (hex from address)
-                        </span>
-                        {intermediates.oracleBuffer && (
-                          <CopyButton text={intermediates.oracleBuffer} label="Copy" />
-                        )}
+                        <span className="text-sm font-semibold text-yellow-800">Oracle Script (hex from address)</span>
+                        {intermediates.oracleBuffer && <CopyButton text={intermediates.oracleBuffer} label="Copy" />}
                       </div>
                     </div>
                     <div className="px-3 py-2">
@@ -166,9 +184,7 @@ export const SnapBetInitializeStage: React.FC = () => {
                           {intermediates.oracleBuffer}
                         </span>
                       ) : (
-                        <span className="text-sm text-muted italic">
-                          Enter oracle address to calculate
-                        </span>
+                        <span className="text-sm text-muted italic">Enter oracle address to calculate</span>
                       )}
                     </div>
                   </div>
@@ -177,9 +193,7 @@ export const SnapBetInitializeStage: React.FC = () => {
                   <div className="bg-white border border-yellow-200 rounded overflow-hidden">
                     <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-yellow-800">
-                          Unix Timestamp (from deadline)
-                        </span>
+                        <span className="text-sm font-semibold text-yellow-800">Unix Timestamp (from deadline)</span>
                         {intermediates.timestamp !== null && (
                           <CopyButton text={intermediates.timestamp.toString()} label="Copy" />
                         )}
@@ -187,13 +201,9 @@ export const SnapBetInitializeStage: React.FC = () => {
                     </div>
                     <div className="px-3 py-2">
                       {intermediates.timestamp !== null ? (
-                        <span className="text-sm font-mono text-yellow-900">
-                          {intermediates.timestamp}
-                        </span>
+                        <span className="text-sm font-mono text-yellow-900">{intermediates.timestamp}</span>
                       ) : (
-                        <span className="text-sm text-muted italic">
-                          Enter deadline to calculate
-                        </span>
+                        <span className="text-sm text-muted italic">Enter deadline to calculate</span>
                       )}
                     </div>
                   </div>

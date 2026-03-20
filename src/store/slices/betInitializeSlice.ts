@@ -34,10 +34,7 @@ const betInitializeSlice = createSlice({
   name: 'betInitialize',
   initialState,
   reducers: {
-    setBetInitializeRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setBetInitializeRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -46,10 +43,7 @@ const betInitializeSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setBetInitializeResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setBetInitializeResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
       state.duration = action.payload.duration;
@@ -73,11 +67,7 @@ const betInitializeSlice = createSlice({
   },
 });
 
-export const {
-  setBetInitializeRequest,
-  setBetInitializeResponse,
-  setBetInitializeError,
-  clearBetInitializeData,
-} = betInitializeSlice.actions;
+export const { setBetInitializeRequest, setBetInitializeResponse, setBetInitializeError, clearBetInitializeData } =
+  betInitializeSlice.actions;
 
 export default betInitializeSlice.reducer;

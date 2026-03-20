@@ -29,8 +29,7 @@ export const newWalletSection: SectionConfig = {
     {
       id: 'step-3',
       title: 'Verify seed words',
-      instructions:
-        'Verify the seed words screen appears. Note them elsewhere for later use.',
+      instructions: 'Verify the seed words screen appears. Note them elsewhere for later use.',
       tool: {
         componentKey: 'WalletInitialization',
       },
@@ -38,8 +37,7 @@ export const newWalletSection: SectionConfig = {
     {
       id: 'step-4',
       title: 'Test word confirmation',
-      instructions:
-        'Confirm one word correctly, miss the second word. Verify error message appears.',
+      instructions: 'Confirm one word correctly, miss the second word. Verify error message appears.',
       tool: {
         componentKey: 'WalletInitialization',
       },
@@ -55,8 +53,7 @@ export const newWalletSection: SectionConfig = {
     {
       id: 'step-6',
       title: 'Confirm all words',
-      instructions:
-        "Confirm all 5 words correctly and tap **'Next'** to proceed to PIN creation.",
+      instructions: "Confirm all 5 words correctly and tap **'Next'** to proceed to PIN creation.",
       tool: {
         componentKey: 'WalletInitialization',
       },
@@ -88,8 +85,7 @@ export const newWalletSection: SectionConfig = {
     {
       id: 'step-10',
       title: 'Confirm Dashboard',
-      instructions:
-        'Confirm Dashboard screen is displayed - should show only HTR token with **0.00 HTR** balance.',
+      instructions: 'Confirm Dashboard screen is displayed - should show only HTR token with **0.00 HTR** balance.',
       tool: {
         componentKey: 'WalletInitialization',
       },

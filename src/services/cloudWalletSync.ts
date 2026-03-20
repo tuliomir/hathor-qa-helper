@@ -25,7 +25,7 @@ export async function fetchCloudWallets(): Promise<WalletMetadata[]> {
     const response = await fetch(CLOUD_API_URL, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
 
@@ -69,7 +69,7 @@ export async function storeCloudWallets(wallets: WalletMetadata[]): Promise<Clou
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify(wallets),
     });

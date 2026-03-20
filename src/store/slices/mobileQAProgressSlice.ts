@@ -4,11 +4,7 @@
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type {
-  MobileQAProgress,
-  MobileQAStepStatus,
-  MobileQALocation,
-} from '../../types/mobileQA';
+import type { MobileQAProgress, MobileQAStepStatus, MobileQALocation } from '../../types/mobileQA';
 
 const STORAGE_KEY = 'mobile-qa-progress';
 
@@ -114,10 +110,7 @@ const mobileQAProgressSlice = createSlice({
     /**
      * Initialize progress for a section (creates empty step entries if not exists)
      */
-    initializeSectionProgress: (
-      state,
-      action: PayloadAction<{ sectionId: string; stepIds: string[] }>
-    ) => {
+    initializeSectionProgress: (state, action: PayloadAction<{ sectionId: string; stepIds: string[] }>) => {
       const { sectionId, stepIds } = action.payload;
 
       if (!state.sections[sectionId]) {
@@ -137,12 +130,8 @@ const mobileQAProgressSlice = createSlice({
   },
 });
 
-export const {
-  setStepStatus,
-  setCurrentLocation,
-  resetProgress,
-  initializeSectionProgress,
-} = mobileQAProgressSlice.actions;
+export const { setStepStatus, setCurrentLocation, resetProgress, initializeSectionProgress } =
+  mobileQAProgressSlice.actions;
 
 export default mobileQAProgressSlice.reducer;
 
@@ -158,26 +147,18 @@ export const selectStepStatus = (
   return state.mobileQAProgress.sections[sectionId]?.steps[stepId]?.status || 'pending';
 };
 
-export const selectSectionProgress = (
-  state: { mobileQAProgress: MobileQAProgress },
-  sectionId: string
-) => {
+export const selectSectionProgress = (state: { mobileQAProgress: MobileQAProgress }, sectionId: string) => {
   return state.mobileQAProgress.sections[sectionId] || { steps: {} };
 };
 
-export const selectCompletedStepsCount = (
-  state: { mobileQAProgress: MobileQAProgress },
-  sectionId: string
-): number => {
+export const selectCompletedStepsCount = (state: { mobileQAProgress: MobileQAProgress }, sectionId: string): number => {
   const section = state.mobileQAProgress.sections[sectionId];
   if (!section) return 0;
 
   return Object.values(section.steps).filter((step) => step.status === 'completed').length;
 };
 
-export const selectTotalCompletedSteps = (
-  state: { mobileQAProgress: MobileQAProgress }
-): number => {
+export const selectTotalCompletedSteps = (state: { mobileQAProgress: MobileQAProgress }): number => {
   let total = 0;
   for (const section of Object.values(state.mobileQAProgress.sections)) {
     total += Object.values(section.steps).filter((step) => step.status === 'completed').length;

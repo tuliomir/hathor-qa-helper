@@ -8,11 +8,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-	clearGetUtxosData,
-	setGetUtxosError,
-	setGetUtxosFormData,
-	setGetUtxosRequest,
-	setGetUtxosResponse,
+  clearGetUtxosData,
+  setGetUtxosError,
+  setGetUtxosFormData,
+  setGetUtxosRequest,
+  setGetUtxosResponse,
 } from '../../store/slices/getUtxosSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcGetUtxosCard } from '../rpc/RpcGetUtxosCard';
@@ -252,7 +252,9 @@ export const GetUtxosStage: React.FC = () => {
       });
       await sendTx.run();
 
-      setScatterResult(`Scattered into ${amounts.length} UTXOs (amounts: ${amounts[0]}..${amounts[amounts.length - 1]})`);
+      setScatterResult(
+        `Scattered into ${amounts.length} UTXOs (amounts: ${amounts[0]}..${amounts[amounts.length - 1]})`
+      );
     } catch (err) {
       setScatterError(err instanceof Error ? err.message : 'Failed to scatter funds');
       console.error('Scatter funds error:', err);
@@ -266,9 +268,7 @@ export const GetUtxosStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Get UTXOs RPC</h1>
-      <p className="text-muted mb-7.5">
-        Retrieve unspent transaction outputs (UTXOs) for a specific token
-      </p>
+      <p className="text-muted mb-7.5">Retrieve unspent transaction outputs (UTXOs) for a specific token</p>
 
       {/* Scatter Funds — compact utility at the top */}
       {testWallet?.instance && (
@@ -288,12 +288,8 @@ export const GetUtxosStage: React.FC = () => {
               {isScattering ? 'Scattering...' : 'Scatter'}
             </button>
           </div>
-          {scatterError && (
-            <p className="text-xs text-danger mt-2 mb-0">{scatterError}</p>
-          )}
-          {scatterResult && (
-            <p className="text-xs text-success mt-2 mb-0">{scatterResult}</p>
-          )}
+          {scatterError && <p className="text-xs text-danger mt-2 mb-0">{scatterError}</p>}
+          {scatterResult && <p className="text-xs text-success mt-2 mb-0">{scatterResult}</p>}
         </div>
       )}
 
@@ -377,9 +373,7 @@ export const GetUtxosStage: React.FC = () => {
               }}
               className="input"
             />
-            <p className="text-muted text-xs mt-1.5 mb-0">
-              Maximum number of UTXOs to return
-            </p>
+            <p className="text-muted text-xs mt-1.5 mb-0">Maximum number of UTXOs to return</p>
           </div>
 
           {/* Amount Filters */}
@@ -400,9 +394,7 @@ export const GetUtxosStage: React.FC = () => {
                 placeholder="Leave empty for no filter"
                 className="input"
               />
-              <p className="text-muted text-xs mt-1.5 mb-0">
-                Filter UTXOs with amount less than this value
-              </p>
+              <p className="text-muted text-xs mt-1.5 mb-0">Filter UTXOs with amount less than this value</p>
             </div>
 
             <div>
@@ -419,9 +411,7 @@ export const GetUtxosStage: React.FC = () => {
                 placeholder="Leave empty for no filter"
                 className="input"
               />
-              <p className="text-muted text-xs mt-1.5 mb-0">
-                Filter UTXOs with amount greater than this value
-              </p>
+              <p className="text-muted text-xs mt-1.5 mb-0">Filter UTXOs with amount greater than this value</p>
             </div>
           </div>
 
@@ -479,9 +469,7 @@ export const GetUtxosStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {getUtxosData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {getUtxosData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {getUtxosData.duration}ms</span>
                 )}
               </p>
             </div>

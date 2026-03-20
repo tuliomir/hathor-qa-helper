@@ -46,8 +46,7 @@ export const generateTokenErrorSection: SectionConfig = {
     {
       id: 'step-5',
       title: 'Verify error state',
-      instructions:
-        'The **Next** button should not be clickable. Also, deposit value and balance should turn **red**.',
+      instructions: 'The **Next** button should not be clickable. Also, deposit value and balance should turn **red**.',
       tool: {
         componentKey: 'CreateTokenStage',
       },

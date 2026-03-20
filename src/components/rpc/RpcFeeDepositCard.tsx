@@ -12,8 +12,8 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import { safeStringify } from '../../utils/betHelpers';
-import TxStatus from '../common/TxStatus.tsx'
-import { useAppSelector } from '../../store/hooks.ts'
+import TxStatus from '../common/TxStatus.tsx';
+import { useAppSelector } from '../../store/hooks.ts';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -87,7 +87,6 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
   useEffect(() => {
     if (initialRequest) {
       setRequestInfo(initialRequest);
-
     }
     if (initialResponse) {
       setResult(initialResponse);
@@ -178,10 +177,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
       console.log(`[RPC Request] Fee Deposit`, request);
       console.log(`[RPC Success] Fee Deposit`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Fee token deposited successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Fee token deposited successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -191,7 +187,6 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
       // Capture request params from error if available
       if (err && typeof err === 'object' && 'requestParams' in err) {
         setRequestInfo(err.requestParams as { method: string; params: unknown });
-  
       }
 
       console.error(`[RPC Error] Fee Deposit`, {
@@ -212,9 +207,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
   const renderRawJson = (data: unknown) => {
     return (
       <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50 text-left">
-        <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 text-left">
-          {safeStringify(data, 2)}
-        </pre>
+        <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 text-left">{safeStringify(data, 2)}</pre>
       </div>
     );
   };
@@ -257,18 +250,11 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Deposit Fee Token</h3>
-            <p className="text-sm text-muted mt-1">
-              Deposit a fee-based token into the fee nano contract
-            </p>
+            <p className="text-sm text-muted mt-1">Deposit a fee-based token into the fee nano contract</p>
           </div>
           {isDryRun && (
             <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-300">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
               </svg>
               DRY RUN
@@ -294,12 +280,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
                 className="btn-secondary px-4 flex items-center gap-2"
                 title="Select latest initialized nano contract"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
                     d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
@@ -319,9 +300,18 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
             <label className="block text-sm font-medium mb-1.5">Fee Token</label>
             {feeTokensLoading ? (
               <div className="input flex items-center gap-2 text-muted">
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg
+                  className="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 Loading fee tokens...
               </div>
@@ -363,9 +353,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
                 className="input"
               />
             )}
-            <p className="text-xs text-muted mt-1">
-              Fee token to deposit into the nano contract
-            </p>
+            <p className="text-xs text-muted mt-1">Fee token to deposit into the nano contract</p>
           </div>
 
           {/* Amount */}
@@ -398,9 +386,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
                 </button>
               )}
             </div>
-            <p className="text-xs text-muted mt-1">
-              Amount to deposit (in token's smallest unit)
-            </p>
+            <p className="text-xs text-muted mt-1">Amount to deposit (in token's smallest unit)</p>
           </div>
 
           {/* Address Index */}
@@ -414,9 +400,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
               placeholder="0"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              Index of the address to use for change output
-            </p>
+            <p className="text-xs text-muted mt-1">Index of the address to use for change output</p>
           </div>
 
           {/* Contract Pays Fees */}
@@ -483,12 +467,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
         <div className="card-primary mb-7.5">
           <div className="bg-green-50 border border-green-300 rounded p-4">
             <div className="flex items-center gap-2 text-green-700 mb-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -539,20 +518,14 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
                     <span className="text-sm font-semibold text-yellow-800">
                       Change Address (from index {addressIndex})
                     </span>
-                    {changeAddress && (
-                      <CopyButton text={changeAddress} label="Copy" />
-                    )}
+                    {changeAddress && <CopyButton text={changeAddress} label="Copy" />}
                   </div>
                 </div>
                 <div className="px-3 py-2">
                   {changeAddress ? (
-                    <span className="text-sm font-mono text-yellow-900 break-all">
-                      {changeAddress}
-                    </span>
+                    <span className="text-sm font-mono text-yellow-900 break-all">{changeAddress}</span>
                   ) : (
-                    <span className="text-sm text-muted italic">
-                      Deriving address from wallet...
-                    </span>
+                    <span className="text-sm text-muted italic">Deriving address from wallet...</span>
                   )}
                 </div>
               </div>
@@ -576,7 +549,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {(result && !error) ? (
+              {result && !error ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -584,10 +557,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
               ) : null}
-              <CopyButton
-                text={result ? safeStringify(result, 2) as string : error || ''}
-                label="Copy response"
-              />
+              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
             </div>
           </div>
 
@@ -596,19 +566,14 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

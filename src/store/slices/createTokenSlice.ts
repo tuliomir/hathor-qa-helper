@@ -34,10 +34,7 @@ const createTokenSlice = createSlice({
   name: 'createToken',
   initialState,
   reducers: {
-    setCreateTokenRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setCreateTokenRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -46,10 +43,7 @@ const createTokenSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setCreateTokenResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setCreateTokenResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       // Store raw response (BigInt already converted to strings)
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
@@ -74,11 +68,7 @@ const createTokenSlice = createSlice({
   },
 });
 
-export const {
-  setCreateTokenRequest,
-  setCreateTokenResponse,
-  setCreateTokenError,
-  clearCreateTokenData,
-} = createTokenSlice.actions;
+export const { setCreateTokenRequest, setCreateTokenResponse, setCreateTokenError, clearCreateTokenData } =
+  createTokenSlice.actions;
 
 export default createTokenSlice.reducer;

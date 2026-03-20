@@ -8,9 +8,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-	setSignWithAddressError,
-	setSignWithAddressRequest,
-	setSignWithAddressResponse,
+  setSignWithAddressError,
+  setSignWithAddressRequest,
+  setSignWithAddressResponse,
 } from '../../store/slices/signWithAddressSlice';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { RpcSignWithAddressCard } from '../rpc/RpcSignWithAddressCard';
@@ -27,9 +27,7 @@ export const SignWithAddressStage: React.FC = () => {
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const testWallet = useSelector((state: RootState) =>
-    testWalletId ? state.walletStore.wallets[testWalletId] : null
-  );
+  const testWallet = useSelector((state: RootState) => (testWalletId ? state.walletStore.wallets[testWalletId] : null));
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const signWithAddressData = useSelector((state: RootState) => state.signWithAddress);
@@ -98,20 +96,24 @@ export const SignWithAddressStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setSignWithAddressRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setSignWithAddressRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setSignWithAddressResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setSignWithAddressResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -122,10 +124,12 @@ export const SignWithAddressStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setSignWithAddressError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setSignWithAddressError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -161,9 +165,8 @@ export const SignWithAddressStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -204,9 +207,7 @@ export const SignWithAddressStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {signWithAddressData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {signWithAddressData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {signWithAddressData.duration}ms</span>
                 )}
               </p>
             </div>

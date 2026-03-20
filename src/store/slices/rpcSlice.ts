@@ -61,7 +61,6 @@ const rpcSlice = createSlice({
   },
 });
 
-export const { addRpcEntry, clearRpcHistory, removeRpcEntry, setDryRunMode, toggleDryRunMode } =
-  rpcSlice.actions;
+export const { addRpcEntry, clearRpcHistory, removeRpcEntry, setDryRunMode, toggleDryRunMode } = rpcSlice.actions;
 
 export default rpcSlice.reducer;

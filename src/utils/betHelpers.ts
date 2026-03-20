@@ -19,9 +19,5 @@ export function getOracleBuffer(address: string): string {
  * Helper function to safely stringify objects containing BigInt values
  */
 export const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };

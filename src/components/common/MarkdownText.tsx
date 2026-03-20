@@ -26,8 +26,7 @@ function tokenize(text: string): Token[] {
 
   // Combined regex for all markdown patterns
   // Order matters: longer patterns first to avoid partial matches
-  const pattern =
-    /(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\+\+[^+]+\+\+)|(~~[^~]+~~)|(\[[^\]]+\]\([^)]+\))|(\n)/g;
+  const pattern = /(\*\*[^*]+\*\*)|(\*[^*]+\*)|(\+\+[^+]+\+\+)|(~~[^~]+~~)|(\[[^\]]+\]\([^)]+\))|(\n)/g;
 
   let lastIndex = 0;
   let match;

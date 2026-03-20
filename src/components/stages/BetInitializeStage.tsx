@@ -85,13 +85,26 @@ export const BetInitializeStage: React.FC = () => {
         try {
           const htrBal = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
           if (htrBal?.[0]?.balance?.unlocked > 0n) {
-            tokens.push({ uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name });
+            tokens.push({
+              uid: NATIVE_TOKEN_UID,
+              symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+              name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+            });
           }
-        } catch { /* include HTR as fallback */
-          tokens.push({ uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name });
+        } catch {
+          /* include HTR as fallback */
+          tokens.push({
+            uid: NATIVE_TOKEN_UID,
+            symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+            name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+          });
         }
       } else {
-        tokens.push({ uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name });
+        tokens.push({
+          uid: NATIVE_TOKEN_UID,
+          symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+          name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+        });
       }
 
       // Check custom tokens
@@ -105,7 +118,9 @@ export const BetInitializeStage: React.FC = () => {
             if (bal?.[0]?.balance?.unlocked > 0n) {
               tokens.push({ uid: tokenInfo.uid, symbol: tokenInfo.symbol, name: tokenInfo.name });
             }
-          } catch { /* skip tokens that fail balance check */ }
+          } catch {
+            /* skip tokens that fail balance check */
+          }
         }
       }
 
@@ -177,7 +192,7 @@ export const BetInitializeStage: React.FC = () => {
         oracleAddress,
         token,
         deadlineDate,
-        pushTx,
+        pushTx
       );
       const duration = Date.now() - startTime;
 
@@ -185,28 +200,41 @@ export const BetInitializeStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setBetInitializeRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setBetInitializeRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setBetInitializeResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setBetInitializeResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       // Store the nano contract ID for use in other stages
-      if (serializedResponse && typeof serializedResponse === 'object' && 'response' in serializedResponse && serializedResponse.response && typeof serializedResponse.response === 'object' && 'hash' in serializedResponse.response) {
-        dispatch(setBetNanoContractId({
-          ncId: (serializedResponse.response as { hash: string }).hash,
-          blueprintId,
-          token,
-        }));
+      if (
+        serializedResponse &&
+        typeof serializedResponse === 'object' &&
+        'response' in serializedResponse &&
+        serializedResponse.response &&
+        typeof serializedResponse.response === 'object' &&
+        'hash' in serializedResponse.response
+      ) {
+        dispatch(
+          setBetNanoContractId({
+            ncId: (serializedResponse.response as { hash: string }).hash,
+            blueprintId,
+            token,
+          })
+        );
       }
 
       return { request, response: serializedResponse };
@@ -218,10 +246,12 @@ export const BetInitializeStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setBetInitializeError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setBetInitializeError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -230,9 +260,7 @@ export const BetInitializeStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Initialize Bet RPC</h1>
-      <p className="text-muted mb-7.5">
-        Initialize a new bet nano contract with oracle and token configuration
-      </p>
+      <p className="text-muted mb-7.5">Initialize a new bet nano contract with oracle and token configuration</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -257,9 +285,8 @@ export const BetInitializeStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -312,9 +339,7 @@ export const BetInitializeStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {betInitializeData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {betInitializeData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {betInitializeData.duration}ms</span>
                 )}
               </p>
             </div>

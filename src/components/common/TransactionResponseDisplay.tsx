@@ -13,11 +13,7 @@ import CopyButton from './CopyButton';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, spaces = 0): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    spaces
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), spaces);
 };
 
 export interface TransactionData {
@@ -120,9 +116,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
 
   // Render hex string response
   const renderHexResponse = (data: unknown): React.ReactElement => {
-    const hexString = typeof data === 'string'
-      ? data
-      : (data as { response?: string }).response;
+    const hexString = typeof data === 'string' ? data : (data as { response?: string }).response;
 
     return (
       <div className="bg-white border border-green-200 rounded overflow-hidden">
@@ -130,9 +124,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
           <span className="text-sm font-semibold text-green-800">Transaction Hex</span>
         </div>
         <div className="px-3 py-2 max-h-64 overflow-y-auto">
-          <pre className="text-xs font-mono text-gray-700 text-left break-all whitespace-pre-wrap">
-            {hexString}
-          </pre>
+          <pre className="text-xs font-mono text-gray-700 text-left break-all whitespace-pre-wrap">{hexString}</pre>
         </div>
       </div>
     );
@@ -181,30 +173,56 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
                   </div>
                 </div>
               )}
-              {tx.nc_method && <div><strong>Method:</strong> {tx.nc_method}</div>}
-              {tx.nc_pubkey && <div><strong>Public Key:</strong> <span className="font-mono text-xs">{tx.nc_pubkey}</span></div>}
+              {tx.nc_method && (
+                <div>
+                  <strong>Method:</strong> {tx.nc_method}
+                </div>
+              )}
+              {tx.nc_pubkey && (
+                <div>
+                  <strong>Public Key:</strong> <span className="font-mono text-xs">{tx.nc_pubkey}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* Transaction Metadata */}
-        {(tx.version !== undefined || tx.weight !== undefined || tx.nonce !== undefined ||
-          tx.timestamp !== undefined || tx.signalBits !== undefined) && (
+        {(tx.version !== undefined ||
+          tx.weight !== undefined ||
+          tx.nonce !== undefined ||
+          tx.timestamp !== undefined ||
+          tx.signalBits !== undefined) && (
           <div className="bg-white border border-green-200 rounded overflow-hidden">
             <div className="bg-green-100 px-3 py-2 border-b border-green-200">
               <span className="text-sm font-semibold text-green-800">Transaction Metadata</span>
             </div>
             <div className="px-3 py-2 space-y-1 text-sm">
-              {tx.version !== undefined && <div><strong>Version:</strong> {tx.version}</div>}
-              {tx.weight !== undefined && <div><strong>Weight:</strong> {typeof tx.weight === 'number' ? tx.weight.toFixed(2) : tx.weight}</div>}
-              {tx.nonce !== undefined && <div><strong>Nonce:</strong> {tx.nonce}</div>}
-              {tx.timestamp !== undefined && (
+              {tx.version !== undefined && (
                 <div>
-                  <strong>Timestamp:</strong>{' '}
-                  {new Date(tx.timestamp * 1000).toLocaleString()} ({tx.timestamp})
+                  <strong>Version:</strong> {tx.version}
                 </div>
               )}
-              {tx.signalBits !== undefined && <div><strong>Signal Bits:</strong> {tx.signalBits}</div>}
+              {tx.weight !== undefined && (
+                <div>
+                  <strong>Weight:</strong> {typeof tx.weight === 'number' ? tx.weight.toFixed(2) : tx.weight}
+                </div>
+              )}
+              {tx.nonce !== undefined && (
+                <div>
+                  <strong>Nonce:</strong> {tx.nonce}
+                </div>
+              )}
+              {tx.timestamp !== undefined && (
+                <div>
+                  <strong>Timestamp:</strong> {new Date(tx.timestamp * 1000).toLocaleString()} ({tx.timestamp})
+                </div>
+              )}
+              {tx.signalBits !== undefined && (
+                <div>
+                  <strong>Signal Bits:</strong> {tx.signalBits}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -213,9 +231,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
         {tx.inputs && tx.inputs.length > 0 && (
           <div className="bg-white border border-green-200 rounded overflow-hidden">
             <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">
-                Inputs ({tx.inputs.length})
-              </span>
+              <span className="text-sm font-semibold text-green-800">Inputs ({tx.inputs.length})</span>
             </div>
             <div className="px-3 py-2 space-y-2 max-h-48 overflow-y-auto">
               {tx.inputs.map((input, idx) => (
@@ -229,7 +245,9 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
                       <ExplorerLink hash={input.hash} network={network} />
                     </div>
                   </div>
-                  <div><strong>Index:</strong> {input.index}</div>
+                  <div>
+                    <strong>Index:</strong> {input.index}
+                  </div>
                   {input.data && (
                     <div className="mt-1">
                       <strong>Data:</strong>
@@ -248,9 +266,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
         {tx.outputs && tx.outputs.length > 0 && (
           <div className="bg-white border border-green-200 rounded overflow-hidden">
             <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">
-                Outputs ({tx.outputs.length})
-              </span>
+              <span className="text-sm font-semibold text-green-800">Outputs ({tx.outputs.length})</span>
             </div>
             <div className="px-3 py-2 space-y-2 max-h-48 overflow-y-auto">
               {tx.outputs.map((output, idx) => {
@@ -265,10 +281,16 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
                         </span>
                       )}
                     </div>
-                    <div><strong>Value:</strong> {output.value}</div>
-                    <div><strong>Token Data:</strong> {output.tokenData}</div>
+                    <div>
+                      <strong>Value:</strong> {output.value}
+                    </div>
+                    <div>
+                      <strong>Token Data:</strong> {output.tokenData}
+                    </div>
                     {output.decodedScript?.address?.base58 && (
-                      <div><strong>Address:</strong> {output.decodedScript.address.base58}</div>
+                      <div>
+                        <strong>Address:</strong> {output.decodedScript.address.base58}
+                      </div>
                     )}
                     {output.decodedScript?.data !== undefined && (
                       <div className="mt-1">
@@ -279,7 +301,9 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
                       </div>
                     )}
                     {output.decodedScript?.timelock !== undefined && output.decodedScript.timelock !== null && (
-                      <div><strong>Timelock:</strong> {output.decodedScript.timelock}</div>
+                      <div>
+                        <strong>Timelock:</strong> {output.decodedScript.timelock}
+                      </div>
                     )}
                   </div>
                 );
@@ -292,9 +316,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
         {tx.parents && tx.parents.length > 0 && (
           <div className="bg-white border border-green-200 rounded overflow-hidden">
             <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">
-                Parents ({tx.parents.length})
-              </span>
+              <span className="text-sm font-semibold text-green-800">Parents ({tx.parents.length})</span>
             </div>
             <div className="px-3 py-2 space-y-1">
               {tx.parents.map((parent, idx) => (
@@ -312,9 +334,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
         {tx.tokens && tx.tokens.length > 0 && (
           <div className="bg-white border border-green-200 rounded overflow-hidden">
             <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">
-                Tokens ({tx.tokens.length})
-              </span>
+              <span className="text-sm font-semibold text-green-800">Tokens ({tx.tokens.length})</span>
             </div>
             <div className="px-3 py-2 space-y-1">
               {tx.tokens.map((token, idx) => (
@@ -337,9 +357,7 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
   const renderRawJson = (data: unknown): React.ReactElement => {
     return (
       <div className="bg-white border border-green-200 rounded p-3 overflow-auto max-h-64">
-        <pre className="text-sm font-mono text-gray-700 text-left">
-          {safeStringify(data, 2)}
-        </pre>
+        <pre className="text-sm font-mono text-gray-700 text-left">{safeStringify(data, 2)}</pre>
       </div>
     );
   };

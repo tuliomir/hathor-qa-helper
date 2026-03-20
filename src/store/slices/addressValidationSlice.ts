@@ -33,6 +33,7 @@ const addressValidationSlice = createSlice({
   },
 });
 
-export const { setSelectedWalletId, setAddressIndex, resetAddressValidation, setAmount } = addressValidationSlice.actions;
+export const { setSelectedWalletId, setAddressIndex, resetAddressValidation, setAmount } =
+  addressValidationSlice.actions;
 
 export default addressValidationSlice.reducer;

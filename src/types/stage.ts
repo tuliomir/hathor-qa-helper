@@ -5,12 +5,68 @@
 /**
  * Available QA stages
  */
-export type StageId = 'wallet-initialization' | 'address-validation' | 'custom-tokens' | 'transaction-history' | 'tx-update-events' | 'rpc-connection' | 'rpc-basic-info' | 'rpc-get-address' | 'rpc-get-balance' | 'rpc-get-utxos' | 'rpc-sign-with-address' | 'rpc-create-token' | 'rpc-send-transaction' | 'rpc-sign-oracle-data' | 'rpc-raw-editor' | 'rpc-bet-initialize' | 'rpc-bet-deposit' | 'rpc-set-bet-result' | 'rpc-bet-withdraw' | 'rpc-fee-initialize' | 'rpc-fee-deposit' | 'rpc-fee-withdraw' | 'push-notifications' | 'test-wallet-cleanup' | 'multisig-wallet-management' | 'snap-connection' | 'snap-get-address' | 'snap-get-balance' | 'snap-get-connected-network' | 'snap-get-utxos' | 'snap-send-transaction' | 'snap-sign-with-address' | 'snap-create-token' | 'snap-send-nano-contract-tx' | 'snap-create-nc-token' | 'snap-sign-oracle-data' | 'snap-change-network' | 'snap-get-xpub' | 'snap-get-wallet-info' | 'snap-bet-initialize' | 'snap-bet-deposit' | 'snap-set-bet-result' | 'snap-bet-withdraw' | 'snap-fee-initialize' | 'snap-fee-deposit' | 'snap-fee-withdraw';
+export type StageId =
+  | 'wallet-initialization'
+  | 'address-validation'
+  | 'custom-tokens'
+  | 'transaction-history'
+  | 'tx-update-events'
+  | 'rpc-connection'
+  | 'rpc-basic-info'
+  | 'rpc-get-address'
+  | 'rpc-get-balance'
+  | 'rpc-get-utxos'
+  | 'rpc-sign-with-address'
+  | 'rpc-create-token'
+  | 'rpc-send-transaction'
+  | 'rpc-sign-oracle-data'
+  | 'rpc-raw-editor'
+  | 'rpc-bet-initialize'
+  | 'rpc-bet-deposit'
+  | 'rpc-set-bet-result'
+  | 'rpc-bet-withdraw'
+  | 'rpc-fee-initialize'
+  | 'rpc-fee-deposit'
+  | 'rpc-fee-withdraw'
+  | 'push-notifications'
+  | 'test-wallet-cleanup'
+  | 'multisig-wallet-management'
+  | 'snap-connection'
+  | 'snap-get-address'
+  | 'snap-get-balance'
+  | 'snap-get-connected-network'
+  | 'snap-get-utxos'
+  | 'snap-send-transaction'
+  | 'snap-sign-with-address'
+  | 'snap-create-token'
+  | 'snap-send-nano-contract-tx'
+  | 'snap-create-nc-token'
+  | 'snap-sign-oracle-data'
+  | 'snap-change-network'
+  | 'snap-get-xpub'
+  | 'snap-get-wallet-info'
+  | 'snap-bet-initialize'
+  | 'snap-bet-deposit'
+  | 'snap-set-bet-result'
+  | 'snap-bet-withdraw'
+  | 'snap-fee-initialize'
+  | 'snap-fee-deposit'
+  | 'snap-fee-withdraw';
 
 /**
  * Available stage groups
  */
-export type GroupId = 'main-qa' | 'rpc' | 'bet-nano-contracts' | 'fee-nano-contracts' | 'push-notifications' | 'auditing' | 'multisig' | 'snaps' | 'snap-bet-nc' | 'snap-fee-nc';
+export type GroupId =
+  | 'main-qa'
+  | 'rpc'
+  | 'bet-nano-contracts'
+  | 'fee-nano-contracts'
+  | 'push-notifications'
+  | 'auditing'
+  | 'multisig'
+  | 'snaps'
+  | 'snap-bet-nc'
+  | 'snap-fee-nc';
 
 /**
  * Stage configuration
@@ -397,7 +453,7 @@ export const STAGE_GROUPS: StageGroup[] = [
  */
 export function getGroupForStage(stageId: StageId): GroupId | null {
   for (const group of STAGE_GROUPS) {
-    if (group.stages.some(s => s.id === stageId)) {
+    if (group.stages.some((s) => s.id === stageId)) {
       return group.id;
     }
   }
@@ -407,7 +463,7 @@ export function getGroupForStage(stageId: StageId): GroupId | null {
 /**
  * All available stages with section separators (deprecated - kept for backward compatibility)
  */
-export const STAGES: StageItem[] = STAGE_GROUPS.flatMap(group => [
+export const STAGES: StageItem[] = STAGE_GROUPS.flatMap((group) => [
   { type: 'separator', title: group.title } as StageSection,
   ...group.stages,
 ]);

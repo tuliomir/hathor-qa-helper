@@ -59,10 +59,7 @@ const getUtxosSlice = createSlice({
   name: 'getUtxos',
   initialState,
   reducers: {
-    setGetUtxosRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setGetUtxosRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -71,10 +68,7 @@ const getUtxosSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setGetUtxosResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setGetUtxosResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
@@ -90,10 +84,7 @@ const getUtxosSlice = createSlice({
         state.response = null;
       }
     },
-    setGetUtxosError: (
-      state,
-      action: PayloadAction<{ error: string; duration: number }>
-    ) => {
+    setGetUtxosError: (state, action: PayloadAction<{ error: string; duration: number }>) => {
       state.error = action.payload.error;
       state.duration = action.payload.duration;
       state.response = null;
@@ -125,12 +116,7 @@ const getUtxosSlice = createSlice({
   },
 });
 
-export const {
-  setGetUtxosRequest,
-  setGetUtxosResponse,
-  setGetUtxosError,
-  setGetUtxosFormData,
-  clearGetUtxosData,
-} = getUtxosSlice.actions;
+export const { setGetUtxosRequest, setGetUtxosResponse, setGetUtxosError, setGetUtxosFormData, clearGetUtxosData } =
+  getUtxosSlice.actions;
 
 export default getUtxosSlice.reducer;

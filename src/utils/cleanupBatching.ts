@@ -30,7 +30,7 @@ export function splitIntoBatches(
   tokensToMelt: CleanupToken[],
   swapTokens: CleanupToken[],
   returnTokens: ReturnToken[],
-  maxTokensPerBatch = DEFAULT_MAX_TOKENS_PER_BATCH,
+  maxTokensPerBatch = DEFAULT_MAX_TOKENS_PER_BATCH
 ): CleanupBatch[] {
   // Flatten all tokens into a tagged list so we can chunk them
   type Tagged =

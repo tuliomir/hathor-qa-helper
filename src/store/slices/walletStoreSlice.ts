@@ -16,9 +16,9 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { addToken } from './tokensSlice';
 import {
-	deleteAddressesForWallet,
-	storeAddresses,
-	storeAddressesFromTransaction,
+  deleteAddressesForWallet,
+  storeAddresses,
+  storeAddressesFromTransaction,
 } from '../../services/addressDatabase';
 import type { AddressEntry } from '../../types/addressDatabase';
 import { fetchCloudWallets, storeCloudWallets } from '../../services/cloudWalletSync';
@@ -238,12 +238,14 @@ export const startWallet = createAsyncThunk(
 
           // Extract token info and store in Redux
           if (tokenDetails && tokenDetails.tokenInfo) {
-            dispatch(addToken({
-              uid,
-              name: tokenDetails.tokenInfo.name,
-              symbol: tokenDetails.tokenInfo.symbol,
-              timestamp: tokenDetails.tokenInfo.timestamp,
-            }));
+            dispatch(
+              addToken({
+                uid,
+                name: tokenDetails.tokenInfo.name,
+                symbol: tokenDetails.tokenInfo.symbol,
+                timestamp: tokenDetails.tokenInfo.timestamp,
+              })
+            );
           }
         } catch (err) {
           // Silently ignore errors for tokens that couldn't be fetched
@@ -257,11 +259,13 @@ export const startWallet = createAsyncThunk(
         console.debug('New transaction received:', tx);
 
         // Store event in Redux
-        dispatch(addWalletEvent({
-          walletId,
-          eventType: 'new-tx',
-          data: tx as { tx_id?: string; txId?: string; tokenName?: string; tokenSymbol?: string },
-        }));
+        dispatch(
+          addWalletEvent({
+            walletId,
+            eventType: 'new-tx',
+            data: tx as { tx_id?: string; txId?: string; tokenName?: string; tokenSymbol?: string },
+          })
+        );
 
         // Store addresses from transaction (fire-and-forget)
         storeAddressesFromTransaction(walletId, tx).catch(console.error);
@@ -282,11 +286,13 @@ export const startWallet = createAsyncThunk(
         console.debug('Transaction update received:', tx);
 
         // Store event in Redux
-        dispatch(addWalletEvent({
-          walletId,
-          eventType: 'update-tx',
-          data: tx,
-        }));
+        dispatch(
+          addWalletEvent({
+            walletId,
+            eventType: 'update-tx',
+            data: tx,
+          })
+        );
 
         // Store addresses from transaction (fire-and-forget)
         storeAddressesFromTransaction(walletId, tx).catch(console.error);
@@ -300,11 +306,13 @@ export const startWallet = createAsyncThunk(
         console.log('Wallet state changed:', state);
 
         // Store event in Redux
-        dispatch(addWalletEvent({
-          walletId,
-          eventType: 'state',
-          data: state,
-        }));
+        dispatch(
+          addWalletEvent({
+            walletId,
+            eventType: 'state',
+            data: state,
+          })
+        );
       };
 
       // Handler for 'more-addresses-loaded' event
@@ -312,11 +320,13 @@ export const startWallet = createAsyncThunk(
         console.log('More addresses loaded:', data);
 
         // Store event in Redux
-        dispatch(addWalletEvent({
-          walletId,
-          eventType: 'more-addresses-loaded',
-          data,
-        }));
+        dispatch(
+          addWalletEvent({
+            walletId,
+            eventType: 'more-addresses-loaded',
+            data,
+          })
+        );
 
         // Store newly loaded addresses (fire-and-forget)
         if (data && typeof data === 'object' && 'addresses' in data) {
@@ -350,7 +360,7 @@ export const startWallet = createAsyncThunk(
       // Cleanup on error
       const instance = walletInstancesMap.get(walletId);
       if (instance) {
-	      await instance.stop().catch((err: unknown) => console.error('Error stopping wallet after failed start:', err));
+        await instance.stop().catch((err: unknown) => console.error('Error stopping wallet after failed start:', err));
         walletInstancesMap.delete(walletId);
       }
 
@@ -365,35 +375,32 @@ export const startWallet = createAsyncThunk(
  * Async Thunk: Stop a wallet
  * Stops a running wallet instance and cleans up resources
  */
-export const stopWallet = createAsyncThunk(
-  'walletStore/stopWallet',
-  async (walletId: string, { dispatch }) => {
-    const instance = walletInstancesMap.get(walletId);
+export const stopWallet = createAsyncThunk('walletStore/stopWallet', async (walletId: string, { dispatch }) => {
+  const instance = walletInstancesMap.get(walletId);
 
-    if (instance) {
-      try {
-        // Remove all event listeners
-        const handlers = walletEventHandlers.get(walletId);
-        if (handlers) {
-          Object.entries(handlers).forEach(([event, handler]) => {
-            instance.off(event, handler);
-          });
-          walletEventHandlers.delete(walletId);
-        }
-
-        await instance.stop();
-        walletInstancesMap.delete(walletId);
-        dispatch(updateWalletInstance({ id: walletId, instance: null }));
-        dispatch(updateWalletStatus({ id: walletId, status: 'idle' }));
-      } catch (error) {
-        console.error(`Failed to stop wallet ${walletId}:`, error);
-        throw error;
+  if (instance) {
+    try {
+      // Remove all event listeners
+      const handlers = walletEventHandlers.get(walletId);
+      if (handlers) {
+        Object.entries(handlers).forEach(([event, handler]) => {
+          instance.off(event, handler);
+        });
+        walletEventHandlers.delete(walletId);
       }
-    }
 
-    return { walletId };
+      await instance.stop();
+      walletInstancesMap.delete(walletId);
+      dispatch(updateWalletInstance({ id: walletId, instance: null }));
+      dispatch(updateWalletStatus({ id: walletId, status: 'idle' }));
+    } catch (error) {
+      console.error(`Failed to stop wallet ${walletId}:`, error);
+      throw error;
+    }
   }
-);
+
+  return { walletId };
+});
 
 /**
  * Async Thunk: Refresh wallet tokens
@@ -437,12 +444,14 @@ export const refreshWalletTokens = createAsyncThunk(
 
           // Extract token info and store in Redux
           if (tokenDetails && tokenDetails.tokenInfo) {
-            dispatch(addToken({
-              uid,
-              name: tokenDetails.tokenInfo.name,
-              symbol: tokenDetails.tokenInfo.symbol,
-              timestamp: tokenDetails.tokenInfo.timestamp,
-            }));
+            dispatch(
+              addToken({
+                uid,
+                name: tokenDetails.tokenInfo.name,
+                symbol: tokenDetails.tokenInfo.symbol,
+                timestamp: tokenDetails.tokenInfo.timestamp,
+              })
+            );
           }
         } catch (err) {
           // Silently ignore errors for tokens that couldn't be fetched
@@ -512,9 +521,7 @@ export const importWalletsFromCloud = createAsyncThunk(
     const existingWallets = Object.values(state.walletStore.wallets);
 
     // Create a set of existing seed words (normalized) for deduplication
-    const existingSeeds = new Set(
-      existingWallets.map((w) => w.metadata.seedWords.toLowerCase().trim())
-    );
+    const existingSeeds = new Set(existingWallets.map((w) => w.metadata.seedWords.toLowerCase().trim()));
 
     let imported = 0;
     let skipped = 0;
@@ -528,13 +535,15 @@ export const importWalletsFromCloud = createAsyncThunk(
       }
 
       // Add the wallet (use original metadata but generate new ID)
-      dispatch(addWallet({
-        friendlyName: cloudWallet.friendlyName,
-        seedWords: cloudWallet.seedWords,
-        network: cloudWallet.network,
-        lastUsedAt: cloudWallet.lastUsedAt,
-        lastInitDurationMs: cloudWallet.lastInitDurationMs,
-      }));
+      dispatch(
+        addWallet({
+          friendlyName: cloudWallet.friendlyName,
+          seedWords: cloudWallet.seedWords,
+          network: cloudWallet.network,
+          lastUsedAt: cloudWallet.lastUsedAt,
+          lastInitDurationMs: cloudWallet.lastInitDurationMs,
+        })
+      );
 
       // Add to existing seeds to prevent duplicates within the same import
       existingSeeds.add(normalizedSeed);
@@ -550,21 +559,18 @@ export const importWalletsFromCloud = createAsyncThunk(
  * Async Thunk: Export wallets to cloud storage
  * Sends all local wallets to the remote API
  */
-export const exportWalletsToCloud = createAsyncThunk(
-  'walletStore/exportWalletsToCloud',
-  async (_, { getState }) => {
-    const state = getState() as RootState;
-    const wallets = Object.values(state.walletStore.wallets).map((w) => w.metadata);
+export const exportWalletsToCloud = createAsyncThunk('walletStore/exportWalletsToCloud', async (_, { getState }) => {
+  const state = getState() as RootState;
+  const wallets = Object.values(state.walletStore.wallets).map((w) => w.metadata);
 
-    if (wallets.length === 0) {
-      return { stored: 0, filtered: 0 };
-    }
-
-    const result = await storeCloudWallets(wallets);
-    console.log(`[CloudSync] Exported ${result.stored} wallets to cloud (${result.filtered} filtered by server)`);
-    return result;
+  if (wallets.length === 0) {
+    return { stored: 0, filtered: 0 };
   }
-);
+
+  const result = await storeCloudWallets(wallets);
+  console.log(`[CloudSync] Exported ${result.stored} wallets to cloud (${result.filtered} filtered by server)`);
+  return result;
+});
 
 const walletStoreSlice = createSlice({
   name: 'walletStore',
@@ -642,10 +648,7 @@ const walletStoreSlice = createSlice({
       }
     },
 
-    updateWalletInstance: (
-      state,
-      action: PayloadAction<{ id: string; instance: HathorWallet | null }>
-    ) => {
+    updateWalletInstance: (state, action: PayloadAction<{ id: string; instance: HathorWallet | null }>) => {
       const { id, instance } = action.payload;
       const walletInfo = state.wallets[id];
 
@@ -746,7 +749,11 @@ const walletStoreSlice = createSlice({
           walletInfo.events.push(event);
         }
       },
-      prepare: ({ walletId, eventType, data }: {
+      prepare: ({
+        walletId,
+        eventType,
+        data,
+      }: {
         walletId: string;
         eventType: WalletEvent['eventType'];
         data: unknown;
@@ -770,10 +777,7 @@ const walletStoreSlice = createSlice({
      * Update the init duration for a wallet (persisted to localStorage)
      * Used for time estimation during scan operations
      */
-    updateWalletInitDuration: (
-      state,
-      action: PayloadAction<{ id: string; durationMs: number }>
-    ) => {
+    updateWalletInitDuration: (state, action: PayloadAction<{ id: string; durationMs: number }>) => {
       const { id, durationMs } = action.payload;
       const walletInfo = state.wallets[id];
 
@@ -820,21 +824,18 @@ export const selectWalletEvents = (state: RootState, walletId: string): WalletEv
  * Get all events across all wallets (useful for global event monitoring)
  * MEMOIZED: Returns same reference if wallet events haven't changed
  */
-export const selectAllWalletEvents = createSelector(
-  [(state: RootState) => state.walletStore.wallets],
-  (wallets) => {
-    const allEvents: Array<WalletEvent & { walletId: string }> = [];
+export const selectAllWalletEvents = createSelector([(state: RootState) => state.walletStore.wallets], (wallets) => {
+  const allEvents: Array<WalletEvent & { walletId: string }> = [];
 
-    Object.entries(wallets).forEach(([walletId, walletInfo]) => {
-      walletInfo.events.forEach((event) => {
-        allEvents.push({ ...event, walletId });
-      });
+  Object.entries(wallets).forEach(([walletId, walletInfo]) => {
+    walletInfo.events.forEach((event) => {
+      allEvents.push({ ...event, walletId });
     });
+  });
 
-    // Sort by timestamp, most recent first
-    return allEvents.sort((a, b) => b.timestamp - a.timestamp);
-  }
-);
+  // Sort by timestamp, most recent first
+  return allEvents.sort((a, b) => b.timestamp - a.timestamp);
+});
 
 /**
  * Get all events that involve a specific transaction hash
@@ -842,10 +843,7 @@ export const selectAllWalletEvents = createSelector(
  * MEMOIZED: Returns same reference if events haven't changed
  */
 export const selectEventsByTxHash = createSelector(
-  [
-    (state: RootState) => selectAllWalletEvents(state),
-    (_state: RootState, txHash: string) => txHash,
-  ],
+  [(state: RootState) => selectAllWalletEvents(state), (_state: RootState, txHash: string) => txHash],
   (allEvents, txHash) => {
     return allEvents.filter((event) => {
       // Check if the event data contains this transaction hash
@@ -864,9 +862,7 @@ export const selectEventsByTxHash = createSelector(
  * MEMOIZED: Returns same reference if events haven't changed
  */
 export const selectLatestEventForTx = createSelector(
-  [
-    (state: RootState, txHash: string) => selectEventsByTxHash(state, txHash),
-  ],
+  [(state: RootState, txHash: string) => selectEventsByTxHash(state, txHash)],
   (events) => {
     return events.length > 0 ? events[0] : null;
   }

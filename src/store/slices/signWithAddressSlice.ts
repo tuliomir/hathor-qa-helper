@@ -56,10 +56,7 @@ const signWithAddressSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setSignWithAddressResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setSignWithAddressResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
@@ -68,12 +65,7 @@ const signWithAddressSlice = createSlice({
       try {
         const responseData = action.payload.response as Record<string, unknown>;
 
-        if (
-          responseData &&
-          responseData.message &&
-          responseData.signature &&
-          responseData.address
-        ) {
+        if (responseData && responseData.message && responseData.signature && responseData.address) {
           const addressData = responseData.address as Record<string, unknown>;
 
           state.response = {

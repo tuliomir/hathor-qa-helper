@@ -7,8 +7,8 @@ import { NETWORK_CONFIG } from '../constants/network';
 import type { WalletInfo } from '../types/walletStore';
 
 export interface TransactionMetadata {
-	fromWallet: WalletInfo;  // Only required: needed to create the actual tx
-	fromWalletId: string;
+  fromWallet: WalletInfo; // Only required: needed to create the actual tx
+  fromWalletId: string;
   toAddress: string;
   amount: number;
   tokenUid: string;
@@ -53,7 +53,7 @@ export function useSendTransaction() {
       // Build and sign the transaction
       const tx = await hWallet.buildTxTemplate(template, {
         signTx: true,
-        pinCode
+        pinCode,
       });
 
       // Send the transaction
@@ -62,7 +62,7 @@ export function useSendTransaction() {
 
       // Track transaction in history
       if (tx.hash) {
-				// TODO: Simplify this, as not all transactions will have these metadata fields
+        // TODO: Simplify this, as not all transactions will have these metadata fields
         dispatch(
           addTransaction({
             hash: tx.hash,
@@ -73,7 +73,7 @@ export function useSendTransaction() {
             tokenUid,
             tokenSymbol,
             network: fromWallet.metadata.network,
-            status: 'confirmed'
+            status: 'confirmed',
           })
         );
       }
@@ -104,6 +104,6 @@ export function useSendTransaction() {
     sendTransaction,
     isSending,
     error,
-    clearError: () => setError(null)
+    clearError: () => setError(null),
   };
 }

@@ -113,7 +113,6 @@ export default function TestWalletCleanup() {
   const [meltTxStatuses, setMeltTxStatuses] = useState<MeltTxStatus[]>([]);
   const [cleanupPhase, setCleanupPhase] = useState<'idle' | 'melting' | 'transferring' | 'done'>('idle');
 
-
   // Track retrieve-from-funding transaction statuses
   const [isRetrieving, setIsRetrieving] = useState<string | null>(null); // tokenUid being retrieved
 
@@ -171,7 +170,8 @@ export default function TestWalletCleanup() {
             }
 
             // Check if this is a swap test token (never melt, send to funding)
-            const swapTokenUids = testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapTokenUids =
+              testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
             const swapToken = swapTokenUids.includes(uid);
             if (swapToken) {
               return {
@@ -277,7 +277,7 @@ export default function TestWalletCleanup() {
   }, [testWallet, isRefreshing, dispatch, loadPreviewData]);
 
   // Fetch swap tokens registry and refresh wallet data on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     dispatch(fetchSwapTokens());
     handleRefresh().catch((e) => console.error('Failed refresh', e));
@@ -418,10 +418,11 @@ export default function TestWalletCleanup() {
       });
 
       // UNIFIED CLEANUP: Melt + swap transfers + return to sender + HTR in ONE atomic transaction
-      const hasWork = tokensWithMeltAuthority.length > 0
-        || swapTokensToTransfer.length > 0
-        || returnTokensForTemplate.length > 0
-        || htrBalance > 0n;
+      const hasWork =
+        tokensWithMeltAuthority.length > 0 ||
+        swapTokensToTransfer.length > 0 ||
+        returnTokensForTemplate.length > 0 ||
+        htrBalance > 0n;
 
       if (hasWork) {
         const meltSymbols = tokensWithMeltAuthority.map((t) => t.symbol);
@@ -464,10 +465,7 @@ export default function TestWalletCleanup() {
           });
 
           addDebugLog('info', 'Calling runTxTemplate for unified cleanup...');
-          const tx = await testWallet.instance.runTxTemplate(
-            unifiedTemplate,
-            WALLET_CONFIG.DEFAULT_PIN_CODE
-          );
+          const tx = await testWallet.instance.runTxTemplate(unifiedTemplate, WALLET_CONFIG.DEFAULT_PIN_CODE);
 
           addDebugLog('tx', 'Unified cleanup transaction result', {
             hash: tx?.hash,
@@ -516,11 +514,7 @@ export default function TestWalletCleanup() {
           // The unified tx failed likely because too many HTR UTXOs caused an
           // oversized transaction. Separating HTR uses sendManyOutputsSendTransaction
           // which handles UTXO selection natively (no template fill bloat).
-          const batches = splitIntoBatches(
-            tokensWithMeltAuthority,
-            swapTokensToTransfer,
-            returnTokensForTemplate,
-          );
+          const batches = splitIntoBatches(tokensWithMeltAuthority, swapTokensToTransfer, returnTokensForTemplate);
           const totalBatches = batches.length + (htrBalance > 0n ? 1 : 0);
           addDebugLog('info', `Batched fallback: ${batches.length} token batch(es) + HTR transfer`);
 
@@ -530,7 +524,8 @@ export default function TestWalletCleanup() {
           for (let bIdx = 0; bIdx < batches.length; bIdx++) {
             if (batchFailed) break;
             const batch = batches[bIdx];
-            const hasTokenWork = batch.tokensToMelt.length > 0 || batch.swapTokens.length > 0 || batch.returnTokens.length > 0;
+            const hasTokenWork =
+              batch.tokensToMelt.length > 0 || batch.swapTokens.length > 0 || batch.returnTokens.length > 0;
             if (!hasTokenWork) continue;
 
             setExecutionStep(`Token batch ${bIdx + 1}/${totalBatches}...`);
@@ -548,8 +543,8 @@ export default function TestWalletCleanup() {
                 batch.returnTokens,
                 testWalletAddr,
                 fundingAddr,
-                0n,   // no existing HTR selection — avoids UTXO bloat
-                true, // always include HTR output for melt-produced amount
+                0n, // no existing HTR selection — avoids UTXO bloat
+                true // always include HTR output for melt-produced amount
               );
 
               addDebugLog('template', `Token batch ${bIdx + 1}`, {
@@ -558,10 +553,7 @@ export default function TestWalletCleanup() {
                 ret: batch.returnTokens.length,
               });
 
-              const tx = await testWallet.instance.runTxTemplate(
-                batchTemplate,
-                WALLET_CONFIG.DEFAULT_PIN_CODE,
-              );
+              const tx = await testWallet.instance.runTxTemplate(batchTemplate, WALLET_CONFIG.DEFAULT_PIN_CODE);
 
               if (tx?.hash) {
                 addDebugLog('info', `Token batch ${bIdx + 1} tx: ${tx.hash}`);
@@ -581,10 +573,7 @@ export default function TestWalletCleanup() {
               batchFailed = true;
 
               for (const token of [...batch.tokensToMelt, ...batch.swapTokens]) {
-                setMeltTxStatuses((prev) => [
-                  ...prev,
-                  { tokenSymbol: token.symbol, txHash: '', status: 'failed' },
-                ]);
+                setMeltTxStatuses((prev) => [...prev, { tokenSymbol: token.symbol, txHash: '', status: 'failed' }]);
               }
             }
           }
@@ -603,7 +592,7 @@ export default function TestWalletCleanup() {
                 // Send all HTR to self — wallet-lib selects UTXOs natively
                 const consolidateTx = await testWallet.instance.sendManyOutputsSendTransaction(
                   [{ address: testWalletAddr, value: freshHtr, token: NATIVE_TOKEN_UID }],
-                  { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE },
+                  { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE }
                 );
                 await consolidateTx.run();
                 addDebugLog('info', `HTR consolidated: ${freshHtr} units into 1 UTXO`);
@@ -629,7 +618,7 @@ export default function TestWalletCleanup() {
               if (freshHtr > 0n) {
                 const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(
                   [{ address: fundingAddr, value: freshHtr, token: NATIVE_TOKEN_UID }],
-                  { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE },
+                  { changeAddress: testWalletAddr, pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE }
                 );
                 await sendTx.run();
                 addDebugLog('info', `HTR sent to funding: ${freshHtr} units`);
@@ -694,7 +683,8 @@ export default function TestWalletCleanup() {
               };
             }
 
-            const swapTokenUids = testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapTokenUids =
+              testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
             const swapToken = swapTokenUids.includes(uid);
             if (swapToken) {
               return {
@@ -768,7 +758,11 @@ export default function TestWalletCleanup() {
   const hasSwapTokens = swapTokensList.length > 0;
   const hasTokensToReturn = returnableTokensList.length > 0;
   const hasHtrToTransfer = htrBalance > 0n;
-  const canExecute = (hasTokensToMelt || hasSwapTokens || hasTokensToReturn || hasHtrToTransfer) && fundingReady && !isExecuting && !isLoading;
+  const canExecute =
+    (hasTokensToMelt || hasSwapTokens || hasTokensToReturn || hasHtrToTransfer) &&
+    fundingReady &&
+    !isExecuting &&
+    !isLoading;
 
   // Calculate estimated HTR from melting (100 tokens = 1 HTR)
   const totalMeltableTokens = meltableTokensList.reduce((sum, t) => sum + t.meltableAmount, 0);
@@ -778,13 +772,14 @@ export default function TestWalletCleanup() {
   return (
     <div className="max-w-300 mx-auto">
       {(isExecuting || isRetrieving) && (
-        <Loading overlay message={isRetrieving ? 'Retrieving tokens from Funding Wallet...' : (executionStep || 'Processing...')} />
+        <Loading
+          overlay
+          message={isRetrieving ? 'Retrieving tokens from Funding Wallet...' : executionStep || 'Processing...'}
+        />
       )}
 
       <h1 className="mt-0 text-3xl font-bold">Test Wallet Cleanup</h1>
-      <p className="text-muted mb-7.5">
-        Melt all custom tokens and return HTR to the funding wallet.
-      </p>
+      <p className="text-muted mb-7.5">Melt all custom tokens and return HTR to the funding wallet.</p>
 
       {/* Warning Banner */}
       <div className="card-primary mb-7.5 bg-yellow-50 border-2 border-yellow-400">
@@ -841,27 +836,21 @@ export default function TestWalletCleanup() {
                   {t.symbol}: {t.meltableAmount} meltable (balance: {t.balance.toString()})
                 </div>
               ))}
-              {meltableTokensList.length === 0 && (
-                <div className="ml-2 text-yellow-400">None found!</div>
-              )}
+              {meltableTokensList.length === 0 && <div className="ml-2 text-yellow-400">None found!</div>}
               <div className="mt-2 text-gray-400">Swap test tokens:</div>
               {swapTokensList.map((t, i) => (
                 <div key={i} className="ml-2 text-indigo-400">
                   {t.symbol}: {t.balance.toString()} → funding wallet
                 </div>
               ))}
-              {swapTokensList.length === 0 && (
-                <div className="ml-2 text-yellow-400">None found</div>
-              )}
+              {swapTokensList.length === 0 && <div className="ml-2 text-yellow-400">None found</div>}
               <div className="mt-2 text-gray-400">Fee tokens (left in wallet):</div>
               {feeTokensList.map((t, i) => (
                 <div key={i} className="ml-2 text-rose-400">
                   {t.symbol}: {t.balance.toString()} (skipped)
                 </div>
               ))}
-              {feeTokensList.length === 0 && (
-                <div className="ml-2 text-yellow-400">None found</div>
-              )}
+              {feeTokensList.length === 0 && <div className="ml-2 text-yellow-400">None found</div>}
             </div>
 
             {/* Log Entries */}
@@ -876,15 +865,14 @@ export default function TestWalletCleanup() {
                       log.type === 'error'
                         ? 'bg-red-900/50 text-red-300'
                         : log.type === 'template'
-                        ? 'bg-blue-900/50 text-blue-300'
-                        : log.type === 'tx'
-                        ? 'bg-green-900/50 text-green-300'
-                        : 'bg-gray-800 text-gray-300'
+                          ? 'bg-blue-900/50 text-blue-300'
+                          : log.type === 'tx'
+                            ? 'bg-green-900/50 text-green-300'
+                            : 'bg-gray-800 text-gray-300'
                     }`}
                   >
                     <span className="text-gray-500">[{log.timestamp}]</span>{' '}
-                    <span className="font-semibold">[{log.type.toUpperCase()}]</span>{' '}
-                    {log.message}
+                    <span className="font-semibold">[{log.type.toUpperCase()}]</span> {log.message}
                     {log.data !== undefined && log.data !== null && (
                       <pre className="mt-1 text-2xs overflow-x-auto whitespace-pre-wrap">
                         {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
@@ -902,7 +890,8 @@ export default function TestWalletCleanup() {
       {swapTokensState.status === 'failed' && (
         <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
           <p className="m-0 text-orange-900">
-            Failed to load swap token registry: {swapTokensState.error}. Swap tokens may be incorrectly melted instead of transferred.
+            Failed to load swap token registry: {swapTokensState.error}. Swap tokens may be incorrectly melted instead
+            of transferred.
           </p>
         </div>
       )}
@@ -919,9 +908,7 @@ export default function TestWalletCleanup() {
       {/* Test Wallet Not Ready */}
       {testWallet && !testReady && (
         <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
-          <p className="m-0 text-red-900">
-            Test Wallet is not ready. Please wait for it to finish syncing.
-          </p>
+          <p className="m-0 text-red-900">Test Wallet is not ready. Please wait for it to finish syncing.</p>
         </div>
       )}
 
@@ -929,7 +916,8 @@ export default function TestWalletCleanup() {
       {!fundingWallet && testReady && (
         <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
           <p className="m-0 text-red-900">
-            No Funding Wallet selected. A Funding Wallet is required for cleanup — all tokens and HTR must be sent there.
+            No Funding Wallet selected. A Funding Wallet is required for cleanup — all tokens and HTR must be sent
+            there.
           </p>
         </div>
       )}
@@ -948,11 +936,7 @@ export default function TestWalletCleanup() {
           <div className="card-primary mb-7.5">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold m-0">Tokens to Melt</h2>
-              <button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="btn-primary py-1.5 px-4 text-sm"
-              >
+              <button onClick={handleRefresh} disabled={isRefreshing} className="btn-primary py-1.5 px-4 text-sm">
                 {isRefreshing ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
@@ -976,7 +960,9 @@ export default function TestWalletCleanup() {
                     {getDisplayableTokens(tokensToMelt).map((token) => {
                       // Calculate amount that will be returned to sender
                       const returnAmount = token.canReturnToSender
-                        ? (!token.hasMeltAuthority ? Number(token.balance) : token.remainder)
+                        ? !token.hasMeltAuthority
+                          ? Number(token.balance)
+                          : token.remainder
                         : 0;
 
                       return (
@@ -985,9 +971,7 @@ export default function TestWalletCleanup() {
                             <span className="font-semibold">{token.symbol}</span>
                             <span className="text-muted text-xs ml-2">({token.name})</span>
                           </td>
-                          <td className="py-2 px-3 text-right font-mono">
-                            {formatBalance(token.balance)}
-                          </td>
+                          <td className="py-2 px-3 text-right font-mono">{formatBalance(token.balance)}</td>
                           <td className="py-2 px-3 text-right font-mono">
                             {token.hasMeltAuthority ? (
                               token.meltableAmount > 0 ? (
@@ -1061,9 +1045,7 @@ export default function TestWalletCleanup() {
                           <span className="font-semibold">{token.symbol}</span>
                           <span className="text-muted text-xs ml-2">({token.name})</span>
                         </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {formatBalance(token.balance)}
-                        </td>
+                        <td className="py-2 px-3 text-right font-mono">{formatBalance(token.balance)}</td>
                         <td className="py-2 px-3 text-center">
                           <span className="badge badge-primary badge-sm">Send to Funding</span>
                         </td>
@@ -1080,7 +1062,8 @@ export default function TestWalletCleanup() {
             <div className="card-primary mb-7.5 bg-rose-50 border-2 border-rose-400">
               <h2 className="text-xl font-bold mb-2 text-rose-900">Fee Tokens</h2>
               <p className="text-sm text-rose-800 mb-4">
-                These tokens were created with version &quot;fee&quot; and cost HTR to transfer. They will be left in the wallet:
+                These tokens were created with version &quot;fee&quot; and cost HTR to transfer. They will be left in
+                the wallet:
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1098,9 +1081,7 @@ export default function TestWalletCleanup() {
                           <span className="font-semibold">{token.symbol}</span>
                           <span className="text-muted text-xs ml-2">({token.name})</span>
                         </td>
-                        <td className="py-2 px-3 text-right font-mono">
-                          {formatBalance(token.balance)}
-                        </td>
+                        <td className="py-2 px-3 text-right font-mono">{formatBalance(token.balance)}</td>
                         <td className="py-2 px-3 text-center">
                           <span className="badge badge-warning badge-sm">Left in wallet</span>
                         </td>
@@ -1147,13 +1128,9 @@ export default function TestWalletCleanup() {
                 </div>
               </div>
               {fundingReady ? (
-                <p className="text-sm text-blue-700 mt-2 mb-0">
-                  Will be sent to Funding Wallet address 0.
-                </p>
+                <p className="text-sm text-blue-700 mt-2 mb-0">Will be sent to Funding Wallet address 0.</p>
               ) : (
-                <p className="text-sm text-red-600 mt-2 mb-0">
-                  No funding wallet available. Cleanup cannot proceed.
-                </p>
+                <p className="text-sm text-red-600 mt-2 mb-0">No funding wallet available. Cleanup cannot proceed.</p>
               )}
             </div>
           </div>
@@ -1179,9 +1156,7 @@ export default function TestWalletCleanup() {
                     {tokensToMelt
                       .filter((t) => t.canReturnToSender && t.originalSender)
                       .map((token) => {
-                        const returnAmount = !token.hasMeltAuthority
-                          ? Number(token.balance)
-                          : token.remainder;
+                        const returnAmount = !token.hasMeltAuthority ? Number(token.balance) : token.remainder;
                         const primaryFlow = token.tokenFlow?.addressFlows[0];
 
                         return (
@@ -1189,9 +1164,7 @@ export default function TestWalletCleanup() {
                             <td className="py-2 px-3">
                               <span className="font-semibold">{token.symbol}</span>
                             </td>
-                            <td className="py-2 px-3 text-right font-mono text-cyan-700">
-                              {returnAmount}
-                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-cyan-700">{returnAmount}</td>
                             <td className="py-2 px-3 font-mono text-xs text-cyan-700" title={token.originalSender}>
                               {token.originalSender?.slice(0, 12)}...{token.originalSender?.slice(-6)}
                             </td>
@@ -1208,12 +1181,13 @@ export default function TestWalletCleanup() {
           )}
 
           {/* Tokens to Retrieve for Melting - has melt authority but tokens are held externally */}
-          {tokensToMelt.filter((t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0).length > 0 && (
+          {tokensToMelt.filter((t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0)
+            .length > 0 && (
             <div className="card-primary mb-7.5 bg-amber-50 border-2 border-amber-400">
               <h2 className="text-xl font-bold mb-2 text-amber-900">Tokens to Retrieve for Melting</h2>
               <p className="text-sm text-amber-800 mb-4">
-                You have melt authority for these tokens, but some are held at external addresses.
-                Retrieve them to complete the cleanup:
+                You have melt authority for these tokens, but some are held at external addresses. Retrieve them to
+                complete the cleanup:
               </p>
               {tokensToMelt
                 .filter((t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0)
@@ -1228,9 +1202,7 @@ export default function TestWalletCleanup() {
                       </div>
 
                       <div className="border-t border-amber-200 pt-2 mt-2">
-                        <div className="text-xs text-amber-800 font-semibold mb-2">
-                          External Addresses:
-                        </div>
+                        <div className="text-xs text-amber-800 font-semibold mb-2">External Addresses:</div>
                         <div className="space-y-2">
                           {token.tokenFlow!.addressFlows.map((flow, idx) => {
                             const isFundingWallet = flow.walletId === fundingWalletId;
@@ -1252,11 +1224,14 @@ export default function TestWalletCleanup() {
                                 {flow.walletId && (
                                   <div className="flex justify-between items-center mt-1">
                                     <div className="text-amber-600">
-                                      <span className="font-semibold">Wallet:</span> {getWalletFriendlyName(flow.walletId)}
+                                      <span className="font-semibold">Wallet:</span>{' '}
+                                      {getWalletFriendlyName(flow.walletId)}
                                     </div>
                                     {isFundingWallet && (
                                       <button
-                                        onClick={() => handleRetrieveFromFunding(token.uid, token.symbol, flow.netBalance)}
+                                        onClick={() =>
+                                          handleRetrieveFromFunding(token.uid, token.symbol, flow.netBalance)
+                                        }
                                         disabled={!canRetrieve}
                                         className="ml-2 px-2 py-0.5 text-xs font-semibold rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                       >
@@ -1312,9 +1287,7 @@ export default function TestWalletCleanup() {
 
                       {hasFlowData ? (
                         <div className="border-t border-orange-200 pt-2 mt-2">
-                          <div className="text-xs text-orange-800 font-semibold mb-2">
-                            Token Origin:
-                          </div>
+                          <div className="text-xs text-orange-800 font-semibold mb-2">Token Origin:</div>
                           <div className="space-y-2">
                             {token.tokenFlow!.addressFlows.map((flow, idx) => (
                               <div key={idx} className="bg-orange-50 rounded px-2 py-1.5 text-xs">
@@ -1328,7 +1301,8 @@ export default function TestWalletCleanup() {
                                 </div>
                                 {flow.walletId && (
                                   <div className="text-orange-600 mt-1">
-                                    <span className="font-semibold">Wallet:</span> {getWalletFriendlyName(flow.walletId)}
+                                    <span className="font-semibold">Wallet:</span>{' '}
+                                    {getWalletFriendlyName(flow.walletId)}
                                   </div>
                                 )}
                               </div>
@@ -1336,9 +1310,7 @@ export default function TestWalletCleanup() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-orange-500 italic text-xs mt-2">
-                          Could not trace token origin
-                        </div>
+                        <div className="text-orange-500 italic text-xs mt-2">Could not trace token origin</div>
                       )}
                     </div>
                   );
@@ -1355,20 +1327,24 @@ export default function TestWalletCleanup() {
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-purple-800 font-semibold">Phase:</span>
-                  <span className={`badge ${
-                    cleanupPhase === 'melting' ? 'badge-warning' :
-                    cleanupPhase === 'transferring' ? 'badge-primary' :
-                    cleanupPhase === 'done' ? 'badge-success' : 'badge-ghost'
-                  }`}>
+                  <span
+                    className={`badge ${
+                      cleanupPhase === 'melting'
+                        ? 'badge-warning'
+                        : cleanupPhase === 'transferring'
+                          ? 'badge-primary'
+                          : cleanupPhase === 'done'
+                            ? 'badge-success'
+                            : 'badge-ghost'
+                    }`}
+                  >
                     {cleanupPhase === 'melting' && 'Processing'}
                     {cleanupPhase === 'transferring' && 'Transferring HTR'}
                     {cleanupPhase === 'done' && 'Completed'}
                     {cleanupPhase === 'idle' && 'Idle'}
                   </span>
                 </div>
-                {executionStep && (
-                  <p className="text-sm text-purple-700 m-0">{executionStep}</p>
-                )}
+                {executionStep && <p className="text-sm text-purple-700 m-0">{executionStep}</p>}
               </div>
 
               {/* Transaction Status */}
@@ -1381,13 +1357,11 @@ export default function TestWalletCleanup() {
                         <span className="font-semibold">{tx.tokenSymbol}</span>
                         <div className="flex items-center gap-2">
                           {tx.txHash && (
-                            <span className="font-mono text-xs text-gray-500">
-                              {tx.txHash.slice(0, 8)}...
-                            </span>
+                            <span className="font-mono text-xs text-gray-500">{tx.txHash.slice(0, 8)}...</span>
                           )}
-                          <span className={`badge badge-sm ${
-                            tx.status === 'confirmed' ? 'badge-success' : 'badge-error'
-                          }`}>
+                          <span
+                            className={`badge badge-sm ${tx.status === 'confirmed' ? 'badge-success' : 'badge-error'}`}
+                          >
                             {tx.status === 'confirmed' ? 'Sent' : 'Failed'}
                           </span>
                         </div>
@@ -1414,9 +1388,7 @@ export default function TestWalletCleanup() {
           {/* Success Message */}
           {completed && errors.length === 0 && (
             <div className="card-primary mb-7.5 bg-green-50 border-2 border-green-400">
-              <p className="m-0 text-green-900 font-semibold text-center">
-                Cleanup completed successfully!
-              </p>
+              <p className="m-0 text-green-900 font-semibold text-center">Cleanup completed successfully!</p>
             </div>
           )}
 
@@ -1435,8 +1407,8 @@ export default function TestWalletCleanup() {
                 {!fundingReady
                   ? 'Funding Wallet required for cleanup.'
                   : !hasTokensToMelt && !hasSwapTokens && !hasTokensToReturn && !hasHtrToTransfer
-                  ? 'Nothing to clean up.'
-                  : 'Cannot execute cleanup.'}
+                    ? 'Nothing to clean up.'
+                    : 'Cannot execute cleanup.'}
               </p>
             )}
           </div>

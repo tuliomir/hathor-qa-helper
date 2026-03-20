@@ -87,11 +87,13 @@ export default function TransactionHistory() {
       } catch (err) {
         console.error('Failed to refresh tokens:', err);
         // Fallback: at least show HTR
-        setAvailableTokens([{
-          uid: NATIVE_TOKEN_UID,
-          symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
-          name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
-        }]);
+        setAvailableTokens([
+          {
+            uid: NATIVE_TOKEN_UID,
+            symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+            name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+          },
+        ]);
       } finally {
         setIsLoadingTokens(false);
       }
@@ -103,10 +105,20 @@ export default function TransactionHistory() {
   // Parse a single raw tx into our WalletTransaction shape
   function parseTx(tx: unknown, tokenSymbol?: string): WalletTransaction {
     const txData = tx as {
-      tx_id?: string; txId?: string; timestamp?: number; balance?: number;
-      first_block?: string | number; firstBlock?: string | number; voided?: boolean; version?: number;
-      nc_caller?: string; ncCaller?: string; nc_id?: string; ncId?: string;
-      nc_method?: string; ncMethod?: string;
+      tx_id?: string;
+      txId?: string;
+      timestamp?: number;
+      balance?: number;
+      first_block?: string | number;
+      firstBlock?: string | number;
+      voided?: boolean;
+      version?: number;
+      nc_caller?: string;
+      ncCaller?: string;
+      nc_id?: string;
+      ncId?: string;
+      nc_method?: string;
+      ncMethod?: string;
       headers?: { method?: string; [key: string]: unknown };
     };
     const rawFirstBlock = txData.first_block ?? txData.firstBlock;
@@ -183,9 +195,7 @@ export default function TransactionHistory() {
   // Get explorer URL based on network
   function getExplorerUrl(hash: string): string {
     const network = testWallet?.metadata.network || 'testnet';
-    const baseUrl = network === 'MAINNET'
-      ? NETWORK_CONFIG.MAINNET.explorerUrl
-      : NETWORK_CONFIG.TESTNET.explorerUrl;
+    const baseUrl = network === 'MAINNET' ? NETWORK_CONFIG.MAINNET.explorerUrl : NETWORK_CONFIG.TESTNET.explorerUrl;
     return `${baseUrl}transaction/${hash}`;
   }
 
@@ -212,10 +222,7 @@ export default function TransactionHistory() {
   const isAllFilter = selectedTokenFilter === ALL_TOKENS_VALUE;
 
   // Paginate wallet transactions
-  const paginatedTxs = walletTxs.slice(
-    currentPage * pageSize,
-    (currentPage + 1) * pageSize
-  );
+  const paginatedTxs = walletTxs.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const totalPages = Math.ceil(walletTxs.length / pageSize);
 
   if (!testWallet) {
@@ -230,16 +237,12 @@ export default function TransactionHistory() {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Transaction History</h1>
-      <p className="text-muted mb-7.5">
-        View transaction history for {testWallet.metadata.friendlyName}
-      </p>
+      <p className="text-muted mb-7.5">View transaction history for {testWallet.metadata.friendlyName}</p>
 
       {/* Section 1: Redux Transactions */}
       <div className="card-primary mb-6">
         <h2 className="text-xl font-bold mb-4">App Transactions</h2>
-        <p className="text-sm text-muted mb-4">
-          Transactions created by this application (stored in Redux)
-        </p>
+        <p className="text-sm text-muted mb-4">Transactions created by this application (stored in Redux)</p>
 
         {reduxTransactions.length === 0 ? (
           <p className="text-muted text-sm">No transactions yet</p>
@@ -272,9 +275,7 @@ export default function TransactionHistory() {
                         <CopyButton text={tx.hash} label="" />
                       </div>
                     </td>
-                    <td className="py-2 px-3 text-xs">
-                      {dateFormatter.parseTimestamp(tx.timestamp)}
-                    </td>
+                    <td className="py-2 px-3 text-xs">{dateFormatter.parseTimestamp(tx.timestamp)}</td>
                     <td className="py-2 px-3 font-mono text-xs" title={tx.toAddress}>
                       {truncateHash(tx.toAddress)}
                     </td>
@@ -306,9 +307,7 @@ export default function TransactionHistory() {
       {/* Section 2: Wallet getTxHistory */}
       <div className="card-primary">
         <h2 className="text-xl font-bold mb-4">Wallet Transaction History</h2>
-        <p className="text-sm text-muted mb-4">
-          Full transaction history from wallet-lib (paginated)
-        </p>
+        <p className="text-sm text-muted mb-4">Full transaction history from wallet-lib (paginated)</p>
 
         {/* Token Filter Select */}
         <div className="mb-4 flex flex-col items-center">
@@ -333,15 +332,9 @@ export default function TransactionHistory() {
 
         {isLoading && <Loading message="Loading transaction history..." />}
 
-        {error && (
-          <p className="text-danger text-sm">
-            Error: {error}
-          </p>
-        )}
+        {error && <p className="text-danger text-sm">Error: {error}</p>}
 
-        {!isLoading && !error && walletTxs.length === 0 && (
-          <p className="text-muted text-sm">No transactions found</p>
-        )}
+        {!isLoading && !error && walletTxs.length === 0 && <p className="text-muted text-sm">No transactions found</p>}
 
         {!isLoading && !error && walletTxs.length > 0 && (
           <>
@@ -352,9 +345,7 @@ export default function TransactionHistory() {
                     <th className="text-left py-2 px-3 font-bold">Hash</th>
                     <th className="text-left py-2 px-3 font-bold">Timestamp</th>
                     <th className="text-right py-2 px-3 font-bold">Balance</th>
-                    {isAllFilter && (
-                      <th className="text-center py-2 px-3 font-bold">Token</th>
-                    )}
+                    {isAllFilter && <th className="text-center py-2 px-3 font-bold">Token</th>}
                     <th className="text-center py-2 px-3 font-bold">Status</th>
                     <th className="text-center py-2 px-3 font-bold">Type</th>
                     <th className="text-center py-2 px-3 font-bold">Explorer</th>
@@ -375,12 +366,8 @@ export default function TransactionHistory() {
                             <CopyButton text={tx.txId} label="" />
                           </div>
                         </td>
-                        <td className="py-2 px-3 text-xs">
-                          {dateFormatter.parseTimestamp(tx.timestamp/1000)}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          {tx.balance}
-                        </td>
+                        <td className="py-2 px-3 text-xs">{dateFormatter.parseTimestamp(tx.timestamp / 1000)}</td>
+                        <td className="py-2 px-3 text-right">{tx.balance}</td>
                         {isAllFilter && (
                           <td className="py-2 px-3 text-center">
                             <button
@@ -399,9 +386,7 @@ export default function TransactionHistory() {
                         <td className="py-2 px-3 text-center">
                           <TxStatus hash={tx.txId} walletId={testWalletId ?? undefined} />
                         </td>
-                        <td className="py-2 px-3 text-center text-xs">
-                          {txType}
-                        </td>
+                        <td className="py-2 px-3 text-center text-xs">{txType}</td>
                         <td className="py-2 px-3 text-center">
                           <div className="flex items-center justify-center gap-2">
                             {txType === 'Nano Init' && (
@@ -494,10 +479,7 @@ export default function TransactionHistory() {
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={() => setQrModalTxHash(null)}
         >
-          <div
-            className="bg-white rounded-lg p-6 max-w-sm mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold m-0">Transaction QR Code</h3>
               <button

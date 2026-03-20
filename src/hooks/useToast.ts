@@ -15,18 +15,27 @@ export function useToast() {
       dispatch(addToast({ id, message, type, duration, link, actionType }));
 
       // Auto-remove toast after duration or default 2000ms
-      setTimeout(() => {
-        dispatch(removeToast(id));
-      }, typeof duration === 'number' ? duration : 2000);
+      setTimeout(
+        () => {
+          dispatch(removeToast(id));
+        },
+        typeof duration === 'number' ? duration : 2000
+      );
     },
     [dispatch]
   );
 
   return {
     showToast,
-    success: useCallback((message: string, options?: ToastOptions) => showToast(message, 'success', options), [showToast]),
+    success: useCallback(
+      (message: string, options?: ToastOptions) => showToast(message, 'success', options),
+      [showToast]
+    ),
     error: useCallback((message: string, options?: ToastOptions) => showToast(message, 'error', options), [showToast]),
-    warning: useCallback((message: string, options?: ToastOptions) => showToast(message, 'warning', options), [showToast]),
+    warning: useCallback(
+      (message: string, options?: ToastOptions) => showToast(message, 'warning', options),
+      [showToast]
+    ),
     info: useCallback((message: string, options?: ToastOptions) => showToast(message, 'info', options), [showToast]),
   };
 }

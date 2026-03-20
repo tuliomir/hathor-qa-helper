@@ -12,11 +12,7 @@ interface OCRReferenceImageProps {
   onDismiss: () => void;
 }
 
-export default function OCRReferenceImage({
-  imageDataUrl,
-  onExpand,
-  onDismiss,
-}: OCRReferenceImageProps) {
+export default function OCRReferenceImage({ imageDataUrl, onExpand, onDismiss }: OCRReferenceImageProps) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -138,11 +134,7 @@ export default function OCRReferenceImage({
 
       {/* Instructions */}
       <div className="text-center text-xs text-muted mt-2">
-        {zoom === 1 ? (
-          <>Click to expand • Scroll to zoom</>
-        ) : (
-          <>Drag to pan • Scroll to zoom • Click to expand</>
-        )}
+        {zoom === 1 ? <>Click to expand • Scroll to zoom</> : <>Drag to pan • Scroll to zoom • Click to expand</>}
       </div>
     </div>
   );

@@ -12,8 +12,7 @@ import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 
 export const SnapSignOracleDataStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('signOracleData');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('signOracleData');
 
   const snapAddress = useSelector(selectSnapAddress);
 
@@ -30,7 +29,7 @@ export const SnapSignOracleDataStage: React.FC = () => {
         oracle: oracle || '<oracle>',
       },
     }),
-    [ncId, data, oracle],
+    [ncId, data, oracle]
   );
 
   const handleExecute = () => execute((h) => h.signOracleData(ncId, data, oracle));
@@ -38,9 +37,7 @@ export const SnapSignOracleDataStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Sign Oracle Data (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Sign oracle data for a nano contract via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Sign oracle data for a nano contract via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -55,19 +52,39 @@ export const SnapSignOracleDataStage: React.FC = () => {
         >
           <div>
             <label className="block text-sm font-medium mb-1.5">Nano Contract ID</label>
-            <input type="text" value={ncId} onChange={(e) => setNcId(e.target.value)} placeholder="NC ID" className="input" />
+            <input
+              type="text"
+              value={ncId}
+              onChange={(e) => setNcId(e.target.value)}
+              placeholder="NC ID"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Data</label>
-            <input type="text" value={data} onChange={(e) => setData(e.target.value)} placeholder="Data to sign" className="input" />
+            <input
+              type="text"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              placeholder="Data to sign"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Oracle Address</label>
-            <input type="text" value={oracle} onChange={(e) => setOracle(e.target.value)} placeholder="Oracle address" className="input" />
+            <input
+              type="text"
+              value={oracle}
+              onChange={(e) => setOracle(e.target.value)}
+              placeholder="Oracle address"
+              className="input"
+            />
             <div className="flex gap-2 mt-1.5">
               <button
                 type="button"
-                onClick={() => { if (snapAddress) setOracle(snapAddress); }}
+                onClick={() => {
+                  if (snapAddress) setOracle(snapAddress);
+                }}
                 disabled={!snapAddress}
                 className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
                 title="Use address 0 from the connected Snap wallet"

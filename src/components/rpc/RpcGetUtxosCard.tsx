@@ -19,11 +19,7 @@ import { extractErrorMessage } from '../../utils/errorUtils';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 export interface RpcGetUtxosCardProps {
@@ -53,10 +49,13 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const { showToast } = useToast();
 
-  const liveRequest = useMemo(() => ({
-    method: 'htr_getUtxos',
-    params: { network: 'testnet' },
-  }), []);
+  const liveRequest = useMemo(
+    () => ({
+      method: 'htr_getUtxos',
+      params: { network: 'testnet' },
+    }),
+    []
+  );
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -90,10 +89,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
       console.log(`[RPC Request] Get UTXOs`, request);
       console.log(`[RPC Success] Get UTXOs`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'UTXOs retrieved successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'UTXOs retrieved successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -120,7 +116,9 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result is a getUtxos response
-  const isGetUtxosResponse = (data: unknown): data is {
+  const isGetUtxosResponse = (
+    data: unknown
+  ): data is {
     type: number;
     response: {
       total_amount_available: string;
@@ -128,7 +126,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
       total_amount_locked: string;
       total_utxos_locked: string;
       utxos: UtxoData[];
-    }
+    };
   } => {
     return !!(
       data &&
@@ -209,9 +207,11 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
                         <div>
                           <span className="text-muted">Status:</span>
                           <p className="mt-1 mb-0">
-                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                              utxo.locked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                            }`}>
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                                utxo.locked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                              }`}
+                            >
                               {utxo.locked ? 'Locked' : 'Available'}
                             </span>
                           </p>
@@ -288,10 +288,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
               <span>{expanded ? '▼' : '▶'}</span>
               {error ? 'Error Details' : 'Response'}
             </button>
-            <CopyButton
-              text={result ? safeStringify(result, 2) : error || ''}
-              label="Copy response"
-            />
+            <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
           </div>
 
           {expanded && (
@@ -299,19 +296,14 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

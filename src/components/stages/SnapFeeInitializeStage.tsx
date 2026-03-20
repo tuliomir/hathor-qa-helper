@@ -13,8 +13,7 @@ import { selectSnapAddress } from '../../store/slices/snapSlice';
 import { NETWORK_CONFIG } from '../../constants/network';
 
 export const SnapFeeInitializeStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('snapFeeInitialize');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapFeeInitialize');
 
   const snapAddress = useSelector(selectSnapAddress);
 
@@ -22,29 +21,29 @@ export const SnapFeeInitializeStage: React.FC = () => {
   const [htrAmount, setHtrAmount] = useState('100');
   const [changeAddress, setChangeAddress] = useState(snapAddress ?? '');
 
-  useEffect(() => { if (snapAddress && !changeAddress) setChangeAddress(snapAddress); }, [snapAddress]);
+  useEffect(() => {
+    if (snapAddress && !changeAddress) setChangeAddress(snapAddress);
+  }, [snapAddress]);
 
-  const params = useMemo(() => ({
-    method: 'initialize',
-    blueprint_id: blueprintId,
-    actions: [{ type: 'deposit', token: '00', amount: htrAmount, changeAddress }],
-    args: [],
-    nc_id: null,
-  }), [blueprintId, htrAmount, changeAddress]);
-
-  const liveRequest = useMemo(
-    () => ({ method: 'htr_sendNanoContractTx', params }),
-    [params],
+  const params = useMemo(
+    () => ({
+      method: 'initialize',
+      blueprint_id: blueprintId,
+      actions: [{ type: 'deposit', token: '00', amount: htrAmount, changeAddress }],
+      args: [],
+      nc_id: null,
+    }),
+    [blueprintId, htrAmount, changeAddress]
   );
+
+  const liveRequest = useMemo(() => ({ method: 'htr_sendNanoContractTx', params }), [params]);
 
   const handleExecute = () => execute((h) => h.sendNanoContractTx(params));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Initialize Fee (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Initialize a Fee nano contract via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Initialize a Fee nano contract via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -59,15 +58,33 @@ export const SnapFeeInitializeStage: React.FC = () => {
         >
           <div>
             <label className="block text-sm font-medium mb-1.5">Blueprint ID</label>
-            <input type="text" value={blueprintId} onChange={(e) => setBlueprintId(e.target.value)} placeholder="Fee blueprint ID" className="input" />
+            <input
+              type="text"
+              value={blueprintId}
+              onChange={(e) => setBlueprintId(e.target.value)}
+              placeholder="Fee blueprint ID"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">HTR Amount</label>
-            <input type="text" value={htrAmount} onChange={(e) => setHtrAmount(e.target.value)} placeholder="100" className="input" />
+            <input
+              type="text"
+              value={htrAmount}
+              onChange={(e) => setHtrAmount(e.target.value)}
+              placeholder="100"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Change Address</label>
-            <input type="text" value={changeAddress} onChange={(e) => setChangeAddress(e.target.value)} placeholder="Change address" className="input" />
+            <input
+              type="text"
+              value={changeAddress}
+              onChange={(e) => setChangeAddress(e.target.value)}
+              placeholder="Change address"
+              className="input"
+            />
           </div>
         </SnapMethodCard>
       )}

@@ -16,11 +16,7 @@ import { extractErrorMessage } from '../../utils/errorUtils';
  * Helper function to safely stringify objects containing BigInt values
  */
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 export interface RpcSignWithAddressCardProps {
@@ -53,14 +49,17 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   const [message, setMessage] = useState('Hello, Hathor!');
   const [addressIndex, setAddressIndex] = useState('0');
 
-  const liveRequest = useMemo(() => ({
-    method: 'htr_signWithAddress',
-    params: {
-      network: 'testnet',
-      message,
-      addressIndex: parseInt(addressIndex, 10) || 0,
-    },
-  }), [message, addressIndex]);
+  const liveRequest = useMemo(
+    () => ({
+      method: 'htr_signWithAddress',
+      params: {
+        network: 'testnet',
+        message,
+        addressIndex: parseInt(addressIndex, 10) || 0,
+      },
+    }),
+    [message, addressIndex]
+  );
 
   // Load persisted data from Redux when component mounts or when initial data changes
   useEffect(() => {
@@ -110,10 +109,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
       console.log(`[RPC Request] Sign with Address`, request);
       console.log(`[RPC Success] Sign with Address`, response);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Message signed successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Message signed successfully', 'success');
     } catch (err: unknown) {
       console.error('Error in handleExecute:', err);
       const errorMessage = extractErrorMessage(err);
@@ -140,11 +136,31 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   const hasResult = result !== null || error !== null;
 
   // Check if result has the expected signature response structure
-  const isSignatureResponse = (data: unknown): data is { type?: number; response?: { message?: string; signature?: string; address?: string }; message?: string; signature?: string; address?: string } => {
+  const isSignatureResponse = (
+    data: unknown
+  ): data is {
+    type?: number;
+    response?: { message?: string; signature?: string; address?: string };
+    message?: string;
+    signature?: string;
+    address?: string;
+  } => {
     // Check if it's the full response with type field
-    if (data && typeof data === 'object' && 'type' in data && (data as { type?: number }).type === 1 && 'response' in data) {
+    if (
+      data &&
+      typeof data === 'object' &&
+      'type' in data &&
+      (data as { type?: number }).type === 1 &&
+      'response' in data
+    ) {
       const response = (data as { response?: unknown }).response;
-      return !!(response && typeof response === 'object' && 'message' in response && 'signature' in response && 'address' in response);
+      return !!(
+        response &&
+        typeof response === 'object' &&
+        'message' in response &&
+        'signature' in response &&
+        'address' in response
+      );
     }
     // Or if it's just the response data directly
     return !!(data && typeof data === 'object' && 'message' in data && 'signature' in data && 'address' in data);
@@ -157,17 +173,16 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
     }
 
     // Extract the actual response data (handle both formats)
-    const responseData = ((parsedResult as { response?: unknown }).response || parsedResult) as { message?: string; signature?: string; address?: { address?: string; index?: number; addressPath?: string } };
+    const responseData = ((parsedResult as { response?: unknown }).response || parsedResult) as {
+      message?: string;
+      signature?: string;
+      address?: { address?: string; index?: number; addressPath?: string };
+    };
 
     return (
       <div className="bg-green-50 border border-green-300 rounded p-4 mb-4">
         <div className="flex items-center gap-2 text-green-700 mb-3">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path
               fillRule="evenodd"
               d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -297,9 +312,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
               placeholder="0"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              Enter the address index (0 for first address, 1 for second, etc.)
-            </p>
+            <p className="text-xs text-muted mt-1">Enter the address index (0 for first address, 1 for second, etc.)</p>
           </div>
         </div>
       </div>
@@ -341,7 +354,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
               {error ? 'Error Details' : 'Response'}
             </button>
             <div className="flex items-center gap-2">
-              {(result && isSignatureResponse(typeof result === 'string' ? JSON.parse(result) : result)) ? (
+              {result && isSignatureResponse(typeof result === 'string' ? JSON.parse(result) : result) ? (
                 <button
                   onClick={() => setShowRawResponse(!showRawResponse)}
                   className="btn-secondary py-1.5 px-3 text-sm"
@@ -349,7 +362,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
                   {showRawResponse ? 'Show Formatted' : 'Show Raw'}
                 </button>
               ) : null}
-              <CopyButton text={result ? safeStringify(result, 2) as string : error || ''} label="Copy response" />
+              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
             </div>
           </div>
 
@@ -358,19 +371,14 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
               {isDryRun && result === null ? (
                 <div className="bg-purple-50 border border-purple-300 rounded p-4">
                   <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                     </svg>
                     <span className="text-sm font-medium">Dry Run Mode</span>
                   </div>
                   <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request
-                    section above to see the parameters that would be sent.
+                    The request was generated but not sent to the RPC server. Check the Request section above to see the
+                    parameters that would be sent.
                   </p>
                 </div>
               ) : (

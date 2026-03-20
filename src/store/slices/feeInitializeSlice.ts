@@ -34,10 +34,7 @@ const feeInitializeSlice = createSlice({
   name: 'feeInitialize',
   initialState,
   reducers: {
-    setFeeInitializeRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setFeeInitializeRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -46,10 +43,7 @@ const feeInitializeSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setFeeInitializeResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setFeeInitializeResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
       state.duration = action.payload.duration;
@@ -73,11 +67,7 @@ const feeInitializeSlice = createSlice({
   },
 });
 
-export const {
-  setFeeInitializeRequest,
-  setFeeInitializeResponse,
-  setFeeInitializeError,
-  clearFeeInitializeData,
-} = feeInitializeSlice.actions;
+export const { setFeeInitializeRequest, setFeeInitializeResponse, setFeeInitializeError, clearFeeInitializeData } =
+  feeInitializeSlice.actions;
 
 export default feeInitializeSlice.reducer;

@@ -24,9 +24,7 @@ function InlineTool({ componentKey }: { componentKey: string }) {
   if (!Component) {
     return (
       <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-sm text-red-800 m-0">
-          Tool "{componentKey}" could not be loaded.
-        </p>
+        <p className="text-sm text-red-800 m-0">Tool "{componentKey}" could not be loaded.</p>
       </div>
     );
   }
@@ -173,9 +171,7 @@ export default function DesktopQAStepContent() {
           {/* Toggle Complete Button */}
           <button
             onClick={handleToggleComplete}
-            className={`btn flex items-center gap-2 ${
-              isCompleted ? 'btn-warning' : 'btn-success'
-            }`}
+            className={`btn flex items-center gap-2 ${isCompleted ? 'btn-warning' : 'btn-success'}`}
           >
             {isCompleted ? (
               <>

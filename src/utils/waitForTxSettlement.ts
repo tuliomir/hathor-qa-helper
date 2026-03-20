@@ -45,10 +45,7 @@ export interface WaitForTxOptions {
  * }
  * ```
  */
-export async function waitForTxSettlement(
-  txHash: string,
-  options: WaitForTxOptions = {}
-): Promise<WalletEvent> {
+export async function waitForTxSettlement(txHash: string, options: WaitForTxOptions = {}): Promise<WalletEvent> {
   const { timeoutMs = 30000, postEventDelayMs = 100 } = options;
 
   return new Promise((resolve, reject) => {
@@ -117,10 +114,7 @@ export async function waitForTxSettlement(
  * // Now safe to call NC methods or read NC state
  * ```
  */
-export async function waitForTxConfirmation(
-  txHash: string,
-  options: WaitForTxOptions = {}
-): Promise<WalletEvent> {
+export async function waitForTxConfirmation(txHash: string, options: WaitForTxOptions = {}): Promise<WalletEvent> {
   const { timeoutMs = 120000, postEventDelayMs = 100 } = options;
 
   return new Promise((resolve, reject) => {

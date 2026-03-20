@@ -109,8 +109,8 @@ export default function AddressListViewer() {
         <h2 className="text-xl font-bold mb-2">Wallet Addresses</h2>
         <p className="text-muted text-sm mb-4">
           First {ADDRESS_COUNT} addresses from{' '}
-          <span className="font-medium text-gray-900">{testWallet.metadata.friendlyName}</span>.
-          Compare these with the addresses shown in the Desktop Wallet app.
+          <span className="font-medium text-gray-900">{testWallet.metadata.friendlyName}</span>. Compare these with the
+          addresses shown in the Desktop Wallet app.
         </p>
 
         {isLoading && <Loading message="Loading addresses and transaction counts..." />}
@@ -136,13 +136,9 @@ export default function AddressListViewer() {
                 {addresses.map((addr) => (
                   <tr
                     key={addr.index}
-                    className={`border-b border-gray-200 ${
-                      addr.transactionCount > 0 ? 'bg-green-50' : ''
-                    }`}
+                    className={`border-b border-gray-200 ${addr.transactionCount > 0 ? 'bg-green-50' : ''}`}
                   >
-                    <td className="py-2 px-3 font-mono text-center font-bold text-blue-600">
-                      {addr.index}
-                    </td>
+                    <td className="py-2 px-3 font-mono text-center font-bold text-blue-600">{addr.index}</td>
                     <td className="py-2 px-3 font-mono text-xs" title={addr.address}>
                       <span className="hidden md:inline">{addr.address}</span>
                       <span className="md:hidden">{truncateAddress(addr.address)}</span>
@@ -150,9 +146,7 @@ export default function AddressListViewer() {
                     <td className="py-2 px-3 text-center">
                       <span
                         className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          addr.transactionCount > 0
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-500'
+                          addr.transactionCount > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
                         }`}
                       >
                         {addr.transactionCount}
@@ -168,9 +162,7 @@ export default function AddressListViewer() {
           </div>
         )}
 
-        {!isLoading && !error && addresses.length === 0 && (
-          <p className="text-muted text-sm">No addresses found.</p>
-        )}
+        {!isLoading && !error && addresses.length === 0 && <p className="text-muted text-sm">No addresses found.</p>}
 
         {/* Legend */}
         {!isLoading && !error && addresses.length > 0 && (

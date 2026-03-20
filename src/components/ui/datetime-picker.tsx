@@ -330,9 +330,7 @@ const TimePeriodSelect = React.forwardRef<HTMLSelectElement, PeriodSelectorProps
       if (date) {
         const tempDate = new Date(date);
         const hours = display12HourValue(date.getHours());
-        onDateChange?.(
-          setDateByType(tempDate, hours.toString(), '12hours', period === 'AM' ? 'PM' : 'AM'),
-        );
+        onDateChange?.(setDateByType(tempDate, hours.toString(), '12hours', period === 'AM' ? 'PM' : 'AM'));
       }
     };
 
@@ -350,7 +348,7 @@ const TimePeriodSelect = React.forwardRef<HTMLSelectElement, PeriodSelectorProps
         </select>
       </div>
     );
-  },
+  }
 );
 
 TimePeriodSelect.displayName = 'TimePeriodSelect';
@@ -382,7 +380,7 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
       onRightFocus,
       ...props
     },
-    ref,
+    ref
   ) => {
     const [flag, setFlag] = React.useState<boolean>(false);
     const [prevIntKey, setPrevIntKey] = React.useState<string>('0');
@@ -460,7 +458,7 @@ const TimePickerInput = React.forwardRef<HTMLInputElement, TimePickerInputProps>
         {...props}
       />
     );
-  },
+  }
 );
 
 TimePickerInput.displayName = 'TimePickerInput';
@@ -497,7 +495,7 @@ const TimePicker = React.forwardRef<TimePickerRef, TimePickerProps>(
         hourRef: hourRef.current,
         secondRef: secondRef.current,
       }),
-      [minuteRef, hourRef, secondRef],
+      [minuteRef, hourRef, secondRef]
     );
     return (
       <div className="flex items-center justify-center gap-2">
@@ -572,7 +570,7 @@ const TimePicker = React.forwardRef<TimePickerRef, TimePickerProps>(
         )}
       </div>
     );
-  },
+  }
 );
 TimePicker.displayName = 'TimePicker';
 
@@ -629,7 +627,7 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
       className,
       ...props
     },
-    ref,
+    ref
   ) => {
     const [month, setMonth] = React.useState<Date>(value ?? defaultPopupValue);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -654,11 +652,7 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
       const diff = newDay.getTime() - defaultPopupValue.getTime();
       const diffInDays = diff / (1000 * 60 * 60 * 24);
       const newDateFull = add(defaultPopupValue, { days: Math.ceil(diffInDays) });
-      newDateFull.setHours(
-        month?.getHours() ?? 0,
-        month?.getMinutes() ?? 0,
-        month?.getSeconds() ?? 0,
-      );
+      newDateFull.setHours(month?.getHours() ?? 0, month?.getMinutes() ?? 0, month?.getSeconds() ?? 0);
       onChange?.(newDateFull);
       setMonth(newDateFull);
     };
@@ -678,16 +672,12 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
         ...buttonRef.current,
         value: displayDate,
       }),
-      [displayDate],
+      [displayDate]
     );
 
     const initHourFormat = {
-      hour24:
-        displayFormat?.hour24 ??
-        `PPP HH:mm${!granularity || granularity === 'second' ? ':ss' : ''}`,
-      hour12:
-        displayFormat?.hour12 ??
-        `PP hh:mm${!granularity || granularity === 'second' ? ':ss' : ''} b`,
+      hour24: displayFormat?.hour24 ?? `PPP HH:mm${!granularity || granularity === 'second' ? ':ss' : ''}`,
+      hour12: displayFormat?.hour12 ?? `PP hh:mm${!granularity || granularity === 'second' ? ':ss' : ''} b`,
     };
 
     let loc = enUS;
@@ -745,13 +735,9 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
             <line x1="3" y1="10" x2="21" y2="10" />
           </svg>
           {displayDate ? (
-            format(
-              displayDate,
-              hourCycle === 24 ? initHourFormat.hour24 : initHourFormat.hour12,
-              {
-                locale: loc,
-              },
-            )
+            format(displayDate, hourCycle === 24 ? initHourFormat.hour24 : initHourFormat.hour12, {
+              locale: loc,
+            })
           ) : (
             <span>{placeholder}</span>
           )}
@@ -769,11 +755,7 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
               month={month}
               onSelect={(newDate) => {
                 if (newDate) {
-                  newDate.setHours(
-                    month?.getHours() ?? 0,
-                    month?.getMinutes() ?? 0,
-                    month?.getSeconds() ?? 0,
-                  );
+                  newDate.setHours(month?.getHours() ?? 0, month?.getMinutes() ?? 0, month?.getSeconds() ?? 0);
                   onSelect(newDate);
                 }
               }}
@@ -802,7 +784,7 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
         )}
       </div>
     );
-  },
+  }
 );
 
 DateTimePicker.displayName = 'DateTimePicker';

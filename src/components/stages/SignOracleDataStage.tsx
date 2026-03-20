@@ -8,10 +8,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
-	setSignOracleDataError,
-	setSignOracleDataFormData,
-	setSignOracleDataRequest,
-	setSignOracleDataResponse,
+  setSignOracleDataError,
+  setSignOracleDataFormData,
+  setSignOracleDataRequest,
+  setSignOracleDataResponse,
 } from '../../store/slices/signOracleDataSlice';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { clearSignOracleDataNavigation, navigateToSetBetResult } from '../../store/slices/navigationSlice';
@@ -160,31 +160,31 @@ export const SignOracleDataStage: React.FC = () => {
     const startTime = Date.now();
 
     try {
-      const { request, response } = await rpcHandlers.getRpcSignOracleData(
-        ncId,
-        oracleAddress,
-        data
-      );
+      const { request, response } = await rpcHandlers.getRpcSignOracleData(ncId, oracleAddress, data);
       const duration = Date.now() - startTime;
 
       // Clear deep link notification after RPC response
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setSignOracleDataRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setSignOracleDataRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setSignOracleDataResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setSignOracleDataResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -195,10 +195,12 @@ export const SignOracleDataStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setSignOracleDataError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setSignOracleDataError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -215,9 +217,7 @@ export const SignOracleDataStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Sign Oracle Data RPC</h1>
-      <p className="text-muted mb-7.5">
-        Sign data as the oracle for a nano contract
-      </p>
+      <p className="text-muted mb-7.5">Sign data as the oracle for a nano contract</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -242,9 +242,8 @@ export const SignOracleDataStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -322,9 +321,7 @@ export const SignOracleDataStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {signOracleDataData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {signOracleDataData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {signOracleDataData.duration}ms</span>
                 )}
               </p>
             </div>

@@ -13,10 +13,7 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 export default function Select({ children, className = '', ...props }: SelectProps) {
   return (
     <div className={`relative ${className}`}>
-      <select
-        {...props}
-        className="input cursor-pointer bg-white pr-10 w-full"
-      >
+      <select {...props} className="input cursor-pointer bg-white pr-10 w-full">
         {children}
       </select>
       <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600">

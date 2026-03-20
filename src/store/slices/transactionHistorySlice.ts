@@ -27,10 +27,7 @@ const transactionHistorySlice = createSlice({
     addTransaction: (state, action: PayloadAction<TransactionRecord>) => {
       state.transactions.push(action.payload);
     },
-    updateTransactionStatus: (
-      state,
-      action: PayloadAction<{ hash: string; status: TransactionRecord['status'] }>
-    ) => {
+    updateTransactionStatus: (state, action: PayloadAction<{ hash: string; status: TransactionRecord['status'] }>) => {
       const tx = state.transactions.find((t) => t.hash === action.payload.hash);
       if (tx) {
         tx.status = action.payload.status;
@@ -42,7 +39,6 @@ const transactionHistorySlice = createSlice({
   },
 });
 
-export const { addTransaction, updateTransactionStatus, clearTransactionHistory } =
-  transactionHistorySlice.actions;
+export const { addTransaction, updateTransactionStatus, clearTransactionHistory } = transactionHistorySlice.actions;
 
 export default transactionHistorySlice.reducer;

@@ -12,8 +12,7 @@ import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 
 export const SnapBetDepositStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('snapBetDeposit');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapBetDeposit');
 
   const snapAddress = useSelector(selectSnapAddress);
 
@@ -23,29 +22,29 @@ export const SnapBetDepositStage: React.FC = () => {
   const [token, setToken] = useState('00');
   const [address, setAddress] = useState(snapAddress ?? '');
 
-  useEffect(() => { if (snapAddress && !address) setAddress(snapAddress); }, [snapAddress]);
+  useEffect(() => {
+    if (snapAddress && !address) setAddress(snapAddress);
+  }, [snapAddress]);
 
-  const params = useMemo(() => ({
-    method: 'bet',
-    nc_id: ncId,
-    blueprint_id: null,
-    actions: [{ type: 'deposit', token, amount, changeAddress: address }],
-    args: [betChoice],
-  }), [ncId, betChoice, amount, token, address]);
-
-  const liveRequest = useMemo(
-    () => ({ method: 'htr_sendNanoContractTx', params }),
-    [params],
+  const params = useMemo(
+    () => ({
+      method: 'bet',
+      nc_id: ncId,
+      blueprint_id: null,
+      actions: [{ type: 'deposit', token, amount, changeAddress: address }],
+      args: [betChoice],
+    }),
+    [ncId, betChoice, amount, token, address]
   );
+
+  const liveRequest = useMemo(() => ({ method: 'htr_sendNanoContractTx', params }), [params]);
 
   const handleExecute = () => execute((h) => h.sendNanoContractTx(params));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Place Bet (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Place a bet on a Bet nano contract via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Place a bet on a Bet nano contract via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -60,23 +59,53 @@ export const SnapBetDepositStage: React.FC = () => {
         >
           <div>
             <label className="block text-sm font-medium mb-1.5">NC ID</label>
-            <input type="text" value={ncId} onChange={(e) => setNcId(e.target.value)} placeholder="Nano contract ID" className="input" />
+            <input
+              type="text"
+              value={ncId}
+              onChange={(e) => setNcId(e.target.value)}
+              placeholder="Nano contract ID"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Bet Choice</label>
-            <input type="text" value={betChoice} onChange={(e) => setBetChoice(e.target.value)} placeholder="e.g. heads" className="input" />
+            <input
+              type="text"
+              value={betChoice}
+              onChange={(e) => setBetChoice(e.target.value)}
+              placeholder="e.g. heads"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Amount</label>
-            <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="100" className="input" />
+            <input
+              type="text"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="100"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Token UID</label>
-            <input type="text" value={token} onChange={(e) => setToken(e.target.value)} placeholder="00" className="input" />
+            <input
+              type="text"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder="00"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Address</label>
-            <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Your address" className="input" />
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Your address"
+              className="input"
+            />
           </div>
         </SnapMethodCard>
       )}

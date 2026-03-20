@@ -19,12 +19,16 @@ const initWalletConnect = async () => {
 setTimeout(initWalletConnect, 0);
 
 // Sync wallets from cloud storage on app load
-store.dispatch(importWalletsFromCloud())
+store
+  .dispatch(importWalletsFromCloud())
   .then((result) => {
     if (result.payload && typeof result.payload === 'object' && 'imported' in result.payload) {
       const { imported, skipped } = result.payload as { imported: number; skipped: number };
       if (imported > 0) {
-        console.log(`%c☁️ Cloud Sync: Imported ${imported} wallet(s)${skipped > 0 ? `, ${skipped} already existed` : ''}`, 'color: #10b981');
+        console.log(
+          `%c☁️ Cloud Sync: Imported ${imported} wallet(s)${skipped > 0 ? `, ${skipped} already existed` : ''}`,
+          'color: #10b981'
+        );
       }
     }
   })

@@ -185,21 +185,25 @@ export const BetDepositStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setBetDepositRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setBetDepositRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux with betChoice metadata
-      dispatch(setBetDepositResponse({
-        response: serializedResponse,
-        duration,
-        betChoice,
-      }));
+      dispatch(
+        setBetDepositResponse({
+          response: serializedResponse,
+          duration,
+          betChoice,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -210,10 +214,12 @@ export const BetDepositStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setBetDepositError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setBetDepositError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -222,9 +228,7 @@ export const BetDepositStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Place Bet RPC</h1>
-      <p className="text-muted mb-7.5">
-        Place a bet on an existing bet nano contract
-      </p>
+      <p className="text-muted mb-7.5">Place a bet on an existing bet nano contract</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -249,9 +253,8 @@ export const BetDepositStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -307,9 +310,7 @@ export const BetDepositStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {betDepositData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {betDepositData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {betDepositData.duration}ms</span>
                 )}
               </p>
             </div>

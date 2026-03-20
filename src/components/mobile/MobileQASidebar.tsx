@@ -59,9 +59,7 @@ function SectionItem({
 }) {
   const dispatch = useAppDispatch();
   const currentLocation = useAppSelector(selectCurrentLocation);
-  const completedCount = useAppSelector((state) =>
-    selectCompletedStepsCount(state, section.id)
-  );
+  const completedCount = useAppSelector((state) => selectCompletedStepsCount(state, section.id));
   const totalSteps = section.steps.length;
   const isCurrentSection = currentLocation.sectionId === section.id;
 
@@ -85,9 +83,7 @@ function SectionItem({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {completedCount === totalSteps && totalSteps > 0 && (
-            <MdCheckCircle className="text-success" size={20} />
-          )}
+          {completedCount === totalSteps && totalSteps > 0 && <MdCheckCircle className="text-success" size={20} />}
           {isExpanded ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
         </div>
       </button>
@@ -135,9 +131,7 @@ export default function MobileQASidebar() {
   return (
     <aside className="w-72 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
       <div className="py-4">
-        <h2 className="px-4 text-sm font-bold text-muted uppercase tracking-wide mb-2">
-          Sections
-        </h2>
+        <h2 className="px-4 text-sm font-bold text-muted uppercase tracking-wide mb-2">Sections</h2>
         <div>
           {sections.map((section) => (
             <SectionItem

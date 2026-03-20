@@ -44,10 +44,7 @@ const betWithdrawSlice = createSlice({
   name: 'betWithdraw',
   initialState,
   reducers: {
-    setBetWithdrawRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setBetWithdrawRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -56,10 +53,7 @@ const betWithdrawSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setBetWithdrawResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setBetWithdrawResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
       state.duration = action.payload.duration;

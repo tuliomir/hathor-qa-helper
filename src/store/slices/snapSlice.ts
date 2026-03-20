@@ -37,10 +37,7 @@ const snapSlice = createSlice({
   name: 'snap',
   initialState,
   reducers: {
-    setSnapConnected: (
-      state,
-      action: PayloadAction<{ installedSnap: InstalledSnap; snapOrigin: string }>,
-    ) => {
+    setSnapConnected: (state, action: PayloadAction<{ installedSnap: InstalledSnap; snapOrigin: string }>) => {
       state.isConnected = true;
       state.installedSnap = action.payload.installedSnap;
       state.snapOrigin = action.payload.snapOrigin;
@@ -49,10 +46,7 @@ const snapSlice = createSlice({
     setSnapOrigin: (state, action: PayloadAction<string>) => {
       state.snapOrigin = action.payload;
     },
-    setSnapWalletInfo: (
-      state,
-      action: PayloadAction<{ address: string; network: string }>,
-    ) => {
+    setSnapWalletInfo: (state, action: PayloadAction<{ address: string; network: string }>) => {
       state.address = action.payload.address;
       state.network = action.payload.network;
     },
@@ -69,8 +63,7 @@ const snapSlice = createSlice({
   },
 });
 
-export const { setSnapConnected, setSnapOrigin, setSnapWalletInfo, setSnapError, resetSnap } =
-  snapSlice.actions;
+export const { setSnapConnected, setSnapOrigin, setSnapWalletInfo, setSnapError, resetSnap } = snapSlice.actions;
 
 export const selectIsSnapConnected = (state: RootState) => state.snap.isConnected;
 export const selectSnapOrigin = (state: RootState) => state.snap.snapOrigin;

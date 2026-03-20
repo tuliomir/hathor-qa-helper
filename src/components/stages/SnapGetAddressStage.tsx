@@ -26,15 +26,12 @@ export const SnapGetAddressStage: React.FC = () => {
     return { method: 'htr_getAddress', params };
   }, [type, index, needsIndex]);
 
-  const handleExecute = () =>
-    execute((h) => h.getAddress(type, needsIndex ? index : undefined));
+  const handleExecute = () => execute((h) => h.getAddress(type, needsIndex ? index : undefined));
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Get Address (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Retrieve addresses by type and index via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Retrieve addresses by type and index via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -49,10 +46,7 @@ export const SnapGetAddressStage: React.FC = () => {
         >
           <div>
             <label className="block text-sm font-medium mb-1.5">Address Type</label>
-            <Select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
+            <Select value={type} onChange={(e) => setType(e.target.value)}>
               {ADDRESS_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t === 'index' ? 'Index' : t === 'first_empty' ? 'First Empty' : 'Client'}

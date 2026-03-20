@@ -13,8 +13,7 @@ export const sendTokensSection: SectionConfig = {
     {
       id: 'step-1',
       title: 'Send HTR',
-      instructions:
-        'Send **0.01 HTR** to an external wallet, like the Funding wallet.',
+      instructions: 'Send **0.01 HTR** to an external wallet, like the Funding wallet.',
       tool: { componentKey: 'FundingWalletAddress' },
     },
     {
@@ -27,7 +26,8 @@ export const sendTokensSection: SectionConfig = {
     {
       id: 'step-3',
       title: 'Copy current address',
-      instructions: 'Copy your current receiving address for the next step.' +
+      instructions:
+        'Copy your current receiving address for the next step.' +
         '\n\nSend both HTR and TST amounts to the same address (your own). Confirm and navigate back to the Dashboard.' +
         '\n\n🔍 Verify the first transaction on the list shows **0.00** amounts (self-transfer).' +
         '\n\n🔍 Verify the transaction details contains inputs and outputs for **both tokens**.',

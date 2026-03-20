@@ -32,7 +32,6 @@ const txUpdateEventsSlice = createSlice({
   },
 });
 
-export const { setFilterWalletId, setCurrentPage, resetTxUpdateEventsState } =
-  txUpdateEventsSlice.actions;
+export const { setFilterWalletId, setCurrentPage, resetTxUpdateEventsState } = txUpdateEventsSlice.actions;
 
 export default txUpdateEventsSlice.reducer;

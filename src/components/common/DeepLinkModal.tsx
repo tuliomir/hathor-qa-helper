@@ -53,9 +53,7 @@ export default function DeepLinkModal() {
           {/* Content */}
           <div className="p-4">
             {/* Instructions */}
-            <p className="text-xs text-muted mb-4 text-center">
-              Scan with your mobile device to open Hathor Wallet
-            </p>
+            <p className="text-xs text-muted mb-4 text-center">Scan with your mobile device to open Hathor Wallet</p>
 
             {/* QR Code */}
             <div className="flex flex-col items-center mb-4">
@@ -77,10 +75,7 @@ export default function DeepLinkModal() {
 
           {/* Footer */}
           <div className="flex items-center justify-end p-4 border-t border-gray-200">
-            <button
-              onClick={handleClose}
-              className="btn btn-ghost btn-sm px-4 py-1"
-            >
+            <button onClick={handleClose} className="btn btn-ghost btn-sm px-4 py-1">
               Close
             </button>
           </div>

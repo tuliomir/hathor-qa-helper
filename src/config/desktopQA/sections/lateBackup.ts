@@ -13,13 +13,15 @@ export const lateBackupSection: SectionConfig = {
     {
       id: 'step-1',
       title: 'Create wallet without backup',
-      instructions: 'Open the app and create a new wallet **without completing the backup**.' +
+      instructions:
+        'Open the app and create a new wallet **without completing the backup**.' +
         '\n\n🔍 Verify a **yellow warning** is displayed on the main screen.',
     },
     {
       id: 'step-2',
       title: 'Complete backup',
-      instructions: 'Complete the backup process following the initialization procedures.' +
+      instructions:
+        'Complete the backup process following the initialization procedures.' +
         '\n\n🔍 Confirm the warning message **disappears**.',
     },
   ],

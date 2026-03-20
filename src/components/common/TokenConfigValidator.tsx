@@ -70,11 +70,7 @@ function TokenConfigComponent({ mode }: TokenConfigComponentProps) {
   // Generate configuration string for the most recent token
   const configString = useMemo(() => {
     if (!mostRecentToken) return null;
-    return getConfigurationString(
-      mostRecentToken.uid,
-      mostRecentToken.name,
-      mostRecentToken.symbol
-    );
+    return getConfigurationString(mostRecentToken.uid, mostRecentToken.name, mostRecentToken.symbol);
   }, [mostRecentToken]);
 
   // Compare the pasted config with expected (validate mode only)
@@ -118,27 +114,20 @@ function TokenConfigComponent({ mode }: TokenConfigComponentProps) {
   if (!mostRecentToken) {
     return (
       <div className="p-4 bg-yellow-50 border border-warning rounded-lg">
-        <p className="text-yellow-800 m-0 text-sm mb-3">
-          No custom tokens found in this wallet.
-        </p>
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="btn btn-warning btn-sm"
-        >
+        <p className="text-yellow-800 m-0 text-sm mb-3">No custom tokens found in this wallet.</p>
+        <button onClick={handleRefresh} disabled={isRefreshing} className="btn btn-warning btn-sm">
           {isRefreshing ? 'Refreshing...' : 'Refresh Tokens'}
         </button>
       </div>
     );
   }
 
-  const title = mode === 'validate'
-    ? 'Token Configuration Validator'
-    : 'Token Configuration String';
+  const title = mode === 'validate' ? 'Token Configuration Validator' : 'Token Configuration String';
 
-  const subtitle = mode === 'validate'
-    ? 'Paste the configuration string from the app to validate'
-    : 'Copy this configuration string to register the token in the app';
+  const subtitle =
+    mode === 'validate'
+      ? 'Paste the configuration string from the app to validate'
+      : 'Copy this configuration string to register the token in the app';
 
   return (
     <div className="card-primary space-y-4">
@@ -175,11 +164,11 @@ function TokenConfigComponent({ mode }: TokenConfigComponentProps) {
           </p>
           {configString && <CopyButton text={configString} label="Copy" />}
         </div>
-        <div className={`p-3 rounded-lg border ${
-          mode === 'display'
-            ? 'bg-green-50 border-green-200'
-            : 'bg-blue-50 border-blue-200'
-        }`}>
+        <div
+          className={`p-3 rounded-lg border ${
+            mode === 'display' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'
+          }`}
+        >
           <code className="text-xs font-mono break-all">{configString}</code>
         </div>
       </div>
@@ -207,20 +196,14 @@ function TokenConfigComponent({ mode }: TokenConfigComponentProps) {
           {/* Validation Result */}
           {hasValidated && pastedConfig.trim() && (
             <div
-              className={`p-4 rounded-lg border ${
-                isMatch
-                  ? 'bg-green-50 border-success'
-                  : 'bg-red-50 border-danger'
-              }`}
+              className={`p-4 rounded-lg border ${isMatch ? 'bg-green-50 border-success' : 'bg-red-50 border-danger'}`}
             >
               {isMatch ? (
                 <div className="flex items-center gap-3">
                   <span className="text-success text-xl">✓</span>
                   <div>
                     <p className="font-bold text-green-900 m-0">Configuration strings match!</p>
-                    <p className="text-sm text-green-800 mt-1 mb-0">
-                      The token configuration is correct.
-                    </p>
+                    <p className="text-sm text-green-800 mt-1 mb-0">The token configuration is correct.</p>
                   </div>
                 </div>
               ) : (

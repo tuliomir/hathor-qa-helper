@@ -46,10 +46,7 @@ const setBetResultSlice = createSlice({
   name: 'setBetResult',
   initialState,
   reducers: {
-    setSetBetResultRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setSetBetResultRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -58,10 +55,7 @@ const setBetResultSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setSetBetResultResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setSetBetResultResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
       state.duration = action.payload.duration;

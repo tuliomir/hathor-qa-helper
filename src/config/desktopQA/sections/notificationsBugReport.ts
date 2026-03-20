@@ -13,7 +13,8 @@ export const notificationsBugReportSection: SectionConfig = {
     {
       id: 'step-1',
       title: 'Toggle settings',
-      instructions: 'Access the **Settings** screen.' +
+      instructions:
+        'Access the **Settings** screen.' +
         '\n\nToggle **"Allow notifications"** setting and verify it changes to **"No"**.' +
         '\n\nToggle the **bug report** setting and verify the change is reflected in the UI.',
     },

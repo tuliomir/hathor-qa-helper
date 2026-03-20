@@ -7,7 +7,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
-import { setGetBalanceError, setGetBalanceRequest, setGetBalanceResponse, } from '../../store/slices/getBalanceSlice';
+import { setGetBalanceError, setGetBalanceRequest, setGetBalanceResponse } from '../../store/slices/getBalanceSlice';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { RpcGetBalanceCard } from '../rpc/RpcGetBalanceCard';
@@ -27,9 +27,7 @@ export const GetBalanceStage: React.FC = () => {
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const testWallet = useSelector((state: RootState) =>
-    testWalletId ? state.walletStore.wallets[testWalletId] : null
-  );
+  const testWallet = useSelector((state: RootState) => (testWalletId ? state.walletStore.wallets[testWalletId] : null));
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
@@ -144,20 +142,24 @@ export const GetBalanceStage: React.FC = () => {
       clearDeepLinkNotification();
 
       // Store request in Redux
-      dispatch(setGetBalanceRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setGetBalanceRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize response to convert BigInt values to strings before dispatching
       const serializedResponse = JSON.parse(JSONBigInt.stringify(response));
 
       // Store response in Redux
-      dispatch(setGetBalanceResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setGetBalanceResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response };
     } catch (error) {
@@ -168,10 +170,12 @@ export const GetBalanceStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setGetBalanceError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setGetBalanceError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -180,9 +184,7 @@ export const GetBalanceStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Get Balance RPC</h1>
-      <p className="text-muted mb-7.5">
-        Test the htr_getBalance RPC method to query token balances
-      </p>
+      <p className="text-muted mb-7.5">Test the htr_getBalance RPC method to query token balances</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -207,9 +209,8 @@ export const GetBalanceStage: React.FC = () => {
             <div>
               <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
               <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC
-                testing has been disabled. Please connect the correct wallet or select a different
-                test wallet.
+                The connected wallet address does not match the selected test wallet address. RPC testing has been
+                disabled. Please connect the correct wallet or select a different test wallet.
               </p>
             </div>
           </div>
@@ -253,9 +254,7 @@ export const GetBalanceStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {getBalanceData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {getBalanceData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {getBalanceData.duration}ms</span>
                 )}
               </p>
             </div>

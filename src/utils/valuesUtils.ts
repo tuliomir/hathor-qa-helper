@@ -1,4 +1,3 @@
-
 /**
  * Convert a deadline string into a compact human-readable remaining time.
  *
@@ -29,26 +28,26 @@
  * formatTimeUntil("not a date"); // "invalid date"
  */
 export function formatTimeUntil(deadlineStr?: string | null): string {
-	if (!deadlineStr) return '';
-	const deadlineMs = new Date(deadlineStr).getTime();
-	if (isNaN(deadlineMs)) return 'invalid date';
+  if (!deadlineStr) return '';
+  const deadlineMs = new Date(deadlineStr).getTime();
+  if (isNaN(deadlineMs)) return 'invalid date';
 
-	let diff = Math.max(0, deadlineMs - Date.now());
-	if (diff === 0) return 'expired';
+  let diff = Math.max(0, deadlineMs - Date.now());
+  if (diff === 0) return 'expired';
 
-	const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-	diff -= days * 24 * 60 * 60 * 1000;
-	const hours = Math.floor(diff / (60 * 60 * 1000));
-	diff -= hours * 60 * 60 * 1000;
-	const minutes = Math.floor(diff / (60 * 1000));
-	diff -= minutes * 60 * 1000;
-	const seconds = Math.floor(diff / 1000);
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  diff -= days * 24 * 60 * 60 * 1000;
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  diff -= hours * 60 * 60 * 1000;
+  const minutes = Math.floor(diff / (60 * 1000));
+  diff -= minutes * 60 * 1000;
+  const seconds = Math.floor(diff / 1000);
 
-	const parts: string[] = [];
-	if (days > 0) parts.push(`${days}d`);
-	if (hours > 0) parts.push(`${hours}h`);
-	if (minutes > 0) parts.push(`${minutes}m`);
-	if (parts.length === 0) parts.push(`${seconds}s`);
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (parts.length === 0) parts.push(`${seconds}s`);
 
-	return parts.join(' ');
-};
+  return parts.join(' ');
+}

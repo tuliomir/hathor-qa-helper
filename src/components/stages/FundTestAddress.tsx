@@ -36,10 +36,7 @@ export default function FundTestAddress() {
         {/* Address Selection */}
         <div className="mb-6">
           <h3 className="text-sm font-bold mb-3 text-gray-700">1. Select Receiving Address</h3>
-          <WalletAddressSelector
-            label="Address Index"
-            onAddressChange={handleAddressChange}
-          />
+          <WalletAddressSelector label="Address Index" onAddressChange={handleAddressChange} />
         </div>
 
         {/* Divider */}

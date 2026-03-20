@@ -6,24 +6,15 @@
  * and returns { request, response } matching the existing RPC handler shape.
  */
 
-type InvokeSnapFn = (params: {
-  method: string;
-  params?: Record<string, unknown>;
-}) => Promise<unknown>;
+type InvokeSnapFn = (params: { method: string; params?: Record<string, unknown> }) => Promise<unknown>;
 
 export interface SnapHandlerResult {
   request: { method: string; params?: Record<string, unknown> };
   response: unknown;
 }
 
-export const createSnapHandlers = (
-  invokeSnap: InvokeSnapFn,
-  dryRun: boolean,
-) => {
-  const invoke = async (
-    method: string,
-    params?: Record<string, unknown>,
-  ): Promise<SnapHandlerResult> => {
+export const createSnapHandlers = (invokeSnap: InvokeSnapFn, dryRun: boolean) => {
+  const invoke = async (method: string, params?: Record<string, unknown>): Promise<SnapHandlerResult> => {
     const request = params ? { method, params } : { method };
     if (dryRun) return { request, response: null };
     const response = await invokeSnap(request);
@@ -37,26 +28,20 @@ export const createSnapHandlers = (
       return invoke('htr_getAddress', params);
     },
 
-    getBalance: (tokens: string[]) =>
-      invoke('htr_getBalance', { tokens }),
+    getBalance: (tokens: string[]) => invoke('htr_getBalance', { tokens }),
 
-    getConnectedNetwork: () =>
-      invoke('htr_getConnectedNetwork'),
+    getConnectedNetwork: () => invoke('htr_getConnectedNetwork'),
 
-    getUtxos: (params?: Record<string, unknown>) =>
-      invoke('htr_getUtxos', params ?? {}),
+    getUtxos: (params?: Record<string, unknown>) => invoke('htr_getUtxos', params ?? {}),
 
-    sendTransaction: (params: Record<string, unknown>) =>
-      invoke('htr_sendTransaction', params),
+    sendTransaction: (params: Record<string, unknown>) => invoke('htr_sendTransaction', params),
 
     signWithAddress: (message: string, addressIndex: number) =>
       invoke('htr_signWithAddress', { message, addressIndex }),
 
-    createToken: (params: Record<string, unknown>) =>
-      invoke('htr_createToken', params),
+    createToken: (params: Record<string, unknown>) => invoke('htr_createToken', params),
 
-    sendNanoContractTx: (params: Record<string, unknown>) =>
-      invoke('htr_sendNanoContractTx', params),
+    sendNanoContractTx: (params: Record<string, unknown>) => invoke('htr_sendNanoContractTx', params),
 
     createNanoContractCreateTokenTx: (params: Record<string, unknown>) =>
       invoke('htr_createNanoContractCreateTokenTx', params),
@@ -64,13 +49,10 @@ export const createSnapHandlers = (
     signOracleData: (ncId: string, data: string, oracle: string) =>
       invoke('htr_signOracleData', { nc_id: ncId, data, oracle }),
 
-    changeNetwork: (newNetwork: string) =>
-      invoke('htr_changeNetwork', { newNetwork }),
+    changeNetwork: (newNetwork: string) => invoke('htr_changeNetwork', { newNetwork }),
 
-    getXpub: (network: string) =>
-      invoke('htr_getXpub', { network }),
+    getXpub: (network: string) => invoke('htr_getXpub', { network }),
 
-    getWalletInformation: () =>
-      invoke('htr_getWalletInformation'),
+    getWalletInformation: () => invoke('htr_getWalletInformation'),
   };
 };

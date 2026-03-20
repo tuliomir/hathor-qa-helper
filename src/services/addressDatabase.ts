@@ -55,10 +55,7 @@ export async function openAddressDatabase(): Promise<IDBPDatabase> {
  * @param walletId - The wallet ID these addresses belong to
  * @param addresses - Array of address entries to store
  */
-export async function storeAddresses(
-  walletId: string,
-  addresses: AddressEntry[]
-): Promise<void> {
+export async function storeAddresses(walletId: string, addresses: AddressEntry[]): Promise<void> {
   try {
     const database = await openAddressDatabase();
     const tx = database.transaction(STORE_NAME, 'readwrite');
@@ -95,10 +92,7 @@ export async function storeAddresses(
  * @param walletId - The wallet ID to associate with discovered addresses
  * @param txData - Transaction data from wallet events
  */
-export async function storeAddressesFromTransaction(
-  walletId: string,
-  txData: unknown
-): Promise<void> {
+export async function storeAddressesFromTransaction(walletId: string, txData: unknown): Promise<void> {
   try {
     const addresses: AddressEntry[] = [];
 

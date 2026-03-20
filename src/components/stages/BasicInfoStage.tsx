@@ -63,20 +63,24 @@ export const BasicInfoStage: React.FC = () => {
       const duration = Date.now() - startTime;
 
       // Store request in Redux
-      dispatch(setWalletInformationRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setWalletInformationRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setWalletInformationResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setWalletInformationResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -84,10 +88,12 @@ export const BasicInfoStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setWalletInformationError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setWalletInformationError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -106,20 +112,24 @@ export const BasicInfoStage: React.FC = () => {
       const duration = Date.now() - startTime;
 
       // Store request in Redux
-      dispatch(setConnectedNetworkRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setConnectedNetworkRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Serialize BigInt values before storing in Redux
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store response in Redux
-      dispatch(setConnectedNetworkResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setConnectedNetworkResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -127,10 +137,12 @@ export const BasicInfoStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setConnectedNetworkError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setConnectedNetworkError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -139,9 +151,7 @@ export const BasicInfoStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Basic Information RPC</h1>
-      <p className="text-muted mb-7.5">
-        Test basic RPC methods to retrieve wallet information
-      </p>
+      <p className="text-muted mb-7.5">Test basic RPC methods to retrieve wallet information</p>
 
       {!isConnected && <RpcNotConnectedBanner />}
 
@@ -149,9 +159,7 @@ export const BasicInfoStage: React.FC = () => {
       {isConnected && rpcHandlers && (
         <>
           <h2 className="text-2xl font-bold mb-3">Get Wallet Information</h2>
-          <p className="text-sm text-muted mb-4">
-            Retrieves the wallet network and first address (address0)
-          </p>
+          <p className="text-sm text-muted mb-4">Retrieves the wallet network and first address (address0)</p>
           <RpcWalletInformationCard
             onExecute={handleExecuteWalletInformation}
             disabled={false}
@@ -164,17 +172,13 @@ export const BasicInfoStage: React.FC = () => {
           {/* Separator */}
           <div className="my-10 border-t-2 border-gray-300 relative">
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-4 py-2">
-              <span className="text-sm font-bold text-muted uppercase tracking-wider">
-                Next RPC Method
-              </span>
+              <span className="text-sm font-bold text-muted uppercase tracking-wider">Next RPC Method</span>
             </div>
           </div>
 
           {/* Connected Network Card */}
           <h2 className="text-2xl font-bold mb-3">Get Connected Network</h2>
-          <p className="text-sm text-muted mb-4">
-            Retrieves the connected network information including genesis hash
-          </p>
+          <p className="text-sm text-muted mb-4">Retrieves the connected network information including genesis hash</p>
           <RpcConnectedNetworkCard
             onExecute={handleExecuteConnectedNetwork}
             disabled={false}
@@ -208,14 +212,10 @@ export const BasicInfoStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request durations</p>
               <div className="text-sm text-green-800 mt-1 mb-0">
                 {walletInformationData.duration !== null && (
-                  <span className="block mt-1">
-                    Wallet Information: {walletInformationData.duration}ms
-                  </span>
+                  <span className="block mt-1">Wallet Information: {walletInformationData.duration}ms</span>
                 )}
                 {connectedNetworkData.duration !== null && (
-                  <span className="block mt-1">
-                    Connected Network: {connectedNetworkData.duration}ms
-                  </span>
+                  <span className="block mt-1">Connected Network: {connectedNetworkData.duration}ms</span>
                 )}
               </div>
             </div>

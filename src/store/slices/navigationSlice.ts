@@ -91,10 +91,7 @@ const navigationSlice = createSlice({
     },
 
     // Navigate to Raw RPC Editor with request JSON
-    navigateToRawRpcEditor: (
-      state,
-      action: PayloadAction<{ requestJson: string }>
-    ) => {
+    navigateToRawRpcEditor: (state, action: PayloadAction<{ requestJson: string }>) => {
       state.rawRpcEditor.requestJson = action.payload.requestJson;
     },
 

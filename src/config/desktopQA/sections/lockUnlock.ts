@@ -13,7 +13,8 @@ export const lockUnlockSection: SectionConfig = {
     {
       id: 'step-1',
       title: 'Lock wallet',
-      instructions: 'Lock the wallet using the lock icon in the **bottom-left corner**.' +
+      instructions:
+        'Lock the wallet using the lock icon in the **bottom-left corner**.' +
         '\n\nAttempt to unlock with an **incorrect PIN** and verify it fails.' +
         '\n\nUnlock with the correct PIN and verify transactions load correctly.',
     },

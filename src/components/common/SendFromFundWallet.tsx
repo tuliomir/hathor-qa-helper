@@ -175,7 +175,10 @@ export default function SendFromFundWallet({
       {/* Fixed amount display */}
       {fixedAmount && (
         <div className="text-sm">
-          Amount: <span className="font-bold">{fixedAmount} {selectedToken.symbol}</span>
+          Amount:{' '}
+          <span className="font-bold">
+            {fixedAmount} {selectedToken.symbol}
+          </span>
         </div>
       )}
 

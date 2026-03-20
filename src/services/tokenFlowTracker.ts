@@ -12,7 +12,7 @@
  * This service processes ALL transactions to build an accurate picture.
  */
 
-import type { AddressTokenFlow, TokenFlowResult, UnspentOutput, } from '../types/tokenFlowTracker';
+import type { AddressTokenFlow, TokenFlowResult, UnspentOutput } from '../types/tokenFlowTracker';
 import { findWalletByAddress } from './addressDatabase';
 
 // Transaction types matching IHistoryTx from wallet-lib
@@ -92,8 +92,7 @@ export async function trackTokenFlow(
     const txHistory = await walletInstance.getTxHistory({ token_id: tokenUid });
 
     const sortedHistory = [...txHistory].sort(
-      (a: { timestamp?: number }, b: { timestamp?: number }) =>
-        (a.timestamp || 0) - (b.timestamp || 0)
+      (a: { timestamp?: number }, b: { timestamp?: number }) => (a.timestamp || 0) - (b.timestamp || 0)
     );
 
     // Step 3: Process each transaction
@@ -202,10 +201,7 @@ export async function trackTokenFlow(
     addressFlows.sort((a, b) => b.netBalance - a.netBalance);
 
     // Calculate total external balance
-    const totalExternalBalance = addressFlows.reduce(
-      (sum, flow) => sum + flow.netBalance,
-      0
-    );
+    const totalExternalBalance = addressFlows.reduce((sum, flow) => sum + flow.netBalance, 0);
 
     return {
       tokenUid,
@@ -230,10 +226,7 @@ export async function trackTokenFlow(
 /**
  * Helper to get or create an address tracker
  */
-function getOrCreateTracker(
-  trackers: Map<string, AddressTracker>,
-  address: string
-): AddressTracker {
+function getOrCreateTracker(trackers: Map<string, AddressTracker>, address: string): AddressTracker {
   let tracker = trackers.get(address);
   if (!tracker) {
     tracker = {

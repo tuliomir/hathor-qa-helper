@@ -82,7 +82,9 @@ export async function extractTextFromImage(imageDataUrl: string): Promise<string
     const processedImage = await preprocessImage(imageDataUrl);
 
     // Recognize text
-    const { data: { text } } = await worker.recognize(processedImage);
+    const {
+      data: { text },
+    } = await worker.recognize(processedImage);
 
     return text;
   } catch (error) {
@@ -105,7 +107,10 @@ export async function extractTextFromImage(imageDataUrl: string): Promise<string
  */
 export function parseSeedWords(ocrText: string): string {
   // Split by lines and clean up
-  const lines = ocrText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  const lines = ocrText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 
   const words: string[] = [];
 
@@ -118,7 +123,7 @@ export function parseSeedWords(ocrText: string): string {
       .toLowerCase();
 
     // Split by whitespace and collect valid words
-    const lineWords = cleanedLine.split(/\s+/).filter(word => {
+    const lineWords = cleanedLine.split(/\s+/).filter((word) => {
       // Filter out empty strings and common OCR artifacts
       return word.length > 2 && word.length < 15 && /^[a-z]+$/.test(word);
     });

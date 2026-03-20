@@ -99,9 +99,7 @@ export default function PushNotifications() {
         );
 
         // Filter out nulls and tokens with zero balance
-        const validTokens = tokensWithBalances.filter(
-          (t): t is Token => t !== null && t.balance > 0n
-        );
+        const validTokens = tokensWithBalances.filter((t): t is Token => t !== null && t.balance > 0n);
 
         // Sort tokens by balance ascending (lowest first)
         validTokens.sort((a, b) => {
@@ -224,7 +222,9 @@ export default function PushNotifications() {
     const isLoading = wallet.status === 'connecting' || wallet.status === 'syncing';
 
     return (
-      <div className={`card bg-white shadow-md border-2 ${isReady && isOnMainnet ? 'border-success' : 'border-gray-300'}`}>
+      <div
+        className={`card bg-white shadow-md border-2 ${isReady && isOnMainnet ? 'border-success' : 'border-gray-300'}`}
+      >
         <div className="card-body">
           <h3 className="card-title">{label} Wallet</h3>
 
@@ -462,7 +462,8 @@ export default function PushNotifications() {
   };
 
   const handleSend1HTRPlus3Tokens = async () => {
-    if (!fundingWallet?.instance || !testWallet?.instance || !selectedToken1 || !selectedToken2 || !selectedToken3) return;
+    if (!fundingWallet?.instance || !testWallet?.instance || !selectedToken1 || !selectedToken2 || !selectedToken3)
+      return;
 
     try {
       const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
@@ -568,7 +569,7 @@ export default function PushNotifications() {
           acc.set(token.tokenId, { ...token });
         }
         return acc;
-      }, new Map<string, typeof sentTokens[0]>());
+      }, new Map<string, (typeof sentTokens)[0]>());
 
       // Build transaction with all tokens
       let builder = TransactionTemplateBuilder.new()
@@ -614,9 +615,7 @@ export default function PushNotifications() {
       {isSending && <Loading overlay message="Sending transaction..." />}
 
       <h1 className="mt-0 text-3xl font-bold">Push Notifications</h1>
-      <p className="text-muted mb-7.5">
-        Test push notification functionality by sending tokens to the test wallet.
-      </p>
+      <p className="text-muted mb-7.5">Test push notification functionality by sending tokens to the test wallet.</p>
 
       {/* Wallets Status */}
       <div className="mb-7.5">
@@ -634,8 +633,8 @@ export default function PushNotifications() {
           <div>
             <h3 className="font-bold text-lg mt-0 mb-2">Network Check Required</h3>
             <p className="m-0">
-              Both wallets must be on <strong>MAINNET</strong> before continuing with push notification tests.
-              Please use the swap buttons above to change the network.
+              Both wallets must be on <strong>MAINNET</strong> before continuing with push notification tests. Please
+              use the swap buttons above to change the network.
             </p>
           </div>
         </div>
@@ -651,14 +650,8 @@ export default function PushNotifications() {
             <div className="card bg-white shadow-md mb-4">
               <div className="card-body">
                 <h3 className="card-title">Send 1 HTR</h3>
-                <p className="text-sm text-muted mb-4">
-                  Send 1 HTR from the funding wallet to the test wallet.
-                </p>
-                <button
-                  onClick={handleSend1HTR}
-                  disabled={isSending}
-                  className="btn btn-primary w-full"
-                >
+                <p className="text-sm text-muted mb-4">Send 1 HTR from the funding wallet to the test wallet.</p>
+                <button onClick={handleSend1HTR} disabled={isSending} className="btn btn-primary w-full">
                   {isSending ? 'Sending...' : 'Send 1 HTR'}
                 </button>
               </div>
@@ -668,9 +661,7 @@ export default function PushNotifications() {
             <div className="card bg-white shadow-md mb-4">
               <div className="card-body">
                 <h3 className="card-title">Send 1 HTR + 1 Custom Token</h3>
-                <p className="text-sm text-muted mb-4">
-                  Send 1 HTR and 1 custom token in a single transaction.
-                </p>
+                <p className="text-sm text-muted mb-4">Send 1 HTR and 1 custom token in a single transaction.</p>
 
                 {isLoadingTokens ? (
                   <div className="text-sm text-muted mb-4">Loading tokens...</div>
@@ -868,7 +859,15 @@ export default function PushNotifications() {
 
                     <button
                       onClick={handleSend1HTRPlus2Tokens}
-                      disabled={isSending || !selectedToken1 || !selectedToken2 || !token1Amount || !token2Amount || parseFloat(token1Amount) <= 0 || parseFloat(token2Amount) <= 0}
+                      disabled={
+                        isSending ||
+                        !selectedToken1 ||
+                        !selectedToken2 ||
+                        !token1Amount ||
+                        !token2Amount ||
+                        parseFloat(token1Amount) <= 0 ||
+                        parseFloat(token2Amount) <= 0
+                      }
                       className="btn btn-primary w-full"
                     >
                       {isSending ? 'Sending...' : 'Send 1 HTR + 2 Tokens'}
@@ -1056,7 +1055,18 @@ export default function PushNotifications() {
 
                     <button
                       onClick={handleSend1HTRPlus3Tokens}
-                      disabled={isSending || !selectedToken1 || !selectedToken2 || !selectedToken3 || !token1Amount || !token2Amount || !token3Amount || parseFloat(token1Amount) <= 0 || parseFloat(token2Amount) <= 0 || parseFloat(token3Amount) <= 0}
+                      disabled={
+                        isSending ||
+                        !selectedToken1 ||
+                        !selectedToken2 ||
+                        !selectedToken3 ||
+                        !token1Amount ||
+                        !token2Amount ||
+                        !token3Amount ||
+                        parseFloat(token1Amount) <= 0 ||
+                        parseFloat(token2Amount) <= 0 ||
+                        parseFloat(token3Amount) <= 0
+                      }
                       className="btn btn-primary w-full"
                     >
                       {isSending ? 'Sending...' : 'Send 1 HTR + 3 Tokens'}
@@ -1068,56 +1078,53 @@ export default function PushNotifications() {
           </div>
 
           {/* Return Tokens Section */}
-          {sentTokens.length > 0 && (() => {
-            // Group tokens by token ID and sum amounts
-            const tokenGroups = sentTokens.reduce((acc, token) => {
-              const existing = acc.get(token.tokenId);
-              if (existing) {
-                existing.amount = (BigInt(existing.amount) + BigInt(token.amount)).toString();
-              } else {
-                acc.set(token.tokenId, { ...token });
-              }
-              return acc;
-            }, new Map<string, typeof sentTokens[0]>());
+          {sentTokens.length > 0 &&
+            (() => {
+              // Group tokens by token ID and sum amounts
+              const tokenGroups = sentTokens.reduce((acc, token) => {
+                const existing = acc.get(token.tokenId);
+                if (existing) {
+                  existing.amount = (BigInt(existing.amount) + BigInt(token.amount)).toString();
+                } else {
+                  acc.set(token.tokenId, { ...token });
+                }
+                return acc;
+              }, new Map<string, (typeof sentTokens)[0]>());
 
-            const groupedTokens = Array.from(tokenGroups.values());
+              const groupedTokens = Array.from(tokenGroups.values());
 
-            return (
-              <div className="mb-7.5">
-                <h2 className="text-2xl font-bold mb-4">Return Tokens</h2>
-                <div className="card bg-blue-50 border-2 border-blue-400">
-                  <div className="card-body">
-                    <h3 className="card-title text-blue-900">Tokens Sent This Session</h3>
-                    <div className="overflow-x-auto mb-4">
-                      <table className="table table-sm w-full">
-                        <thead>
-                          <tr>
-                            <th>Token</th>
-                            <th>Total Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {groupedTokens.map((token, idx) => (
-                            <tr key={idx}>
-                              <td className="font-bold">{token.tokenSymbol}</td>
-                              <td>{token.amount}</td>
+              return (
+                <div className="mb-7.5">
+                  <h2 className="text-2xl font-bold mb-4">Return Tokens</h2>
+                  <div className="card bg-blue-50 border-2 border-blue-400">
+                    <div className="card-body">
+                      <h3 className="card-title text-blue-900">Tokens Sent This Session</h3>
+                      <div className="overflow-x-auto mb-4">
+                        <table className="table table-sm w-full">
+                          <thead>
+                            <tr>
+                              <th>Token</th>
+                              <th>Total Amount</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {groupedTokens.map((token, idx) => (
+                              <tr key={idx}>
+                                <td className="font-bold">{token.tokenSymbol}</td>
+                                <td>{token.amount}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <button onClick={handleReturnAllTokens} disabled={isSending} className="btn btn-warning w-full">
+                        {isSending ? 'Returning...' : 'Return All Tokens to Funding Wallet'}
+                      </button>
                     </div>
-                  <button
-                    onClick={handleReturnAllTokens}
-                    disabled={isSending}
-                    className="btn btn-warning w-full"
-                  >
-                    {isSending ? 'Returning...' : 'Return All Tokens to Funding Wallet'}
-                  </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-            );
-          })()}
+              );
+            })()}
         </>
       )}
 

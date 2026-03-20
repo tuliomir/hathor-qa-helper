@@ -12,8 +12,8 @@ export interface TokenBalanceInfo {
   tokenSymbol: string;
   tokenName: string;
   balance: {
-    unlocked: string;  // Store as string for Redux serialization
-    locked: string;    // Store as string for Redux serialization
+    unlocked: string; // Store as string for Redux serialization
+    locked: string; // Store as string for Redux serialization
   };
   lockExpires: number | null;
   transactions: number;
@@ -50,10 +50,7 @@ const getBalanceSlice = createSlice({
   name: 'getBalance',
   initialState,
   reducers: {
-    setGetBalanceRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setGetBalanceRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
@@ -62,10 +59,7 @@ const getBalanceSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setGetBalanceResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setGetBalanceResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       // Response is already serialized (BigInt converted to strings) before dispatch
       state.rawResponse = action.payload.response;
       state.duration = action.payload.duration;
@@ -122,11 +116,7 @@ const getBalanceSlice = createSlice({
   },
 });
 
-export const {
-  setGetBalanceRequest,
-  setGetBalanceResponse,
-  setGetBalanceError,
-  clearGetBalanceData,
-} = getBalanceSlice.actions;
+export const { setGetBalanceRequest, setGetBalanceResponse, setGetBalanceError, clearGetBalanceData } =
+  getBalanceSlice.actions;
 
 export default getBalanceSlice.reducer;

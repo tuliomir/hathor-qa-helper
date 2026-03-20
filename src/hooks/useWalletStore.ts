@@ -64,7 +64,12 @@ export function useWalletStore(): WalletStoreContextValue {
   );
 
   const updateWalletStatus = useCallback(
-    (id: string, status: Parameters<WalletStoreContextValue['updateWalletStatus']>[1], firstAddress?: string, error?: string) => {
+    (
+      id: string,
+      status: Parameters<WalletStoreContextValue['updateWalletStatus']>[1],
+      firstAddress?: string,
+      error?: string
+    ) => {
       dispatch(updateWalletStatusAction({ id, status, firstAddress, error }));
     },
     [dispatch]

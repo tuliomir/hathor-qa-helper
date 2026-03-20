@@ -6,7 +6,7 @@ Bun.serve({
   port: Number(PORT),
   async fetch(req) {
     const url = new URL(req.url);
-    let pathname = url.pathname === "/" ? "/index.html" : url.pathname;
+    const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
 
     // Try to serve the file, fall back to index.html for SPA routing
     let file = Bun.file(distPath + pathname);

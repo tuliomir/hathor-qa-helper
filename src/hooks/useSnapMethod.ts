@@ -14,11 +14,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useMetaMaskContext } from '@hathor/snap-utils';
 import type { AppDispatch, RootState } from '../store';
 import { selectIsSnapConnected, selectSnapOrigin } from '../store/slices/snapSlice';
-import {
-  setSnapMethodRequest,
-  setSnapMethodResponse,
-  setSnapMethodError,
-} from '../store/slices/snapMethodsSlice';
+import { setSnapMethodRequest, setSnapMethodResponse, setSnapMethodError } from '../store/slices/snapMethodsSlice';
 import type { SnapMethodData } from '../store/slices/snapMethodsSlice';
 import { createSnapHandlers } from '../services/snapHandlers';
 import { extractErrorMessage } from '../utils/errorUtils';
@@ -29,7 +25,7 @@ export function useSnapMethod(methodKey: string) {
   const snapOrigin = useSelector(selectSnapOrigin);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const methodData: SnapMethodData | undefined = useSelector(
-    (state: RootState) => state.snapMethods.methods[methodKey],
+    (state: RootState) => state.snapMethods.methods[methodKey]
   );
 
   const { provider } = useMetaMaskContext();
@@ -47,16 +43,17 @@ export function useSnapMethod(methodKey: string) {
         },
       });
     },
-    [provider, snapOrigin],
+    [provider, snapOrigin]
   );
 
-  const handlers = useMemo(
-    () => createSnapHandlers(invokeSnapDirect, isDryRun),
-    [invokeSnapDirect, isDryRun],
-  );
+  const handlers = useMemo(() => createSnapHandlers(invokeSnapDirect, isDryRun), [invokeSnapDirect, isDryRun]);
 
   const execute = useCallback(
-    async (handlerFn: (handlers: ReturnType<typeof createSnapHandlers>) => Promise<{ request: { method: string; params?: Record<string, unknown> }; response: unknown }>) => {
+    async (
+      handlerFn: (
+        handlers: ReturnType<typeof createSnapHandlers>
+      ) => Promise<{ request: { method: string; params?: Record<string, unknown> }; response: unknown }>
+    ) => {
       const startTime = Date.now();
 
       dispatch(
@@ -65,7 +62,7 @@ export function useSnapMethod(methodKey: string) {
           method: '',
           params: null,
           isDryRun,
-        }),
+        })
       );
 
       try {
@@ -78,12 +75,10 @@ export function useSnapMethod(methodKey: string) {
             method: request.method,
             params: request.params ?? null,
             isDryRun,
-          }),
+          })
         );
 
-        dispatch(
-          setSnapMethodResponse({ methodKey, response, duration }),
-        );
+        dispatch(setSnapMethodResponse({ methodKey, response, duration }));
 
         return { request, response };
       } catch (error) {
@@ -91,14 +86,12 @@ export function useSnapMethod(methodKey: string) {
         const errorMessage = extractErrorMessage(error);
         console.error(`[snap:${methodKey}] Error:`, error);
 
-        dispatch(
-          setSnapMethodError({ methodKey, error: errorMessage, duration }),
-        );
+        dispatch(setSnapMethodError({ methodKey, error: errorMessage, duration }));
 
         throw error;
       }
     },
-    [dispatch, handlers, isDryRun, methodKey],
+    [dispatch, handlers, isDryRun, methodKey]
   );
 
   return {

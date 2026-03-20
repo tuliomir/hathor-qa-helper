@@ -39,9 +39,6 @@ const feeNanoContractSlice = createSlice({
   },
 });
 
-export const {
-  setFeeNanoContractId,
-  clearFeeNanoContractData,
-} = feeNanoContractSlice.actions;
+export const { setFeeNanoContractId, clearFeeNanoContractData } = feeNanoContractSlice.actions;
 
 export default feeNanoContractSlice.reducer;

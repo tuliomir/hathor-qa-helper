@@ -8,11 +8,11 @@
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
-	clearDeepLink,
-	selectDeepLinksEnabled,
-	selectDeepLinkToastId,
-	setDeepLink,
-	showDeepLinkModal,
+  clearDeepLink,
+  selectDeepLinksEnabled,
+  selectDeepLinkToastId,
+  setDeepLink,
+  showDeepLinkModal,
 } from '../store/slices/deepLinkSlice';
 import { removeToast } from '../store/slices/toastSlice';
 

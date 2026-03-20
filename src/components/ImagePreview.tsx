@@ -12,13 +12,7 @@ interface ImagePreviewProps {
   isProcessing: boolean;
 }
 
-export default function ImagePreview({
-  imageDataUrl,
-  onExtractText,
-  onCancel,
-  isProcessing,
-}: ImagePreviewProps) {
-
+export default function ImagePreview({ imageDataUrl, onExtractText, onCancel, isProcessing }: ImagePreviewProps) {
   return (
     <div
       style={{

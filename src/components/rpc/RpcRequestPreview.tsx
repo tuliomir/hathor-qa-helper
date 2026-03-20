@@ -13,11 +13,7 @@ import CopyButton from '../common/CopyButton';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
 
 const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(
-    obj,
-    (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-    space,
-  );
+  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
 
 interface RpcRequestPreviewProps {
@@ -60,11 +56,7 @@ export const RpcRequestPreview: React.FC<RpcRequestPreviewProps> = ({
 
       {expanded && (
         <div className="bg-blue-50 border border-blue-300 rounded p-4">
-          {!isSent && (
-            <p className="text-sm text-blue-800 mb-3">
-              Live preview — updates as you change inputs above.
-            </p>
-          )}
+          {!isSent && <p className="text-sm text-blue-800 mb-3">Live preview — updates as you change inputs above.</p>}
           <div className="space-y-2">
             <div className="bg-white border border-blue-200 rounded overflow-hidden">
               <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">

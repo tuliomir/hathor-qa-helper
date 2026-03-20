@@ -46,10 +46,7 @@ const betDepositSlice = createSlice({
   name: 'betDeposit',
   initialState,
   reducers: {
-    setBetDepositRequest: (
-      state,
-      action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>
-    ) => {
+    setBetDepositRequest: (state, action: PayloadAction<{ method: string; params: unknown; isDryRun: boolean }>) => {
       state.request = { method: action.payload.method, params: action.payload.params };
       state.isDryRun = action.payload.isDryRun;
       state.timestamp = Date.now();
