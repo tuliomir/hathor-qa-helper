@@ -28,6 +28,8 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import CopyButton from '../common/CopyButton';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { LoadingOverlay } from '../common/LoadingOverlay';
+import TimelockPicker from '../common/TimelockPicker';
+import { defaultTimelockValue, timelockToUnix } from '../../utils/timelockUtils';
 import { useToast } from '../../hooks/useToast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -59,11 +61,7 @@ export const SnapConnectionStage: React.FC = () => {
   // Inject fund state
   const [injectUnlocked, setInjectUnlocked] = useState(10);
   const [injectLocked, setInjectLocked] = useState(5);
-  const [injectTimestamp, setInjectTimestamp] = useState<string>(() => {
-    const date = new Date(Date.now() + 5 * 60 * 1000);
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  });
+  const [injectTimestamp, setInjectTimestamp] = useState<string>(() => defaultTimelockValue(5));
   const [isInjecting, setIsInjecting] = useState(false);
   const [injectError, setInjectError] = useState<string | null>(null);
 
@@ -77,14 +75,19 @@ export const SnapConnectionStage: React.FC = () => {
 
     try {
       const fundAddr0 = await fundingWallet.instance.getAddressAtIndex(0);
-      const timelockTs = Math.floor(new Date(injectTimestamp).getTime() / 1000);
+      const timelockTs = timelockToUnix(injectTimestamp)!;
 
       const outputs: Array<{ address: string; value: bigint; token: string; timelock?: number }> = [];
       if (injectUnlocked > 0) {
         outputs.push({ address: snapAddress, value: BigInt(injectUnlocked), token: NATIVE_TOKEN_UID });
       }
       if (injectLocked > 0) {
-        outputs.push({ address: snapAddress, value: BigInt(injectLocked), token: NATIVE_TOKEN_UID, timelock: timelockTs });
+        outputs.push({
+          address: snapAddress,
+          value: BigInt(injectLocked),
+          token: NATIVE_TOKEN_UID,
+          timelock: timelockTs,
+        });
       }
       if (outputs.length === 0) return;
 
@@ -111,10 +114,7 @@ export const SnapConnectionStage: React.FC = () => {
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent).detail;
-      if (
-        detail?.info?.rdns === 'io.metamask' ||
-        detail?.info?.rdns === 'io.metamask.flask'
-      ) {
+      if (detail?.info?.rdns === 'io.metamask' || detail?.info?.rdns === 'io.metamask.flask') {
         setHasMetaMask(true);
       }
     };
@@ -143,7 +143,7 @@ export const SnapConnectionStage: React.FC = () => {
             version: contextSnap.version,
           },
           snapOrigin: originInput,
-        }),
+        })
       );
     }
   }, [contextSnap, dispatch, originInput]);
@@ -163,8 +163,10 @@ export const SnapConnectionStage: React.FC = () => {
     const checkExistingSnap = async () => {
       setIsReconnecting(true);
       try {
-        const snaps = await provider.request({ method: 'wallet_getSnaps' }) as
-          Record<string, { id: string; version: string; enabled: boolean; blocked: boolean }> | null;
+        const snaps = (await provider.request({ method: 'wallet_getSnaps' })) as Record<
+          string,
+          { id: string; version: string; enabled: boolean; blocked: boolean }
+        > | null;
 
         const snap = snaps?.[storedOrigin];
         if (snap && snap.enabled && !snap.blocked) {
@@ -174,7 +176,7 @@ export const SnapConnectionStage: React.FC = () => {
             setSnapConnected({
               installedSnap: { id: snap.id ?? storedOrigin, version: snap.version },
               snapOrigin: storedOrigin,
-            }),
+            })
           );
           dispatch(setSnapOrigin(storedOrigin));
         }
@@ -186,7 +188,7 @@ export const SnapConnectionStage: React.FC = () => {
     };
 
     checkExistingSnap();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
   const fetchWalletInfo = useCallback(async () => {
@@ -246,16 +248,25 @@ export const SnapConnectionStage: React.FC = () => {
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Snap Connection</h1>
-      <p className="text-muted mb-7.5">
-        Connect to the Hathor MetaMask Snap and configure the snap origin
-      </p>
+      <p className="text-muted mb-7.5">Connect to the Hathor MetaMask Snap and configure the snap origin</p>
 
       {/* MetaMask Detection */}
       {hasMetaMask === false && (
         <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
           <div className="flex items-start gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-warning flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-warning flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
             </svg>
             <div>
               <p className="font-bold text-yellow-900 m-0">MetaMask Not Detected</p>
@@ -280,21 +291,13 @@ export const SnapConnectionStage: React.FC = () => {
               placeholder="local:http://localhost:8080"
               className="input"
             />
-            <p className="text-xs text-muted mt-1">
-              The snap origin identifier (local dev or npm package)
-            </p>
+            <p className="text-xs text-muted mt-1">The snap origin identifier (local dev or npm package)</p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => handleSetOrigin(DEFAULT_SNAP_ORIGIN)}
-              className="btn-secondary py-1.5 px-3 text-sm"
-            >
+            <button onClick={() => handleSetOrigin(DEFAULT_SNAP_ORIGIN)} className="btn-secondary py-1.5 px-3 text-sm">
               Local Dev
             </button>
-            <button
-              onClick={() => handleSetOrigin(SNAP_ORIGIN_NPM)}
-              className="btn-secondary py-1.5 px-3 text-sm"
-            >
+            <button onClick={() => handleSetOrigin(SNAP_ORIGIN_NPM)} className="btn-secondary py-1.5 px-3 text-sm">
               NPM Package
             </button>
           </div>
@@ -320,11 +323,7 @@ export const SnapConnectionStage: React.FC = () => {
                 Disconnect
               </button>
             ) : (
-              <button
-                onClick={handleConnect}
-                disabled={isConnecting || hasMetaMask === false}
-                className="btn-primary"
-              >
+              <button onClick={handleConnect} disabled={isConnecting || hasMetaMask === false} className="btn-primary">
                 {isConnecting ? 'Connecting...' : isReconnecting ? 'Reconnecting...' : 'Connect Snap'}
               </button>
             )}
@@ -334,9 +333,7 @@ export const SnapConnectionStage: React.FC = () => {
         {/* Snap Info */}
         {isConnected && installedSnap && (
           <div className="bg-blue-50 border border-blue-300 rounded p-4 mt-4">
-            <h3 className="text-sm font-semibold text-blue-800 mb-2">
-              Connected Snap
-            </h3>
+            <h3 className="text-sm font-semibold text-blue-800 mb-2">Connected Snap</h3>
             <div className="bg-white border border-blue-200 rounded p-3 space-y-2">
               <div>
                 <div className="text-xs text-muted mb-1">Snap ID</div>
@@ -368,9 +365,7 @@ export const SnapConnectionStage: React.FC = () => {
                   </div>
                 </div>
               )}
-              {isFetchingWalletInfo && (
-                <div className="text-xs text-muted italic">Fetching wallet info...</div>
-              )}
+              {isFetchingWalletInfo && <div className="text-xs text-muted italic">Fetching wallet info...</div>}
             </div>
           </div>
         )}
@@ -383,9 +378,7 @@ export const SnapConnectionStage: React.FC = () => {
             <DryRunCheckbox />
             <div>
               <h3 className="text-base font-bold m-0">Dry Run Mode</h3>
-              <p className="text-sm text-muted mt-1 mb-0">
-                Toggle dry run for all snap method stages
-              </p>
+              <p className="text-sm text-muted mt-1 mb-0">Toggle dry run for all snap method stages</p>
             </div>
           </div>
         </div>
@@ -396,7 +389,8 @@ export const SnapConnectionStage: React.FC = () => {
         <div className="card-primary mb-7.5">
           <h3 className="text-lg font-bold mb-4">Fund Snap Wallet</h3>
           <p className="text-sm text-muted mb-4">
-            Send HTR from the funding wallet to the snap wallet address ({snapAddress.slice(0, 8)}...{snapAddress.slice(-6)})
+            Send HTR from the funding wallet to the snap wallet address ({snapAddress.slice(0, 8)}...
+            {snapAddress.slice(-6)})
           </p>
 
           <div className="space-y-4">
@@ -423,23 +417,15 @@ export const SnapConnectionStage: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Timestamp (lock until)</label>
-              <input
-                type="datetime-local"
-                value={injectTimestamp}
-                onChange={(e) => setInjectTimestamp(e.target.value)}
-                className="input"
-              />
-              <p className="text-xs text-muted mt-1">
-                Locked funds unavailable until this time (default: 5 min from now)
-              </p>
-            </div>
+            <TimelockPicker
+              value={injectTimestamp}
+              onChange={setInjectTimestamp}
+              label="Timestamp (lock until)"
+              hint="Locked funds unavailable until this time (default: 5 min from now)"
+            />
 
             {injectError && (
-              <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">
-                {injectError}
-              </div>
+              <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">{injectError}</div>
             )}
 
             <button
@@ -459,7 +445,12 @@ export const SnapConnectionStage: React.FC = () => {
         <div className="card-primary mb-7.5 border border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50">
           <div className="flex items-center gap-2.5 mb-5">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-indigo-600"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
                 <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
               </svg>
             </div>
@@ -467,31 +458,40 @@ export const SnapConnectionStage: React.FC = () => {
           </div>
 
           <p className="text-sm text-slate-700 mb-5 leading-relaxed">
-            The MetaMask Snaps section requires the <strong>Hathor Snap</strong> running locally.
-            Follow these steps to set up your environment before connecting.
+            The MetaMask Snaps section requires the <strong>Hathor Snap</strong> running locally. Follow these steps to
+            set up your environment before connecting.
           </p>
 
           {/* Prerequisites */}
           <div className="mb-5">
             <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex-shrink-0">!</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex-shrink-0">
+                !
+              </span>
               Prerequisites
             </h3>
             <ul className="text-sm text-slate-600 space-y-1 ml-6.5 list-disc">
-              <li><strong>MetaMask</strong> (or MetaMask Flask) browser extension installed</li>
-              <li><strong>Node.js</strong> 18+ and a package manager (yarn or npm)</li>
+              <li>
+                <strong>MetaMask</strong> (or MetaMask Flask) browser extension installed
+              </li>
+              <li>
+                <strong>Node.js</strong> 18+ and a package manager (yarn or npm)
+              </li>
             </ul>
           </div>
 
           {/* Step 1 */}
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">1</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
+                1
+              </span>
               Clone the RPC library
             </h3>
             <div className="relative group">
               <pre className="bg-slate-800 text-slate-100 rounded-lg px-4 py-3 text-sm font-mono overflow-x-auto">
-                <span className="text-slate-500">$</span> git clone https://github.com/HathorNetwork/hathor-rpc-lib.git{'\n'}
+                <span className="text-slate-500">$</span> git clone https://github.com/HathorNetwork/hathor-rpc-lib.git
+                {'\n'}
                 <span className="text-slate-500">$</span> cd hathor-rpc-lib
               </pre>
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -507,7 +507,9 @@ export const SnapConnectionStage: React.FC = () => {
           {/* Step 2 */}
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">2</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
+                2
+              </span>
               Install dependencies
             </h3>
             <div className="relative group">
@@ -515,7 +517,11 @@ export const SnapConnectionStage: React.FC = () => {
                 <span className="text-slate-500">$</span> yarn install
               </pre>
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton text="yarn install" label="Copy" className="!bg-slate-700 hover:!bg-slate-600 !text-slate-300" />
+                <CopyButton
+                  text="yarn install"
+                  label="Copy"
+                  className="!bg-slate-700 hover:!bg-slate-600 !text-slate-300"
+                />
               </div>
             </div>
           </div>
@@ -523,7 +529,9 @@ export const SnapConnectionStage: React.FC = () => {
           {/* Step 3 */}
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">3</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
+                3
+              </span>
               Start the Snap dev server
             </h3>
             <div className="relative group">
@@ -531,25 +539,31 @@ export const SnapConnectionStage: React.FC = () => {
                 <span className="text-slate-500">$</span> yarn snap-start
               </pre>
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton text="yarn snap-start" label="Copy" className="!bg-slate-700 hover:!bg-slate-600 !text-slate-300" />
+                <CopyButton
+                  text="yarn snap-start"
+                  label="Copy"
+                  className="!bg-slate-700 hover:!bg-slate-600 !text-slate-300"
+                />
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed">
               This builds the Snap and serves it on{' '}
-              <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">localhost:8080</code>,
-              which matches the default <em>Local Dev</em> origin above.
+              <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">localhost:8080</code>, which matches
+              the default <em>Local Dev</em> origin above.
             </p>
           </div>
 
           {/* Step 4 */}
           <div className="mb-2">
             <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">4</span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
+                4
+              </span>
               Connect above
             </h3>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Once the Snap dev server is running, keep the <strong>Local Dev</strong> origin selected
-              and click <strong>Connect Snap</strong>. MetaMask will prompt you to install the Hathor Snap.
+              Once the Snap dev server is running, keep the <strong>Local Dev</strong> origin selected and click{' '}
+              <strong>Connect Snap</strong>. MetaMask will prompt you to install the Hathor Snap.
             </p>
           </div>
 

@@ -15,6 +15,7 @@ export interface SendTransactionOutput {
   address?: string;
   value?: string;
   token?: string; // Token UID (default '00' for HTR)
+  timelock?: string; // ISO datetime string for timelock (converted to unix timestamp on send)
   // Data output fields
   data?: string; // Max 255 characters
 }
@@ -69,29 +70,20 @@ const sendTransactionSlice = createSlice({
       state.error = null;
       state.duration = null;
     },
-    setSendTransactionResponse: (
-      state,
-      action: PayloadAction<{ response: unknown; duration: number }>
-    ) => {
+    setSendTransactionResponse: (state, action: PayloadAction<{ response: unknown; duration: number }>) => {
       // Store raw response
       state.rawResponse = action.payload.response;
       state.response = action.payload.response;
       state.duration = action.payload.duration;
       state.error = null;
     },
-    setSendTransactionError: (
-      state,
-      action: PayloadAction<{ error: string; duration: number }>
-    ) => {
+    setSendTransactionError: (state, action: PayloadAction<{ error: string; duration: number }>) => {
       state.error = action.payload.error;
       state.duration = action.payload.duration;
       state.response = null;
       state.rawResponse = null;
     },
-    setSendTransactionFormData: (
-      state,
-      action: PayloadAction<SendTransactionFormData>
-    ) => {
+    setSendTransactionFormData: (state, action: PayloadAction<SendTransactionFormData>) => {
       state.formData = action.payload;
     },
     clearSendTransactionData: (state) => {

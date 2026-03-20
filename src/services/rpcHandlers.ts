@@ -18,6 +18,7 @@ interface SessionStruct {
 }
 import { HATHOR_TESTNET_CHAIN } from '../constants/walletConnect';
 import { getOracleBuffer } from '../utils/betHelpers';
+import { timelockToUnix } from '../utils/timelockUtils';
 import { generateHathorWalletRequestDeepLink } from './walletConnectClient';
 
 export type CreateTokenVersion = 'deposit' | 'fee' | '';
@@ -38,11 +39,11 @@ export interface CreateTokenParams {
 }
 
 export interface RpcHandlerDependencies {
-  client: Client;  // WalletConnect client
+  client: Client; // WalletConnect client
   session: SessionStruct; // Active WalletConnect session
   balanceTokens?: string[];
-  dryRun?: boolean;  // If true, skip actual RPC call
-  onDeepLinkAvailable?: (url: string, title: string) => void;  // Callback when a deep link needs to be shown
+  dryRun?: boolean; // If true, skip actual RPC call
+  onDeepLinkAvailable?: (url: string, title: string) => void; // Callback when a deep link needs to be shown
 }
 
 const DEFAULT_NETWORK = 'testnet';
@@ -490,7 +491,14 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
      * Sends a transaction with one or more outputs (token or data)
      */
     getRpcSendTransaction: async (
-      outputs: Array<{ type?: 'token' | 'data'; address?: string; value?: string; token?: string; data?: string }>,
+      outputs: Array<{
+        type?: 'token' | 'data';
+        address?: string;
+        value?: string;
+        token?: string;
+        timelock?: string;
+        data?: string;
+      }>,
       pushTx: boolean
     ) => {
       if (!session || !client) {
@@ -502,16 +510,19 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         params: {
           network: DEFAULT_NETWORK,
           push_tx: pushTx,
-          outputs: outputs.map(output => {
+          outputs: outputs.map((output) => {
             if (output.type === 'data') {
               return { data: output.data };
             }
             // Default to token output
-            return {
+            const tokenOutput: { address?: string; value?: string; token?: string; timelock?: number } = {
               address: output.address,
               value: output.value,
               token: output.token,
             };
+            const ts = timelockToUnix(output.timelock || '');
+            if (ts !== undefined) tokenOutput.timelock = ts;
+            return tokenOutput;
           }),
         },
       };
@@ -559,7 +570,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       oracleAddress: string,
       token: string,
       deadline: Date,
-      pushTx: boolean,
+      pushTx: boolean
     ) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
@@ -703,11 +714,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
      * Sign Oracle Data
      * Sign data as oracle for a nano contract
      */
-    getRpcSignOracleData: async (
-      ncId: string,
-      oracle: string,
-      data: string
-    ) => {
+    getRpcSignOracleData: async (ncId: string, oracle: string, data: string) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
       }
@@ -828,12 +835,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
      * Initialize Fee
      * Initialize a new fee nano contract with an HTR deposit
      */
-    getRpcFeeInitialize: async (
-      blueprintId: string,
-      amount: string,
-      changeAddress: string,
-      pushTx: boolean,
-    ) => {
+    getRpcFeeInitialize: async (blueprintId: string, amount: string, changeAddress: string, pushTx: boolean) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
       }
@@ -900,7 +902,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       changeAddress: string,
       pushTx: boolean,
       contractPaysFees: boolean,
-      htrWithdrawAmount: string,
+      htrWithdrawAmount: string
     ) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
@@ -982,7 +984,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       address: string,
       pushTx: boolean,
       contractPaysFees: boolean,
-      htrWithdrawAmount: string,
+      htrWithdrawAmount: string
     ) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
@@ -1057,13 +1059,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
      * Withdraw Bet Prize
      * Withdraw prize from a bet nano contract
      */
-    getRpcBetWithdraw: async (
-      ncId: string,
-      address: string,
-      amount: number,
-      token: string,
-      pushTx: boolean
-    ) => {
+    getRpcBetWithdraw: async (ncId: string, address: string, amount: number, token: string, pushTx: boolean) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
       }

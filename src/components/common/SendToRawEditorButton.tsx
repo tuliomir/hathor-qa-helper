@@ -17,10 +17,7 @@ interface SendToRawEditorButtonProps {
   disabled?: boolean;
 }
 
-const SendToRawEditorButton: React.FC<SendToRawEditorButtonProps> = ({
-  requestJson,
-  disabled = false,
-}) => {
+const SendToRawEditorButton: React.FC<SendToRawEditorButtonProps> = ({ requestJson, disabled = false }) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -36,7 +33,7 @@ const SendToRawEditorButton: React.FC<SendToRawEditorButtonProps> = ({
 
       // Navigate to the raw editor stage
       navigate(getStageUrl('rpc-raw-editor'));
-    } catch (e) {
+    } catch {
       showToast('Failed to send to raw editor', 'error');
     }
   };

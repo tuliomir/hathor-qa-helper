@@ -13,9 +13,10 @@ import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import type { SendTransactionOutput, SendTransactionOutputType } from '../../store/slices/sendTransactionSlice';
 import type { NetworkType } from '../../constants/network';
 import Select from '../common/Select';
-// @ts-expect-error - Hathor wallet lib doesn't have TypeScript definitions
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import { LoadingOverlay } from '../common/LoadingOverlay';
+import TimelockPicker from '../common/TimelockPicker';
+import { timelockToUnix } from '../../utils/timelockUtils';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
 interface Token {
@@ -68,21 +69,28 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
   // Form state
   const [pushTx, setPushTx] = useState(initialFormData?.pushTx ?? false);
   const [outputs, setOutputs] = useState<SendTransactionOutput[]>(
-    initialFormData?.outputs?.map(o => ({
+    initialFormData?.outputs?.map((o) => ({
       type: o.type || 'token',
       address: o.address || '',
       value: o.value || '',
       token: o.token || '00',
+      timelock: o.timelock || '',
       data: o.data || '',
-    })) ?? [{ type: 'token', address: '', value: '', token: '00', data: '' }]
+    })) ?? [{ type: 'token', address: '', value: '', token: '00', timelock: '', data: '' }]
   );
 
   const liveRequest = useMemo(() => {
-    const builtOutputs = outputs.map(o =>
-      o.type === 'data'
-        ? { data: o.data }
-        : { address: o.address, value: o.value, token: o.token }
-    );
+    const builtOutputs = outputs.map((o) => {
+      if (o.type === 'data') return { data: o.data };
+      const tokenOutput: { address?: string; value?: string; token?: string; timelock?: number } = {
+        address: o.address,
+        value: o.value,
+        token: o.token,
+      };
+      const ts = timelockToUnix(o.timelock || '');
+      if (ts !== undefined) tokenOutput.timelock = ts;
+      return tokenOutput;
+    });
     return {
       method: 'htr_sendTransaction',
       params: {
@@ -114,7 +122,7 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
       showToast('Maximum 255 outputs allowed', 'error');
       return;
     }
-    setOutputs([...outputs, { type: 'token', address: '', value: '', token: '00', data: '' }]);
+    setOutputs([...outputs, { type: 'token', address: '', value: '', token: '00', timelock: '', data: '' }]);
   };
 
   // Remove output
@@ -127,7 +135,11 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
   };
 
   // Update output
-  const handleOutputChange = (index: number, field: 'address' | 'value' | 'token' | 'data', value: string) => {
+  const handleOutputChange = (
+    index: number,
+    field: 'address' | 'value' | 'token' | 'timelock' | 'data',
+    value: string
+  ) => {
     const newOutputs = [...outputs];
     newOutputs[index] = { ...newOutputs[index], [field]: value };
     setOutputs(newOutputs);
@@ -211,10 +223,7 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
       setResult(response);
       setExpanded(true);
 
-      showToast(
-        isDryRun ? 'Request generated (not sent to RPC)' : 'Transaction sent successfully',
-        'success'
-      );
+      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Transaction sent successfully', 'success');
     } catch (err: unknown) {
       const errorMessage = extractErrorMessage(err);
       setError(errorMessage);
@@ -235,273 +244,267 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
 
   // Safe stringify helper for BigInt
   const safeStringify = (obj: unknown, spaces = 0): string => {
-    return JSON.stringify(
-      obj,
-      (_, value) => (typeof value === 'bigint' ? value.toString() : value),
-      spaces
-    );
+    return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), spaces);
   };
-
 
   return (
     <>
-    <div className="card-primary mb-7.5 relative">
-      {loading && <LoadingOverlay />}
-      <div className="flex flex-col space-y-3">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-semibold m-0">Send Transaction</h3>
-              {isDryRun && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300">
-                  DRY RUN
-                </span>
-              )}
+      <div className="card-primary mb-7.5 relative">
+        {loading && <LoadingOverlay />}
+        <div className="flex flex-col space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-lg font-semibold m-0">Send Transaction</h3>
+                {isDryRun && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300">
+                    DRY RUN
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-muted m-0">Send a transaction with one or more outputs</p>
             </div>
-            <p className="text-sm text-muted m-0">Send a transaction with one or more outputs</p>
-          </div>
-        </div>
-
-        {/* Form Fields */}
-        <div className="space-y-4 pt-2">
-          {/* Push Transaction Toggle */}
-          <div className="space-y-2 bg-gray-50 rounded p-3 border border-gray-200">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={pushTx}
-                onChange={(e) => setPushTx(e.target.checked)}
-                className="checkbox"
-                id="push-tx-checkbox"
-              />
-              <label htmlFor="push-tx-checkbox" className="text-sm cursor-pointer">
-                Push transaction to network
-              </label>
-            </div>
-            <p className="text-xs text-muted m-0">
-              {pushTx
-                ? 'Transaction will be broadcast to the network and fully processed'
-                : 'Returns only the transaction hex without broadcasting'}
-            </p>
           </div>
 
-          {/* Outputs */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">
-                Outputs ({outputs.length}/255)
-              </label>
-              <button
-                onClick={handleAddOutput}
-                disabled={outputs.length >= 255}
-                className="btn-secondary py-1.5 px-3 text-sm"
-              >
-                + Add Output
-              </button>
+          {/* Form Fields */}
+          <div className="space-y-4 pt-2">
+            {/* Push Transaction Toggle */}
+            <div className="space-y-2 bg-gray-50 rounded p-3 border border-gray-200">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={pushTx}
+                  onChange={(e) => setPushTx(e.target.checked)}
+                  className="checkbox"
+                  id="push-tx-checkbox"
+                />
+                <label htmlFor="push-tx-checkbox" className="text-sm cursor-pointer">
+                  Push transaction to network
+                </label>
+              </div>
+              <p className="text-xs text-muted m-0">
+                {pushTx
+                  ? 'Transaction will be broadcast to the network and fully processed'
+                  : 'Returns only the transaction hex without broadcasting'}
+              </p>
             </div>
-            <div className="space-y-3">
-              {outputs.map((output, index) => (
-                <div key={index} className="bg-gray-50 rounded p-3 border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Output {index + 1}</span>
-                    {outputs.length > 1 && (
-                      <button
-                        onClick={() => handleRemoveOutput(index)}
-                        className="text-sm text-red-600 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {/* Output Type Selector */}
-                    <div>
-                      <label className="block mb-1 text-xs font-medium text-muted">Output Type:</label>
-                      <div className="flex gap-2">
+
+            {/* Outputs */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium">Outputs ({outputs.length}/255)</label>
+                <button
+                  onClick={handleAddOutput}
+                  disabled={outputs.length >= 255}
+                  className="btn-secondary py-1.5 px-3 text-sm"
+                >
+                  + Add Output
+                </button>
+              </div>
+              <div className="space-y-3">
+                {outputs.map((output, index) => (
+                  <div key={index} className="bg-gray-50 rounded p-3 border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Output {index + 1}</span>
+                      {outputs.length > 1 && (
                         <button
-                          type="button"
-                          onClick={() => handleOutputTypeChange(index, 'token')}
-                          className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
-                            output.type === 'token'
-                              ? 'bg-primary text-white border-primary'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                          }`}
+                          onClick={() => handleRemoveOutput(index)}
+                          className="text-sm text-red-600 hover:text-red-700"
                         >
-                          Token
+                          Remove
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOutputTypeChange(index, 'data')}
-                          className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
-                            output.type === 'data'
-                              ? 'bg-primary text-white border-primary'
-                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          Data
-                        </button>
-                      </div>
+                      )}
                     </div>
-
-                    {/* Token Output Fields */}
-                    {output.type === 'token' && (
-                      <>
-                        <div>
-                          <input
-                            value={output.address || ''}
-                            onChange={(e) => handleOutputChange(index, 'address', e.target.value)}
-                            placeholder="Address (base58)"
-                            className="input w-full"
-                          />
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              type="button"
-                              onClick={() => handleSelectAddress0(index)}
-                              disabled={!testWallet}
-                              className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                              title="Populate with address 0 from test wallet"
-                            >
-                              Use Addr0
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSelectExternalAddr(index)}
-                              disabled={!fundingWallet}
-                              className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                              title="Populate with address 0 from funding wallet"
-                            >
-                              Use external addr
-                            </button>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            value={output.value || ''}
-                            onChange={(e) => handleOutputChange(index, 'value', e.target.value)}
-                            placeholder="Amount (in tokens)"
-                            className="input flex-1"
-                            type="number"
-                          />
-                          {testWallet && output.token && (
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  const bal = await testWallet.getBalance(output.token || '00');
-                                  const unlocked = bal?.[0]?.balance?.unlocked ?? 0n;
-                                  handleOutputChange(index, 'value', unlocked.toString());
-                                } catch (err) {
-                                  console.error('Failed to get token balance:', err);
-                                }
-                              }}
-                              className="btn-secondary px-3 whitespace-nowrap text-sm"
-                              title="Fill with full token balance"
-                            >
-                              Max
-                            </button>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block mb-1 text-xs font-medium text-muted">Token:</label>
-                          <Select
-                            value={output.token || '00'}
-                            onChange={(e) => handleOutputChange(index, 'token', e.target.value)}
-                            disabled={isLoadingTokens || availableTokens.length === 0}
-                          >
-                            {isLoadingTokens ? (
-                              <option>Loading tokens...</option>
-                            ) : availableTokens.length === 0 ? (
-                              <option>No tokens available</option>
-                            ) : (
-                              availableTokens.map((token) => (
-                                <option key={token.uid} value={token.uid}>
-                                  {token.symbol} - {token.name}
-                                </option>
-                              ))
-                            )}
-                          </Select>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Data Output Fields */}
-                    {output.type === 'data' && (
+                    <div className="space-y-2">
+                      {/* Output Type Selector */}
                       <div>
-                        <label className="block mb-1 text-xs font-medium text-muted">
-                          Data String ({output.data?.length || 0}/255):
-                        </label>
-                        <textarea
-                          value={output.data || ''}
-                          onChange={(e) => {
-                            if (e.target.value.length <= 255) {
-                              handleOutputChange(index, 'data', e.target.value);
-                            }
-                          }}
-                          placeholder="Enter data string (max 255 characters)"
-                          className="input w-full min-h-[80px] resize-y"
-                          maxLength={255}
-                        />
-                        <p className="text-xs text-muted mt-1">
-                          Data outputs store arbitrary string data on the blockchain
-                        </p>
+                        <label className="block mb-1 text-xs font-medium text-muted">Output Type:</label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOutputTypeChange(index, 'token')}
+                            className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
+                              output.type === 'token'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            Token
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOutputTypeChange(index, 'data')}
+                            className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
+                              output.type === 'data'
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            Data
+                          </button>
+                        </div>
                       </div>
-                    )}
+
+                      {/* Token Output Fields */}
+                      {output.type === 'token' && (
+                        <>
+                          <div>
+                            <input
+                              value={output.address || ''}
+                              onChange={(e) => handleOutputChange(index, 'address', e.target.value)}
+                              placeholder="Address (base58)"
+                              className="input w-full"
+                            />
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectAddress0(index)}
+                                disabled={!testWallet}
+                                className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                                title="Populate with address 0 from test wallet"
+                              >
+                                Use Addr0
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectExternalAddr(index)}
+                                disabled={!fundingWallet}
+                                className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
+                                title="Populate with address 0 from funding wallet"
+                              >
+                                Use external addr
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              value={output.value || ''}
+                              onChange={(e) => handleOutputChange(index, 'value', e.target.value)}
+                              placeholder="Amount (in tokens)"
+                              className="input flex-1"
+                              type="number"
+                            />
+                            {testWallet && output.token && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const bal = await testWallet.getBalance(output.token || '00');
+                                    const unlocked = bal?.[0]?.balance?.unlocked ?? 0n;
+                                    handleOutputChange(index, 'value', unlocked.toString());
+                                  } catch (err) {
+                                    console.error('Failed to get token balance:', err);
+                                  }
+                                }}
+                                className="btn-secondary px-3 whitespace-nowrap text-sm"
+                                title="Fill with full token balance"
+                              >
+                                Max
+                              </button>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block mb-1 text-xs font-medium text-muted">Token:</label>
+                            <Select
+                              value={output.token || '00'}
+                              onChange={(e) => handleOutputChange(index, 'token', e.target.value)}
+                              disabled={isLoadingTokens || availableTokens.length === 0}
+                            >
+                              {isLoadingTokens ? (
+                                <option>Loading tokens...</option>
+                              ) : availableTokens.length === 0 ? (
+                                <option>No tokens available</option>
+                              ) : (
+                                availableTokens.map((token) => (
+                                  <option key={token.uid} value={token.uid}>
+                                    {token.symbol} - {token.name}
+                                  </option>
+                                ))
+                              )}
+                            </Select>
+                          </div>
+                          <TimelockPicker
+                            value={output.timelock || ''}
+                            onChange={(v) => handleOutputChange(index, 'timelock', v)}
+                          />
+                        </>
+                      )}
+
+                      {/* Data Output Fields */}
+                      {output.type === 'data' && (
+                        <div>
+                          <label className="block mb-1 text-xs font-medium text-muted">
+                            Data String ({output.data?.length || 0}/255):
+                          </label>
+                          <textarea
+                            value={output.data || ''}
+                            onChange={(e) => {
+                              if (e.target.value.length <= 255) {
+                                handleOutputChange(index, 'data', e.target.value);
+                              }
+                            }}
+                            placeholder="Enter data string (max 255 characters)"
+                            className="input w-full min-h-[80px] resize-y"
+                            maxLength={255}
+                          />
+                          <p className="text-xs text-muted mt-1">
+                            Data outputs store arbitrary string data on the blockchain
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Execute Button */}
-        <div className="flex items-center gap-4 justify-end">
-          <DryRunCheckbox />
-          <button
-            onClick={handleExecute}
-            disabled={loading || disabled}
-            className="btn-primary"
-          >
-            {loading ? 'Sending...' : 'Send Transaction'}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {/* Request Section */}
-    <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
-
-    {/* Response Section */}
-    {hasResult && (
-      <div className="mt-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className={`text-sm font-medium flex items-center ${
-              error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-            }`}
-          >
-            {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
-          </button>
-          {!error && result ? (
-            <CopyButton text={safeStringify(result, 2)} label="Copy response" />
-          ) : null}
-        </div>
-
-        {expanded && (
-          <div className={error ? 'bg-red-50 border border-red-300 rounded p-4' : 'bg-green-50 border border-green-300 rounded p-4'}>
-            {error ? (
-              <div className="text-sm text-red-900 break-words">{error}</div>
-            ) : result ? (
-              <TransactionResponseDisplay
-                response={result}
-                network={network}
-              />
-            ) : null}
+          {/* Execute Button */}
+          <div className="flex items-center gap-4 justify-end">
+            <DryRunCheckbox />
+            <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
+              {loading ? 'Sending...' : 'Send Transaction'}
+            </button>
           </div>
-        )}
+        </div>
       </div>
-    )}
-  </>
+
+      {/* Request Section */}
+      <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
+
+      {/* Response Section */}
+      {hasResult && (
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className={`text-sm font-medium flex items-center ${
+                error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
+              }`}
+            >
+              {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
+            </button>
+            {!error && result ? <CopyButton text={safeStringify(result, 2)} label="Copy response" /> : null}
+          </div>
+
+          {expanded && (
+            <div
+              className={
+                error
+                  ? 'bg-red-50 border border-red-300 rounded p-4'
+                  : 'bg-green-50 border border-green-300 rounded p-4'
+              }
+            >
+              {error ? (
+                <div className="text-sm text-red-900 break-words">{error}</div>
+              ) : result ? (
+                <TransactionResponseDisplay response={result} network={network} />
+              ) : null}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 };

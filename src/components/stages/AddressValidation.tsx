@@ -13,11 +13,13 @@ import CopyButton from '../common/CopyButton';
 import Loading from '../common/Loading';
 import { formatBalance } from '../../utils/balanceUtils';
 import type { WalletInfo } from '../../types/walletStore';
-import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants'
-import { WALLET_CONFIG } from '../../constants/network.ts'
-import { TransactionTemplateBuilder } from '@hathor/wallet-lib'
+import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { WALLET_CONFIG } from '../../constants/network.ts';
+import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import QrScanner from '../QrScanner';
+import TimelockPicker from '../common/TimelockPicker';
+import { defaultTimelockValue, timelockToUnix } from '../../utils/timelockUtils';
 import { getAddressRecord } from '../../services/addressDatabase';
 import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
 
@@ -49,7 +51,7 @@ function WalletAddressDisplay({
   amount,
   onIndexChange,
   onAmountChange,
-  fundingWalletId
+  fundingWalletId,
 }: {
   wallet: WalletInfo;
   addressIndex: number;
@@ -65,22 +67,17 @@ function WalletAddressDisplay({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFetchingFirstEmpty, setIsFetchingFirstEmpty] = useState(false);
-	// TODO: add setSelectedToken as soon as we have custom token feature implemented
-	const [selectedToken] = useState<{ uid: string; name: string; symbol: string }>({
-		uid: NATIVE_TOKEN_UID,
-		name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
-		symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol
-	});
+  // TODO: add setSelectedToken as soon as we have custom token feature implemented
+  const [selectedToken] = useState<{ uid: string; name: string; symbol: string }>({
+    uid: NATIVE_TOKEN_UID,
+    name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+    symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+  });
 
   // Inject initial fund state
   const [injectUnlocked, setInjectUnlocked] = useState(10);
   const [injectLocked, setInjectLocked] = useState(5);
-  const [injectTimestamp, setInjectTimestamp] = useState<string>(() => {
-    const date = new Date(Date.now() + 5 * 60 * 1000);
-    // Format as local datetime for datetime-local input (YYYY-MM-DDTHH:MM)
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  });
+  const [injectTimestamp, setInjectTimestamp] = useState<string>(() => defaultTimelockValue(5));
   const [isInjecting, setIsInjecting] = useState(false);
   const [injectError, setInjectError] = useState<string | null>(null);
 
@@ -162,9 +159,7 @@ function WalletAddressDisplay({
     try {
       // Get the funding wallet
       const wallets = getAllWallets();
-      const fundingWallet = wallets.find(
-        (w) => w.metadata.id === fundingWalletId && w.status === 'ready'
-      );
+      const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
 
       if (!fundingWallet || !fundingWallet.instance) {
         throw new Error('Funding wallet not found or not ready');
@@ -180,10 +175,10 @@ function WalletAddressDisplay({
         .addTokenOutput({
           address: '{recipientAddr}',
           amount: BigInt(amount),
-          token: selectedToken.uid
+          token: selectedToken.uid,
         })
         .addCompleteAction({
-          changeAddress: '{changeAddr}'
+          changeAddress: '{changeAddr}',
         })
         .build();
 
@@ -196,7 +191,7 @@ function WalletAddressDisplay({
           toAddress: derivedAddress,
           amount,
           tokenUid: selectedToken.uid,
-          tokenSymbol: selectedToken.symbol
+          tokenSymbol: selectedToken.symbol,
         },
         WALLET_CONFIG.DEFAULT_PIN_CODE
       );
@@ -217,14 +212,12 @@ function WalletAddressDisplay({
 
     try {
       const wallets = getAllWallets();
-      const fundingWallet = wallets.find(
-        (w) => w.metadata.id === fundingWalletId && w.status === 'ready',
-      );
+      const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
       if (!fundingWallet?.instance) throw new Error('Funding wallet not ready');
 
       const addr0 = await wallet.instance.getAddressAtIndex(0);
       const fundAddr0 = await fundingWallet.instance.getAddressAtIndex(0);
-      const timelockTs = Math.floor(new Date(injectTimestamp).getTime() / 1000);
+      const timelockTs = timelockToUnix(injectTimestamp)!;
 
       const outputs: Array<{ address: string; value: bigint; token: string; timelock?: number }> = [];
 
@@ -253,7 +246,7 @@ function WalletAddressDisplay({
     }
   };
 
-  const getAddressUri = () => derivedAddress ? `hathor:${derivedAddress}` : '';
+  const getAddressUri = () => (derivedAddress ? `hathor:${derivedAddress}` : '');
 
   const getPaymentRequest = () => {
     if (!derivedAddress) return '';
@@ -263,8 +256,8 @@ function WalletAddressDisplay({
       token: {
         uid: '00',
         name: 'Hathor',
-        symbol: 'HTR'
-      }
+        symbol: 'HTR',
+      },
     });
   };
 
@@ -353,9 +346,7 @@ function WalletAddressDisplay({
               <h3 className="text-lg font-bold m-0">Address (Index {addressIndex})</h3>
             </div>
             <div className="flex items-center justify-center gap-2">
-              <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">
-                {derivedAddress}
-              </p>
+              <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">{derivedAddress}</p>
               <CopyButton text={derivedAddress} label="Copy address" className="ml-2" />
             </div>
           </div>
@@ -408,9 +399,7 @@ function WalletAddressDisplay({
                 <QRCode value={getPaymentRequest()} size={200} />
               </div>
               <div className="flex items-center w-full">
-                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
-                  {getPaymentRequest()}
-                </p>
+                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">{getPaymentRequest()}</p>
                 <CopyButton text={getPaymentRequest()} label="Copy payment request" className="ml-2" />
               </div>
 
@@ -437,7 +426,11 @@ function WalletAddressDisplay({
                 <label className="block text-sm font-medium mb-1">Address</label>
                 <input
                   type="text"
-                  value={derivedAddress ? `${derivedAddress.slice(0, 12)}...${derivedAddress.slice(-8)} (index 0)` : 'Deriving...'}
+                  value={
+                    derivedAddress
+                      ? `${derivedAddress.slice(0, 12)}...${derivedAddress.slice(-8)} (index 0)`
+                      : 'Deriving...'
+                  }
                   disabled
                   className="input bg-gray-50"
                 />
@@ -466,23 +459,15 @@ function WalletAddressDisplay({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Timestamp (lock until)</label>
-                <input
-                  type="datetime-local"
-                  value={injectTimestamp}
-                  onChange={(e) => setInjectTimestamp(e.target.value)}
-                  className="input"
-                />
-                <p className="text-xs text-muted mt-1">
-                  Locked funds will be unavailable until this time (default: 5 min from now)
-                </p>
-              </div>
+              <TimelockPicker
+                value={injectTimestamp}
+                onChange={setInjectTimestamp}
+                label="Timestamp (lock until)"
+                hint="Locked funds will be unavailable until this time (default: 5 min from now)"
+              />
 
               {injectError && (
-                <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">
-                  {injectError}
-                </div>
+                <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">{injectError}</div>
               )}
 
               <button
@@ -538,9 +523,7 @@ export default function AddressValidation() {
     try {
       // Strip hathor: prefix if present
       const hathorPrefix = 'hathor:';
-      const cleanAddress = address.startsWith(hathorPrefix)
-        ? address.substring(hathorPrefix.length)
-        : address.trim();
+      const cleanAddress = address.startsWith(hathorPrefix) ? address.substring(hathorPrefix.length) : address.trim();
 
       if (!cleanAddress) {
         setLookupResult({
@@ -707,11 +690,7 @@ export default function AddressValidation() {
 
           {/* QR Scanner Button */}
           <div className="border-t border-gray-200 pt-4">
-            <button
-              onClick={() => setShowQrScanner(true)}
-              className="btn-secondary px-4 py-2"
-              disabled={isValidating}
-            >
+            <button onClick={() => setShowQrScanner(true)} className="btn-secondary px-4 py-2" disabled={isValidating}>
               {isValidating ? 'Looking up...' : 'Scan QR Code'}
             </button>
           </div>
@@ -784,21 +763,13 @@ export default function AddressValidation() {
       )}
 
       {/* QR Scanner Modal */}
-      {showQrScanner && (
-        <QrScanner
-          onScan={handleQrScan}
-          onCancel={() => setShowQrScanner(false)}
-        />
-      )}
+      {showQrScanner && <QrScanner onScan={handleQrScan} onCancel={() => setShowQrScanner(false)} />}
 
       {/* Address Lookup Results Modal */}
       {lookupResult && (
         <>
           {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={() => setLookupResult(null)}
-          />
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setLookupResult(null)} />
 
           {/* Modal */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -847,13 +818,14 @@ export default function AddressValidation() {
                         />
                       </svg>
                       <div className="flex-1">
-                        <p className="font-bold m-0 text-green-900">
-                          Belongs to current wallet
-                        </p>
+                        <p className="font-bold m-0 text-green-900">Belongs to current wallet</p>
                         <p className="text-sm mt-2 mb-0 text-green-800">
                           This address belongs to <strong>{lookupResult.walletName}</strong>
                           {lookupResult.addressIndex !== undefined && (
-                            <> at index <strong>{lookupResult.addressIndex}</strong></>
+                            <>
+                              {' '}
+                              at index <strong>{lookupResult.addressIndex}</strong>
+                            </>
                           )}
                         </p>
                       </div>
@@ -879,13 +851,14 @@ export default function AddressValidation() {
                         />
                       </svg>
                       <div className="flex-1">
-                        <p className="font-bold m-0 text-blue-900">
-                          Belongs to other active wallet
-                        </p>
+                        <p className="font-bold m-0 text-blue-900">Belongs to other active wallet</p>
                         <p className="text-sm mt-2 mb-0 text-blue-800">
                           This address belongs to <strong>{lookupResult.walletName}</strong>
                           {lookupResult.addressIndex !== undefined && (
-                            <> at index <strong>{lookupResult.addressIndex}</strong></>
+                            <>
+                              {' '}
+                              at index <strong>{lookupResult.addressIndex}</strong>
+                            </>
                           )}
                         </p>
                       </div>
@@ -911,13 +884,14 @@ export default function AddressValidation() {
                         />
                       </svg>
                       <div className="flex-1">
-                        <p className="font-bold m-0 text-yellow-900">
-                          Belongs to another wallet
-                        </p>
+                        <p className="font-bold m-0 text-yellow-900">Belongs to another wallet</p>
                         <p className="text-sm mt-2 mb-0 text-yellow-800">
                           This address belongs to <strong>{lookupResult.walletName}</strong>
                           {lookupResult.addressIndex !== undefined && (
-                            <> at index <strong>{lookupResult.addressIndex}</strong></>
+                            <>
+                              {' '}
+                              at index <strong>{lookupResult.addressIndex}</strong>
+                            </>
                           )}
                         </p>
                       </div>
@@ -943,9 +917,7 @@ export default function AddressValidation() {
                         />
                       </svg>
                       <div className="flex-1">
-                        <p className="font-bold m-0 text-gray-700">
-                          Unknown address
-                        </p>
+                        <p className="font-bold m-0 text-gray-700">Unknown address</p>
                         <p className="text-sm mt-2 mb-0 text-gray-600">
                           This address is not found in any known wallet.
                         </p>
@@ -973,11 +945,7 @@ export default function AddressValidation() {
                       </svg>
                       <div className="flex-1">
                         <p className="font-bold m-0 text-red-900">Error</p>
-                        {lookupResult.error && (
-                          <p className="text-sm mt-2 mb-0 text-red-800">
-                            {lookupResult.error}
-                          </p>
-                        )}
+                        {lookupResult.error && <p className="text-sm mt-2 mb-0 text-red-800">{lookupResult.error}</p>}
                       </div>
                     </div>
                   </div>
@@ -989,19 +957,13 @@ export default function AddressValidation() {
                 <div>
                   {/* "Use this in the test below" button - only for current-wallet with known index */}
                   {lookupResult.category === 'current-wallet' && lookupResult.addressIndex !== undefined && (
-                    <button
-                      onClick={handleUseInTest}
-                      className="btn-success px-4 py-2"
-                    >
+                    <button onClick={handleUseInTest} className="btn-success px-4 py-2">
                       Use this in the test below
                     </button>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setLookupResult(null)}
-                    className="btn btn-ghost px-6 py-2"
-                  >
+                  <button onClick={() => setLookupResult(null)} className="btn btn-ghost px-6 py-2">
                     Close
                   </button>
                   <button

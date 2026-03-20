@@ -9,11 +9,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
 import {
-	clearSendTransactionData,
-	setSendTransactionError,
-	setSendTransactionFormData,
-	setSendTransactionRequest,
-	setSendTransactionResponse,
+  clearSendTransactionData,
+  setSendTransactionError,
+  setSendTransactionFormData,
+  setSendTransactionRequest,
+  setSendTransactionResponse,
 } from '../../store/slices/sendTransactionSlice';
 import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcSendTransactionCard } from '../rpc/RpcSendTransactionCard';
@@ -145,17 +145,21 @@ export const SendTransactionStage: React.FC = () => {
       const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
 
       // Store request in Redux
-      dispatch(setSendTransactionRequest({
-        method: request.method,
-        params: request.params,
-        isDryRun,
-      }));
+      dispatch(
+        setSendTransactionRequest({
+          method: request.method,
+          params: request.params,
+          isDryRun,
+        })
+      );
 
       // Store response in Redux (with BigInt converted to strings)
-      dispatch(setSendTransactionResponse({
-        response: serializedResponse,
-        duration,
-      }));
+      dispatch(
+        setSendTransactionResponse({
+          response: serializedResponse,
+          duration,
+        })
+      );
 
       return { request, response: serializedResponse };
     } catch (error) {
@@ -166,10 +170,12 @@ export const SendTransactionStage: React.FC = () => {
 
       // Store error in Redux
       const errorMessage = extractErrorMessage(error);
-      dispatch(setSendTransactionError({
-        error: errorMessage,
-        duration,
-      }));
+      dispatch(
+        setSendTransactionError({
+          error: errorMessage,
+          duration,
+        })
+      );
 
       throw error;
     }
@@ -224,9 +230,7 @@ export const SendTransactionStage: React.FC = () => {
               <p className="font-bold text-green-900 m-0">Request duration</p>
               <p className="text-sm text-green-800 mt-1 mb-0">
                 {sendTransactionData.duration !== null && (
-                  <span className="block mt-1">
-                    Last request took {sendTransactionData.duration}ms
-                  </span>
+                  <span className="block mt-1">Last request took {sendTransactionData.duration}ms</span>
                 )}
               </p>
             </div>

@@ -13,12 +13,15 @@ import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import type { RootState } from '../../store';
 import Select from '../common/Select';
+import TimelockPicker from '../common/TimelockPicker';
+import { timelockToUnix } from '../../utils/timelockUtils';
 
 interface TxOutput {
   type: 'token' | 'data';
   address: string;
   value: string;
   token: string;
+  timelock: string;
   data: string;
 }
 
@@ -32,12 +35,12 @@ const emptyOutput = (): TxOutput => ({
   address: '',
   value: '1',
   token: '00',
+  timelock: '',
   data: '',
 });
 
 export const SnapSendTransactionStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } =
-    useSnapMethod('sendTransaction');
+  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('sendTransaction');
 
   const snapAddress = useSelector(selectSnapAddress);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
@@ -52,11 +55,17 @@ export const SnapSendTransactionStage: React.FC = () => {
   const [changeAddress, setChangeAddress] = useState('');
 
   const params = useMemo(() => {
-    const builtOutputs = outputs.map((o) =>
-      o.type === 'data'
-        ? { data: o.data }
-        : { address: o.address, value: o.value, token: o.token },
-    );
+    const builtOutputs = outputs.map((o) => {
+      if (o.type === 'data') return { data: o.data };
+      const tokenOutput: { address: string; value: string; token: string; timelock?: number } = {
+        address: o.address,
+        value: o.value,
+        token: o.token,
+      };
+      const ts = timelockToUnix(o.timelock);
+      if (ts !== undefined) tokenOutput.timelock = ts;
+      return tokenOutput;
+    });
     const p: Record<string, unknown> = { outputs: builtOutputs };
     if (changeAddress.trim()) p.changeAddress = changeAddress.trim();
     if (inputs.length > 0) {
@@ -68,29 +77,19 @@ export const SnapSendTransactionStage: React.FC = () => {
     return p;
   }, [outputs, changeAddress, inputs]);
 
-  const liveRequest = useMemo(
-    () => ({ method: 'htr_sendTransaction', params }),
-    [params],
-  );
+  const liveRequest = useMemo(() => ({ method: 'htr_sendTransaction', params }), [params]);
 
-  const handleExecute = () =>
-    execute((h) => h.sendTransaction(params));
+  const handleExecute = () => execute((h) => h.sendTransaction(params));
 
   const addOutput = () => setOutputs([...outputs, emptyOutput()]);
-  const removeOutput = (i: number) =>
-    setOutputs(outputs.filter((_, idx) => idx !== i));
+  const removeOutput = (i: number) => setOutputs(outputs.filter((_, idx) => idx !== i));
   const updateOutput = (i: number, field: keyof TxOutput, value: string) =>
-    setOutputs(
-      outputs.map((o, idx) => (idx === i ? { ...o, [field]: value } : o)),
-    );
+    setOutputs(outputs.map((o, idx) => (idx === i ? { ...o, [field]: value } : o)));
 
   const addInput = () => setInputs([...inputs, { txId: '', index: '0' }]);
-  const removeInput = (i: number) =>
-    setInputs(inputs.filter((_, idx) => idx !== i));
+  const removeInput = (i: number) => setInputs(inputs.filter((_, idx) => idx !== i));
   const updateInput = (i: number, field: keyof TxInput, value: string) =>
-    setInputs(
-      inputs.map((inp, idx) => (idx === i ? { ...inp, [field]: value } : inp)),
-    );
+    setInputs(inputs.map((inp, idx) => (idx === i ? { ...inp, [field]: value } : inp)));
 
   const fillSnapAddr = (i: number) => {
     if (snapAddress) updateOutput(i, 'address', snapAddress);
@@ -101,7 +100,9 @@ export const SnapSendTransactionStage: React.FC = () => {
     try {
       const address = await testWallet.instance.getAddressAtIndex(0);
       updateOutput(i, 'address', address);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   const fillFundAddr = async (i: number) => {
@@ -109,15 +110,15 @@ export const SnapSendTransactionStage: React.FC = () => {
     try {
       const address = await fundingWallet.instance.getAddressAtIndex(0);
       updateOutput(i, 'address', address);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   return (
     <div className="max-w-300 mx-auto">
       <h1 className="mt-0 text-3xl font-bold">Send Transaction (Snap)</h1>
-      <p className="text-muted mb-7.5">
-        Send a transaction with one or more outputs via MetaMask Snap
-      </p>
+      <p className="text-muted mb-7.5">Send a transaction with one or more outputs via MetaMask Snap</p>
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
@@ -135,20 +136,14 @@ export const SnapSendTransactionStage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Output {i + 1}</span>
                 {outputs.length > 1 && (
-                  <button
-                    onClick={() => removeOutput(i)}
-                    className="btn-secondary py-1 px-2 text-xs"
-                  >
+                  <button onClick={() => removeOutput(i)} className="btn-secondary py-1 px-2 text-xs">
                     Remove
                   </button>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1.5">Type</label>
-                <Select
-                  value={output.type}
-                  onChange={(e) => updateOutput(i, 'type', e.target.value)}
-                >
+                <Select value={output.type} onChange={(e) => updateOutput(i, 'type', e.target.value)}>
                   <option value="token">Token</option>
                   <option value="data">Data</option>
                 </Select>
@@ -214,6 +209,7 @@ export const SnapSendTransactionStage: React.FC = () => {
                       className="input"
                     />
                   </div>
+                  <TimelockPicker value={output.timelock} onChange={(v) => updateOutput(i, 'timelock', v)} />
                 </>
               ) : (
                 <div>
@@ -246,7 +242,9 @@ export const SnapSendTransactionStage: React.FC = () => {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { if (snapAddress) setChangeAddress(snapAddress); }}
+                onClick={() => {
+                  if (snapAddress) setChangeAddress(snapAddress);
+                }}
                 disabled={!snapAddress}
                 className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
                 title="Use address 0 from the connected Snap wallet"
@@ -263,10 +261,7 @@ export const SnapSendTransactionStage: React.FC = () => {
               <div key={i} className="border border-gray-200 rounded p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium">Input {i + 1}</span>
-                  <button
-                    onClick={() => removeInput(i)}
-                    className="btn-secondary py-1 px-2 text-xs"
-                  >
+                  <button onClick={() => removeInput(i)} className="btn-secondary py-1 px-2 text-xs">
                     Remove
                   </button>
                 </div>
