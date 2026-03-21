@@ -26,6 +26,19 @@ interface NavigationState {
   rawRpcEditor: {
     requestJson: string | null;
   };
+
+  // Snap: Set Bet Result → Snap Sign Oracle Data
+  snapSignOracleData: {
+    ncId: string | null;
+    result: string | null;
+  };
+
+  // Snap: Sign Oracle Data → Snap Set Bet Result
+  snapSetBetResult: {
+    ncId: string | null;
+    result: string | null;
+    oracleSignedData: string | null;
+  };
 }
 
 const initialState: NavigationState = {
@@ -42,6 +55,15 @@ const initialState: NavigationState = {
   },
   rawRpcEditor: {
     requestJson: null,
+  },
+  snapSignOracleData: {
+    ncId: null,
+    result: null,
+  },
+  snapSetBetResult: {
+    ncId: null,
+    result: null,
+    oracleSignedData: null,
   },
 };
 
@@ -90,6 +112,36 @@ const navigationSlice = createSlice({
       state.setBetResult.oracleSignature = null;
     },
 
+    // Snap: Navigate to Snap Sign Oracle Data with data
+    navigateToSnapSignOracleData: (
+      state,
+      action: PayloadAction<{ ncId: string; result: string }>
+    ) => {
+      state.snapSignOracleData.ncId = action.payload.ncId;
+      state.snapSignOracleData.result = action.payload.result;
+    },
+
+    clearSnapSignOracleDataNavigation: (state) => {
+      state.snapSignOracleData.ncId = null;
+      state.snapSignOracleData.result = null;
+    },
+
+    // Snap: Navigate to Snap Set Bet Result with signed data
+    navigateToSnapSetBetResult: (
+      state,
+      action: PayloadAction<{ ncId: string; result: string; oracleSignedData: string }>
+    ) => {
+      state.snapSetBetResult.ncId = action.payload.ncId;
+      state.snapSetBetResult.result = action.payload.result;
+      state.snapSetBetResult.oracleSignedData = action.payload.oracleSignedData;
+    },
+
+    clearSnapSetBetResultNavigation: (state) => {
+      state.snapSetBetResult.ncId = null;
+      state.snapSetBetResult.result = null;
+      state.snapSetBetResult.oracleSignedData = null;
+    },
+
     // Navigate to Raw RPC Editor with request JSON
     navigateToRawRpcEditor: (state, action: PayloadAction<{ requestJson: string }>) => {
       state.rawRpcEditor.requestJson = action.payload.requestJson;
@@ -107,6 +159,10 @@ export const {
   clearSignOracleDataNavigation,
   navigateToSetBetResult,
   clearSetBetResultNavigation,
+  navigateToSnapSignOracleData,
+  clearSnapSignOracleDataNavigation,
+  navigateToSnapSetBetResult,
+  clearSnapSetBetResultNavigation,
   navigateToRawRpcEditor,
   clearRawRpcEditorNavigation,
 } = navigationSlice.actions;

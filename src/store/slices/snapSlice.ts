@@ -22,6 +22,13 @@ export interface SnapUtxo {
   locked: boolean;
 }
 
+export interface SnapBetNc {
+  ncId: string | null;
+  token: string | null;
+  betChoice: string | null;
+  amount: string | null;
+}
+
 export interface SnapState {
   isConnected: boolean;
   snapOrigin: string;
@@ -33,6 +40,8 @@ export interface SnapState {
   network: string | null;
   /** UTXOs from last htr_getUtxos call, cleared on disconnect/network change */
   utxos: SnapUtxo[];
+  /** Bet NC session data, cleared on disconnect/network change */
+  betNc: SnapBetNc;
 }
 
 const initialState: SnapState = {
@@ -43,6 +52,7 @@ const initialState: SnapState = {
   address: null,
   network: null,
   utxos: [],
+  betNc: { ncId: null, token: null, betChoice: null, amount: null },
 };
 
 const snapSlice = createSlice({
@@ -62,10 +72,16 @@ const snapSlice = createSlice({
       const networkChanged = state.network !== null && state.network !== action.payload.network;
       state.address = action.payload.address;
       state.network = action.payload.network;
-      if (networkChanged) state.utxos = [];
+      if (networkChanged) {
+        state.utxos = [];
+        state.betNc = { ncId: null, token: null, betChoice: null, amount: null };
+      }
     },
     setSnapUtxos: (state, action: PayloadAction<SnapUtxo[]>) => {
       state.utxos = action.payload;
+    },
+    setSnapBetNc: (state, action: PayloadAction<Partial<SnapBetNc>>) => {
+      Object.assign(state.betNc, action.payload);
     },
     setSnapError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
@@ -77,11 +93,12 @@ const snapSlice = createSlice({
       state.address = null;
       state.network = null;
       state.utxos = [];
+      state.betNc = { ncId: null, token: null, betChoice: null, amount: null };
     },
   },
 });
 
-export const { setSnapConnected, setSnapOrigin, setSnapWalletInfo, setSnapError, resetSnap, setSnapUtxos } =
+export const { setSnapConnected, setSnapOrigin, setSnapWalletInfo, setSnapError, resetSnap, setSnapUtxos, setSnapBetNc } =
   snapSlice.actions;
 
 export const selectIsSnapConnected = (state: RootState) => state.snap.isConnected;
@@ -90,5 +107,6 @@ export const selectInstalledSnap = (state: RootState) => state.snap.installedSna
 export const selectSnapAddress = (state: RootState) => state.snap.address;
 export const selectSnapNetwork = (state: RootState) => state.snap.network;
 export const selectSnapUtxos = (state: RootState) => state.snap.utxos;
+export const selectSnapBetNc = (state: RootState) => state.snap.betNc;
 
 export default snapSlice.reducer;
