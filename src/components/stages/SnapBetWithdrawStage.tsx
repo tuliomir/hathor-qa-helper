@@ -10,17 +10,18 @@ import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { AddressInput } from '../common/AddressInput';
-import { selectSnapAddress } from '../../store/slices/snapSlice';
+import { selectSnapAddress, selectSnapBetNc } from '../../store/slices/snapSlice';
 
 export const SnapBetWithdrawStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapBetWithdraw');
 
   const snapAddress = useSelector(selectSnapAddress);
+  const betNc = useSelector(selectSnapBetNc);
 
-  const [ncId, setNcId] = useState('');
+  const [ncId, setNcId] = useState(betNc.ncId ?? '');
   const [withdrawAddress, setWithdrawAddress] = useState(snapAddress ?? '');
-  const [amount, setAmount] = useState('');
-  const [token, setToken] = useState('00');
+  const [amount, setAmount] = useState(betNc.amount ?? '');
+  const [token, setToken] = useState(betNc.token ?? '00');
 
   const params = useMemo(
     () => ({

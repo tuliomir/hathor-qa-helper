@@ -5,22 +5,25 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { AddressInput } from '../common/AddressInput';
-import { selectSnapAddress } from '../../store/slices/snapSlice';
+import { selectSnapAddress, selectSnapBetNc, setSnapBetNc } from '../../store/slices/snapSlice';
+import type { AppDispatch } from '../../store';
 
 export const SnapBetDepositStage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapBetDeposit');
 
   const snapAddress = useSelector(selectSnapAddress);
+  const betNc = useSelector(selectSnapBetNc);
 
-  const [ncId, setNcId] = useState('');
-  const [betChoice, setBetChoice] = useState('');
-  const [amount, setAmount] = useState('100');
-  const [token, setToken] = useState('00');
+  const [ncId, setNcId] = useState(betNc.ncId ?? '');
+  const [betChoice, setBetChoice] = useState('Result_1');
+  const [amount, setAmount] = useState('10');
+  const [token, setToken] = useState(betNc.token ?? '00');
   const [address, setAddress] = useState(snapAddress ?? '');
 
   const params = useMemo(
@@ -36,7 +39,11 @@ export const SnapBetDepositStage: React.FC = () => {
 
   const liveRequest = useMemo(() => ({ method: 'htr_sendNanoContractTx', params }), [params]);
 
-  const handleExecute = () => execute((h) => h.sendNanoContractTx(params));
+  const handleExecute = async () => {
+    const result = await execute((h) => h.sendNanoContractTx(params));
+    dispatch(setSnapBetNc({ betChoice, amount }));
+    return result;
+  };
 
   return (
     <div className="max-w-300 mx-auto">
@@ -70,7 +77,7 @@ export const SnapBetDepositStage: React.FC = () => {
               type="text"
               value={betChoice}
               onChange={(e) => setBetChoice(e.target.value)}
-              placeholder="e.g. heads"
+              placeholder="e.g. Result_1"
               className="input"
             />
           </div>
@@ -80,7 +87,7 @@ export const SnapBetDepositStage: React.FC = () => {
               type="text"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="100"
+              placeholder="10"
               className="input"
             />
           </div>
