@@ -46,7 +46,7 @@ export const SnapSetBetResultStage: React.FC = () => {
       nc_id: ncId,
       blueprint_id: null,
       actions: [],
-      args: [result, oracleSignedData],
+      args: [{ type: 'str', signature: oracleSignedData, value: result }],
     }),
     [ncId, result, oracleSignedData]
   );

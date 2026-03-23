@@ -32,7 +32,7 @@ export const SnapBetDepositStage: React.FC = () => {
       nc_id: ncId,
       blueprint_id: null,
       actions: [{ type: 'deposit', token, amount, changeAddress: address }],
-      args: [betChoice, address],
+      args: [address, betChoice],
     }),
     [ncId, betChoice, amount, token, address]
   );
