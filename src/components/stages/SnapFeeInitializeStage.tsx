@@ -5,21 +5,24 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { AddressInput } from '../common/AddressInput';
-import { selectSnapAddress } from '../../store/slices/snapSlice';
+import { selectSnapAddress, setSnapFeeNc } from '../../store/slices/snapSlice';
+import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../utils/snapResponseHelpers';
 import { NETWORK_CONFIG } from '../../constants/network';
+import type { AppDispatch } from '../../store';
 
 export const SnapFeeInitializeStage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapFeeInitialize');
 
   const snapAddress = useSelector(selectSnapAddress);
 
   const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.feeBlueprintId);
-  const [htrAmount, setHtrAmount] = useState('100');
+  const [htrAmount, setHtrAmount] = useState('2');
   const [changeAddress, setChangeAddress] = useState(snapAddress ?? '');
 
   const params = useMemo(
@@ -35,7 +38,18 @@ export const SnapFeeInitializeStage: React.FC = () => {
 
   const liveRequest = useMemo(() => ({ method: 'htr_sendNanoContractTx', params }), [params]);
 
-  const handleExecute = () => execute((h) => h.sendNanoContractTx(params));
+  const handleExecute = async () => {
+    const result = await execute((h) => h.sendNanoContractTx(params));
+    const parsed = parseSnapResponse(result.response);
+    const inner = isSnapEnvelope(parsed) ? (parsed as { response: unknown }).response : parsed;
+    if (inner && typeof inner === 'object' && isTransactionLike(inner)) {
+      const hash = (inner as Record<string, unknown>).hash as string | undefined;
+      if (hash) {
+        dispatch(setSnapFeeNc({ ncId: hash }));
+      }
+    }
+    return result;
+  };
 
   return (
     <div className="max-w-300 mx-auto">

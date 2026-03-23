@@ -10,19 +10,20 @@ import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { AddressInput } from '../common/AddressInput';
-import { selectSnapAddress } from '../../store/slices/snapSlice';
+import { selectSnapAddress, selectSnapFeeNc } from '../../store/slices/snapSlice';
 
 export const SnapFeeDepositStage: React.FC = () => {
   const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapFeeDeposit');
 
   const snapAddress = useSelector(selectSnapAddress);
+  const feeNc = useSelector(selectSnapFeeNc);
 
-  const [ncId, setNcId] = useState('');
+  const [ncId, setNcId] = useState(feeNc.ncId ?? '');
   const [feeToken, setFeeToken] = useState('');
   const [amount, setAmount] = useState('');
   const [changeAddress, setChangeAddress] = useState(snapAddress ?? '');
   const [contractPaysFees, setContractPaysFees] = useState(false);
-  const [htrWithdrawAmount, setHtrWithdrawAmount] = useState('');
+  const [htrWithdrawAmount, setHtrWithdrawAmount] = useState('1');
 
   const params = useMemo(() => {
     const actions: Array<Record<string, unknown>> = [];
