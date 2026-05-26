@@ -50,7 +50,7 @@ export const AddressInput: React.FC<AddressInputProps> = ({
     }
   }, [suggestedValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fillFromWallet = async (wallet: ReturnType<typeof getWallet>) => {
+  const fillFromWallet = async (wallet: ReturnType<typeof getWallet> | null) => {
     if (!wallet?.instance) return;
     try {
       onChange(await wallet.instance.getAddressAtIndex(0));
