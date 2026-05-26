@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@hathor/snap-utils": "^0.1.0",
-    "@hathor/wallet-lib": "^2.17.0",
+    "@hathor/wallet-lib": "^3.1.1",
     "@reduxjs/toolkit": "^2.12.0",
     "@walletconnect/core": "^2.23.9",
     "@walletconnect/modal": "^2.7.0",

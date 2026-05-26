@@ -8,8 +8,10 @@ import {
   NETWORK_CONFIG,
   DEFAULT_NETWORK,
   WALLET_CONFIG,
+  WALLET_SCAN_POLICY,
   type NetworkType,
 } from '../src/constants/network';
+import { SCANNING_POLICY } from '@hathor/wallet-lib/lib/types';
 
 describe('network constants', () => {
   describe('NETWORK_CONFIG', () => {
@@ -112,6 +114,22 @@ describe('network constants', () => {
       expect(Object.keys(config)).toContain('DEFAULT_PASSWORD');
       expect(Object.keys(config)).toContain('DEFAULT_PIN_CODE');
       expect(Object.keys(config)).toContain('SYNC_CHECK_INTERVAL');
+    });
+  });
+
+  describe('WALLET_SCAN_POLICY', () => {
+    // Regression guard: wallet-lib 3.0 changed the default scan policy to
+    // SINGLE_ADDRESS, which would make app wallets watch only address 0 and
+    // silently miss funds on freshly-derived addresses during test flows.
+    // We force GAP_LIMIT to preserve the 2.x multi-address behavior.
+    test('forces gap-limit scanning (not the 3.x single-address default)', () => {
+      expect(WALLET_SCAN_POLICY.policy).toBe(SCANNING_POLICY.GAP_LIMIT);
+      expect(WALLET_SCAN_POLICY.policy).not.toBe(SCANNING_POLICY.SINGLE_ADDRESS);
+    });
+
+    test('uses a positive gap limit so multiple addresses are scanned', () => {
+      expect(typeof WALLET_SCAN_POLICY.gapLimit).toBe('number');
+      expect(WALLET_SCAN_POLICY.gapLimit).toBeGreaterThan(0);
     });
   });
 

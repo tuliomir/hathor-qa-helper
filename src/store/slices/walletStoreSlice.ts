@@ -9,7 +9,7 @@ import type { WalletStatus } from '../../types/wallet';
 import type { RootState } from '../index';
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
-import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG, WALLET_SCAN_POLICY } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
@@ -156,6 +156,9 @@ export const startWallet = createAsyncThunk(
         connection,
         password: WALLET_CONFIG.DEFAULT_PASSWORD,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+        // Preserve wallet-lib 2.x multi-address scanning (3.0 defaults to
+        // SINGLE_ADDRESS). See WALLET_SCAN_POLICY for rationale.
+        scanPolicy: WALLET_SCAN_POLICY,
       });
 
       // Store instance in the external map

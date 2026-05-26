@@ -11,7 +11,7 @@ import SendTransaction from '@hathor/wallet-lib/lib/new/sendTransaction.js';
 import transactionUtils from '@hathor/wallet-lib/lib/utils/transaction.js';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { MULTISIG_CONFIG, MULTISIG_TOTAL_PARTICIPANTS } from '../../constants/multisig';
-import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG, WALLET_SCAN_POLICY } from '../../constants/network';
 import type { CollectedSignature, MultisigParticipant, MultisigTransactionState } from '../../types/multisig';
 import type { RootState } from '../index';
 
@@ -105,6 +105,9 @@ export const startMultisigParticipant = createAsyncThunk(
         connection,
         password: WALLET_CONFIG.DEFAULT_PASSWORD,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
+        // Preserve wallet-lib 2.x multi-address scanning (3.0 defaults to
+        // SINGLE_ADDRESS). See WALLET_SCAN_POLICY for rationale.
+        scanPolicy: WALLET_SCAN_POLICY,
         multisig: {
           pubkeys: [...MULTISIG_CONFIG.pubkeys],
           numSignatures: MULTISIG_CONFIG.numSignatures,

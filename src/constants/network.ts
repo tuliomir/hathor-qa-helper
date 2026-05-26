@@ -2,6 +2,9 @@
  * Network configuration constants for Hathor wallet
  */
 
+import { SCANNING_POLICY, type IGapLimitAddressScanPolicy } from '@hathor/wallet-lib/lib/types';
+import { GAP_LIMIT } from '@hathor/wallet-lib/lib/constants';
+
 export const NETWORK_CONFIG = {
   TESTNET: {
     name: 'testnet',
@@ -34,6 +37,21 @@ export const WALLET_CONFIG = {
   DEFAULT_PIN_CODE: '123456',
   SYNC_CHECK_INTERVAL: 100,
 } as const;
+
+/**
+ * Address scan policy for every wallet this app creates.
+ *
+ * wallet-lib 3.0 changed the default scan policy to SINGLE_ADDRESS (with a
+ * first-connection auto-upgrade to gap-limit only when the wallet already has
+ * transaction history beyond address 0). As a QA tool we force GAP_LIMIT so
+ * every wallet scans multiple addresses exactly as it did under wallet-lib
+ * 2.x, regardless of history — this avoids silently "missing" funds on
+ * freshly-derived addresses (address 1+) during test flows.
+ */
+export const WALLET_SCAN_POLICY: IGapLimitAddressScanPolicy = {
+  policy: SCANNING_POLICY.GAP_LIMIT,
+  gapLimit: GAP_LIMIT,
+};
 
 /**
  * Cloud API URL for wallet synchronization
