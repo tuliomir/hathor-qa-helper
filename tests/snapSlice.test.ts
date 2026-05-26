@@ -19,6 +19,9 @@ const initialState: SnapState = {
   error: null,
   address: null,
   network: null,
+  utxos: [],
+  betNc: { ncId: null, token: null, betChoice: null, amount: null },
+  feeNc: { ncId: null },
 };
 
 describe('snapSlice', () => {
