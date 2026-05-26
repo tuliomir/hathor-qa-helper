@@ -230,12 +230,12 @@ export const GetUtxosStage: React.FC = () => {
       const balance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
       const unlocked = balance?.[0]?.balance?.unlocked ?? 0n;
 
-      // Reserve 1 HTR (100 units) for fees/change
-      const available = unlocked > 100n ? unlocked - 100n : 0n;
-
-      const amounts = computeScatterOutputs(available);
+      // Scatter the full unlocked balance. Hathor transfers are feeless and
+      // computeScatterOutputs makes the outputs sum exactly to the input, so
+      // no fee/change reserve is needed (matches TestWalletCleanup's HTR send).
+      const amounts = computeScatterOutputs(unlocked);
       if (amounts.length === 0) {
-        setScatterError(`Not enough balance to scatter. Need at least 6 units, have ${available} available.`);
+        setScatterError(`Not enough balance to scatter. Need at least 6 units, have ${unlocked} available.`);
         return;
       }
 
