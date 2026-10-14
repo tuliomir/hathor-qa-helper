@@ -27,7 +27,7 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import { firstUnmetReason } from '../../utils/requirements';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network';
-import { computeScatterOutputs } from '../../utils/scatterFunds';
+import { computeScatterOutputs, scatterResultMessage, scatterShortfallMessage } from '../../utils/scatterFunds';
 import { applyNetworkServices } from '../../services/networkServices';
 import { shieldedSweepNotice, splitAvailableUtxos } from '../../services/shieldedUtxos';
 
@@ -143,10 +143,7 @@ export const GetUtxosStage: React.FC = () => {
       // Transfers are feeless and the outputs sum exactly to the input, so no reserve is needed.
       const amounts = computeScatterOutputs(unlocked);
       if (amounts.length === 0) {
-        setScatterError(
-          `Not enough balance to scatter. Need at least 6 units, have ${unlocked} available.` +
-            (shieldedNote ? ` (${shieldedNote}.)` : '')
-        );
+        setScatterError(scatterShortfallMessage(unlocked) + (shieldedNote ? ` (${shieldedNote}.)` : ''));
         return;
       }
       const outputs = amounts.map((amount) => ({ address: addr0, value: amount, token: NATIVE_TOKEN_UID }));
@@ -156,9 +153,7 @@ export const GetUtxosStage: React.FC = () => {
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
       });
       await sendTx.run();
-      setScatterResult(
-        `Scattered into ${amounts.length} UTXOs (amounts ${amounts[0]} to ${amounts[amounts.length - 1]}).`
-      );
+      setScatterResult(scatterResultMessage(amounts));
     } catch (err) {
       setScatterError(err instanceof Error ? err.message : 'Failed to scatter funds');
       console.error('Scatter funds error:', err);
@@ -190,7 +185,7 @@ export const GetUtxosStage: React.FC = () => {
       {testWallet?.instance && (
         <Panel
           title="Scatter funds"
-          description="Split the test wallet's HTR into distinct UTXOs (1, 2, 3, …) to exercise the amount filters."
+          description="Split the test wallet's HTR into UTXOs of 0.01, 0.02, 0.03 … HTR (1, 2, 3 … base units) to exercise the amount filters."
           actions={
             <button
               type="button"

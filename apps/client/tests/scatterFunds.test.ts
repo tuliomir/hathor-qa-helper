@@ -6,7 +6,12 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { computeScatterOutputs, MAX_SCATTER_OUTPUTS } from '../src/utils/scatterFunds';
+import {
+  computeScatterOutputs,
+  MAX_SCATTER_OUTPUTS,
+  scatterResultMessage,
+  scatterShortfallMessage,
+} from '../src/utils/scatterFunds';
 
 describe('computeScatterOutputs', () => {
   test('returns empty array when balance is 0', () => {
@@ -95,5 +100,28 @@ describe('computeScatterOutputs', () => {
     const outputs = computeScatterOutputs(15n);
     expect(outputs.length).toBe(5);
     expect(outputs).toEqual([1n, 2n, 3n, 4n, 5n]);
+  });
+});
+
+// Messages use the same decimal HTR as the amount filters, with base units alongside.
+describe('scatterResultMessage', () => {
+  test('describes the UTXOs in HTR and base units', () => {
+    expect(scatterResultMessage([1n, 2n, 3n, 4n])).toBe(
+      'Scattered into 4 UTXOs: 0.01, 0.02, … 0.04 HTR (1, 2, … 4 base units).'
+    );
+  });
+
+  test('shows the remainder on the last UTXO', () => {
+    expect(scatterResultMessage([1n, 2n, 1250n])).toBe(
+      'Scattered into 3 UTXOs: 0.01, 0.02, … 12.50 HTR (1, 2, … 1250 base units).'
+    );
+  });
+});
+
+describe('scatterShortfallMessage', () => {
+  test('states the minimum and the available balance in HTR and base units', () => {
+    expect(scatterShortfallMessage(5n)).toBe(
+      'Not enough balance to scatter. Need at least 0.06 HTR (6 base units), have 0.05 HTR (5 base units).'
+    );
   });
 });

@@ -170,7 +170,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
           onChange={(v) => set({ amountSmallerThan: v })}
           token={amountToken}
           allowZero
-          hint="Optional; empty means no filter."
+          hint="Optional, exclusive; empty means no filter. Sent in base units (0.01 = 1)."
         />
         <AmountInput
           label="Amount bigger than"
@@ -178,7 +178,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
           onChange={(v) => set({ amountBiggerThan: v })}
           token={amountToken}
           allowZero
-          hint="Optional; empty means no filter."
+          hint="Optional, exclusive; empty means no filter. Sent in base units (0.01 = 1)."
         />
       </div>
     </RpcMethodCard>

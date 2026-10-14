@@ -34,6 +34,7 @@ export interface UtxoFilters {
   amountBiggerThan: string;
 }
 
+/** htr_getUtxos takes the amount filters in base units, as numbers. */
 export const toFilterNumber = (v: string): number | null => (v ? parseInt(v, 10) : null);
 
 export function buildGetUtxosRequest(f: UtxoFilters) {

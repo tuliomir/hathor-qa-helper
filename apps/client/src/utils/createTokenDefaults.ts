@@ -9,6 +9,11 @@ import type { CreateTokenVersion } from '../services/rpcHandlers';
 export const BASE_NAME = 'Test Token';
 export const BASE_SYMBOL = 'TST';
 
+/**
+ * `amount` is in base units, as htr_createToken takes it: 100 and 9999 are
+ * 1.00 and 99.99 tokens. These were always the values sent; the decimal
+ * input only shows them as 1.00 / 99.99 now.
+ */
 export const VERSION_DEFAULTS: Record<
   CreateTokenVersion,
   { nameSuffix: string; symbolSuffix: string; amount: string }

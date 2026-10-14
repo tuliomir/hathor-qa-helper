@@ -6,13 +6,17 @@
  *
  * Strategy: outputs are [1, 2, 3, ..., n] with any remainder added to the
  * last output. This ensures every UTXO has a unique amount for filter testing.
+ * Amounts are base units: 1, 2, 3 are 0.01, 0.02, 0.03 HTR.
  */
+
+import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
+import { formatAmount } from './amount';
 
 /** Max outputs per transaction (255 minus 1 for potential change) */
 export const MAX_SCATTER_OUTPUTS = 254;
 
 /** Minimum balance needed: sum(1+2+3) = 6 for at least 3 distinct UTXOs */
-const MIN_BALANCE = 6n;
+export const MIN_SCATTER_BALANCE = 6n;
 
 /**
  * Compute output amounts that sum to `balance` with each amount unique.
@@ -21,7 +25,7 @@ const MIN_BALANCE = 6n;
  * @returns Array of output amounts sorted ascending, or empty if balance too small
  */
 export function computeScatterOutputs(balance: bigint): bigint[] {
-  if (balance < MIN_BALANCE) return [];
+  if (balance < MIN_SCATTER_BALANCE) return [];
 
   // Find max n where sum(1..n) = n*(n+1)/2 <= balance, capped at MAX_SCATTER_OUTPUTS
   let n = 0;
@@ -50,4 +54,23 @@ export function computeScatterOutputs(balance: bigint): bigint[] {
   }
 
   return outputs;
+}
+
+const htr = (v: bigint) => formatAmount(v, DECIMAL_PLACES);
+
+/** Scatter outcome in the amount filters' unit (HTR), with base units alongside. */
+export function scatterResultMessage(amounts: bigint[]): string {
+  const [a, b] = amounts;
+  const last = amounts[amounts.length - 1];
+  return (
+    `Scattered into ${amounts.length} UTXOs: ${htr(a)}, ${htr(b)}, … ${htr(last)} HTR ` +
+    `(${a}, ${b}, … ${last} base units).`
+  );
+}
+
+export function scatterShortfallMessage(available: bigint): string {
+  return (
+    `Not enough balance to scatter. Need at least ${htr(MIN_SCATTER_BALANCE)} HTR ` +
+    `(${MIN_SCATTER_BALANCE} base units), have ${htr(available)} HTR (${available} base units).`
+  );
 }
