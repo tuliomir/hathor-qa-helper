@@ -1,15 +1,21 @@
 /**
  * Snap Response Display Component
  *
- * Formatted display for snap method responses, matching the RPC card style.
- * Detects response type via the {type, response} envelope and renders
- * specialized views for each snap method.
+ * Formatted view of snap method responses, used as the "Formatted" side of
+ * MethodCard's response JsonPanel. Detects the response type via the
+ * {type, response} envelope and renders a view per snap method; anything
+ * unrecognised falls back to highlighted JSON.
  */
 
 import React from 'react';
 import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
+import { Identifier } from '../common/Identifier';
+import { JsonHighlight } from '../common/JsonPanel';
 import { TransactionResponseDisplay } from '../common/TransactionResponseDisplay';
+import { Panel } from '../ui/Panel';
+import { EmptyState } from '../ui/EmptyState';
+import { StatusChip } from '../ui/StatusChip';
 import { safeStringify } from '../../utils/betHelpers';
 import { snapNetworkKey } from '../../utils/blueprints';
 import { DEFAULT_NETWORK, type NetworkKey } from '../../constants/network';
@@ -28,98 +34,47 @@ function useSnapExplorerNetwork(): NetworkKey {
 }
 
 /* ------------------------------------------------------------------ */
-/*  JSON Syntax Highlighting                                          */
+/*  Field list                                                        */
 /* ------------------------------------------------------------------ */
 
-const JSON_TOKEN_RE =
-  /("(?:\\.|[^"\\])*")\s*:|("(?:\\.|[^"\\])*")|(\btrue\b|\bfalse\b)|(\bnull\b)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
+type FieldKind = 'text' | 'mono' | 'address' | 'xpub';
 
-function JsonHighlight({ json }: { json: string }) {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-
-  const re = new RegExp(JSON_TOKEN_RE.source, 'g');
-  let match = re.exec(json);
-  while (match !== null) {
-    if (match.index > lastIndex) {
-      parts.push(json.slice(lastIndex, match.index));
-    }
-
-    const [full, key, str, bool, nil, num] = match;
-    if (key !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-indigo-600">
-          {key}
-        </span>
-      );
-      parts.push(':');
-    } else if (str !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-emerald-600">
-          {full}
-        </span>
-      );
-    } else if (bool !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-amber-600">
-          {full}
-        </span>
-      );
-    } else if (nil !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-gray-400">
-          {full}
-        </span>
-      );
-    } else if (num !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-blue-600">
-          {full}
-        </span>
-      );
-    }
-
-    lastIndex = match.index + full.length;
-    match = re.exec(json);
-  }
-
-  if (lastIndex < json.length) {
-    parts.push(json.slice(lastIndex));
-  }
-
-  return <>{parts}</>;
+interface FieldSpec {
+  label: string;
+  value: unknown;
+  kind?: FieldKind;
+  /** Copy button for `mono` values (Identifier kinds always copy). */
+  copy?: boolean;
+  fallback?: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Helpers (parseSnapResponse, isSnapEnvelope, isTransactionLike,    */
-/*  safeDisplayValue imported from utils/snapResponseHelpers)         */
-/* ------------------------------------------------------------------ */
-
-/* ------------------------------------------------------------------ */
-/*  Field Box (reusable labeled field, matches RPC card style)        */
-/* ------------------------------------------------------------------ */
-
-function FieldBox({
-  label,
-  value,
-  copyable = false,
-  mono = true,
-}: {
-  label: string;
-  value: React.ReactNode;
-  copyable?: boolean;
-  mono?: boolean;
-}) {
+function FieldValue({ value, kind = 'mono', copy = false, fallback }: Omit<FieldSpec, 'label'>) {
+  const text = safeDisplayValue(value, fallback);
+  const isMissing = value === null || value === undefined || value === '';
+  if (!isMissing && typeof value === 'string' && (kind === 'address' || kind === 'xpub')) {
+    return <Identifier value={value} kind={kind} />;
+  }
+  if (kind === 'text') return <span className="text-body">{text}</span>;
   return (
-    <div className="bg-white border border-gray-300 rounded overflow-hidden">
-      <div className="bg-gray-100 px-3 py-2 border-b border-gray-300 flex items-center justify-between">
-        <span className="text-sm font-semibold text-primary">{label}</span>
-        {copyable && typeof value === 'string' && <CopyButton text={value} label="Copy" />}
-      </div>
-      <div className="px-3 py-2">
-        <span className={`text-sm break-all ${mono ? 'font-mono' : ''}`}>{value ?? 'N/A'}</span>
-      </div>
-    </div>
+    <span className="flex min-w-0 items-start gap-1">
+      <code className="min-w-0 whitespace-pre-wrap font-mono text-data [overflow-wrap:anywhere]">{text}</code>
+      {copy && !isMissing && <CopyButton text={text} />}
+    </span>
+  );
+}
+
+function FieldList({ fields }: { fields: FieldSpec[] }) {
+  return (
+    <dl className="m-0 flex flex-col gap-2 text-left">
+      {fields.map(({ label, ...rest }) => (
+        <div key={label} className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3">
+          <dt className="w-32 flex-none font-mono text-data-sm text-ink-muted">{label}</dt>
+          <dd className="m-0 min-w-0">
+            <FieldValue {...rest} />
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -130,108 +85,87 @@ function FieldBox({
 /** type 2 - htr_getAddress */
 function RenderGetAddress({ data }: { data: Record<string, unknown> }) {
   return (
-    <div className="space-y-3">
-      <FieldBox label="address" value={safeDisplayValue(data.address)} copyable />
-      <FieldBox label="index" value={safeDisplayValue(data.index)} />
-      <FieldBox label="addressPath" value={safeDisplayValue(data.addressPath)} copyable />
+    <FieldList
+      fields={[
+        { label: 'address', value: data.address, kind: 'address' },
+        { label: 'index', value: data.index },
+        { label: 'addressPath', value: data.addressPath, copy: true },
+      ]}
+    />
+  );
+}
+
+interface BalanceItem {
+  token: { id?: string; name: string; symbol: string; version?: number };
+  balance: { unlocked: number | string; locked: number | string };
+  tokenAuthorities?: {
+    unlocked?: { mint: boolean | number; melt: boolean | number };
+    locked?: { mint: boolean | number; melt: boolean | number };
+  };
+  transactions?: number;
+  lockExpires?: number | null;
+}
+
+function Stat({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="text-caption text-ink-muted">{label}</dt>
+      <dd className="m-0 min-w-0">{children}</dd>
     </div>
   );
 }
 
 /** type 3 - htr_getBalance */
-function RenderGetBalance({
-  data,
-}: {
-  data: Array<{
-    token: { id?: string; name: string; symbol: string; version?: number };
-    balance: { unlocked: number | string; locked: number | string };
-    tokenAuthorities?: {
-      unlocked?: { mint: boolean | number; melt: boolean | number };
-      locked?: { mint: boolean | number; melt: boolean | number };
-    };
-    transactions?: number;
-    lockExpires?: number | null;
-  }>;
-}) {
+function RenderGetBalance({ data }: { data: BalanceItem[] }) {
   if (data.length === 0) {
-    return <div className="text-sm text-muted italic p-3">No balance data</div>;
+    return <p className="m-0 text-body text-ink-muted">The snap returned no balances.</p>;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-3">
       {data.map((item, idx) => (
-        <div key={idx} className="border border-gray-300 rounded overflow-hidden">
-          {/* Token Header */}
-          <div className="bg-tint-info px-4 py-3 border-b border-gray-300">
-            <h4 className="text-lg font-bold text-primary m-0">
-              {item.token?.name || 'Unknown Token'} ({item.token?.symbol || 'N/A'})
-            </h4>
-            <p className="text-xs text-muted font-mono mt-1 mb-0 break-all">{item.token?.id || 'Unknown ID'}</p>
-          </div>
+        <Panel
+          key={idx}
+          variant="inset"
+          title={`${item.token?.name || 'Unknown token'} (${item.token?.symbol || 'N/A'})`}
+          actions={item.token?.id ? <Identifier value={item.token.id} kind="token" /> : undefined}
+        >
+          <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+            <Stat label="Unlocked">
+              <span className="font-mono text-title-sm tabular-nums">{String(item.balance?.unlocked ?? '0')}</span>
+            </Stat>
+            <Stat label="Locked">
+              <span className="font-mono text-title-sm tabular-nums text-ink-muted">
+                {String(item.balance?.locked ?? '0')}
+              </span>
+            </Stat>
+            <Stat label="Transactions">
+              <span className="font-mono text-data tabular-nums">{safeDisplayValue(item.transactions, '0')}</span>
+            </Stat>
+            <Stat label="Lock expires">
+              <span className="text-body">
+                {item.lockExpires ? new Date(item.lockExpires * 1000).toLocaleString() : 'N/A'}
+              </span>
+            </Stat>
+          </dl>
 
-          <div className="px-4 py-3 bg-white">
-            {/* Balance Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <div className="bg-green-50 border border-green-200 rounded p-3">
-                <div className="text-xs text-muted mb-1">Unlocked Balance</div>
-                <div className="text-xl font-bold text-green-700">{String(item.balance?.unlocked ?? '0')}</div>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                <div className="text-xs text-muted mb-1">Locked Balance</div>
-                <div className="text-xl font-bold text-gray-700">{String(item.balance?.locked ?? '0')}</div>
-              </div>
-            </div>
-
-            {/* Transactions and Lock Expires */}
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <div>
-                <div className="text-xs text-muted mb-1">Transactions</div>
-                <div className="text-base font-semibold">{safeDisplayValue(item.transactions, '0')}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted mb-1">Lock Expires</div>
-                <div className="text-base font-semibold">
-                  {item.lockExpires ? new Date(item.lockExpires * 1000).toLocaleString() : 'N/A'}
-                </div>
-              </div>
-            </div>
-
-            {/* Token Authorities */}
-            {item.tokenAuthorities && (
-              <div className="border-t border-gray-200 pt-3">
-                <div className="text-xs text-muted mb-2 font-semibold">Token Authorities</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-blue-50 border border-blue-200 rounded p-2">
-                    <div className="text-xs font-semibold text-blue-800 mb-1">Unlocked</div>
-                    <div className="text-xs space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-muted">Mint:</span>
-                        <span className="font-mono">{String(item.tokenAuthorities.unlocked?.mint ?? '0')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted">Melt:</span>
-                        <span className="font-mono">{String(item.tokenAuthorities.unlocked?.melt ?? '0')}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 border border-gray-200 rounded p-2">
-                    <div className="text-xs font-semibold text-gray-800 mb-1">Locked</div>
-                    <div className="text-xs space-y-1">
-                      <div className="flex justify-between">
-                        <span className="text-muted">Mint:</span>
-                        <span className="font-mono">{String(item.tokenAuthorities.locked?.mint ?? '0')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted">Melt:</span>
-                        <span className="font-mono">{String(item.tokenAuthorities.locked?.melt ?? '0')}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+          {item.tokenAuthorities && (
+            <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-base-300 pt-2 sm:grid-cols-4">
+              <Stat label="Unlocked mint">
+                <span className="font-mono text-data">{String(item.tokenAuthorities.unlocked?.mint ?? '0')}</span>
+              </Stat>
+              <Stat label="Unlocked melt">
+                <span className="font-mono text-data">{String(item.tokenAuthorities.unlocked?.melt ?? '0')}</span>
+              </Stat>
+              <Stat label="Locked mint">
+                <span className="font-mono text-data">{String(item.tokenAuthorities.locked?.mint ?? '0')}</span>
+              </Stat>
+              <Stat label="Locked melt">
+                <span className="font-mono text-data">{String(item.tokenAuthorities.locked?.melt ?? '0')}</span>
+              </Stat>
+            </dl>
+          )}
+        </Panel>
       ))}
     </div>
   );
@@ -239,103 +173,68 @@ function RenderGetBalance({
 
 /** type 4 - htr_getConnectedNetwork */
 function RenderGetNetwork({ data }: { data: Record<string, unknown> }) {
-  return (
-    <div className="space-y-3">
-      <FieldBox label="network" value={safeDisplayValue(data.network)} />
-      {data.genesisHash !== undefined && (
-        <FieldBox
-          label="genesisHash"
-          value={safeDisplayValue(data.genesisHash, '(empty)')}
-          copyable={!!data.genesisHash}
-        />
-      )}
-    </div>
-  );
+  const fields: FieldSpec[] = [{ label: 'network', value: data.network }];
+  if (data.genesisHash !== undefined) {
+    fields.push({ label: 'genesisHash', value: data.genesisHash, fallback: '(empty)', copy: !!data.genesisHash });
+  }
+  return <FieldList fields={fields} />;
 }
 
 /** type 5 - htr_getUtxos */
 function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
   const network = useSnapExplorerNetwork();
   const utxos = Array.isArray(data.utxos) ? (data.utxos as Record<string, unknown>[]) : [];
+
   return (
-    <div className="space-y-4">
-      {/* Summary Statistics */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white border border-gray-300 rounded p-3">
-          <p className="text-xs text-muted mb-1">Total Amount Available</p>
-          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_amount_available, '0')}</p>
-        </div>
-        <div className="bg-white border border-gray-300 rounded p-3">
-          <p className="text-xs text-muted mb-1">Total UTXOs Available</p>
-          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_utxos_available, '0')}</p>
-        </div>
-        <div className="bg-white border border-gray-300 rounded p-3">
-          <p className="text-xs text-muted mb-1">Total Amount Locked</p>
-          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_amount_locked, '0')}</p>
-        </div>
-        <div className="bg-white border border-gray-300 rounded p-3">
-          <p className="text-xs text-muted mb-1">Total UTXOs Locked</p>
-          <p className="text-lg font-bold font-mono m-0">{safeDisplayValue(data.total_utxos_locked, '0')}</p>
-        </div>
-      </div>
-
-      {/* UTXOs List */}
-      {utxos.length > 0 && (
-        <div className="bg-white border border-gray-300 rounded overflow-hidden">
-          <div className="bg-gray-100 px-3 py-2 border-b border-gray-300">
-            <span className="text-sm font-semibold text-primary">UTXOs ({utxos.length})</span>
-          </div>
-          <div className="max-h-96 overflow-y-auto">
-            {utxos.map((utxo, index) => (
-              <div
-                key={`${safeDisplayValue(utxo.tx_id, index.toString())}-${safeDisplayValue(utxo.index, '0')}`}
-                className={`p-3 ${index > 0 ? 'border-t border-gray-200' : ''}`}
-              >
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted">Address:</span>
-                    <p className="font-mono text-2xs break-all mt-1 mb-0">{safeDisplayValue(utxo.address)}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted">Amount:</span>
-                    <p className="font-mono font-semibold mt-1 mb-0">{safeDisplayValue(utxo.amount, '0')}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <span className="text-muted">TX ID:</span>
-                        <p className="font-mono text-2xs break-all mt-1 mb-0">{safeDisplayValue(utxo.tx_id)}</p>
-                      </div>
-                      {typeof utxo.tx_id === 'string' && <ExplorerLink hash={utxo.tx_id} network={network} />}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-muted">Index:</span>
-                    <p className="font-mono mt-1 mb-0">{safeDisplayValue(utxo.index)}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted">Status:</span>
-                    <p className="mt-1 mb-0">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                          utxo.locked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {utxo.locked ? 'Locked' : 'Available'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
+    <div className="flex flex-col gap-3">
+      <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+        <Stat label="Amount available">
+          <span className="font-mono text-data tabular-nums">{safeDisplayValue(data.total_amount_available, '0')}</span>
+        </Stat>
+        <Stat label="UTXOs available">
+          <span className="font-mono text-data tabular-nums">{safeDisplayValue(data.total_utxos_available, '0')}</span>
+        </Stat>
+        <Stat label="Amount locked">
+          <span className="font-mono text-data tabular-nums">{safeDisplayValue(data.total_amount_locked, '0')}</span>
+        </Stat>
+        <Stat label="UTXOs locked">
+          <span className="font-mono text-data tabular-nums">{safeDisplayValue(data.total_utxos_locked, '0')}</span>
+        </Stat>
+      </dl>
+      {utxos.length === 0 ? (
+        <EmptyState>No UTXOs match these filters.</EmptyState>
+      ) : (
+        <ul className="m-0 flex max-h-96 list-none flex-col overflow-y-auto p-0" aria-label={`UTXOs (${utxos.length})`}>
+          {utxos.map((u, i) => (
+            <li
+              key={`${safeDisplayValue(u.tx_id, i.toString())}-${safeDisplayValue(u.index, '0')}`}
+              className="flex flex-col gap-1 border-b border-base-300 py-2 last:border-b-0"
+            >
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {typeof u.tx_id === 'string' ? (
+                  <Identifier value={u.tx_id} kind="tx" />
+                ) : (
+                  <code className="font-mono text-data">{safeDisplayValue(u.tx_id)}</code>
+                )}
+                <span className="text-caption text-ink-muted">output {safeDisplayValue(u.index)}</span>
+                {typeof u.tx_id === 'string' && <ExplorerLink hash={u.tx_id} network={network} className="ml-auto" />}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {utxos.length === 0 && (
-        <div className="bg-gray-50 border border-gray-300 rounded p-4 text-center">
-          <p className="text-muted m-0">No UTXOs found</p>
-        </div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {typeof u.address === 'string' && u.address ? (
+                  <Identifier value={u.address} kind="address" />
+                ) : (
+                  <span className="text-caption text-ink-muted">No address</span>
+                )}
+                <span className="ml-auto font-mono text-data tabular-nums">{safeDisplayValue(u.amount, '0')}</span>
+                {u.locked ? (
+                  <StatusChip status="locked" label="Locked" tone="idle" />
+                ) : (
+                  <StatusChip status="available" label="Available" tone="success" />
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -343,29 +242,23 @@ function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
 
 /** type 10 - htr_changeNetwork */
 function RenderChangeNetwork({ data }: { data: Record<string, unknown> }) {
-  return (
-    <div className="space-y-3">
-      <FieldBox label="newNetwork" value={safeDisplayValue(data.newNetwork)} />
-    </div>
-  );
+  return <FieldList fields={[{ label: 'newNetwork', value: data.newNetwork }]} />;
 }
 
 /** type 11 - htr_getXpub */
 function RenderGetXpub({ data }: { data: Record<string, unknown> }) {
-  return (
-    <div className="space-y-3">
-      <FieldBox label="xpub" value={safeDisplayValue(data.xpub)} copyable />
-    </div>
-  );
+  return <FieldList fields={[{ label: 'xpub', value: data.xpub, kind: 'xpub' }]} />;
 }
 
 /** type 12 - htr_getWalletInformation */
 function RenderGetWalletInformation({ data }: { data: Record<string, unknown> }) {
   return (
-    <div className="space-y-3">
-      <FieldBox label="network" value={safeDisplayValue(data.network)} />
-      <FieldBox label="address0" value={safeDisplayValue(data.address0)} copyable />
-    </div>
+    <FieldList
+      fields={[
+        { label: 'network', value: data.network },
+        { label: 'address0', value: data.address0, kind: 'address' },
+      ]}
+    />
   );
 }
 
@@ -374,13 +267,11 @@ function RenderSignWithAddress({ data }: { data: Record<string, unknown> }) {
   // The snap may return address as an object {address, index, addressPath} or a string
   const addressVal =
     data.address && typeof data.address === 'object' ? (data.address as Record<string, unknown>).address : data.address;
-  return (
-    <div className="space-y-3">
-      {data.signature ? <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable /> : null}
-      {addressVal ? <FieldBox label="address" value={safeDisplayValue(addressVal)} copyable /> : null}
-      {data.message ? <FieldBox label="message" value={safeDisplayValue(data.message)} /> : null}
-    </div>
-  );
+  const fields: FieldSpec[] = [];
+  if (data.signature) fields.push({ label: 'signature', value: data.signature, copy: true });
+  if (addressVal) fields.push({ label: 'address', value: addressVal, kind: 'address' });
+  if (data.message) fields.push({ label: 'message', value: data.message, kind: 'text' });
+  return <FieldList fields={fields} />;
 }
 
 /** type 7 - htr_signOracleData */
@@ -389,25 +280,29 @@ function RenderSignOracleData({ data }: { data: Record<string, unknown> }) {
     data.signedData && typeof data.signedData === 'object' ? (data.signedData as Record<string, unknown>) : null;
 
   return (
-    <div className="space-y-3">
-      <FieldBox label="data" value={safeDisplayValue(data.data)} />
-      <FieldBox label="oracle" value={safeDisplayValue(data.oracle)} copyable />
+    <div className="flex flex-col gap-3">
+      <FieldList
+        fields={[
+          { label: 'data', value: data.data },
+          { label: 'oracle', value: data.oracle, copy: true },
+        ]}
+      />
 
       {signedData && (
-        <div className="border border-gray-300 rounded overflow-hidden">
-          <div className="bg-gray-100 px-3 py-2 border-b border-gray-300">
-            <span className="text-sm font-semibold text-primary">Signed Data</span>
-          </div>
-          <div className="p-3 space-y-3">
-            <FieldBox label="type" value={safeDisplayValue(signedData.type)} />
-            <FieldBox label="value" value={safeDisplayValue(signedData.value)} />
-            <FieldBox label="signature" value={safeDisplayValue(signedData.signature)} copyable />
-          </div>
-        </div>
+        <section className="flex flex-col gap-2 border-t border-base-300 pt-3" aria-label="Signed data">
+          <h4 className="m-0 text-body font-semibold">Signed data</h4>
+          <FieldList
+            fields={[
+              { label: 'type', value: signedData.type },
+              { label: 'value', value: signedData.value },
+              { label: 'signature', value: signedData.signature, copy: true },
+            ]}
+          />
+        </section>
       )}
 
       {!signedData && data.signature ? (
-        <FieldBox label="signature" value={safeDisplayValue(data.signature)} copyable />
+        <FieldList fields={[{ label: 'signature', value: data.signature, copy: true }]} />
       ) : null}
     </div>
   );
@@ -418,13 +313,11 @@ function RenderSignOracleData({ data }: { data: Record<string, unknown> }) {
 /* ------------------------------------------------------------------ */
 
 function RenderGenericObject({ data }: { data: unknown }) {
-  const json = safeStringify(data, 2) as string;
+  const json = (safeStringify(data, 2) as string | undefined) ?? String(data);
   return (
-    <div className="border border-gray-300 rounded overflow-auto max-h-96 bg-slate-50 text-left">
-      <pre className="text-sm font-mono whitespace-pre-wrap break-words m-0 p-3">
-        <JsonHighlight json={json} />
-      </pre>
-    </div>
+    <pre className="m-0 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-field bg-base-200 p-3 text-left font-mono text-data">
+      <JsonHighlight json={json} />
+    </pre>
   );
 }
 
@@ -448,71 +341,50 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({ respon
 
   // Check for transaction-like responses (sendTransaction, createToken, nano contract tx)
   if (isTransactionLike(parsed)) {
-    return (
-      <div className="space-y-3">
-        <TransactionResponseDisplay response={parsed} network={network} />
-      </div>
-    );
+    return <TransactionResponseDisplay response={parsed} network={network} />;
   }
 
   // Check for {type, response} envelope
   if (isSnapEnvelope(parsed)) {
     const { type, response: inner } = parsed;
+    const obj = inner && typeof inner === 'object' ? (inner as Record<string, unknown>) : null;
     let formatted: React.ReactNode = null;
 
     switch (type) {
       case RpcResponseType.GetAddress:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderGetAddress data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderGetAddress data={obj} />;
         break;
 
       case RpcResponseType.GetBalance:
-        if (Array.isArray(inner)) {
-          formatted = <RenderGetBalance data={inner} />;
-        }
+        if (Array.isArray(inner)) formatted = <RenderGetBalance data={inner as BalanceItem[]} />;
         break;
 
       case RpcResponseType.GetConnectedNetwork:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderGetNetwork data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderGetNetwork data={obj} />;
         break;
 
       case RpcResponseType.GetUtxos:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderGetUtxos data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderGetUtxos data={obj} />;
         break;
 
       case RpcResponseType.SignWithAddress:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderSignWithAddress data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderSignWithAddress data={obj} />;
         break;
 
       case RpcResponseType.SignOracleData:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderSignOracleData data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderSignOracleData data={obj} />;
         break;
 
       case RpcResponseType.ChangeNetwork:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderChangeNetwork data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderChangeNetwork data={obj} />;
         break;
 
       case RpcResponseType.GetXpub:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderGetXpub data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderGetXpub data={obj} />;
         break;
 
       case RpcResponseType.GetWalletInformation:
-        if (inner && typeof inner === 'object') {
-          formatted = <RenderGetWalletInformation data={inner as Record<string, unknown>} />;
-        }
+        if (obj) formatted = <RenderGetWalletInformation data={obj} />;
         break;
 
       default:

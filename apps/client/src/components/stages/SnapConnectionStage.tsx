@@ -25,10 +25,19 @@ import { DEFAULT_SNAP_ORIGIN, SNAP_ORIGIN_NPM } from '../../constants/snap';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network';
 import { useWalletStore } from '../../hooks/useWalletStore';
+import { MdOpenInNew } from 'react-icons/md';
 import CopyButton from '../common/CopyButton';
-import DryRunCheckbox from '../common/DryRunCheckbox';
-import { LoadingOverlay } from '../common/LoadingOverlay';
 import TimelockPicker from '../common/TimelockPicker';
+import { StageHeader } from '../common/StageHeader';
+import { Identifier } from '../common/Identifier';
+import NetworkChip from '../common/NetworkChip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { StatusChip } from '../ui/StatusChip';
+import { setDryRunMode } from '../../store/slices/rpcSlice';
+import { snapNetworkKey } from '../../utils/blueprints';
 import { defaultTimelockValue, timelockToUnix } from '../../utils/timelockUtils';
 import { useToast } from '../../hooks/useToast';
 import { extractErrorMessage } from '../../utils/errorUtils';
@@ -36,9 +45,54 @@ import { applyNetworkServices } from '../../services/networkServices';
 
 const STORAGE_KEY_SNAP_ORIGIN = 'hathor_qa_snap_origin';
 
+type OriginPreset = 'local' | 'npm' | 'custom';
+
+const ORIGIN_PRESETS: { value: OriginPreset; label: string }[] = [
+  { value: 'local', label: 'Local dev' },
+  { value: 'npm', label: 'NPM package' },
+  { value: 'custom', label: 'Custom' },
+];
+
+function presetOf(origin: string): OriginPreset {
+  if (origin === DEFAULT_SNAP_ORIGIN) return 'local';
+  if (origin === SNAP_ORIGIN_NPM) return 'npm';
+  return 'custom';
+}
+
+/** A shell command block in the JsonPanel style: mono on base-200, with copy. */
+function CommandBlock({ lines, copyText }: { lines: string[]; copyText?: string }) {
+  return (
+    <div className="relative">
+      <pre className="m-0 overflow-x-auto rounded-field bg-base-200 py-2.5 pl-3 pr-10 text-left font-mono text-data">
+        {lines.map((line, i) => (
+          <span key={i} className="block">
+            <span className="select-none text-ink-muted" aria-hidden="true">
+              ${' '}
+            </span>
+            {line}
+          </span>
+        ))}
+      </pre>
+      <div className="absolute right-1 top-1 rounded-field bg-base-200">
+        <CopyButton text={copyText ?? lines.join('\n')} label="Copy command" />
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
+      <dt className="w-36 flex-none text-caption text-ink-muted">{label}</dt>
+      <dd className="m-0 flex min-w-0 items-center gap-1">{children}</dd>
+    </div>
+  );
+}
+
 export const SnapConnectionStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
+  const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
 
   const snapOrigin = useSelector(selectSnapOrigin);
   const isConnected = useSelector(selectIsSnapConnected);
@@ -247,344 +301,254 @@ export const SnapConnectionStage: React.FC = () => {
     setOriginInput(value);
   };
 
-  return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Snap Connection</h1>
-      <p className="text-muted mb-7.5">Connect to the Hathor MetaMask Snap and configure the snap origin</p>
+  const sessionStatus = isConnecting
+    ? { status: 'connecting', label: 'Waiting for MetaMask' }
+    : isReconnecting
+      ? { status: 'connecting', label: 'Reconnecting' }
+      : isConnected
+        ? { status: 'connected', label: 'Connected' }
+        : { status: 'idle', label: 'Not connected' };
+  const snapNetworkChip = snapNetwork ? snapNetworkKey(snapNetwork) : null;
 
-      {/* MetaMask Detection */}
+  return (
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader stageId="snap-connection" description="Connect to the Hathor MetaMask Snap and choose its origin." />
+
       {hasMetaMask === false && (
-        <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-warning flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-yellow-900 m-0">MetaMask Not Detected</p>
-              <p className="text-sm text-yellow-800 mt-1 mb-0">
-                Please install MetaMask or MetaMask Flask to use Snap features.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Callout tone="warning" title="MetaMask not detected" role="alert">
+          Install MetaMask or MetaMask Flask to use the snap stages.
+        </Callout>
       )}
 
-      {/* Snap Origin Configuration */}
-      <div className="card-primary mb-7.5">
-        <h2 className="text-xl font-bold m-0 mb-4">Snap Origin</h2>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Snap Origin URL</label>
+      <Panel
+        title="Snap origin"
+        description="Where MetaMask loads the snap from: a local dev server or the npm package."
+      >
+        <div className="flex flex-col gap-1.5">
+          <span className="text-body font-medium">Preset</span>
+          <SegmentedControl
+            className="self-start"
+            aria-label="Snap origin preset"
+            options={ORIGIN_PRESETS}
+            value={presetOf(originInput)}
+            onChange={(preset) => {
+              if (preset === 'local') handleSetOrigin(DEFAULT_SNAP_ORIGIN);
+              if (preset === 'npm') handleSetOrigin(SNAP_ORIGIN_NPM);
+              if (preset === 'custom') document.getElementById('snap-origin-input')?.focus();
+            }}
+          />
+        </div>
+        <Field label="Snap origin" hint="The snap ID MetaMask installs, e.g. local:http://localhost:8080.">
+          <input
+            id="snap-origin-input"
+            type="text"
+            value={originInput}
+            onChange={(e) => handleSetOrigin(e.target.value)}
+            placeholder="local:http://localhost:8080"
+            spellCheck={false}
+            className="input w-full font-mono text-data"
+          />
+        </Field>
+      </Panel>
+
+      <Panel
+        title="Snap session"
+        description={
+          isConnected
+            ? 'Connected and ready for the snap stages.'
+            : 'Install or connect the Hathor Snap to start testing.'
+        }
+        actions={
+          isConnected ? (
+            <button type="button" onClick={handleDisconnect} className="btn btn-sm btn-outline btn-error">
+              Disconnect
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnect}
+              disabled={isConnecting || hasMetaMask === false}
+              className="btn btn-sm btn-primary"
+            >
+              {(isConnecting || isReconnecting) && (
+                <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+              )}
+              {isConnecting ? 'Waiting for MetaMask…' : isReconnecting ? 'Reconnecting…' : 'Connect snap'}
+            </button>
+          )
+        }
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusChip status={sessionStatus.status} label={sessionStatus.label} />
+          <label className="ml-auto flex cursor-pointer select-none items-center gap-2 text-body">
             <input
-              type="text"
-              value={originInput}
-              onChange={(e) => handleSetOrigin(e.target.value)}
-              placeholder="local:http://localhost:8080"
-              className="input"
+              type="checkbox"
+              className="toggle toggle-sm"
+              checked={isDryRun}
+              onChange={(e) => dispatch(setDryRunMode(e.target.checked))}
             />
-            <p className="text-xs text-muted mt-1">The snap origin identifier (local dev or npm package)</p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => handleSetOrigin(DEFAULT_SNAP_ORIGIN)} className="btn-secondary py-1.5 px-3 text-sm">
-              Local Dev
-            </button>
-            <button onClick={() => handleSetOrigin(SNAP_ORIGIN_NPM)} className="btn-secondary py-1.5 px-3 text-sm">
-              NPM Package
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Connection Card */}
-      <div className="card-primary mb-7.5 relative">
-        {isConnecting && <LoadingOverlay message="Waiting for MetaMask..." />}
-
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold m-0">Snap Session</h2>
-            <p className="text-sm text-muted mt-1">
-              {isConnected
-                ? 'Connected and ready to test Snap methods'
-                : 'Install/connect the Hathor Snap to begin testing'}
-            </p>
-          </div>
-          <div>
-            {isConnected ? (
-              <button onClick={handleDisconnect} className="btn-danger">
-                Disconnect
-              </button>
-            ) : (
-              <button onClick={handleConnect} disabled={isConnecting || hasMetaMask === false} className="btn-primary">
-                {isConnecting ? 'Connecting...' : isReconnecting ? 'Reconnecting...' : 'Connect Snap'}
-              </button>
-            )}
-          </div>
+            Dry run for every snap stage
+          </label>
         </div>
 
-        {/* Snap Info */}
         {isConnected && installedSnap && (
-          <div className="bg-blue-50 border border-blue-300 rounded p-4 mt-4">
-            <h3 className="text-sm font-semibold text-blue-800 mb-2">Connected Snap</h3>
-            <div className="bg-white border border-blue-200 rounded p-3 space-y-2">
-              <div>
-                <div className="text-xs text-muted mb-1">Snap ID</div>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-mono text-xs break-all">{installedSnap.id}</div>
-                  <CopyButton text={installedSnap.id} label="Copy snap ID" />
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted mb-1">Version</div>
-                <div className="font-mono text-xs">{installedSnap.version}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted mb-1">Origin</div>
-                <div className="font-mono text-xs break-all">{snapOrigin}</div>
-              </div>
+          <section
+            className="flex flex-col gap-2 border-t border-base-300 pt-3"
+            aria-labelledby="snap-connected-heading"
+          >
+            <h3 id="snap-connected-heading" className="m-0 text-body font-semibold">
+              Connected snap
+            </h3>
+            <dl className="m-0 flex flex-col gap-2">
+              <DetailRow label="Snap ID">
+                <code className="min-w-0 truncate font-mono text-data" title={installedSnap.id}>
+                  {installedSnap.id}
+                </code>
+                <CopyButton text={installedSnap.id} label="Copy snap ID" />
+              </DetailRow>
+              <DetailRow label="Version">
+                <code className="font-mono text-data">{installedSnap.version}</code>
+              </DetailRow>
+              <DetailRow label="Origin">
+                <code className="min-w-0 truncate font-mono text-data" title={snapOrigin}>
+                  {snapOrigin}
+                </code>
+              </DetailRow>
               {snapNetwork && (
-                <div>
-                  <div className="text-xs text-muted mb-1">Network</div>
-                  <div className="font-mono text-xs">{snapNetwork}</div>
-                </div>
+                <DetailRow label="Network">
+                  {snapNetworkChip ? (
+                    <NetworkChip network={snapNetworkChip} size="sm" />
+                  ) : (
+                    <code className="font-mono text-data">{snapNetwork}</code>
+                  )}
+                </DetailRow>
               )}
               {snapAddress && (
-                <div>
-                  <div className="text-xs text-muted mb-1">Address (index 0)</div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-mono text-xs break-all">{snapAddress}</div>
-                    <CopyButton text={snapAddress} label="Copy address" />
-                  </div>
-                </div>
+                <DetailRow label="Address (index 0)">
+                  <Identifier value={snapAddress} kind="address" walletTag={false} />
+                </DetailRow>
               )}
-              {isFetchingWalletInfo && <div className="text-xs text-muted italic">Fetching wallet info...</div>}
-            </div>
-          </div>
+              {isFetchingWalletInfo && (
+                <p className="m-0 flex items-center gap-2 text-caption text-ink-muted">
+                  <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+                  Fetching wallet information…
+                </p>
+              )}
+            </dl>
+          </section>
         )}
-      </div>
+      </Panel>
 
-      {/* Dry Run Toggle */}
-      {isConnected && (
-        <div className="card-primary mb-7.5">
-          <div className="flex items-center gap-4">
-            <DryRunCheckbox />
-            <div>
-              <h3 className="text-base font-bold m-0">Dry Run Mode</h3>
-              <p className="text-sm text-muted mt-1 mb-0">Toggle dry run for all snap method stages</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Inject Fund — shown when snap connected + addr0 available + funding wallet ready */}
       {canInjectFund && (
-        <div className="card-primary mb-7.5">
-          <h3 className="text-lg font-bold mb-4">Fund Snap Wallet</h3>
-          <p className="text-sm text-muted mb-4">
-            Send HTR from the funding wallet to the snap wallet address ({snapAddress.slice(0, 8)}...
-            {snapAddress.slice(-6)})
-          </p>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Unlocked</label>
-                <input
-                  type="number"
-                  value={injectUnlocked}
-                  onChange={(e) => setInjectUnlocked(parseInt(e.target.value) || 0)}
-                  min="0"
-                  className="input"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Locked</label>
-                <input
-                  type="number"
-                  value={injectLocked}
-                  onChange={(e) => setInjectLocked(parseInt(e.target.value) || 0)}
-                  min="0"
-                  className="input"
-                />
-              </div>
-            </div>
-
-            <TimelockPicker
-              value={injectTimestamp}
-              onChange={setInjectTimestamp}
-              label="Timestamp (lock until)"
-              hint="Locked funds unavailable until this time (default: 5 min from now)"
-            />
-
-            {injectError && (
-              <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">{injectError}</div>
-            )}
-
+        <Panel
+          title="Fund the snap wallet"
+          description="Send HTR from the funding wallet to the snap's address 0."
+          footer={
             <button
               type="button"
               onClick={handleInjectFund}
               disabled={isInjecting || (injectUnlocked === 0 && injectLocked === 0)}
-              className="btn-primary w-full"
+              className="btn btn-primary ml-auto"
             >
-              {isInjecting ? 'Injecting...' : 'Inject Fund'}
+              {isInjecting && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}
+              {isInjecting ? 'Sending funds…' : 'Send funds'}
             </button>
+          }
+        >
+          <p className="m-0 flex flex-wrap items-center gap-2 text-body">
+            <span className="text-ink-muted">Recipient</span>
+            <Identifier value={snapAddress} kind="address" walletTag="Snap addr 0" />
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Unlocked amount">
+              <input
+                type="number"
+                value={injectUnlocked}
+                onChange={(e) => setInjectUnlocked(parseInt(e.target.value) || 0)}
+                min="0"
+                className="input w-full text-right font-mono text-data tabular-nums"
+              />
+            </Field>
+            <Field label="Locked amount">
+              <input
+                type="number"
+                value={injectLocked}
+                onChange={(e) => setInjectLocked(parseInt(e.target.value) || 0)}
+                min="0"
+                className="input w-full text-right font-mono text-data tabular-nums"
+              />
+            </Field>
           </div>
-        </div>
+          <TimelockPicker
+            value={injectTimestamp}
+            onChange={setInjectTimestamp}
+            label="Lock until"
+            hint="Locked funds can't be spent before this time (default: 5 minutes from now)."
+          />
+          {injectError && (
+            <Callout tone="error" title="Sending funds failed" role="alert">
+              <pre className="m-0 whitespace-pre-wrap break-words font-mono text-data-sm">{injectError}</pre>
+            </Callout>
+          )}
+        </Panel>
       )}
 
-      {/* Getting Started Guide — shown when not connected */}
       {!isConnected && (
-        <div className="card-primary mb-7.5 border border-indigo-200 bg-gradient-to-br from-indigo-50 to-slate-50">
-          <div className="flex items-center gap-2.5 mb-5">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 text-indigo-600"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold m-0 text-indigo-900">Getting Started</h2>
-          </div>
-
-          <p className="text-sm text-slate-700 mb-5 leading-relaxed">
-            The MetaMask Snaps section requires the <strong>Hathor Snap</strong> running locally. Follow these steps to
-            set up your environment before connecting.
-          </p>
-
-          {/* Prerequisites */}
-          <div className="mb-5">
-            <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex-shrink-0">
-                !
-              </span>
-              Prerequisites
-            </h3>
-            <ul className="text-sm text-slate-600 space-y-1 ml-6.5 list-disc">
-              <li>
-                <strong>MetaMask</strong> (or MetaMask Flask) browser extension installed
-              </li>
-              <li>
-                <strong>Node.js</strong> 18+ and a package manager (yarn or npm)
-              </li>
-            </ul>
-          </div>
-
-          {/* Step 1 */}
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
-                1
-              </span>
-              Clone the RPC library
-            </h3>
-            <div className="relative group">
-              <pre className="bg-slate-800 text-slate-100 rounded-lg px-4 py-3 text-sm font-mono overflow-x-auto">
-                <span className="text-slate-500">$</span> git clone https://github.com/HathorNetwork/hathor-rpc-lib.git
-                {'\n'}
-                <span className="text-slate-500">$</span> cd hathor-rpc-lib
-              </pre>
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton
-                  text="git clone https://github.com/HathorNetwork/hathor-rpc-lib.git && cd hathor-rpc-lib"
-                  label="Copy"
-                  className="!bg-slate-700 hover:!bg-slate-600 !text-slate-300"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
-                2
-              </span>
-              Install dependencies
-            </h3>
-            <div className="relative group">
-              <pre className="bg-slate-800 text-slate-100 rounded-lg px-4 py-3 text-sm font-mono overflow-x-auto">
-                <span className="text-slate-500">$</span> yarn install
-              </pre>
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton
-                  text="yarn install"
-                  label="Copy"
-                  className="!bg-slate-700 hover:!bg-slate-600 !text-slate-300"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
-                3
-              </span>
-              Start the Snap dev server
-            </h3>
-            <div className="relative group">
-              <pre className="bg-slate-800 text-slate-100 rounded-lg px-4 py-3 text-sm font-mono overflow-x-auto">
-                <span className="text-slate-500">$</span> yarn snap-start
-              </pre>
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <CopyButton
-                  text="yarn snap-start"
-                  label="Copy"
-                  className="!bg-slate-700 hover:!bg-slate-600 !text-slate-300"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-              This builds the Snap and serves it on{' '}
-              <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">localhost:8080</code>, which matches
-              the default <em>Local Dev</em> origin above.
+        <Panel title="Set up the Hathor Snap">
+          <div className="flex max-w-prose flex-col gap-4 text-left text-body-lg">
+            <p className="m-0">
+              The snap stages need the Hathor Snap running locally. Set it up once, then connect above.
             </p>
-          </div>
 
-          {/* Step 4 */}
-          <div className="mb-2">
-            <h3 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold flex-shrink-0">
-                4
-              </span>
-              Connect above
-            </h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Once the Snap dev server is running, keep the <strong>Local Dev</strong> origin selected and click{' '}
-              <strong>Connect Snap</strong>. MetaMask will prompt you to install the Hathor Snap.
-            </p>
-          </div>
+            <div className="flex flex-col gap-1">
+              <h3 className="m-0 text-body-lg font-semibold">Before you start</h3>
+              <ul className="m-0 list-disc pl-5">
+                <li>MetaMask or MetaMask Flask installed in this browser.</li>
+                <li>Node.js 18 or newer, and yarn or npm.</li>
+              </ul>
+            </div>
 
-          {/* Repo link */}
-          <div className="mt-5 pt-4 border-t border-indigo-100">
+            <ol className="m-0 flex list-decimal flex-col gap-4 pl-5 marker:font-semibold marker:text-ink-muted">
+              <li className="space-y-2 pl-1">
+                <span className="block font-semibold">Clone the RPC library</span>
+                <CommandBlock
+                  lines={['git clone https://github.com/HathorNetwork/hathor-rpc-lib.git', 'cd hathor-rpc-lib']}
+                  copyText="git clone https://github.com/HathorNetwork/hathor-rpc-lib.git && cd hathor-rpc-lib"
+                />
+              </li>
+              <li className="space-y-2 pl-1">
+                <span className="block font-semibold">Install dependencies</span>
+                <CommandBlock lines={['yarn install']} />
+              </li>
+              <li className="space-y-2 pl-1">
+                <span className="block font-semibold">Start the snap dev server</span>
+                <CommandBlock lines={['yarn snap-start']} />
+                <span className="block text-body text-ink-muted">
+                  This builds the snap and serves it on{' '}
+                  <code className="rounded-selector bg-base-200 px-1 font-mono text-data">localhost:8080</code>, which
+                  is the Local dev origin.
+                </span>
+              </li>
+              <li className="space-y-1 pl-1">
+                <span className="block font-semibold">Connect</span>
+                <span className="block">
+                  With the dev server running and the Local dev origin selected, press Connect snap. MetaMask asks you
+                  to install the Hathor Snap.
+                </span>
+              </li>
+            </ol>
+
             <a
               href="https://github.com/HathorNetwork/hathor-rpc-lib"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+              className="link link-primary inline-flex items-center gap-1 self-start text-body"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-              </svg>
-              View hathor-rpc-lib on GitHub
+              hathor-rpc-lib on GitHub
+              <MdOpenInNew aria-hidden="true" />
             </a>
           </div>
-        </div>
+        </Panel>
       )}
     </div>
   );

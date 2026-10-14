@@ -6,11 +6,16 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Field } from '../ui/Field';
+import { firstUnmetReason } from '../../utils/requirements';
 
 export const SnapSignWithAddressStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('signWithAddress');
+  const { isDryRun, methodData, execute } = useSnapMethod('signWithAddress');
+  const snapRequirement = useRequireSnap();
 
   const [message, setMessage] = useState<string>('Hello, Hathor!');
   const [addressIndex, setAddressIndex] = useState<number>(0);
@@ -26,43 +31,42 @@ export const SnapSignWithAddressStage: React.FC = () => {
   const handleExecute = () => execute((h) => h.signWithAddress(message, addressIndex));
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Sign with Address (Snap)</h1>
-      <p className="text-muted mb-7.5">Sign a message using a specific address via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-sign-with-address"
+        description="Sign a message with the snap wallet's address at a given index."
+        method="htr_signWithAddress"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Sign with Address"
-          description="Sign a message using an address at a specific index"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Message</label>
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Message to sign"
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Address Index</label>
-            <input
-              type="number"
-              value={addressIndex}
-              onChange={(e) => setAddressIndex(parseInt(e.target.value) || 0)}
-              min={0}
-              className="input"
-            />
-          </div>
-        </SnapMethodCard>
-      )}
+      <SnapMethodCard
+        title="Sign message"
+        description="The snap shows the message for approval."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <Field label="Message">
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Message to sign"
+            className="input w-full"
+          />
+        </Field>
+        <Field label="Address index" className="max-w-48">
+          <input
+            type="number"
+            value={addressIndex}
+            onChange={(e) => setAddressIndex(parseInt(e.target.value) || 0)}
+            min={0}
+            className="input w-full font-mono text-data"
+          />
+        </Field>
+      </SnapMethodCard>
     </div>
   );
 };

@@ -7,8 +7,14 @@
 import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
-import Select from '../common/Select';
+import { MdAdd, MdClose } from 'react-icons/md';
+import { useRequireSnap } from '../../hooks/useRequirements';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Field } from '../ui/Field';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { firstUnmetReason } from '../../utils/requirements';
 
 interface NcAction {
   type: 'deposit' | 'withdrawal';
@@ -24,8 +30,16 @@ const emptyAction = (): NcAction => ({
   address: '',
 });
 
+const ACTION_TYPES = [
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'withdrawal', label: 'Withdrawal' },
+] as const;
+
+const MONO_INPUT = 'input w-full font-mono text-data';
+
 export const SnapSendNanoContractTxStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('sendNanoContractTx');
+  const { isDryRun, methodData, execute } = useSnapMethod('sendNanoContractTx');
+  const snapRequirement = useRequireSnap();
 
   const [ncId, setNcId] = useState('');
   const [blueprintId, setBlueprintId] = useState('');
@@ -73,133 +87,153 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
     setActions(actions.map((a, idx) => (idx === i ? { ...a, [field]: value } : a)));
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Nano Contract TX (Snap)</h1>
-      <p className="text-muted mb-7.5">Send a nano contract transaction via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-send-nano-contract-tx"
+        description="Send a nano contract transaction (initialize, bet, withdraw…) from the snap wallet."
+        method="htr_sendNanoContractTx"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Nano Contract TX"
-          description="Send nano contract transactions (initialize, bet, withdraw, etc.)"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">NC ID (for existing contracts)</label>
-            <input
-              type="text"
-              value={ncId}
-              onChange={(e) => setNcId(e.target.value)}
-              placeholder="Nano contract ID"
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Blueprint ID (for initialization)</label>
+      <SnapMethodCard
+        title="Send nano contract tx"
+        description="Use the NC ID for existing contracts, the blueprint ID to initialize one."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <Field label="NC ID" hint="For existing contracts.">
+          <input
+            type="text"
+            value={ncId}
+            onChange={(e) => setNcId(e.target.value)}
+            placeholder="Nano contract ID"
+            className={MONO_INPUT}
+          />
+        </Field>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
+          <Field label="Blueprint ID" hint="For initialization.">
             <input
               type="text"
               value={blueprintId}
               onChange={(e) => setBlueprintId(e.target.value)}
               placeholder="Blueprint ID"
-              className="input"
+              className={MONO_INPUT}
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Method</label>
+          </Field>
+          <Field label="Method">
             <input
               type="text"
               value={method}
               onChange={(e) => setMethod(e.target.value)}
               placeholder="initialize"
-              className="input"
+              className={MONO_INPUT}
             />
-          </div>
+          </Field>
+        </div>
 
-          {/* Actions */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Actions</label>
-            {actions.map((action, i) => (
-              <div key={i} className="border border-gray-200 rounded p-3 mb-2 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Action {i + 1}</span>
-                  <button onClick={() => removeAction(i)} className="btn-secondary py-1 px-2 text-xs">
-                    Remove
+        <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-nctx-actions">
+          <h3 id="snap-nctx-actions" className="m-0 text-body font-semibold">
+            Actions
+          </h3>
+          {actions.map((action, i) => (
+            <Panel
+              key={i}
+              variant="inset"
+              title={`Action ${i + 1}`}
+              actions={
+                <>
+                  <SegmentedControl
+                    size="sm"
+                    aria-label={`Action ${i + 1} type`}
+                    options={ACTION_TYPES}
+                    value={action.type}
+                    onChange={(v) => updateAction(i, 'type', v)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeAction(i)}
+                    className="btn btn-ghost btn-xs btn-square"
+                    aria-label={`Remove action ${i + 1}`}
+                  >
+                    <MdClose aria-hidden="true" />
                   </button>
-                </div>
-                <Select value={action.type} onChange={(e) => updateAction(i, 'type', e.target.value)}>
-                  <option value="deposit">Deposit</option>
-                  <option value="withdrawal">Withdrawal</option>
-                </Select>
-                <input
-                  type="text"
-                  value={action.token}
-                  onChange={(e) => updateAction(i, 'token', e.target.value)}
-                  placeholder="Token UID"
-                  className="input"
-                />
-                <input
-                  type="text"
-                  value={action.amount}
-                  onChange={(e) => updateAction(i, 'amount', e.target.value)}
-                  placeholder="Amount"
-                  className="input"
-                />
+                </>
+              }
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_10rem]">
+                <Field label="Token UID">
+                  <input
+                    type="text"
+                    value={action.token}
+                    onChange={(e) => updateAction(i, 'token', e.target.value)}
+                    placeholder="00"
+                    className={MONO_INPUT}
+                  />
+                </Field>
+                <Field label="Amount">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={action.amount}
+                    onChange={(e) => updateAction(i, 'amount', e.target.value)}
+                    placeholder="Amount"
+                    className="input w-full text-right font-mono text-data tabular-nums"
+                  />
+                </Field>
+              </div>
+              <Field label={action.type === 'deposit' ? 'Change address' : 'Withdrawal address'}>
                 <input
                   type="text"
                   value={action.address}
                   onChange={(e) => updateAction(i, 'address', e.target.value)}
                   placeholder={action.type === 'deposit' ? 'Change address' : 'Withdrawal address'}
-                  className="input"
+                  className={MONO_INPUT}
                 />
-              </div>
-            ))}
-            <button onClick={addAction} className="btn-secondary py-1.5 px-3 text-sm">
-              + Add Action
-            </button>
-          </div>
+              </Field>
+            </Panel>
+          ))}
+          <button type="button" onClick={addAction} className="btn btn-secondary btn-sm self-start">
+            <MdAdd aria-hidden="true" />
+            Add action
+          </button>
+        </section>
 
-          {/* Args */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Args (JSON array)</label>
+        <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-nctx-args">
+          <h3 id="snap-nctx-args" className="m-0 text-body font-semibold">
+            Arguments and fees
+          </h3>
+          <Field label="Args" hint="JSON array of arguments for the method; anything else is sent as a single value.">
             <textarea
               value={argsText}
               onChange={(e) => setArgsText(e.target.value)}
-              placeholder='["arg1", "arg2"] or a single value'
-              className="input min-h-20"
+              placeholder='["arg1", "arg2"]'
+              className="textarea min-h-20 w-full font-mono text-data"
               rows={3}
             />
-            <p className="text-xs text-muted mt-1">JSON array of arguments for the nano contract method</p>
-          </div>
-
-          {/* Max Fee */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Max Fee (optional)</label>
+          </Field>
+          <Field label="Max fee (optional)" hint="Highest fee to pay, as a string." className="max-w-60">
             <input
               type="text"
               value={maxFee}
               onChange={(e) => setMaxFee(e.target.value)}
-              placeholder="e.g. 100"
-              className="input"
+              placeholder="100"
+              className={MONO_INPUT}
             />
-            <p className="text-xs text-muted mt-1">Maximum fee willing to pay (in string format)</p>
-          </div>
-
-          {/* Contract Pays Fees */}
-          <div className="flex items-center gap-2">
+          </Field>
+          <label className="flex cursor-pointer items-center gap-2 text-body">
             <input
               type="checkbox"
               checked={contractPaysFees}
               onChange={(e) => setContractPaysFees(e.target.checked)}
-              className="checkbox checkbox-primary"
+              className="checkbox checkbox-sm"
             />
-            <label className="text-sm font-medium">Contract Pays Fees</label>
-          </div>
-        </SnapMethodCard>
-      )}
+            Contract pays fees
+          </label>
+        </section>
+      </SnapMethodCard>
     </div>
   );
 };

@@ -50,7 +50,7 @@ async function connectAndNavigateToGetNetwork(page: import('@playwright/test').P
 
 // Locator helpers: MethodCard marks its outcome region with data-result.
 const executeButton = (page: import('@playwright/test').Page) =>
-  page.getByRole('button', { name: 'Get Network', exact: true });
+  page.getByRole('button', { name: 'Get network', exact: true });
 
 const successIndicator = (page: import('@playwright/test').Page) => page.locator('[data-result="success"]');
 
@@ -148,7 +148,7 @@ test.describe('Snap rejection detection', () => {
 
     // null is a legitimate response — the success toast fires, no error/rejection shown.
     // With a null response MethodCard renders no outcome region; the toast confirms success.
-    await expect(page.getByText(/Get Network succeeded/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/Get network succeeded/i)).toBeVisible({ timeout: 5000 });
     await expect(rejectionBanner(page)).not.toBeVisible();
     await expect(errorSection(page)).not.toBeVisible();
   });

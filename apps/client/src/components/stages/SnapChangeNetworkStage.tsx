@@ -6,45 +6,58 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
-import Select from '../common/Select';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { firstUnmetReason } from '../../utils/requirements';
+
+const NETWORK_OPTIONS = [
+  { value: 'testnet', label: 'Testnet' },
+  { value: 'mainnet', label: 'Mainnet' },
+] as const;
 
 export const SnapChangeNetworkStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('changeNetwork');
+  const { isDryRun, methodData, execute } = useSnapMethod('changeNetwork');
+  const snapRequirement = useRequireSnap();
 
-  const [newNetwork, setNewNetwork] = useState('testnet');
+  const [newNetwork, setNewNetwork] = useState<string>('testnet');
 
   const liveRequest = useMemo(() => ({ method: 'htr_changeNetwork', params: { newNetwork } }), [newNetwork]);
 
   const handleExecute = () => execute((h) => h.changeNetwork(newNetwork));
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Change Network (Snap)</h1>
-      <p className="text-muted mb-7.5">Change the connected network via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-change-network"
+        description="Switch the MetaMask Snap to another network."
+        method="htr_changeNetwork"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Change Network"
-          description="Switch the Snap to a different network"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Network</label>
-            <Select value={newNetwork} onChange={(e) => setNewNetwork(e.target.value)}>
-              <option value="testnet">Testnet</option>
-              <option value="mainnet">Mainnet</option>
-            </Select>
-            <p className="text-xs text-muted mt-1">Select the target network for the Snap</p>
-          </div>
-        </SnapMethodCard>
-      )}
+      <SnapMethodCard
+        title="Change network"
+        description="The snap asks for approval before switching."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <div className="flex flex-col gap-1.5">
+          <span className="text-body font-medium">Network</span>
+          <SegmentedControl
+            className="self-start"
+            aria-label="Target network"
+            options={NETWORK_OPTIONS}
+            value={newNetwork}
+            onChange={setNewNetwork}
+          />
+          <span className="text-caption text-ink-muted">The network the snap switches to.</span>
+        </div>
+      </SnapMethodCard>
     </div>
   );
 };

@@ -6,16 +6,27 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
-import Select from '../common/Select';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { Field } from '../ui/Field';
+import { firstUnmetReason } from '../../utils/requirements';
 
-const ADDRESS_TYPES = ['index', 'first_empty', 'client'] as const;
+type AddressType = 'index' | 'first_empty' | 'client';
+
+const ADDRESS_TYPES: { value: AddressType; label: string; hint: string }[] = [
+  { value: 'index', label: 'Index', hint: 'Returns the address at a specific derivation index.' },
+  { value: 'first_empty', label: 'First empty', hint: 'Returns the first unused address (needs a synced wallet).' },
+  { value: 'client', label: 'Client', hint: 'Asks the MetaMask user to pick an address to share.' },
+];
 
 export const SnapGetAddressStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getAddress');
+  const { isDryRun, methodData, execute } = useSnapMethod('getAddress');
+  const snapRequirement = useRequireSnap();
 
-  const [type, setType] = useState<string>('index');
+  const [type, setType] = useState<AddressType>('index');
   const [index, setIndex] = useState<number>(0);
 
   const needsIndex = type === 'index';
@@ -29,50 +40,46 @@ export const SnapGetAddressStage: React.FC = () => {
   const handleExecute = () => execute((h) => h.getAddress(type, needsIndex ? index : undefined));
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Get Address (Snap)</h1>
-      <p className="text-muted mb-7.5">Retrieve addresses by type and index via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-get-address"
+        description="Get an address from the snap wallet by type and index."
+        method="htr_getAddress"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Get Address"
-          description="Retrieve an address from the Snap wallet"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Address Type</label>
-            <Select value={type} onChange={(e) => setType(e.target.value)}>
-              {ADDRESS_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t === 'index' ? 'Index' : t === 'first_empty' ? 'First Empty' : 'Client'}
-                </option>
-              ))}
-            </Select>
-            <p className="text-xs text-muted mt-1">
-              {type === 'index' && 'Returns the address at a specific derivation index'}
-              {type === 'first_empty' && 'Returns the first unused address (requires wallet sync)'}
-              {type === 'client' && 'Prompts the MetaMask user to select an address to share'}
-            </p>
-          </div>
-          {needsIndex && (
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Address Index</label>
-              <input
-                type="number"
-                value={index}
-                onChange={(e) => setIndex(parseInt(e.target.value) || 0)}
-                min={0}
-                className="input"
-              />
-            </div>
-          )}
-        </SnapMethodCard>
-      )}
+      <SnapMethodCard
+        title="Get address"
+        description="Choose how the snap picks the address."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <div className="flex flex-col gap-1.5">
+          <span className="text-body font-medium">Address type</span>
+          <SegmentedControl
+            className="self-start"
+            aria-label="Address type"
+            options={ADDRESS_TYPES}
+            value={type}
+            onChange={setType}
+          />
+          <span className="text-caption text-ink-muted">{ADDRESS_TYPES.find((t) => t.value === type)?.hint}</span>
+        </div>
+        {needsIndex && (
+          <Field label="Address index" className="max-w-48">
+            <input
+              type="number"
+              value={index}
+              onChange={(e) => setIndex(parseInt(e.target.value) || 0)}
+              min={0}
+              className="input w-full font-mono text-data"
+            />
+          </Field>
+        )}
+      </SnapMethodCard>
     </div>
   );
 };

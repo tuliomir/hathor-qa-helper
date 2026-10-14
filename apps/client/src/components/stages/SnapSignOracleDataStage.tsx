@@ -7,17 +7,20 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { MdArrowForward } from 'react-icons/md';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { useStage } from '../../hooks/useStage';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
 import { AddressInput } from '../common/AddressInput';
+import { Field } from '../ui/Field';
+import { Callout } from '../ui/Callout';
 import { selectSnapAddress, selectSnapBetNc } from '../../store/slices/snapSlice';
-import {
-  navigateToSnapSetBetResult,
-  clearSnapSignOracleDataNavigation,
-} from '../../store/slices/navigationSlice';
+import { navigateToSnapSetBetResult, clearSnapSignOracleDataNavigation } from '../../store/slices/navigationSlice';
 import { parseSnapResponse, isSnapEnvelope } from '../../utils/snapResponseHelpers';
+import { firstUnmetReason } from '../../utils/requirements';
 import type { RootState, AppDispatch } from '../../store';
 
 function extractSignedData(rawResponse: unknown): string | null {
@@ -37,7 +40,8 @@ function extractSignedData(rawResponse: unknown): string | null {
 export const SnapSignOracleDataStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { setCurrentStage } = useStage();
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('signOracleData');
+  const { isDryRun, methodData, execute } = useSnapMethod('signOracleData');
+  const snapRequirement = useRequireSnap();
 
   const snapAddress = useSelector(selectSnapAddress);
   const betNc = useSelector(selectSnapBetNc);
@@ -84,66 +88,64 @@ export const SnapSignOracleDataStage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Sign Oracle Data (Snap)</h1>
-      <p className="text-muted mb-7.5">Sign oracle data for a nano contract via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-sign-oracle-data"
+        description="Sign data as the oracle of a nano contract with the snap wallet."
+        method="htr_signOracleData"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
+      <SnapMethodCard
+        title="Sign oracle data"
+        description="Set bet result can open this stage with the contract and result filled in."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <Field label="Nano contract ID">
+          <input
+            type="text"
+            value={ncId}
+            onChange={(e) => setNcId(e.target.value)}
+            placeholder="NC ID"
+            className="input w-full font-mono text-data"
+          />
+        </Field>
+        <Field label="Data">
+          <input
+            type="text"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            placeholder="Data to sign"
+            className="input w-full"
+          />
+        </Field>
+        <AddressInput
+          label="Oracle address"
+          value={oracle}
+          onChange={setOracle}
+          placeholder="Oracle address"
+          suggestedValue={snapAddress ?? undefined}
+          sources={['snap']}
+        />
+      </SnapMethodCard>
 
-      {isSnapConnected && (
-        <>
-          <SnapMethodCard
-            title="Sign Oracle Data"
-            description="Sign data as oracle for a nano contract"
-            liveRequest={liveRequest}
-            methodData={methodData}
-            isDryRun={isDryRun}
-            onExecute={handleExecute}
-          >
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Nano Contract ID</label>
-              <input
-                type="text"
-                value={ncId}
-                onChange={(e) => setNcId(e.target.value)}
-                placeholder="NC ID"
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Data</label>
-              <input
-                type="text"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-                placeholder="Data to sign"
-                className="input"
-              />
-            </div>
-            <AddressInput
-              label="Oracle Address"
-              value={oracle}
-              onChange={setOracle}
-              placeholder="Oracle address"
-              suggestedValue={snapAddress ?? undefined}
-              sources={['snap']}
-            />
-          </SnapMethodCard>
-
-          {/* Send signed data back to Set Bet Result */}
-          {signedResult && (
-            <div className="card-primary mb-7.5 bg-green-50 border border-success">
-              <p className="text-sm text-green-800 mb-2">Oracle signature ready.</p>
-              <button
-                type="button"
-                onClick={handleSendToSetBetResult}
-                className="btn-primary py-1.5 px-3 text-sm"
-              >
-                ← Send to Set Bet Result
-              </button>
-            </div>
-          )}
-        </>
+      {signedResult && (
+        <Callout
+          tone="success"
+          title="Oracle signature ready"
+          action={
+            <button type="button" onClick={handleSendToSetBetResult} className="btn btn-primary btn-sm">
+              Send to Set bet result
+              <MdArrowForward aria-hidden="true" />
+            </button>
+          }
+        >
+          Use it to resolve the bet in Set bet result.
+        </Callout>
       )}
     </div>
   );

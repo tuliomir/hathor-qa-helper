@@ -8,13 +8,24 @@ import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { MdAdd, MdClose } from 'react-icons/md';
+import { useRequireSnap } from '../../hooks/useRequirements';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
 import { AddressInput } from '../common/AddressInput';
+import { Field } from '../ui/Field';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
-import Select from '../common/Select';
+import { firstUnmetReason } from '../../utils/requirements';
+
+const TOKEN_VERSIONS = [
+  { value: 'deposit', label: 'Deposit-based' },
+  { value: 'fee', label: 'Fee-based' },
+];
 
 export const SnapCreateTokenStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('createToken');
+  const { isDryRun, methodData, execute } = useSnapMethod('createToken');
+  const snapRequirement = useRequireSnap();
 
   const snapAddress = useSelector(selectSnapAddress);
 
@@ -29,7 +40,7 @@ export const SnapCreateTokenStage: React.FC = () => {
   const [createMelt, setCreateMelt] = useState(false);
   const [meltAuthorityAddress, setMeltAuthorityAddress] = useState('');
   const [allowExternalMelt, setAllowExternalMelt] = useState(false);
-  const [version, setVersion] = useState('deposit');
+  const [version, setVersion] = useState<string>('deposit');
   const [dataEntries, setDataEntries] = useState<string[]>([]);
 
   const params = useMemo(() => {
@@ -73,170 +84,179 @@ export const SnapCreateTokenStage: React.FC = () => {
   const addrSources: ('snap' | 'test' | 'fund' | 'multisig')[] = ['snap', 'test', 'fund', 'multisig'];
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Create Token (Snap)</h1>
-      <p className="text-muted mb-7.5">Create a new custom token via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-create-token"
+        description="Create a custom token from the snap wallet, with optional mint and melt authorities."
+        method="htr_createToken"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Create Token"
-          description="Create a new token with optional mint/melt authorities"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Token Name</label>
+      <SnapMethodCard
+        title="Create token"
+        description="Name, symbol and amount are required; the rest is optional."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_10rem]">
+          <Field label="Token name">
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My Token"
-              className="input"
+              className="input w-full"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Symbol</label>
+          </Field>
+          <Field label="Symbol">
             <input
               type="text"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
               placeholder="TKN"
-              className="input"
+              className="input w-full"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Amount</label>
+          </Field>
+          <Field label="Amount">
             <input
               type="text"
+              inputMode="numeric"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="100"
-              className="input"
+              className="input w-full text-right font-mono text-data tabular-nums"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Token Version</label>
-            <Select value={version} onChange={(e) => setVersion(e.target.value)}>
-              <option value="deposit">Deposit-based</option>
-              <option value="fee">Fee-based</option>
-            </Select>
-          </div>
+          </Field>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-body font-medium">Token version</span>
+          <SegmentedControl
+            className="self-start"
+            aria-label="Token version"
+            options={TOKEN_VERSIONS}
+            value={version}
+            onChange={setVersion}
+          />
+        </div>
+
+        <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-token-addresses">
+          <h3 id="snap-token-addresses" className="m-0 text-body font-semibold">
+            Addresses <span className="font-normal text-ink-muted">(optional)</span>
+          </h3>
           <AddressInput
-            label="Address (optional)"
+            label="Destination address"
             value={address}
             onChange={setAddress}
             placeholder="Destination address"
             sources={addrSources}
           />
           <AddressInput
-            label="Change Address (optional)"
+            label="Change address"
             value={changeAddress}
             onChange={setChangeAddress}
             placeholder="Change address"
             sources={addrSources}
           />
+        </section>
 
-          {/* Mint Authority */}
-          <div className="flex items-center gap-2">
+        <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-token-authorities">
+          <h3 id="snap-token-authorities" className="m-0 text-body font-semibold">
+            Authorities
+          </h3>
+          <label className="flex cursor-pointer items-center gap-2 text-body">
             <input
               type="checkbox"
               checked={createMint}
               onChange={(e) => setCreateMint(e.target.checked)}
-              className="checkbox checkbox-primary"
-              id="snapCreateMint"
+              className="checkbox checkbox-sm"
             />
-            <label htmlFor="snapCreateMint" className="text-sm cursor-pointer">
-              Create Mint Authority
-            </label>
-          </div>
+            Create mint authority
+          </label>
           {createMint && (
-            <>
+            <div className="flex flex-col gap-3 border-l-2 border-base-300 pl-4">
               <AddressInput
-                label="Mint Authority Address"
+                label="Mint authority address"
                 value={mintAuthorityAddress}
                 onChange={setMintAuthorityAddress}
                 sources={addrSources}
               />
-              <div className="flex items-center gap-2">
+              <label className="flex cursor-pointer items-center gap-2 text-body">
                 <input
                   type="checkbox"
                   checked={allowExternalMint}
                   onChange={(e) => setAllowExternalMint(e.target.checked)}
-                  className="checkbox checkbox-primary"
-                  id="snapExtMint"
+                  className="checkbox checkbox-sm"
                 />
-                <label htmlFor="snapExtMint" className="text-sm cursor-pointer">
-                  Allow External Mint Authority
-                </label>
-              </div>
-            </>
+                Allow external mint authority address
+              </label>
+            </div>
           )}
-
-          {/* Melt Authority */}
-          <div className="flex items-center gap-2">
+          <label className="flex cursor-pointer items-center gap-2 text-body">
             <input
               type="checkbox"
               checked={createMelt}
               onChange={(e) => setCreateMelt(e.target.checked)}
-              className="checkbox checkbox-primary"
-              id="snapCreateMelt"
+              className="checkbox checkbox-sm"
             />
-            <label htmlFor="snapCreateMelt" className="text-sm cursor-pointer">
-              Create Melt Authority
-            </label>
-          </div>
+            Create melt authority
+          </label>
           {createMelt && (
-            <>
+            <div className="flex flex-col gap-3 border-l-2 border-base-300 pl-4">
               <AddressInput
-                label="Melt Authority Address"
+                label="Melt authority address"
                 value={meltAuthorityAddress}
                 onChange={setMeltAuthorityAddress}
                 sources={addrSources}
               />
-              <div className="flex items-center gap-2">
+              <label className="flex cursor-pointer items-center gap-2 text-body">
                 <input
                   type="checkbox"
                   checked={allowExternalMelt}
                   onChange={(e) => setAllowExternalMelt(e.target.checked)}
-                  className="checkbox checkbox-primary"
-                  id="snapExtMelt"
+                  className="checkbox checkbox-sm"
                 />
-                <label htmlFor="snapExtMelt" className="text-sm cursor-pointer">
-                  Allow External Melt Authority
-                </label>
-              </div>
-            </>
+                Allow external melt authority address
+              </label>
+            </div>
           )}
+        </section>
 
-          {/* Data Entries */}
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Data Entries (optional)</label>
-            {dataEntries.map((d, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={d}
-                  onChange={(e) => setDataEntries(dataEntries.map((v, idx) => (idx === i ? e.target.value : v)))}
-                  className="input flex-1"
-                />
-                <button
-                  onClick={() => setDataEntries(dataEntries.filter((_, idx) => idx !== i))}
-                  className="btn-secondary py-1.5 px-3 text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <button onClick={() => setDataEntries([...dataEntries, ''])} className="btn-secondary py-1.5 px-3 text-sm">
-              + Add Data
-            </button>
-          </div>
-        </SnapMethodCard>
-      )}
+        <section className="flex flex-col gap-2 border-t border-base-300 pt-4" aria-labelledby="snap-token-data">
+          <h3 id="snap-token-data" className="m-0 text-body font-semibold">
+            Data outputs <span className="font-normal text-ink-muted">(optional)</span>
+          </h3>
+          {dataEntries.map((d, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={d}
+                onChange={(e) => setDataEntries(dataEntries.map((v, idx) => (idx === i ? e.target.value : v)))}
+                aria-label={`Data entry ${i + 1}`}
+                className="input w-full flex-1 font-mono text-data"
+              />
+              <button
+                type="button"
+                onClick={() => setDataEntries(dataEntries.filter((_, idx) => idx !== i))}
+                className="btn btn-ghost btn-sm btn-square"
+                aria-label={`Remove data entry ${i + 1}`}
+              >
+                <MdClose aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setDataEntries([...dataEntries, ''])}
+            className="btn btn-secondary btn-sm self-start"
+          >
+            <MdAdd aria-hidden="true" />
+            Add data entry
+          </button>
+        </section>
+      </SnapMethodCard>
     </div>
   );
 };
