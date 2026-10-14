@@ -1,10 +1,11 @@
 /**
  * Get UTXOs Stage
  *
- * Tests htr_getUtxos RPC call with token selection and filters
+ * Tests htr_getUtxos with token selection and filters. Scatter funds splits
+ * the test wallet's HTR into distinct UTXOs for filter testing.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
@@ -14,229 +15,132 @@ import {
   setGetUtxosRequest,
   setGetUtxosResponse,
 } from '../../store/slices/getUtxosSlice';
-import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
-import { RpcGetUtxosCard } from '../rpc/RpcGetUtxosCard';
-import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
-import { createRpcHandlers } from '../../services/rpcHandlers';
-import { extractErrorMessage } from '../../utils/errorUtils';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
+import { RpcGetUtxosCard, type UtxoToken } from '../rpc/RpcGetUtxosCard';
+import { buildGetUtxosRequest, toFilterNumber, type UtxoFilters } from '../../utils/rpcCoreRequests';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { useRequireRpcSession, useRequireTestWallet } from '../../hooks/useRequirements';
+import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
+import { firstUnmetReason } from '../../utils/requirements';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network';
 import { computeScatterOutputs } from '../../utils/scatterFunds';
-import Select from '../common/Select';
 import { applyNetworkServices } from '../../services/networkServices';
 import { shieldedSweepNotice, splitAvailableUtxos } from '../../services/shieldedUtxos';
 
-interface Token {
-  uid: string;
-  name: string;
-  symbol: string;
-}
+const GET_UTXOS_ACTIONS = {
+  setRequest: setGetUtxosRequest,
+  setResponse: setGetUtxosResponse,
+  setError: setGetUtxosError,
+};
+
+const HTR: UtxoToken = { uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' };
 
 export const GetUtxosStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { getWallet } = useWalletStore();
+  const rpcSession = useRequireRpcSession();
+  const testWalletReq = useRequireTestWallet();
+  const { isDryRun, execute } = useRpcStageCall(GET_UTXOS_ACTIONS);
 
-  // Redux state
-  const walletConnect = useSelector((state: RootState) => state.walletConnect);
-  const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
-  const isConnected = useSelector(selectIsWalletConnectConnected);
   const getUtxosData = useSelector((state: RootState) => state.getUtxos);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
-
-  // Get the test wallet instance
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
-  // Local state for form inputs
-  const [tokenUid, setTokenUid] = useState<string>(getUtxosData.tokenUid);
-  const [maxUtxos, setMaxUtxos] = useState<number>(getUtxosData.maxUtxos);
-  const [amountSmallerThan, setAmountSmallerThan] = useState<string>(
-    getUtxosData.amountSmallerThan !== null ? String(getUtxosData.amountSmallerThan) : ''
-  );
-  const [amountBiggerThan, setAmountBiggerThan] = useState<string>(
-    getUtxosData.amountBiggerThan !== null ? String(getUtxosData.amountBiggerThan) : ''
-  );
-
-  // State for available tokens (with non-zero balance)
-  const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
+  const [filters, setFilters] = useState<UtxoFilters>(() => ({
+    tokenUid: getUtxosData.tokenUid,
+    maxUtxos: getUtxosData.maxUtxos,
+    amountSmallerThan: getUtxosData.amountSmallerThan !== null ? String(getUtxosData.amountSmallerThan) : '',
+    amountBiggerThan: getUtxosData.amountBiggerThan !== null ? String(getUtxosData.amountBiggerThan) : '',
+  }));
+  const [availableTokens, setAvailableTokens] = useState<UtxoToken[]>([HTR]);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  const { tokenUid } = filters;
 
-  // Load available tokens from wallet
+  // Tokens with an unlocked balance in the test wallet.
   useEffect(() => {
     const loadTokens = async () => {
       if (!testWallet?.instance || !testWallet.tokenUids) {
-        setAvailableTokens([{ uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' }]);
+        setAvailableTokens([HTR]);
         return;
       }
-
       setIsLoadingTokens(true);
-
       try {
-        const tokensWithBalance: Token[] = [];
-
-        // Always include HTR
+        const withBalance: UtxoToken[] = [];
         const htrBalance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
-        if (htrBalance[0]?.balance?.unlocked && htrBalance[0].balance.unlocked > 0n) {
-          tokensWithBalance.push({ uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' });
-        }
-
-        // Check custom tokens
+        if (htrBalance[0]?.balance?.unlocked && htrBalance[0].balance.unlocked > 0n) withBalance.push(HTR);
         for (const uid of testWallet.tokenUids) {
           if (uid === NATIVE_TOKEN_UID) continue;
-
           try {
             const balance = await testWallet.instance.getBalance(uid);
-            if (balance[0]?.balance?.unlocked && balance[0].balance.unlocked > 0n) {
-              const tokenInfo = allTokens.find((t) => t.uid === uid);
-              if (tokenInfo) {
-                tokensWithBalance.push({
-                  uid: tokenInfo.uid,
-                  name: tokenInfo.name,
-                  symbol: tokenInfo.symbol,
-                });
-              }
+            const info = allTokens.find((t) => t.uid === uid);
+            if (balance[0]?.balance?.unlocked && balance[0].balance.unlocked > 0n && info) {
+              withBalance.push({ uid: info.uid, name: info.name, symbol: info.symbol });
             }
           } catch (err) {
             console.error(`Failed to load balance for token ${uid}:`, err);
           }
         }
-
-        setAvailableTokens(tokensWithBalance);
-
-        // If current token is not in the list, select the first available token
-        if (tokensWithBalance.length > 0 && !tokensWithBalance.find((t) => t.uid === tokenUid)) {
-          setTokenUid(tokensWithBalance[0].uid);
+        setAvailableTokens(withBalance);
+        if (withBalance.length > 0 && !withBalance.find((t) => t.uid === tokenUid)) {
+          setFilters((f) => ({ ...f, tokenUid: withBalance[0].uid }));
         }
       } catch (error) {
         console.error('Failed to load tokens:', error);
-        setAvailableTokens([{ uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' }]);
+        setAvailableTokens([HTR]);
       } finally {
         setIsLoadingTokens(false);
       }
     };
-
     loadTokens();
   }, [testWallet, allTokens, tokenUid]);
 
-  // Save form state to Redux whenever it changes
+  // Persist the form across navigation.
   useEffect(() => {
     dispatch(
       setGetUtxosFormData({
-        tokenUid,
-        maxUtxos,
-        amountSmallerThan: amountSmallerThan ? parseInt(amountSmallerThan, 10) : null,
-        amountBiggerThan: amountBiggerThan ? parseInt(amountBiggerThan, 10) : null,
+        tokenUid: filters.tokenUid,
+        maxUtxos: filters.maxUtxos,
+        amountSmallerThan: toFilterNumber(filters.amountSmallerThan),
+        amountBiggerThan: toFilterNumber(filters.amountBiggerThan),
       })
     );
-  }, [tokenUid, maxUtxos, amountSmallerThan, amountBiggerThan, dispatch]);
+  }, [filters, dispatch]);
 
-  // Deep link callback and cleanup for RPC requests
-  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
-
-  // Create RPC handlers
-  const rpcHandlers = useMemo(() => {
-    if (!walletConnect.client || !walletConnect.session) {
-      return null;
-    }
-
-    return createRpcHandlers({
-      client: walletConnect.client,
-      session: walletConnect.session,
-      dryRun: isDryRun,
-      onDeepLinkAvailable,
-    });
-  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
-
-  // Wrapper for onExecute that stores results in Redux
-  const handleExecuteGetUtxos = async () => {
-    if (!rpcHandlers) {
-      throw new Error('RPC handlers not initialized');
-    }
-
-    // Clear previous data
+  const handleExecute = () => {
     dispatch(clearGetUtxosData());
-
-    const startTime = Date.now();
-
-    try {
-      const { request, response } = await rpcHandlers.getRpcGetUtxos(
-        tokenUid,
-        maxUtxos,
-        amountSmallerThan ? parseInt(amountSmallerThan, 10) : null,
-        amountBiggerThan ? parseInt(amountBiggerThan, 10) : null
-      );
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification after RPC response
-      clearDeepLinkNotification();
-
-      // Store request in Redux
-      dispatch(
-        setGetUtxosRequest({
-          method: request.method,
-          params: request.params,
-          isDryRun,
-        })
-      );
-
-      // Convert BigInt to strings for Redux serialization
-      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
-
-      // Store response in Redux
-      dispatch(
-        setGetUtxosResponse({
-          response: serializedResponse,
-          duration,
-        })
-      );
-
-      return { request, response };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification on error too
-      clearDeepLinkNotification();
-
-      // Store error in Redux
-      const errorMessage = extractErrorMessage(error);
-      dispatch(
-        setGetUtxosError({
-          error: errorMessage,
-          duration,
-        })
-      );
-
-      throw error;
-    }
+    return execute(
+      (h) =>
+        h.getRpcGetUtxos(
+          filters.tokenUid,
+          filters.maxUtxos,
+          toFilterNumber(filters.amountSmallerThan),
+          toFilterNumber(filters.amountBiggerThan)
+        ),
+      buildGetUtxosRequest(filters)
+    );
   };
 
-  // Scatter funds state
   const [isScattering, setIsScattering] = useState(false);
   const [scatterError, setScatterError] = useState<string | null>(null);
   const [scatterResult, setScatterResult] = useState<string | null>(null);
 
   const handleScatterFunds = async () => {
     if (!testWallet?.instance) return;
-
     setIsScattering(true);
     setScatterError(null);
     setScatterResult(null);
-
     try {
       const addr0 = await testWallet.instance.getAddressAtIndex(0);
-
-      // Scatter the test wallet's own transparent HTR. getBalance() also
-      // counts shielded UTXOs, which the browser cannot spend.
+      // Only transparent HTR: getBalance() also counts shielded UTXOs, which the browser cannot spend.
       const htrSplit = await splitAvailableUtxos(testWallet.instance, NATIVE_TOKEN_UID);
       const unlocked = htrSplit.transparent.amount;
       const shieldedNote = shieldedSweepNotice([htrSplit]);
-
-      // Scatter the full unlocked balance. Hathor transfers are feeless and
-      // computeScatterOutputs makes the outputs sum exactly to the input, so
-      // no fee/change reserve is needed (matches TestWalletCleanup's HTR send).
+      // Transfers are feeless and the outputs sum exactly to the input, so no reserve is needed.
       const amounts = computeScatterOutputs(unlocked);
       if (amounts.length === 0) {
         setScatterError(
@@ -245,23 +149,15 @@ export const GetUtxosStage: React.FC = () => {
         );
         return;
       }
-
-      // Build outputs — send back to the test wallet's own addr0 as separate UTXOs
-      const outputs = amounts.map((amount) => ({
-        address: addr0,
-        value: amount,
-        token: NATIVE_TOKEN_UID,
-      }));
-
+      const outputs = amounts.map((amount) => ({ address: addr0, value: amount, token: NATIVE_TOKEN_UID }));
       applyNetworkServices(testWallet.metadata.network);
       const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(outputs, {
         changeAddress: addr0,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
       });
       await sendTx.run();
-
       setScatterResult(
-        `Scattered into ${amounts.length} UTXOs (amounts: ${amounts[0]}..${amounts[amounts.length - 1]})`
+        `Scattered into ${amounts.length} UTXOs (amounts ${amounts[0]} to ${amounts[amounts.length - 1]}).`
       );
     } catch (err) {
       setScatterError(err instanceof Error ? err.message : 'Failed to scatter funds');
@@ -271,218 +167,52 @@ export const GetUtxosStage: React.FC = () => {
     }
   };
 
-  const selectedToken = availableTokens.find((t) => t.uid === tokenUid);
+  const requirements = [rpcSession, testWalletReq];
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Get UTXOs RPC</h1>
-      <p className="text-muted mb-7.5">Retrieve unspent transaction outputs (UTXOs) for a specific token</p>
-
-      {/* Scatter Funds — compact utility at the top */}
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="rpc-get-utxos"
+        description="List the wallet's unspent outputs for one token, with count and amount filters."
+        method="htr_getUtxos"
+      />
+      <PreconditionStrip requirements={requirements} />
+      <RpcGetUtxosCard
+        onExecute={handleExecute}
+        methodData={toMethodData(getUtxosData)}
+        isDryRun={isDryRun}
+        disabledReason={firstUnmetReason(requirements)}
+        filters={filters}
+        onFiltersChange={setFilters}
+        tokens={availableTokens}
+        isLoadingTokens={isLoadingTokens}
+      />
       {testWallet?.instance && (
-        <div className="card-primary mb-7.5 bg-gray-50 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-medium text-gray-700">Scatter Funds</span>
-              <span className="text-xs text-muted ml-2">
-                Split HTR into distinct UTXOs (1, 2, 3, ...) for filter testing
-              </span>
-            </div>
+        <Panel
+          title="Scatter funds"
+          description="Split the test wallet's HTR into distinct UTXOs (1, 2, 3, …) to exercise the amount filters."
+          actions={
             <button
+              type="button"
+              className="btn btn-secondary btn-sm"
               onClick={handleScatterFunds}
               disabled={isScattering}
-              className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap"
             >
-              {isScattering ? 'Scattering...' : 'Scatter'}
+              {isScattering && <span className="loading loading-spinner loading-xs" aria-hidden="true" />}
+              {isScattering ? 'Scattering…' : 'Scatter funds'}
             </button>
-          </div>
-          {scatterError && <p className="text-xs text-danger mt-2 mb-0">{scatterError}</p>}
-          {scatterResult && <p className="text-xs text-success mt-2 mb-0">{scatterResult}</p>}
-        </div>
-      )}
-
-      {!isConnected && <RpcNotConnectedBanner />}
-
-      {/* No Wallet Warning */}
-      {isConnected && !testWallet && (
-        <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-warning flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-yellow-900 m-0">No Test Wallet Selected</p>
-              <p className="text-sm text-yellow-800 mt-1 mb-0">
-                Please select a test wallet in the Wallet Initialization stage to load available tokens.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Form Inputs */}
-      {isConnected && rpcHandlers && testWallet && (
-        <>
-          {/* Token Selection */}
-          <div className="card-primary mb-7.5">
-            <label htmlFor="token-select" className="block mb-1.5 font-bold">
-              Token:
-            </label>
-            <Select
-              id="token-select"
-              value={tokenUid}
-              onChange={(e) => setTokenUid(e.target.value)}
-              disabled={isLoadingTokens || availableTokens.length === 0}
-            >
-              {isLoadingTokens ? (
-                <option>Loading tokens...</option>
-              ) : availableTokens.length === 0 ? (
-                <option>No tokens with balance found</option>
-              ) : (
-                availableTokens.map((token) => (
-                  <option key={token.uid} value={token.uid}>
-                    {token.symbol} - {token.name}
-                  </option>
-                ))
-              )}
-            </Select>
-            <p className="text-muted text-xs mt-1.5 mb-0">
-              Select the token to query UTXOs for (only tokens with non-zero balance are shown)
-            </p>
-          </div>
-
-          {/* Max UTXOs */}
-          <div className="card-primary mb-7.5">
-            <label htmlFor="max-utxos" className="block mb-1.5 font-bold">
-              Max UTXOs:
-            </label>
-            <input
-              id="max-utxos"
-              type="number"
-              min={1}
-              step={1}
-              value={maxUtxos}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val) && val > 0) {
-                  setMaxUtxos(val);
-                }
-              }}
-              className="input"
-            />
-            <p className="text-muted text-xs mt-1.5 mb-0">Maximum number of UTXOs to return</p>
-          </div>
-
-          {/* Amount Filters */}
-          <div className="card-primary mb-7.5">
-            <h3 className="text-lg font-bold mb-3">Amount Filters (Optional)</h3>
-
-            <div className="mb-4">
-              <label htmlFor="amount-smaller-than" className="block mb-1.5 font-semibold">
-                Amount Smaller Than:
-              </label>
-              <input
-                id="amount-smaller-than"
-                type="number"
-                min={0}
-                step={1}
-                value={amountSmallerThan}
-                onChange={(e) => setAmountSmallerThan(e.target.value)}
-                placeholder="Leave empty for no filter"
-                className="input"
-              />
-              <p className="text-muted text-xs mt-1.5 mb-0">Filter UTXOs with amount less than this value</p>
-            </div>
-
-            <div>
-              <label htmlFor="amount-bigger-than" className="block mb-1.5 font-semibold">
-                Amount Bigger Than:
-              </label>
-              <input
-                id="amount-bigger-than"
-                type="number"
-                min={0}
-                step={1}
-                value={amountBiggerThan}
-                onChange={(e) => setAmountBiggerThan(e.target.value)}
-                placeholder="Leave empty for no filter"
-                className="input"
-              />
-              <p className="text-muted text-xs mt-1.5 mb-0">Filter UTXOs with amount greater than this value</p>
-            </div>
-          </div>
-
-          {/* Selected Token Info */}
-          {selectedToken && (
-            <div className="card-primary mb-7.5 bg-gray-50">
-              <h3 className="text-lg font-bold mb-2">Selected Token</h3>
-              <div className="space-y-1">
-                <p className="text-sm mb-0">
-                  <span className="font-semibold">Symbol:</span> {selectedToken.symbol}
-                </p>
-                <p className="text-sm mb-0">
-                  <span className="font-semibold">Name:</span> {selectedToken.name}
-                </p>
-                <p className="text-sm mb-0">
-                  <span className="font-semibold">UID:</span>
-                  <span className="font-mono text-xs ml-1">{selectedToken.uid}</span>
-                </p>
-              </div>
-            </div>
+          }
+        >
+          {scatterError && (
+            <Callout tone="error" title="Scatter failed" role="alert">
+              {scatterError}
+            </Callout>
           )}
-
-          {/* RPC Card */}
-          <RpcGetUtxosCard
-            onExecute={handleExecuteGetUtxos}
-            disabled={false}
-            isDryRun={isDryRun}
-            network={testWallet.metadata.network}
-            initialRequest={getUtxosData.request}
-            initialResponse={getUtxosData.rawResponse}
-            initialError={getUtxosData.error}
-          />
-        </>
-      )}
-
-      {/* Persisted Data Info */}
-      {getUtxosData.timestamp && (
-        <div className="card-primary mt-7.5 bg-green-50 border border-success">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-success flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-green-900 m-0">Request duration</p>
-              <p className="text-sm text-green-800 mt-1 mb-0">
-                {getUtxosData.duration !== null && (
-                  <span className="block mt-1">Last request took {getUtxosData.duration}ms</span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
+          {scatterResult && <Callout tone="success">{scatterResult}</Callout>}
+          {!scatterError && !scatterResult && (
+            <p className="m-0 text-body text-ink-muted">Sends the transparent HTR balance back to address 0.</p>
+          )}
+        </Panel>
       )}
     </div>
   );

@@ -1,227 +1,67 @@
 /**
  * Basic Information Stage
  *
- * Tests basic information RPC calls:
- * - htr_getWalletInformation
- * - htr_getConnectedNetwork
+ * Tests htr_getWalletInformation and htr_getConnectedNetwork.
  */
 
-import React, { useMemo } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../store';
+import React from 'react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../store';
 import {
+  setWalletInformationError,
   setWalletInformationRequest,
   setWalletInformationResponse,
-  setWalletInformationError,
 } from '../../store/slices/walletInformationSlice';
 import {
+  setConnectedNetworkError,
   setConnectedNetworkRequest,
   setConnectedNetworkResponse,
-  setConnectedNetworkError,
 } from '../../store/slices/connectedNetworkSlice';
-import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcWalletInformationCard } from '../rpc/RpcWalletInformationCard';
 import { RpcConnectedNetworkCard } from '../rpc/RpcConnectedNetworkCard';
-import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
-import { createRpcHandlers } from '../../services/rpcHandlers';
-import { extractErrorMessage } from '../../utils/errorUtils';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
+import { CONNECTED_NETWORK_REQUEST, WALLET_INFORMATION_REQUEST } from '../../utils/rpcCoreRequests';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { useRequireRpcSession } from '../../hooks/useRequirements';
+import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
+import { firstUnmetReason } from '../../utils/requirements';
+
+const WALLET_INFORMATION_ACTIONS = {
+  setRequest: setWalletInformationRequest,
+  setResponse: setWalletInformationResponse,
+  setError: setWalletInformationError,
+};
+
+const CONNECTED_NETWORK_ACTIONS = {
+  setRequest: setConnectedNetworkRequest,
+  setResponse: setConnectedNetworkResponse,
+  setError: setConnectedNetworkError,
+};
 
 export const BasicInfoStage: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
-
-  // Redux state
-  const walletConnect = useSelector((state: RootState) => state.walletConnect);
-  const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
-  const isConnected = useSelector(selectIsWalletConnectConnected);
+  const rpcSession = useRequireRpcSession();
+  const walletInformation = useRpcStageCall(WALLET_INFORMATION_ACTIONS);
+  const connectedNetwork = useRpcStageCall(CONNECTED_NETWORK_ACTIONS);
   const walletInformationData = useSelector((state: RootState) => state.walletInformation);
   const connectedNetworkData = useSelector((state: RootState) => state.connectedNetwork);
-
-  // Create RPC handlers
-  const rpcHandlers = useMemo(() => {
-    if (!walletConnect.client || !walletConnect.session) {
-      return null;
-    }
-
-    return createRpcHandlers({
-      client: walletConnect.client,
-      session: walletConnect.session,
-      dryRun: isDryRun,
-    });
-  }, [walletConnect.client, walletConnect.session, isDryRun]);
-
-  // Wrapper for onExecute that stores results in Redux
-  const handleExecuteWalletInformation = async () => {
-    if (!rpcHandlers) {
-      throw new Error('RPC handlers not initialized');
-    }
-
-    const startTime = Date.now();
-
-    try {
-      const { request, response } = await rpcHandlers.getRpcWalletInformation();
-      const duration = Date.now() - startTime;
-
-      // Store request in Redux
-      dispatch(
-        setWalletInformationRequest({
-          method: request.method,
-          params: request.params,
-          isDryRun,
-        })
-      );
-
-      // Serialize BigInt values before storing in Redux
-      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
-
-      // Store response in Redux
-      dispatch(
-        setWalletInformationResponse({
-          response: serializedResponse,
-          duration,
-        })
-      );
-
-      return { request, response: serializedResponse };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-
-      // Store error in Redux
-      const errorMessage = extractErrorMessage(error);
-      dispatch(
-        setWalletInformationError({
-          error: errorMessage,
-          duration,
-        })
-      );
-
-      throw error;
-    }
-  };
-
-  // Wrapper for onExecute that stores results in Redux
-  const handleExecuteConnectedNetwork = async () => {
-    if (!rpcHandlers) {
-      throw new Error('RPC handlers not initialized');
-    }
-
-    const startTime = Date.now();
-
-    try {
-      const { request, response } = await rpcHandlers.getRpcConnectedNetwork();
-      const duration = Date.now() - startTime;
-
-      // Store request in Redux
-      dispatch(
-        setConnectedNetworkRequest({
-          method: request.method,
-          params: request.params,
-          isDryRun,
-        })
-      );
-
-      // Serialize BigInt values before storing in Redux
-      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
-
-      // Store response in Redux
-      dispatch(
-        setConnectedNetworkResponse({
-          response: serializedResponse,
-          duration,
-        })
-      );
-
-      return { request, response: serializedResponse };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-
-      // Store error in Redux
-      const errorMessage = extractErrorMessage(error);
-      dispatch(
-        setConnectedNetworkError({
-          error: errorMessage,
-          duration,
-        })
-      );
-
-      throw error;
-    }
-  };
+  const disabledReason = firstUnmetReason([rpcSession]);
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Basic Information RPC</h1>
-      <p className="text-muted mb-7.5">Test basic RPC methods to retrieve wallet information</p>
-
-      {!isConnected && <RpcNotConnectedBanner />}
-
-      {/* Wallet Information Card */}
-      {isConnected && rpcHandlers && (
-        <>
-          <h2 className="text-2xl font-bold mb-3">Get Wallet Information</h2>
-          <p className="text-sm text-muted mb-4">Retrieves the wallet network and first address (address0)</p>
-          <RpcWalletInformationCard
-            onExecute={handleExecuteWalletInformation}
-            disabled={false}
-            isDryRun={isDryRun}
-            initialRequest={walletInformationData.request}
-            initialResponse={walletInformationData.rawResponse}
-            initialError={walletInformationData.error}
-          />
-
-          {/* Separator */}
-          <div className="my-10 border-t-2 border-gray-300 relative">
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-4 py-2">
-              <span className="text-sm font-bold text-muted uppercase tracking-wider">Next RPC Method</span>
-            </div>
-          </div>
-
-          {/* Connected Network Card */}
-          <h2 className="text-2xl font-bold mb-3">Get Connected Network</h2>
-          <p className="text-sm text-muted mb-4">Retrieves the connected network information including genesis hash</p>
-          <RpcConnectedNetworkCard
-            onExecute={handleExecuteConnectedNetwork}
-            disabled={false}
-            isDryRun={isDryRun}
-            initialRequest={connectedNetworkData.request}
-            initialResponse={connectedNetworkData.rawResponse}
-            initialError={connectedNetworkData.error}
-          />
-        </>
-      )}
-
-      {/* Persisted Data Info */}
-      {(walletInformationData.timestamp || connectedNetworkData.timestamp) && (
-        <div className="card-primary mt-7.5 bg-green-50 border border-success">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-success flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-green-900 m-0">Request durations</p>
-              <div className="text-sm text-green-800 mt-1 mb-0">
-                {walletInformationData.duration !== null && (
-                  <span className="block mt-1">Wallet Information: {walletInformationData.duration}ms</span>
-                )}
-                {connectedNetworkData.duration !== null && (
-                  <span className="block mt-1">Connected Network: {connectedNetworkData.duration}ms</span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader stageId="rpc-basic-info" description="Read the wallet's network, first address and genesis hash." />
+      <PreconditionStrip requirements={[rpcSession]} />
+      <RpcWalletInformationCard
+        onExecute={() => walletInformation.execute((h) => h.getRpcWalletInformation(), WALLET_INFORMATION_REQUEST)}
+        methodData={toMethodData(walletInformationData)}
+        isDryRun={walletInformation.isDryRun}
+        disabledReason={disabledReason}
+      />
+      <RpcConnectedNetworkCard
+        onExecute={() => connectedNetwork.execute((h) => h.getRpcConnectedNetwork(), CONNECTED_NETWORK_REQUEST)}
+        methodData={toMethodData(connectedNetworkData)}
+        isDryRun={connectedNetwork.isDryRun}
+        disabledReason={disabledReason}
+      />
     </div>
   );
 };

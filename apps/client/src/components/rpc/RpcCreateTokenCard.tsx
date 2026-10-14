@@ -1,651 +1,215 @@
 /**
- * RPC Create Token Card
- *
- * Card component for testing htr_createToken RPC method
+ * RPC Create Token Card — htr_createToken with version, authorities and
+ * data outputs.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
-import CopyButton from '../common/CopyButton';
-import { ExplorerLink } from '../common/ExplorerLink';
-import { useToast } from '../../hooks/useToast';
-import DryRunCheckbox from '../common/DryRunCheckbox';
-import Select from '../common/Select';
-import { RpcRequestPreview } from './RpcRequestPreview';
+import React, { useEffect, useState } from 'react';
+import { MdAdd, MdClose } from 'react-icons/md';
 import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
-import type { NetworkKey } from '../../constants/network';
-import { LoadingOverlay } from '../common/LoadingOverlay';
-import { extractErrorMessage } from '../../utils/errorUtils';
+import { MethodCard, type MethodData } from '../common/MethodCard';
+import { Identifier } from '../common/Identifier';
+import { ExplorerLink } from '../common/ExplorerLink';
+import { AddressInput } from '../common/AddressInput';
+import { AmountInput } from '../common/AmountInput';
+import { Field } from '../ui/Field';
+import { Panel } from '../ui/Panel';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { ResponseFields } from './ResponseFields';
 import { BASE_NAME, BASE_SYMBOL, VERSION_DEFAULTS, swapVersionSuffix } from '../../utils/createTokenDefaults';
+import { buildCreateTokenRequest, unwrapResponse } from '../../utils/rpcCoreRequests';
+
+const VERSION_OPTIONS = [
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'fee', label: 'Fee' },
+  { value: 'none', label: 'Not set' },
+] as const;
+
+function initialParams(): CreateTokenParams {
+  const v = VERSION_DEFAULTS.deposit;
+  return {
+    name: `${BASE_NAME}${v.nameSuffix}`,
+    symbol: `${BASE_SYMBOL}${v.symbolSuffix}`.slice(0, 5),
+    amount: v.amount,
+    version: 'deposit',
+    change_address: '',
+    create_mint: true,
+    mint_authority_address: '',
+    allow_external_mint_authority_address: false,
+    create_melt: true,
+    melt_authority_address: '',
+    allow_external_melt_authority_address: false,
+    data: [],
+  };
+}
+
+function txHashOf(response: unknown): string | null {
+  const r = unwrapResponse<{ hash?: unknown }>(response);
+  return typeof r?.hash === 'string' ? r.hash : null;
+}
 
 export interface RpcCreateTokenCardProps {
-  onExecute: (params: CreateTokenParams) => Promise<{ request: unknown; response: unknown }>;
-  disabled?: boolean;
-  isDryRun?: boolean;
+  onExecute: (params: CreateTokenParams) => Promise<unknown>;
+  methodData: MethodData | null;
+  isDryRun: boolean;
+  disabledReason?: string | null;
+  /** Test wallet address 0, pre-filled as the change address. */
   walletAddress?: string | null;
-  fundingWalletAddress?: string | null;
-  network?: NetworkKey;
-  initialRequest?: { method: string; params: unknown } | null;
-  initialResponse?: unknown | null;
-  initialError?: string | null;
 }
 
 export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   onExecute,
-  disabled = false,
-  isDryRun = false,
+  methodData,
+  isDryRun,
+  disabledReason = null,
   walletAddress = null,
-  fundingWalletAddress = null,
-  network,
-  initialRequest = null,
-  initialResponse = null,
-  initialError = null,
 }) => {
-  const { showToast } = useToast();
+  const [params, setParams] = useState<CreateTokenParams>(initialParams);
+  const set = (patch: Partial<CreateTokenParams>) => setParams((p) => ({ ...p, ...patch }));
 
-  // Component state
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<unknown>(initialResponse);
-  const [error, setError] = useState<string | null>(initialError);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(initialRequest);
-  const [expanded, setExpanded] = useState(false);
-  const [showRawResponse, setShowRawResponse] = useState(false);
-
-  // Imported from utils for testability — see createTokenDefaults.ts
-
-  // Form state — defaults to deposit version
-  const [params, setParams] = useState<CreateTokenParams>(() => {
-    const v = VERSION_DEFAULTS.deposit;
-    return {
-      name: `${BASE_NAME}${v.nameSuffix}`,
-      symbol: `${BASE_SYMBOL}${v.symbolSuffix}`.slice(0, 5),
-      amount: v.amount,
-      version: 'deposit' as CreateTokenVersion,
-      change_address: '',
-      create_mint: true,
-      mint_authority_address: '',
-      allow_external_mint_authority_address: false,
-      create_melt: true,
-      melt_authority_address: '',
-      allow_external_melt_authority_address: false,
-      data: [],
-    };
-  });
-
-  const liveRequest = useMemo(() => {
-    const filteredParams: Record<string, unknown> = { network: 'testnet' };
-    // Include all non-empty fields from params
-    if (params.name) filteredParams.name = params.name;
-    if (params.symbol) filteredParams.symbol = params.symbol;
-    if (params.amount) filteredParams.amount = params.amount;
-    if (params.version) filteredParams.version = params.version;
-    if (params.change_address) filteredParams.change_address = params.change_address;
-    filteredParams.create_mint = params.create_mint;
-    if (params.mint_authority_address) filteredParams.mint_authority_address = params.mint_authority_address;
-    if (params.allow_external_mint_authority_address)
-      filteredParams.allow_external_mint_authority_address = params.allow_external_mint_authority_address;
-    filteredParams.create_melt = params.create_melt;
-    if (params.melt_authority_address) filteredParams.melt_authority_address = params.melt_authority_address;
-    if (params.allow_external_melt_authority_address)
-      filteredParams.allow_external_melt_authority_address = params.allow_external_melt_authority_address;
-    if (params.data.length > 0) filteredParams.data = params.data;
-    return {
-      method: 'htr_createToken',
-      params: filteredParams,
-    };
-  }, [params]);
-
-  // Pre-populate change_address with wallet address on mount
+  // Pre-fill the change address with the test wallet's address 0.
   useEffect(() => {
-    if (walletAddress && !params.change_address) {
-      setParams((prev) => ({
-        ...prev,
-        change_address: walletAddress,
-      }));
-    }
+    if (walletAddress) setParams((p) => (p.change_address ? p : { ...p, change_address: walletAddress }));
   }, [walletAddress]);
 
-  // Sync with initial values from Redux
-  useEffect(() => {
-    if (initialRequest) setRequestInfo(initialRequest);
-    if (initialResponse) {
-      setResult(initialResponse);
-      setExpanded(true);
-    }
-    if (initialError) {
-      setError(initialError);
-      setExpanded(true);
-    }
-  }, [initialRequest, initialResponse, initialError]);
-
-  // Helper to populate address field from test wallet
-  const populateAddress = (field: 'change_address' | 'mint_authority_address' | 'melt_authority_address') => {
-    if (walletAddress) {
-      setParams({ ...params, [field]: walletAddress });
-    }
+  const setVersion = (version: CreateTokenVersion) => {
+    setParams((p) => ({
+      ...p,
+      version,
+      ...swapVersionSuffix(p.name, p.version, version, p.symbol, p.amount),
+    }));
   };
 
-  // Helper to populate address field from funding wallet
-  const populateExternalAddress = (field: 'change_address' | 'mint_authority_address' | 'melt_authority_address') => {
-    if (fundingWalletAddress) {
-      setParams({ ...params, [field]: fundingWalletAddress });
-    }
-  };
+  const setData = (data: string[]) => set({ data });
 
-  // Handler for simple field changes
-  const handleFieldChange = (field: keyof CreateTokenParams, value: string | boolean) => {
-    if (field === 'version') {
-      const newVersion = value as CreateTokenVersion;
-      const { name, symbol, amount } = swapVersionSuffix(
-        params.name,
-        params.version,
-        newVersion,
-        params.symbol,
-        params.amount
-      );
-      setParams({ ...params, version: newVersion, name, symbol, amount });
-      return;
-    }
-    setParams({ ...params, [field]: value });
-  };
-
-  // Handler for data array
-  const handleAddData = () => {
-    setParams({
-      ...params,
-      data: [...params.data, ''],
-    });
-  };
-
-  const handleRemoveData = (index: number) => {
-    const newData = params.data.filter((_, i) => i !== index);
-    setParams({ ...params, data: newData });
-  };
-
-  const handleDataChange = (index: number, value: string) => {
-    const newData = [...params.data];
-    newData[index] = value;
-    setParams({ ...params, data: newData });
-  };
-
-  const handleExecute = async () => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setRequestInfo(null);
-
-    try {
-      const { request, response } = await onExecute(params);
-
-      // Store request and response separately
-      setRequestInfo(request as { method: string; params: unknown });
-      setResult(response);
-      setExpanded(true);
-
-      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Token created successfully', 'success');
-    } catch (err: unknown) {
-      const errorMessage = extractErrorMessage(err);
-      setError(errorMessage);
-      setExpanded(true);
-
-      // Capture request params from error if available
-      if (err && typeof err === 'object' && 'requestParams' in err) {
-        setRequestInfo(err.requestParams as { method: string; params: unknown });
-      }
-
-      showToast(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const hasResult = result !== null || error !== null;
-
-  // Safe stringify helper for BigInt
-  const safeStringify = (obj: unknown, spaces = 0): string => {
-    return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), spaces);
-  };
-
-  // Check if response is createToken response format
-  const isCreateTokenResponse = (
-    data: unknown
-  ): data is { type?: number; response?: { hash?: string; inputs?: unknown[]; outputs?: unknown[] } } => {
-    // Check if it's the full response with type field and response object
-    if (data && typeof data === 'object' && 'type' in data && 'response' in data) {
-      const response = (data as { response?: unknown }).response;
-      // Create token transactions have type 6 and response with hash, inputs, outputs
-      return !!(response && typeof response === 'object' && 'hash' in response);
-    }
-    return false;
-  };
-
-  // Render formatted response
-  const renderFormattedResponse = (parsedResult: unknown) => {
-    // Extract the actual response data - the response object itself contains the transaction data
-    const responseData = (parsedResult as { response?: unknown }).response as {
-      hash?: string;
-      name?: string;
-      symbol?: string;
-      inputs?: unknown[];
-      outputs?: unknown[];
-    };
-
-    if (!responseData || !responseData.hash) {
-      return renderRawJson(result);
-    }
-
-    // For create token transactions, the token UID is the transaction hash itself
-    const tokenUid = responseData.hash;
-
+  const authority = (kind: 'mint' | 'melt') => {
+    const create = kind === 'mint' ? 'create_mint' : 'create_melt';
+    const address = kind === 'mint' ? 'mint_authority_address' : 'melt_authority_address';
+    const external =
+      kind === 'mint' ? 'allow_external_mint_authority_address' : 'allow_external_melt_authority_address';
+    const Kind = kind === 'mint' ? 'Mint' : 'Melt';
     return (
-      <div className="space-y-3">
-        {/* Transaction Hash */}
-        <div className="bg-white border border-green-200 rounded overflow-hidden">
-          <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-            <span className="text-sm font-semibold text-green-800">Transaction Hash</span>
-          </div>
-          <div className="px-3 py-2">
-            <div className="flex items-start gap-2 flex-wrap">
-              <span className="text-sm font-mono text-gray-700 break-all flex-1">{responseData.hash}</span>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <CopyButton text={responseData.hash} label="Copy Tx Id" />
-                {network && <ExplorerLink hash={responseData.hash} network={network} />}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Token UID - For create token transactions, this is the same as the transaction hash */}
-        <div className="bg-white border border-green-200 rounded overflow-hidden">
-          <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-            <span className="text-sm font-semibold text-green-800">Token UID</span>
-          </div>
-          <div className="px-3 py-2">
-            <div className="flex items-start gap-2 flex-wrap">
-              <span className="text-sm font-mono text-gray-700 break-all flex-1">{tokenUid}</span>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <CopyButton text={tokenUid} label="Copy Token UID" />
-                {network && <ExplorerLink hash={tokenUid} specificPage="token_detail" network={network} />}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Token Info */}
-        {(responseData.name || responseData.symbol) && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Token Details</span>
-            </div>
-            <div className="px-3 py-2 space-y-1">
-              {responseData.name && (
-                <div className="text-sm">
-                  <span className="font-semibold">Name:</span> {responseData.name}
-                </div>
-              )}
-              {responseData.symbol && (
-                <div className="text-sm">
-                  <span className="font-semibold">Symbol:</span> {responseData.symbol}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Full TX JSON is accessible via the parent's "Show Raw" toggle */}
-      </div>
-    );
-  };
-
-  // Render raw JSON
-  const renderRawJson = (data: unknown) => {
-    return (
-      <div className="bg-white border border-green-200 rounded p-3 overflow-auto max-h-64">
-        <pre className="text-sm font-mono text-gray-700 text-left">{safeStringify(data, 2) as string}</pre>
-      </div>
+      <Panel variant="inset" title={`${Kind} authority`}>
+        <label className="flex cursor-pointer items-center gap-2 text-body">
+          <input
+            type="checkbox"
+            className="checkbox checkbox-sm"
+            checked={params[create]}
+            onChange={(e) => set({ [create]: e.target.checked })}
+          />
+          Create a {kind} authority
+        </label>
+        <AddressInput
+          label={`${Kind} authority address (optional)`}
+          value={params[address]}
+          onChange={(v) => set({ [address]: v })}
+          sources={['test', 'fund']}
+        />
+        <label className="flex cursor-pointer items-center gap-2 text-body">
+          <input
+            type="checkbox"
+            className="checkbox checkbox-sm"
+            checked={params[external]}
+            onChange={(e) => set({ [external]: e.target.checked })}
+          />
+          Allow an external {kind} authority address
+        </label>
+      </Panel>
     );
   };
 
   return (
-    <>
-      <div className="card-primary mb-7.5 relative">
-        {loading && <LoadingOverlay />}
-        <div className="flex flex-col space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-semibold m-0">Create Token</h3>
-                {isDryRun && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300">
-                    DRY RUN
+    <MethodCard
+      title="Create token"
+      liveRequest={buildCreateTokenRequest(params)}
+      methodData={methodData}
+      isDryRun={isDryRun}
+      onExecute={() => onExecute(params)}
+      disabledReason={disabledReason}
+      getTxHash={txHashOf}
+      successToast="Token created"
+      renderResponse={(response) => {
+        const r = unwrapResponse<{ hash?: string; name?: string; symbol?: string }>(response);
+        if (!r?.hash) return undefined;
+        return (
+          <ResponseFields
+            fields={[
+              {
+                label: 'Token UID',
+                value: (
+                  <span className="inline-flex flex-wrap items-center gap-2">
+                    <Identifier value={r.hash} kind="token" />
+                    <ExplorerLink hash={r.hash} specificPage="token_detail" />
                   </span>
-                )}
-              </div>
-              <p className="text-sm text-muted m-0">Create a new custom token with mint/melt authorities</p>
-            </div>
-          </div>
-
-          {/* Form Fields */}
-          <div className="space-y-4 pt-2">
-            {/* Basic Token Info */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">Token Name</label>
-              <input
-                value={params.name}
-                onChange={(e) => handleFieldChange('name', e.target.value)}
-                placeholder="Token Name (e.g., Test Token)"
-                className="input"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">Token Symbol</label>
-              <input
-                value={params.symbol}
-                onChange={(e) => handleFieldChange('symbol', e.target.value)}
-                placeholder="Symbol (e.g., TST)"
-                className="input"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">Amount</label>
-              <input
-                value={params.amount}
-                onChange={(e) => handleFieldChange('amount', e.target.value)}
-                placeholder="Amount (e.g., 100)"
-                className="input"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">Version</label>
-              <Select value={params.version} onChange={(e) => handleFieldChange('version', e.target.value)}>
-                <option value="">(none)</option>
-                <option value="deposit">Deposit</option>
-                <option value="fee">Fee</option>
-              </Select>
-            </div>
-
-            {/* Change Address */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium mb-1">Change Address (optional)</label>
-              <div>
-                <input
-                  value={params.change_address}
-                  onChange={(e) => handleFieldChange('change_address', e.target.value)}
-                  placeholder="Change address"
-                  className="input w-full"
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => populateAddress('change_address')}
-                    disabled={!walletAddress}
-                    className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                    title="Populate with address 0 from test wallet"
-                  >
-                    Use Addr0
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => populateExternalAddress('change_address')}
-                    disabled={!fundingWalletAddress}
-                    className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                    title="Populate with address 0 from funding wallet"
-                  >
-                    Use external addr
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Mint Settings */}
-            <div className="space-y-2 bg-gray-50 rounded p-3 border border-gray-200">
-              <label className="block text-sm font-medium">Mint Settings</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={params.create_mint}
-                  onChange={(e) => handleFieldChange('create_mint', e.target.checked)}
-                  className="checkbox"
-                />
-                <span className="text-sm">Create Mint Authority</span>
-              </div>
-              <div>
-                <input
-                  value={params.mint_authority_address}
-                  onChange={(e) => handleFieldChange('mint_authority_address', e.target.value)}
-                  placeholder="Mint Authority Address (optional)"
-                  className="input w-full"
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => populateAddress('mint_authority_address')}
-                    disabled={!walletAddress}
-                    className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                    title="Populate with address 0 from test wallet"
-                  >
-                    Use Addr0
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => populateExternalAddress('mint_authority_address')}
-                    disabled={!fundingWalletAddress}
-                    className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                    title="Populate with address 0 from funding wallet"
-                  >
-                    Use external addr
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={params.allow_external_mint_authority_address}
-                  onChange={(e) => handleFieldChange('allow_external_mint_authority_address', e.target.checked)}
-                  className="checkbox"
-                />
-                <span className="text-sm">Allow External Mint Authority</span>
-              </div>
-            </div>
-
-            {/* Melt Settings */}
-            <div className="space-y-2 bg-gray-50 rounded p-3 border border-gray-200">
-              <label className="block text-sm font-medium">Melt Settings</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={params.create_melt}
-                  onChange={(e) => handleFieldChange('create_melt', e.target.checked)}
-                  className="checkbox"
-                />
-                <span className="text-sm">Create Melt Authority</span>
-              </div>
-              <div>
-                <input
-                  value={params.melt_authority_address}
-                  onChange={(e) => handleFieldChange('melt_authority_address', e.target.value)}
-                  placeholder="Melt Authority Address (optional)"
-                  className="input w-full"
-                />
-                <div className="flex gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => populateAddress('melt_authority_address')}
-                    disabled={!walletAddress}
-                    className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                    title="Populate with address 0 from test wallet"
-                  >
-                    Use Addr0
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => populateExternalAddress('melt_authority_address')}
-                    disabled={!fundingWalletAddress}
-                    className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                    title="Populate with address 0 from funding wallet"
-                  >
-                    Use external addr
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={params.allow_external_melt_authority_address}
-                  onChange={(e) => handleFieldChange('allow_external_melt_authority_address', e.target.checked)}
-                  className="checkbox"
-                />
-                <span className="text-sm">Allow External Melt Authority</span>
-              </div>
-            </div>
-
-            {/* Data Array */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium">Data (optional)</label>
-                <button onClick={handleAddData} className="btn-secondary py-1.5 px-3 text-sm">
-                  + Add Data
-                </button>
-              </div>
-              {params.data.length > 0 && (
-                <div className="space-y-2">
-                  {params.data.map((dataItem, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <input
-                        value={dataItem}
-                        onChange={(e) => handleDataChange(index, e.target.value)}
-                        placeholder="Data value"
-                        className="input flex-1"
-                      />
-                      <button onClick={() => handleRemoveData(index)} className="btn-secondary py-2 px-3 text-sm">
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Execute Button */}
-          <div className="flex items-center gap-4 justify-end">
-            <DryRunCheckbox />
-            <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
-              {loading ? 'Creating...' : 'Create Token'}
-            </button>
-          </div>
-        </div>
+                ),
+              },
+              { label: 'Name', value: r.name },
+              { label: 'Symbol', value: r.symbol },
+            ]}
+          />
+        );
+      }}
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Field label="Name" required>
+          <input className="input w-full" value={params.name} onChange={(e) => set({ name: e.target.value })} />
+        </Field>
+        <Field label="Symbol" required>
+          <input className="input w-full" value={params.symbol} onChange={(e) => set({ symbol: e.target.value })} />
+        </Field>
       </div>
-
-      {/* Request Section */}
-      <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
-
-      {/* Response Section */}
-      {hasResult && (
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className={`text-sm font-medium flex items-center ${
-                error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-              }`}
-            >
-              {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
-            </button>
-            <div className="flex items-center gap-2">
-              {result && isCreateTokenResponse(typeof result === 'string' ? JSON.parse(result) : result) ? (
-                <button
-                  onClick={() => setShowRawResponse(!showRawResponse)}
-                  className="btn-secondary py-1.5 px-3 text-sm"
-                >
-                  {showRawResponse ? 'Show Formatted' : 'Show Raw'}
-                </button>
-              ) : null}
-              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
-            </div>
-          </div>
-
-          {expanded && (
-            <div className="relative">
-              {isDryRun && result === null ? (
-                <div className="bg-purple-50 border border-purple-300 rounded p-4">
-                  <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
-                    <span className="text-sm font-medium">Dry Run Mode</span>
-                  </div>
-                  <p className="text-sm text-purple-600">
-                    The request was generated but not sent to the RPC. Check the Request section above to see the
-                    parameters that would be sent.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {error ? (
-                    <div className="flex items-start gap-2 p-4 bg-red-50 border border-danger rounded">
-                      <svg
-                        className="w-5 h-5 text-danger flex-shrink-0 mt-0.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-red-900 mb-1">Error occurred</p>
-                        <p className="text-sm text-red-700">{error}</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-green-50 border border-green-300 rounded p-4">
-                      <div className="flex items-center gap-2 text-green-700 mb-3">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <span className="font-medium">Success</span>
-                      </div>
-                      {(() => {
-                        try {
-                          const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
-
-                          // Show raw or formatted based on toggle
-                          if (showRawResponse) {
-                            return renderRawJson(result);
-                          }
-
-                          // Show formatted if it's the expected response type
-                          if (isCreateTokenResponse(parsedResult)) {
-                            return renderFormattedResponse(parsedResult);
-                          }
-
-                          // Otherwise show raw
-                          return renderRawJson(result);
-                        } catch {
-                          return renderRawJson(result);
-                        }
-                      })()}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <AmountInput
+          label="Amount"
+          value={params.amount}
+          onChange={(amount) => set({ amount })}
+          token={{ uid: '', symbol: params.symbol || 'tokens' }}
+        />
+        <Field label="Version" hint="Deposit locks HTR; fee tokens pay a fee per transfer." wireControl={false}>
+          <SegmentedControl
+            aria-label="Token version"
+            options={VERSION_OPTIONS}
+            value={params.version || 'none'}
+            onChange={(v) => setVersion(v === 'none' ? '' : v)}
+          />
+        </Field>
+      </div>
+      <AddressInput
+        label="Change address (optional)"
+        value={params.change_address}
+        onChange={(change_address) => set({ change_address })}
+        sources={['test', 'fund']}
+      />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {authority('mint')}
+        {authority('melt')}
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-body font-medium">Data outputs (optional)</span>
+          <button type="button" className="btn btn-ghost btn-xs ml-auto" onClick={() => setData([...params.data, ''])}>
+            <MdAdd aria-hidden="true" />
+            Add data
+          </button>
         </div>
-      )}
-    </>
+        {params.data.map((item, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <input
+              className="input w-full font-mono text-data"
+              aria-label={`Data output ${index + 1}`}
+              value={item}
+              onChange={(e) => setData(params.data.map((d, i) => (i === index ? e.target.value : d)))}
+            />
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm btn-square"
+              aria-label={`Remove data output ${index + 1}`}
+              onClick={() => setData(params.data.filter((_, i) => i !== index))}
+            >
+              <MdClose aria-hidden="true" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </MethodCard>
   );
 };
