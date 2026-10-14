@@ -3,6 +3,7 @@ import {
   buildGetAddressRequest,
   buildGetBalanceRequest,
   buildGetUtxosRequest,
+  buildCreateTokenRequest,
   buildSignOracleDataRequest,
   oracleSignatureOf,
   toFilterNumber,
@@ -79,6 +80,59 @@ describe('buildSignOracleDataRequest', () => {
     expect(buildSignOracleDataRequest('nc', 'WAddr', 'Result_1')).toEqual({
       method: 'htr_signOracleData',
       params: { network: 'testnet', nc_id: 'nc', data: 'Result_1', oracle: 'WAddr' },
+    });
+  });
+});
+
+describe('buildCreateTokenRequest', () => {
+  const base = {
+    name: 'Test Token',
+    symbol: 'TST',
+    amount: '100',
+    version: '' as const,
+    change_address: '',
+    create_mint: true,
+    mint_authority_address: '',
+    allow_external_mint_authority_address: false,
+    create_melt: false,
+    melt_authority_address: '',
+    allow_external_melt_authority_address: false,
+    data: [],
+  };
+
+  test('sends only the required fields by default', () => {
+    expect(buildCreateTokenRequest(base).params).toEqual({
+      network: 'testnet',
+      name: 'Test Token',
+      symbol: 'TST',
+      amount: '100',
+      create_mint: true,
+      create_melt: false,
+    });
+  });
+
+  test('adds optional fields when set and drops blank data', () => {
+    const params = buildCreateTokenRequest({
+      ...base,
+      version: 'fee',
+      change_address: 'WChange',
+      mint_authority_address: ' ',
+      melt_authority_address: 'WMelt',
+      allow_external_melt_authority_address: true,
+      data: ['a', ' ', 'b'],
+    }).params;
+    expect(params).toEqual({
+      network: 'testnet',
+      name: 'Test Token',
+      symbol: 'TST',
+      amount: '100',
+      create_mint: true,
+      create_melt: false,
+      version: 'fee',
+      change_address: 'WChange',
+      melt_authority_address: 'WMelt',
+      allow_external_melt_authority_address: true,
+      data: ['a', 'b'],
     });
   });
 });

@@ -5,6 +5,7 @@
  */
 
 import type { AddressRequestType } from '../store/slices/getAddressSlice';
+import type { CreateTokenParams } from '../services/rpcHandlers';
 
 const NETWORK = 'testnet';
 
@@ -74,4 +75,25 @@ export function oracleSignatureOf(response: unknown): string | null {
     return (signed as { signature: string }).signature;
   }
   return null;
+}
+
+/** Mirrors rpcHandlers.getRpcCreateToken: optional fields only when set. */
+export function buildCreateTokenRequest(p: CreateTokenParams) {
+  const params: Record<string, unknown> = {
+    network: NETWORK,
+    name: p.name,
+    symbol: p.symbol,
+    amount: p.amount,
+    create_mint: p.create_mint,
+    create_melt: p.create_melt,
+  };
+  if (p.version) params.version = p.version;
+  if (p.change_address.trim()) params.change_address = p.change_address;
+  if (p.mint_authority_address.trim()) params.mint_authority_address = p.mint_authority_address;
+  if (p.allow_external_mint_authority_address) params.allow_external_mint_authority_address = true;
+  if (p.melt_authority_address.trim()) params.melt_authority_address = p.melt_authority_address;
+  if (p.allow_external_melt_authority_address) params.allow_external_melt_authority_address = true;
+  const data = p.data.filter((d) => d.trim() !== '');
+  if (data.length > 0) params.data = data;
+  return { method: 'htr_createToken', params };
 }
