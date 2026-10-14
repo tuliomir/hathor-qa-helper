@@ -8,18 +8,23 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { useRequireSnap } from '../../hooks/useRequirements';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
 import { AddressInput } from '../common/AddressInput';
+import { Field } from '../ui/Field';
+import { Callout } from '../ui/Callout';
+import { firstUnmetReason } from '../../utils/requirements';
 import { selectSnapAddress, setSnapFeeNc } from '../../store/slices/snapSlice';
 import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../utils/snapResponseHelpers';
 import { NETWORK_CONFIG } from '../../constants/network';
 import { blueprintIdFor, snapNetworkKey } from '../../utils/blueprints';
-import BlueprintUnavailable from '../common/BlueprintUnavailable';
 import type { AppDispatch, RootState } from '../../store';
 
 export const SnapFeeInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapFeeInitialize');
+  const { isDryRun, methodData, execute } = useSnapMethod('snapFeeInitialize');
+  const snapRequirement = useRequireSnap();
 
   const snapAddress = useSelector(selectSnapAddress);
 
@@ -60,51 +65,54 @@ export const SnapFeeInitializeStage: React.FC = () => {
     return result;
   };
 
-  return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Initialize Fee (Snap)</h1>
-      <p className="text-muted mb-7.5">Initialize a Fee nano contract via MetaMask Snap</p>
+  const networkLabel = networkKey ? NETWORK_CONFIG[networkKey].label : (snapNetwork ?? 'this network');
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
+  return (
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-fee-initialize"
+        description="Create a Fee nano contract from the snap wallet with an HTR deposit."
+        method="htr_sendNanoContractTx"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
       {defaultBlueprintId === null && (
-        <BlueprintUnavailable
-          kind="Fee"
-          networkLabel={networkKey ? NETWORK_CONFIG[networkKey].label : (snapNetwork ?? 'this network')}
-        />
+        <Callout tone="warning" title={`Fee blueprint not available on ${networkLabel}`} role="alert">
+          The QA blueprints are deployed on Testnet only. Switch the snap to Testnet to use this stage.
+        </Callout>
       )}
 
-      {isSnapConnected && defaultBlueprintId !== null && (
+      {defaultBlueprintId !== null && (
         <SnapMethodCard
-          title="Initialize Fee"
-          description="Create a new Fee nano contract instance with an HTR deposit"
+          title="Initialize fee"
+          description="The new contract's ID is kept for the other Fee stages."
           liveRequest={liveRequest}
           methodData={methodData}
           isDryRun={isDryRun}
           onExecute={handleExecute}
+          disabledReason={firstUnmetReason([snapRequirement])}
         >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Blueprint ID</label>
+          <Field label="Blueprint ID">
             <input
               type="text"
               value={blueprintId}
               onChange={(e) => setBlueprintId(e.target.value)}
               placeholder="Fee blueprint ID"
-              className="input"
+              className="input w-full font-mono text-data"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">HTR Amount</label>
+          </Field>
+          <Field label="HTR amount" className="sm:max-w-60">
             <input
               type="text"
+              inputMode="numeric"
               value={htrAmount}
               onChange={(e) => setHtrAmount(e.target.value)}
               placeholder="100"
-              className="input"
+              className="input w-full text-right font-mono text-data tabular-nums"
             />
-          </div>
+          </Field>
           <AddressInput
-            label="Change Address"
+            label="Change address"
             value={changeAddress}
             onChange={setChangeAddress}
             placeholder="Change address"

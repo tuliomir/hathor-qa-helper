@@ -8,20 +8,25 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { useRequireSnap } from '../../hooks/useRequirements';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
 import { AddressInput } from '../common/AddressInput';
+import { Field } from '../ui/Field';
+import { Callout } from '../ui/Callout';
+import { firstUnmetReason } from '../../utils/requirements';
 import { selectSnapAddress, setSnapBetNc } from '../../store/slices/snapSlice';
 import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../utils/snapResponseHelpers';
 import { NETWORK_CONFIG } from '../../constants/network';
 import { blueprintIdFor, snapNetworkKey } from '../../utils/blueprints';
-import BlueprintUnavailable from '../common/BlueprintUnavailable';
 import { getOracleBuffer } from '../../utils/betHelpers';
 import CopyButton from '../common/CopyButton';
 import type { AppDispatch, RootState } from '../../store';
 
 export const SnapBetInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapBetInitialize');
+  const { isDryRun, methodData, execute } = useSnapMethod('snapBetInitialize');
+  const snapRequirement = useRequireSnap();
 
   const snapAddress = useSelector(selectSnapAddress);
 
@@ -41,7 +46,6 @@ export const SnapBetInitializeStage: React.FC = () => {
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   });
-  const [intermediatesExpanded, setIntermediatesExpanded] = useState(true);
 
   // Intermediate calculations — oracle buffer + timestamp
   const intermediates = useMemo(() => {
@@ -97,136 +101,117 @@ export const SnapBetInitializeStage: React.FC = () => {
     return result;
   };
 
-  return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Initialize Bet (Snap)</h1>
-      <p className="text-muted mb-7.5">Initialize a Bet nano contract via MetaMask Snap</p>
+  const networkLabel = networkKey ? NETWORK_CONFIG[networkKey].label : (snapNetwork ?? 'this network');
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
+  return (
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-bet-initialize"
+        description="Create a Bet nano contract from the snap wallet."
+        method="htr_sendNanoContractTx"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
       {defaultBlueprintId === null && (
-        <BlueprintUnavailable
-          kind="Bet"
-          networkLabel={networkKey ? NETWORK_CONFIG[networkKey].label : (snapNetwork ?? 'this network')}
-        />
+        <Callout tone="warning" title={`Bet blueprint not available on ${networkLabel}`} role="alert">
+          The QA blueprints are deployed on Testnet only. Switch the snap to Testnet to use this stage.
+        </Callout>
       )}
 
-      {isSnapConnected && defaultBlueprintId !== null && (
-        <>
-          <SnapMethodCard
-            title="Initialize Bet"
-            description="Create a new Bet nano contract instance"
-            liveRequest={liveRequest}
-            methodData={methodData}
-            isDryRun={isDryRun}
-            onExecute={handleExecute}
-          >
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Blueprint ID</label>
-              <input
-                type="text"
-                value={blueprintId}
-                onChange={(e) => setBlueprintId(e.target.value)}
-                placeholder="Bet blueprint ID"
-                className="input"
-              />
-            </div>
-            <div>
-              <AddressInput
-                label="Oracle Address"
-                value={oracleAddress}
-                onChange={setOracleAddress}
-                placeholder="Oracle address (base58)"
-                suggestedValue={snapAddress ?? undefined}
-                sources={['snap']}
-              />
-              {intermediates.oracleBufferError && (
-                <p className="text-xs text-danger mt-1">{intermediates.oracleBufferError}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Token UID</label>
+      {defaultBlueprintId !== null && (
+        <SnapMethodCard
+          title="Initialize bet"
+          description="The new contract's ID is kept for the other Bet stages."
+          liveRequest={liveRequest}
+          methodData={methodData}
+          isDryRun={isDryRun}
+          onExecute={handleExecute}
+          disabledReason={firstUnmetReason([snapRequirement])}
+        >
+          <Field label="Blueprint ID">
+            <input
+              type="text"
+              value={blueprintId}
+              onChange={(e) => setBlueprintId(e.target.value)}
+              placeholder="Bet blueprint ID"
+              className="input w-full font-mono text-data"
+            />
+          </Field>
+          <AddressInput
+            label="Oracle address"
+            value={oracleAddress}
+            onChange={setOracleAddress}
+            placeholder="Oracle address (base58)"
+            suggestedValue={snapAddress ?? undefined}
+            sources={['snap']}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Token UID">
               <input
                 type="text"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="00"
-                className="input"
+                className="input w-full font-mono text-data"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Deadline</label>
+            </Field>
+            <Field label="Deadline">
               <input
                 type="datetime-local"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="input"
+                className="input w-full"
               />
-            </div>
-          </SnapMethodCard>
-
-          {/* Intermediate Calculations */}
-          <div className="card-primary mb-7.5">
-            <div className="flex items-center justify-between mb-3">
-              <button
-                onClick={() => setIntermediatesExpanded(!intermediatesExpanded)}
-                className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
-              >
-                <span>{intermediatesExpanded ? '▼' : '▶'}</span>
-                Intermediate Calculations
-              </button>
-            </div>
-
-            {intermediatesExpanded && (
-              <div className="bg-yellow-50 border border-yellow-300 rounded p-4">
-                <p className="text-sm text-yellow-800 mb-3">
-                  These values are calculated automatically from your inputs and will be used in the request.
-                </p>
-                <div className="space-y-3">
-                  {/* Oracle Script */}
-                  <div className="bg-white border border-yellow-200 rounded overflow-hidden">
-                    <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-yellow-800">Oracle Script (hex from address)</span>
-                        {intermediates.oracleBuffer && <CopyButton text={intermediates.oracleBuffer} label="Copy" />}
-                      </div>
-                    </div>
-                    <div className="px-3 py-2">
-                      {intermediates.oracleBufferError ? (
-                        <span className="text-sm text-red-600">{intermediates.oracleBufferError}</span>
-                      ) : intermediates.oracleBuffer ? (
-                        <span className="text-sm font-mono text-yellow-900 break-all">
-                          {intermediates.oracleBuffer}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted italic">Enter oracle address to calculate</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Timestamp */}
-                  <div className="bg-white border border-yellow-200 rounded overflow-hidden">
-                    <div className="bg-yellow-100 px-3 py-2 border-b border-yellow-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-yellow-800">Unix Timestamp (from deadline)</span>
-                        {intermediates.timestamp !== null && (
-                          <CopyButton text={intermediates.timestamp.toString()} label="Copy" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="px-3 py-2">
-                      {intermediates.timestamp !== null ? (
-                        <span className="text-sm font-mono text-yellow-900">{intermediates.timestamp}</span>
-                      ) : (
-                        <span className="text-sm text-muted italic">Enter deadline to calculate</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            </Field>
           </div>
-        </>
+
+          <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-bet-derived">
+            <div>
+              <h3 id="snap-bet-derived" className="m-0 text-body font-semibold">
+                Calculated values
+              </h3>
+              <p className="m-0 text-caption text-ink-muted">
+                Derived from the inputs above and sent in the request args.
+              </p>
+            </div>
+            <dl className="m-0 flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <dt className="flex items-center gap-1 text-caption text-ink-muted">
+                  Oracle script (hex from address)
+                  {intermediates.oracleBuffer && (
+                    <CopyButton text={intermediates.oracleBuffer} label="Copy oracle script" />
+                  )}
+                </dt>
+                <dd className="m-0">
+                  {intermediates.oracleBufferError ? (
+                    <span className="text-body text-error">{intermediates.oracleBufferError}</span>
+                  ) : intermediates.oracleBuffer ? (
+                    <code className="block rounded-field bg-base-200 px-2 py-1.5 font-mono text-data [overflow-wrap:anywhere]">
+                      {intermediates.oracleBuffer}
+                    </code>
+                  ) : (
+                    <span className="text-body text-ink-muted">Enter an oracle address to calculate it.</span>
+                  )}
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="flex items-center gap-1 text-caption text-ink-muted">
+                  Unix timestamp (from deadline)
+                  {intermediates.timestamp !== null && (
+                    <CopyButton text={intermediates.timestamp.toString()} label="Copy timestamp" />
+                  )}
+                </dt>
+                <dd className="m-0">
+                  {intermediates.timestamp !== null ? (
+                    <code className="font-mono text-data tabular-nums">{intermediates.timestamp}</code>
+                  ) : (
+                    <span className="text-body text-ink-muted">Enter a deadline to calculate it.</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
+        </SnapMethodCard>
       )}
     </div>
   );

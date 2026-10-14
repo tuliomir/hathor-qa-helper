@@ -8,14 +8,19 @@ import React, { useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { useRequireSnap } from '../../hooks/useRequirements';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Field } from '../ui/Field';
+import { firstUnmetReason } from '../../utils/requirements';
 import { AddressInput } from '../common/AddressInput';
 import { selectSnapAddress, selectSnapBetNc, setSnapBetNc } from '../../store/slices/snapSlice';
 import type { AppDispatch } from '../../store';
 
 export const SnapBetDepositStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('snapBetDeposit');
+  const { isDryRun, methodData, execute } = useSnapMethod('snapBetDeposit');
+  const snapRequirement = useRequireSnap();
 
   const snapAddress = useSelector(selectSnapAddress);
   const betNc = useSelector(selectSnapBetNc);
@@ -46,71 +51,71 @@ export const SnapBetDepositStage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Place Bet (Snap)</h1>
-      <p className="text-muted mb-7.5">Place a bet on a Bet nano contract via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-bet-deposit"
+        description="Deposit tokens and place a bet on an existing Bet nano contract."
+        method="htr_sendNanoContractTx"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Place Bet"
-          description="Deposit tokens and place a bet on an existing Bet contract"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">NC ID</label>
+      <SnapMethodCard
+        title="Place bet"
+        description="The NC ID and token come from Initialize bet when it ran in this session."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <Field label="NC ID">
+          <input
+            type="text"
+            value={ncId}
+            onChange={(e) => setNcId(e.target.value)}
+            placeholder="Nano contract ID"
+            className="input w-full font-mono text-data"
+          />
+        </Field>
+        <Field label="Bet choice">
+          <input
+            type="text"
+            value={betChoice}
+            onChange={(e) => setBetChoice(e.target.value)}
+            placeholder="Result_1"
+            className="input w-full"
+          />
+        </Field>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+          <Field label="Amount">
             <input
               type="text"
-              value={ncId}
-              onChange={(e) => setNcId(e.target.value)}
-              placeholder="Nano contract ID"
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Bet Choice</label>
-            <input
-              type="text"
-              value={betChoice}
-              onChange={(e) => setBetChoice(e.target.value)}
-              placeholder="e.g. Result_1"
-              className="input"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Amount</label>
-            <input
-              type="text"
+              inputMode="numeric"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="10"
-              className="input"
+              className="input w-full text-right font-mono text-data tabular-nums"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Token UID</label>
+          </Field>
+          <Field label="Token UID">
             <input
               type="text"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               placeholder="00"
-              className="input"
+              className="input w-full font-mono text-data"
             />
-          </div>
-          <AddressInput
-            label="Address"
-            value={address}
-            onChange={setAddress}
-            placeholder="Your address"
-            suggestedValue={snapAddress ?? undefined}
-            sources={['snap']}
-          />
-        </SnapMethodCard>
-      )}
+          </Field>
+        </div>
+        <AddressInput
+          label="Address"
+          value={address}
+          onChange={setAddress}
+          placeholder="Your address"
+          suggestedValue={snapAddress ?? undefined}
+          sources={['snap']}
+        />
+      </SnapMethodCard>
     </div>
   );
 };
