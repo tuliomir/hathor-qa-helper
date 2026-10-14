@@ -19,7 +19,19 @@ import { formatBalance } from '../../utils/balanceUtils';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import type { NetworkKey } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
-import Loading from '../common/Loading';
+import { MdRefresh } from 'react-icons/md';
+import NetworkChip from '../common/NetworkChip';
+import { Identifier } from '../common/Identifier';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { EmptyState } from '../ui/EmptyState';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { useRequireFundingWallet, useRequireTestWallet } from '../../hooks/useRequirements';
+import { useToast } from '../../hooks/useToast';
 import { ExplorerLink } from '../common/ExplorerLink';
 import AllConfigStringsModal from '../common/AllConfigStringsModal';
 import { applyNetworkServices } from '../../services/networkServices';
@@ -72,63 +84,21 @@ function useTokenBalance(walletInstance: unknown | null, tokenUid: string, refre
   return { balance, isLoading, error };
 }
 
-// Helper function to truncate UID
-function truncateUid(uid: string): string {
-  if (uid.length <= 12) return uid;
-  return `${uid.slice(0, 6)}...${uid.slice(-6)}`;
-}
-
-// Component for a single token row with lazy-loaded balance
-function TokenRow({
-  token,
+// Lazy-loaded balance cell for one token row
+function TokenBalanceCell({
   walletInstance,
-  isSelected,
-  onClick,
+  tokenUid,
   refreshKey,
-  network,
 }: {
-  token: Token;
   walletInstance: unknown | null;
-  isSelected: boolean;
-  onClick: () => void;
+  tokenUid: string;
   refreshKey?: number;
-  network?: string;
 }) {
-  const { balance, isLoading, error } = useTokenBalance(walletInstance, token.uid, refreshKey);
-
-  return (
-    <tr
-      onClick={onClick}
-      className={`border-b border-gray-200 cursor-pointer transition-colors ${
-        isSelected ? 'bg-tint-info' : 'hover:bg-gray-50'
-      }`}
-    >
-      <td className="py-2 px-3 font-semibold">{token.symbol}</td>
-      <td className="py-2 px-3">{token.name}</td>
-      <td className="py-2 px-3 font-mono text-2xs" title={token.uid}>
-        <div className="flex items-center gap-2">
-          <span>{truncateUid(token.uid)}</span>
-          <ExplorerLink
-            hash={token.uid}
-            specificPage="token_detail"
-            network={network as NetworkKey}
-            className="!px-1 !py-0.5"
-          />
-        </div>
-      </td>
-      <td className="py-2 px-3 text-right">
-        {isLoading ? (
-          <span className="text-muted text-xs">Loading...</span>
-        ) : error ? (
-          <span className="text-danger text-xs">{error}</span>
-        ) : balance !== null ? (
-          <span className="font-mono text-sm">{formatBalance(balance)}</span>
-        ) : (
-          <span className="text-muted text-xs">-</span>
-        )}
-      </td>
-    </tr>
-  );
+  const { balance, isLoading, error } = useTokenBalance(walletInstance, tokenUid, refreshKey);
+  if (isLoading) return <span className="skeleton inline-block h-4 w-16 align-middle" aria-label="Loading" />;
+  if (error) return <span className="font-sans text-caption text-error">{error}</span>;
+  if (balance === null) return null;
+  return <>{formatBalance(balance)}</>;
 }
 
 // Component for displaying wallet tokens
@@ -163,6 +133,7 @@ function WalletTokensDisplay({
   const [isFetchingFirstEmpty, setIsFetchingFirstEmpty] = useState(false);
   const [isAllConfigStringsModalOpen, setIsAllConfigStringsModalOpen] = useState(false);
   const { confirm, confirmDialog } = useConfirm();
+  const { success: toastSuccess } = useToast();
   // Token UIDs fetched directly from wallet instance (more reliable than Redux store)
   const [fetchedTokenUids, setFetchedTokenUids] = useState<string[]>([]);
   // Pagination
@@ -629,7 +600,7 @@ function WalletTokensDisplay({
       setRefreshKey((prev) => prev + 1);
 
       setIsMelting(false);
-      alert(`Successfully melted ${maxMeltable} ${selectedToken.symbol} tokens!`);
+      toastSuccess(`Melted ${maxMeltable} ${selectedToken.symbol}`);
     } catch (err) {
       setIsMelting(false);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -638,391 +609,357 @@ function WalletTokensDisplay({
     }
   };
 
+  const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
+  const otherLabel = isTestWallet ? 'funding' : 'test';
+
+  const tokenColumns: DataTableColumn<Token>[] = [
+    {
+      key: 'symbol',
+      header: 'Symbol',
+      render: (token) => (
+        <button
+          type="button"
+          className="link font-semibold no-underline hover:underline"
+          aria-pressed={selectedTokenUid === token.uid}
+          title={`Select ${token.symbol}`}
+          onClick={() => handleTokenClick(token.uid, token.name, token.symbol)}
+        >
+          {token.symbol}
+        </button>
+      ),
+    },
+    { key: 'name', header: 'Name', value: (token) => token.name },
+    {
+      key: 'uid',
+      header: 'UID',
+      type: 'identifier',
+      render: (token) => (
+        <span className="inline-flex items-center gap-2">
+          <Identifier value={token.uid} kind="token" head={6} tail={6} />
+          <ExplorerLink hash={token.uid} specificPage="token_detail" network={wallet.metadata.network as NetworkKey} />
+        </span>
+      ),
+    },
+    {
+      key: 'balance',
+      header: 'Balance',
+      type: 'amount',
+      render: (token) => (
+        <TokenBalanceCell walletInstance={wallet.instance} tokenUid={token.uid} refreshKey={refreshKey} />
+      ),
+    },
+  ];
+
+  const qrBlock = (value: string, label: string, copyLabel: string) => (
+    <div className="flex flex-col items-start gap-3 sm:flex-row">
+      <div className="flex-none rounded-field border border-base-300 bg-base-100 p-3">
+        <QRCode value={value} size={176} />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-caption text-ink-muted">{label}</span>
+        <span className="flex min-w-0 items-start gap-1">
+          <code className="min-w-0 rounded-field bg-base-200 px-2 py-1 font-mono text-data-sm [overflow-wrap:anywhere]">
+            {value}
+          </code>
+          <CopyButton text={value} label={copyLabel} />
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {confirmDialog}
-      {/* Loading overlay when sending transaction */}
-      {isSending && <Loading overlay message="Sending transaction..." />}
 
-      {/* Error Display */}
-      {transactionError && (
-        <div className="card-primary mb-7.5 bg-red-50 border border-danger">
-          <p className="m-0 text-red-900">{transactionError}</p>
-        </div>
-      )}
+      {transactionError && <Callout tone="error">{transactionError}</Callout>}
 
-      {/* Wallet Info */}
-      <div className="card-primary mb-7.5">
-        <h2 className="text-xl font-bold mb-4">Wallet Information</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-muted mb-1">Name:</p>
-            <p className="font-bold m-0">{wallet.metadata.friendlyName}</p>
+      <Panel title="Wallet information">
+        <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-caption text-ink-muted">Name</dt>
+            <dd className="m-0 font-semibold">{wallet.metadata.friendlyName}</dd>
           </div>
-          <div>
-            <p className="text-sm text-muted mb-1">Network:</p>
-            <p className="font-bold m-0">{wallet.metadata.network}</p>
+          <div className="flex min-w-0 flex-col items-start gap-0.5">
+            <dt className="text-caption text-ink-muted">Network</dt>
+            <dd className="m-0">
+              <NetworkChip network={wallet.metadata.network} size="sm" />
+            </dd>
           </div>
-        </div>
-      </div>
+        </dl>
+      </Panel>
 
-      {/* No Tokens Message */}
-      {walletTokens.length === 0 && (
-        <div className="card-primary mb-7.5 text-center">
-          <p className="m-0 text-muted">No custom tokens found for this wallet.</p>
-          <button onClick={handleRefresh} disabled={isRefreshing} className="btn-primary mt-4 py-1.5 px-4 text-sm">
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      )}
-
-      {/* Tokens List */}
-      {walletTokens.length > 0 && (
-        <div className="card-primary mb-7.5">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-bold m-0">
-              Custom Tokens
-              <span className="text-sm font-normal text-muted ml-2">({filteredTokens.length})</span>
-            </h3>
-            <div className="flex items-center gap-3">
-              <div className="form-control">
-                <label className="label cursor-pointer gap-2 p-0">
+      <Panel
+        title={
+          <>
+            Custom tokens{' '}
+            {walletTokens.length > 0 && (
+              <span className="text-body font-normal text-ink-muted">({filteredTokens.length})</span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            {walletTokens.length > 0 && (
+              <>
+                <label className="flex cursor-pointer items-center gap-2 text-body">
                   <input
                     type="checkbox"
                     checked={hideZeroBalance}
                     onChange={(e) => setHideZeroBalance(e.target.checked)}
                     className="checkbox checkbox-primary checkbox-sm"
                   />
-                  <span className="label-text text-sm">Hide zero-balance</span>
+                  Hide zero balance
                 </label>
-              </div>
-              <button
-                onClick={() => setIsAllConfigStringsModalOpen(true)}
-                disabled={walletTokens.length === 0}
-                className="btn-secondary py-1.5 px-4 text-sm"
-                title="Export all token configuration strings for Desktop Wallet"
-              >
-                Export All
-              </button>
-              <button onClick={handleRefresh} disabled={isRefreshing} className="btn-primary py-1.5 px-4 text-sm">
-                {isRefreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-300">
-                <tr>
-                  <th className="text-left py-2 px-3 font-bold">Symbol</th>
-                  <th className="text-left py-2 px-3 font-bold">Name</th>
-                  <th className="text-left py-2 px-3 font-bold">UID</th>
-                  <th className="text-right py-2 px-3 font-bold">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedTokens.map((token) => (
-                  <TokenRow
-                    key={token.uid}
-                    token={token}
-                    walletInstance={wallet.instance}
-                    isSelected={selectedTokenUid === token.uid}
-                    onClick={() => handleTokenClick(token.uid, token.name, token.symbol)}
-                    refreshKey={refreshKey}
-                    network={wallet.metadata.network}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
-              <p className="text-sm text-muted m-0">
+                <button
+                  type="button"
+                  onClick={() => setIsAllConfigStringsModalOpen(true)}
+                  className="btn btn-secondary btn-sm"
+                  title="Export all token configuration strings for Desktop Wallet"
+                >
+                  Export all
+                </button>
+              </>
+            )}
+            <button type="button" onClick={handleRefresh} disabled={isRefreshing} className="btn btn-secondary btn-sm">
+              {isRefreshing ? spinner : <MdRefresh aria-hidden="true" />}
+              Refresh
+            </button>
+          </>
+        }
+        footer={
+          totalPages > 1 ? (
+            <>
+              <span className="text-body text-ink-muted">
                 Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredTokens.length)}{' '}
                 of {filteredTokens.length} tokens
-              </p>
-              <div className="flex items-center gap-1">
+              </span>
+              <div className="ml-auto flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(1)}
                   disabled={currentPage === 1}
-                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                  className="btn btn-ghost btn-sm"
                 >
                   First
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                  className="btn btn-secondary btn-sm"
                 >
-                  Prev
+                  Previous
                 </button>
-                <span className="text-sm font-medium px-3">
+                <span className="px-2 text-body font-medium">
                   {currentPage} / {totalPages}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                  className="btn btn-secondary btn-sm"
                 >
                   Next
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCurrentPage(totalPages)}
                   disabled={currentPage === totalPages}
-                  className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
+                  className="btn btn-ghost btn-sm"
                 >
                   Last
                 </button>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            </>
+          ) : undefined
+        }
+      >
+        {walletTokens.length === 0 ? (
+          <EmptyState>No custom tokens found for this wallet. Refresh after creating or receiving one.</EmptyState>
+        ) : (
+          <DataTable
+            caption="Custom tokens"
+            columns={tokenColumns}
+            rows={paginatedTokens}
+            getRowKey={(token) => token.uid}
+            rowClassName={(token) => (selectedTokenUid === token.uid ? 'bg-tint-info' : '')}
+            empty="All tokens have a zero balance. Clear “Hide zero balance” to see them."
+          />
+        )}
+      </Panel>
 
-      {/* Token Uid String Display */}
       {selectedTokenUid && (
-        <div className="card-primary mb-7.5">
-          <div className="mb-3 text-center">
-            <h3 className="text-lg font-bold m-0">Token UID String</h3>
+        <Panel title={selectedToken ? `Selected token: ${selectedToken.symbol}` : 'Selected token'}>
+          <div className="flex flex-col gap-1">
+            <span className="text-caption text-ink-muted">Token UID</span>
+            <Identifier value={selectedTokenUid} kind="token" truncate="none" />
           </div>
-
-          {/* Configuration String */}
-          <div className="flex items-center justify-center gap-2 mb-7.5">
-            <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">{selectedTokenUid}</p>
-            <CopyButton text={selectedTokenUid} label="Copy config string" className="ml-2" />
-          </div>
-        </div>
+          {configString && selectedToken && qrBlock(configString, 'Configuration string', 'Copy configuration string')}
+        </Panel>
       )}
 
-      {/* Configuration String Display */}
-      {configString && selectedTokenUid && selectedToken && (
-        <div className="card-primary mb-7.5">
-          <div className="mb-3 text-center">
-            <h3 className="text-lg font-bold m-0">Configuration String</h3>
-          </div>
-
-          {/* Configuration String */}
-          <div className="flex items-center justify-center gap-2 mb-7.5">
-            <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">{configString}</p>
-            <CopyButton text={configString} label="Copy config string" className="ml-2" />
-          </div>
-
-          {/* QR Code */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="p-4 bg-white border-2 border-gray-300 rounded">
-              <QRCode value={configString} size={200} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Payment Request Section */}
       {selectedToken && (
         <>
-          {/* Address Index Control */}
-          <div className="card-primary mb-7.5">
-            <label htmlFor="address-index" className="block mb-1.5 font-bold">
-              Address Index:
-            </label>
-            <div className="flex gap-2 items-start">
-              <input
-                id="address-index"
-                type="number"
-                min={0}
-                step={1}
-                value={addressIndex}
-                onChange={handleAddressIndexChange}
-                className="input flex-1"
-              />
-              <button
-                type="button"
-                onClick={handleGetAddr0}
-                disabled={!wallet || !wallet.instance}
-                className="btn-secondary px-3 py-2 whitespace-nowrap"
+          <Panel title="Payment request" description={`Ask for ${selectedToken.symbol} at an address of this wallet.`}>
+            <div className="flex flex-wrap gap-4">
+              <Field
+                label="Address index"
+                htmlFor="address-index"
+                hint="Index used to derive the address (default 0)"
+                wireControl={false}
               >
-                Get Addr0
-              </button>
-              <button
-                type="button"
-                onClick={handleGetFirstEmpty}
-                disabled={isFetchingFirstEmpty || !wallet || !wallet.instance}
-                className="btn-primary px-3 py-2 whitespace-nowrap"
-              >
-                {isFetchingFirstEmpty ? 'Loading...' : 'Get First Empty'}
-              </button>
-            </div>
-            <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
-          </div>
-
-          {/* Amount Field */}
-          <div className="card-primary mb-7.5">
-            <label htmlFor="amount-input" className="block mb-1.5 font-bold">
-              Payment Amount:
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="amount-input"
-                type="number"
-                min="1"
-                step="1"
-                value={amount}
-                onChange={handleAmountChange}
-                className="input flex-1"
-                placeholder="Enter amount"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const balance = tokenBalances.get(selectedToken.uid);
-                  if (balance != null && balance > 0n) {
-                    setAmount(Number(balance));
-                  }
-                }}
-                className="btn-secondary px-3 whitespace-nowrap text-sm"
-                title="Fill with full token balance"
-              >
-                Max
-              </button>
-            </div>
-            <p className="text-muted text-xs mt-1.5 mb-0">
-              Enter a positive integer for the payment amount ({selectedToken.symbol} tokens)
-            </p>
-          </div>
-
-          {/* Payment Request QR Code */}
-          {derivedAddress && (
-            <div className="card-primary mb-7.5">
-              <div className="mb-3 text-center">
-                <h3 className="text-lg font-bold m-0">Payment Request QR Code</h3>
-              </div>
-              <div className="flex flex-col items-center gap-3">
-                <div className="p-4 bg-white border-2 border-gray-300 rounded">
-                  <QRCode value={getPaymentRequest()} size={200} />
+                <div className="flex flex-wrap items-start gap-2">
+                  <input
+                    id="address-index"
+                    aria-describedby="address-index-hint"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={addressIndex}
+                    onChange={handleAddressIndexChange}
+                    className="input w-28 font-mono text-data"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGetAddr0}
+                    disabled={!wallet || !wallet.instance}
+                    className="btn btn-secondary"
+                  >
+                    Get addr0
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGetFirstEmpty}
+                    disabled={isFetchingFirstEmpty || !wallet || !wallet.instance}
+                    className="btn btn-secondary"
+                  >
+                    {isFetchingFirstEmpty && spinner}
+                    Get first empty
+                  </button>
                 </div>
-                <div className="flex items-center w-full">
-                  <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">
-                    {getPaymentRequest()}
-                  </p>
-                  <CopyButton text={getPaymentRequest()} label="Copy payment request" className="ml-2" />
-                </div>
+              </Field>
 
-                {/* Send button for fund wallet - only show on Test Wallet tab */}
+              <Field
+                label="Payment amount"
+                htmlFor="amount-input"
+                hint={`A positive integer amount of ${selectedToken.symbol}`}
+                wireControl={false}
+              >
+                <div className="flex gap-2">
+                  <input
+                    id="amount-input"
+                    aria-describedby="amount-input-hint"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={amount}
+                    onChange={handleAmountChange}
+                    className="input w-36 font-mono text-data"
+                    placeholder="Amount"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const balance = tokenBalances.get(selectedToken.uid);
+                      if (balance != null && balance > 0n) {
+                        setAmount(Number(balance));
+                      }
+                    }}
+                    className="btn btn-secondary"
+                    title="Fill with full token balance"
+                  >
+                    Max
+                  </button>
+                </div>
+              </Field>
+            </div>
+
+            {derivedAddress && (
+              <>
+                {qrBlock(getPaymentRequest(), 'Payment request', 'Copy payment request')}
                 {isTestWallet && (
-                  <div className="flex items-center justify-center mt-3">
+                  <div className="flex flex-wrap items-center justify-end gap-3">
+                    {!fundingWalletId && (
+                      <span className="text-caption text-ink-muted">Select a funding wallet to send</span>
+                    )}
                     <button
                       type="button"
                       onClick={handleSendFromFundWallet}
-                      className="btn-primary px-4 py-2"
+                      className="btn btn-primary"
                       disabled={isSending || !fundingWalletId}
                     >
-                      {isSending ? 'Sending...' : 'Send from Fund Wallet'}
+                      {isSending && spinner}
+                      {isSending ? 'Sending' : 'Send from funding wallet'}
                     </button>
                   </div>
                 )}
-              </div>
-            </div>
-          )}
+              </>
+            )}
+          </Panel>
 
-          {/* Send to Other Wallet Section */}
           {otherWalletAddress && (
-            <div className="card-primary mb-7.5 bg-blue-50 border-2 border-blue-400">
-              <div className="mb-3 text-center">
-                <h3 className="text-lg font-bold m-0 text-blue-900">
-                  Send to {isTestWallet ? 'Funding' : 'Test'} Wallet
-                </h3>
-                <p className="text-sm text-blue-700 mt-2 mb-0">
-                  Payment request for {isTestWallet ? 'Funding' : 'Test'} Wallet (address at index 0)
-                </p>
+            <Panel
+              title={`Send to ${otherLabel} wallet`}
+              description={`Payment request for the ${otherLabel} wallet (address at index 0)`}
+            >
+              {qrBlock(getOtherWalletPaymentRequest(), 'Payment request', 'Copy payment request')}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSendToOtherWallet}
+                  className="btn btn-primary"
+                  disabled={isSending || !otherWalletAddress}
+                >
+                  {isSending && spinner}
+                  {isSending ? 'Sending' : `Send to ${otherLabel} wallet`}
+                </button>
               </div>
-              <div className="flex flex-col items-center gap-3">
-                <div className="p-4 bg-white border-2 border-blue-300 rounded">
-                  <QRCode value={getOtherWalletPaymentRequest()} size={200} />
-                </div>
-                <div className="flex items-center w-full">
-                  <p className="font-mono text-2xs break-all m-0 p-2 bg-white rounded w-full">
-                    {getOtherWalletPaymentRequest()}
-                  </p>
-                  <CopyButton text={getOtherWalletPaymentRequest()} label="Copy payment request" className="ml-2" />
-                </div>
-
-                {/* Send button to other wallet */}
-                <div className="flex items-center justify-center mt-3">
-                  <button
-                    type="button"
-                    onClick={handleSendToOtherWallet}
-                    className="btn-primary px-4 py-2 bg-blue-600 hover:bg-blue-700"
-                    disabled={isSending || !otherWalletAddress}
-                  >
-                    {isSending ? 'Sending...' : `Send to ${isTestWallet ? 'Funding' : 'Test'} Wallet`}
-                  </button>
-                </div>
-              </div>
-            </div>
+            </Panel>
           )}
 
-          {/* Melt Tokens Section - Only for Test Wallet */}
           {isTestWallet && selectedToken && (
-            <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
-              <div className="mb-3 text-center">
-                <h3 className="text-lg font-bold m-0 text-red-900">Melt Tokens (Irreversible)</h3>
-                <p className="text-sm text-red-700 mt-2 mb-0">Destroy tokens and convert them back to HTR</p>
-              </div>
-
-              {/* Loading overlay for melting */}
+            <Panel title="Melt tokens" description="Destroy tokens and convert them back to HTR. This is irreversible.">
               {isMelting && (
-                <div className="mb-3 p-3 bg-yellow-100 border border-yellow-400 rounded text-center">
-                  <p className="m-0 text-yellow-900 font-semibold">Melting tokens in progress...</p>
-                </div>
+                <p className="m-0 flex items-center gap-2 text-body text-ink-muted" role="status">
+                  <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+                  Melting tokens…
+                </p>
               )}
 
-              {/* Melt error display */}
-              {meltError && (
-                <div className="mb-3 p-3 bg-red-100 border border-red-400 rounded">
-                  <p className="m-0 text-red-900">{meltError}</p>
-                </div>
-              )}
+              {meltError && <Callout tone="error">{meltError}</Callout>}
 
-              {/* Melt authority check */}
               {!hasMeltAuthority ? (
-                <div className="p-4 bg-white border border-red-300 rounded text-center">
-                  <p className="m-0 text-red-800">This wallet does not have melt authority for this token.</p>
-                  <p className="text-sm text-red-600 mt-2 mb-0">Only wallets with melt authority can destroy tokens.</p>
-                </div>
+                <Callout tone="info" title="No melt authority">
+                  This wallet does not have melt authority for this token. Only wallets with melt authority can destroy
+                  tokens.
+                </Callout>
               ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-full p-4 bg-white border border-red-300 rounded">
-                    <p className="text-sm text-red-800 mb-2">
-                      <strong>Warning:</strong> Melting tokens is an irreversible operation.
-                    </p>
-                    <p className="text-sm text-red-700 mb-2">• Tokens can only be melted in multiples of 100</p>
-                    <p className="text-sm text-red-700 mb-2">
-                      • Melted tokens are converted back to HTR at a rate of 100 tokens = 1 HTR
-                    </p>
-                    <p className="text-sm text-red-700 mb-0">
-                      • Any melting below 100 tokens will cause the tokens to be burned without HTR return
-                    </p>
-                  </div>
-
-                  {/* Melt button */}
-                  <div className="flex items-center justify-center mt-3">
+                <>
+                  <Callout tone="warning" title="Melting is irreversible">
+                    <ul>
+                      <li>Tokens can only be melted in multiples of 100</li>
+                      <li>Melted tokens are converted back to HTR at a rate of 100 tokens = 1 HTR</li>
+                      <li>Any melting below 100 tokens burns the tokens without HTR return</li>
+                    </ul>
+                  </Callout>
+                  <div className="flex justify-end">
                     <button
                       type="button"
                       onClick={handleMeltTokens}
-                      className="btn-primary px-4 py-2 bg-red-600 hover:bg-red-700"
+                      className="btn btn-error btn-outline"
                       disabled={isMelting || isSending}
                     >
-                      {isMelting ? 'Melting...' : `Melt ${selectedToken.symbol} Tokens`}
+                      {isMelting && spinner}
+                      {isMelting ? 'Melting' : `Melt ${selectedToken.symbol} tokens`}
                     </button>
                   </div>
-                </div>
+                </>
               )}
-            </div>
+            </Panel>
           )}
         </>
       )}
 
-      {/* All Configuration Strings Modal */}
       <AllConfigStringsModal
         isOpen={isAllConfigStringsModalOpen}
         onClose={() => setIsAllConfigStringsModalOpen(false)}
@@ -1041,6 +978,8 @@ export default function CustomTokens() {
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
 
   const [activeTab, setActiveTab] = useState<TabType>('test');
+  const testWalletRequirement = useRequireTestWallet();
+  const fundingWalletRequirement = useRequireFundingWallet();
 
   const fundingWallet = wallets.find((w) => w.metadata.id === fundingWalletId && w.status === 'ready');
   const testWallet = wallets.find((w) => w.metadata.id === testWalletId && w.status === 'ready');
@@ -1048,51 +987,34 @@ export default function CustomTokens() {
   const noWalletsSelected = !fundingWallet && !testWallet;
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Custom Tokens</h1>
-      <p className="text-muted mb-7.5">View custom tokens for the funding and test wallets.</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader stageId="custom-tokens" description="View custom tokens for the funding and test wallets." />
+      <PreconditionStrip requirements={[testWalletRequirement, fundingWalletRequirement]} />
 
       {noWalletsSelected ? (
-        <div className="p-10 text-center border-2 border-dashed border-warning rounded-lg bg-yellow-50 text-yellow-800">
-          <h2 className="mt-0 text-2xl font-bold">No Wallets Selected</h2>
-          <p className="text-base">
-            Please go to the <strong>Wallet Initialization</strong> stage, start wallets, and select both a funding
-            wallet and a test wallet.
-          </p>
-        </div>
+        <Panel title="Custom tokens">
+          <EmptyState>
+            Start wallets and choose a funding wallet and a test wallet; their tokens appear here.
+          </EmptyState>
+        </Panel>
       ) : (
         <>
-          {/* Tab Navigation */}
-          <div className="mb-7.5">
-            <div className="flex border-b border-gray-300">
-              <button
-                onClick={() => setActiveTab('fund')}
-                className={`px-6 py-3 font-bold text-base border-b-2 transition-colors ${
-                  activeTab === 'fund'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted hover:text-primary'
-                }`}
-                disabled={!fundingWallet}
-              >
-                Funding Wallet
-                {!fundingWallet && ' (Not Selected)'}
-              </button>
-              <button
-                onClick={() => setActiveTab('test')}
-                className={`px-6 py-3 font-bold text-base border-b-2 transition-colors ${
-                  activeTab === 'test'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted hover:text-primary'
-                }`}
-                disabled={!testWallet}
-              >
-                Test Wallet
-                {!testWallet && ' (Not Selected)'}
-              </button>
-            </div>
-          </div>
+          <SegmentedControl<TabType>
+            aria-label="Wallet"
+            value={activeTab}
+            onChange={setActiveTab}
+            options={[
+              {
+                value: 'fund',
+                label: 'Funding wallet',
+                disabled: !fundingWallet,
+                reason: 'No funding wallet selected',
+              },
+              { value: 'test', label: 'Test wallet', disabled: !testWallet, reason: 'No test wallet selected' },
+            ]}
+            className="self-start"
+          />
 
-          {/* Tab Content */}
           {activeTab === 'fund' && fundingWallet && (
             <WalletTokensDisplay
               wallet={fundingWallet}
