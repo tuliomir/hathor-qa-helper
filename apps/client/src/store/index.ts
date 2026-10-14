@@ -44,6 +44,7 @@ import swapTokensReducer from './slices/swapTokensSlice';
 import snapReducer from './slices/snapSlice';
 import snapMethodsReducer from './slices/snapMethodsSlice';
 import networkReducer from './slices/networkSlice';
+import helperServerReducer from './slices/helperServerSlice';
 
 export const store = configureStore({
   reducer: {
@@ -88,6 +89,7 @@ export const store = configureStore({
     snap: snapReducer,
     snapMethods: snapMethodsReducer,
     network: networkReducer,
+    helperServer: helperServerReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

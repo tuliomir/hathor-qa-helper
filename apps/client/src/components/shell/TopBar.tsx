@@ -2,16 +2,17 @@
  * TopBar
  *
  * 48px bar under the network rail: menu (below 1024px), brand, workspace
- * switcher, then the global controls on the right.
+ * switcher, wallet context, then the helper server pill, network switcher
+ * and overflow menu. Below 768px the wallet context moves into the drawer.
  */
 
 import { forwardRef } from 'react';
 import { FiMenu } from 'react-icons/fi';
-import NetworkChip from '../common/NetworkChip';
-import { useAppSelector } from '../../store/hooks';
-import { selectActiveNetwork } from '../../store/slices/networkSlice';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import OverflowMenu from './OverflowMenu';
+import WalletContextBar from './WalletContextBar';
+import HelperServerPill from './HelperServerPill';
+import NetworkSwitcher from './NetworkSwitcher';
 
 interface TopBarProps {
   drawerOpen: boolean;
@@ -19,8 +20,6 @@ interface TopBarProps {
 }
 
 const TopBar = forwardRef<HTMLButtonElement, TopBarProps>(function TopBar({ drawerOpen, onOpenDrawer }, menuRef) {
-  const network = useAppSelector(selectActiveNetwork);
-
   return (
     <header className="flex items-center gap-3 h-12 pl-2 pr-3 lg:pl-4 bg-base-100 border-b border-base-300 min-w-0">
       <button
@@ -37,8 +36,16 @@ const TopBar = forwardRef<HTMLButtonElement, TopBarProps>(function TopBar({ draw
       <div className="hidden md:flex min-w-0">
         <WorkspaceSwitcher />
       </div>
-      <div className="flex-1 min-w-0" />
-      <NetworkChip network={network} label="responsive" />
+      <div className="flex-1 min-w-0 flex items-center">
+        <div className="hidden xl:flex min-w-0">
+          <WalletContextBar variant="bar" />
+        </div>
+        <div className="hidden md:flex xl:hidden">
+          <WalletContextBar variant="compact" />
+        </div>
+      </div>
+      <HelperServerPill />
+      <NetworkSwitcher />
       <OverflowMenu />
     </header>
   );

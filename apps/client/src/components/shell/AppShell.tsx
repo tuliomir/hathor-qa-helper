@@ -13,6 +13,7 @@ import TopBar from './TopBar';
 import NavDrawer from './NavDrawer';
 import { WorkspaceLinks, WorkspaceProgress } from './WorkspaceSwitcher';
 import { useWorkspace } from './useWorkspace';
+import WalletContextBar from './WalletContextBar';
 import ToastContainer from '../common/ToastContainer';
 import DeepLinkModal from '../common/DeepLinkModal';
 
@@ -74,7 +75,9 @@ export default function AppShell({ nav, navWidth = 'stage', children }: AppShell
 
       {drawerOpen && (
         <NavDrawer onClose={closeDrawer}>
-          <div className="md:hidden px-2 pt-2 pb-2 border-b border-base-300">
+          <div className="md:hidden px-2 pt-2 pb-2 border-b border-base-300 flex flex-col gap-2">
+            <WalletContextBar variant="stacked" />
+            <div className="border-t border-base-300" />
             <WorkspaceLinks />
             <WorkspaceProgress className="block px-2 pt-1" />
           </div>
