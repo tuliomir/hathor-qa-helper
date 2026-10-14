@@ -152,7 +152,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
     };
 
     setLiveRequest(requestParams);
-  }, [blueprintId, oracleAddress, token, deadline, pushTx]);
+  }, [blueprintId, oracleAddress, token, deadline, pushTx, network]);
 
   const handleExecute = async () => {
     setLoading(true);

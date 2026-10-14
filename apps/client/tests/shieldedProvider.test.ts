@@ -7,7 +7,7 @@ import type { IShieldedCryptoProvider } from '@hathor/wallet-lib';
 import { enableShieldedProvider } from '../src/services/shieldedProvider';
 
 function fakeWallet() {
-  return { setShieldedCryptoProvider: mock((_provider: IShieldedCryptoProvider) => {}) };
+  return { setShieldedCryptoProvider: mock<(provider: IShieldedCryptoProvider) => void>(() => {}) };
 }
 
 describe('enableShieldedProvider', () => {
