@@ -878,14 +878,6 @@ export default function WalletInitialization() {
       {showOcrReferenceModal && ocrSourceImageUrl && (
         <OCRReferenceModal imageDataUrl={ocrSourceImageUrl} onClose={() => setShowOcrReferenceModal(false)} />
       )}
-      {seedModalWalletId && (
-        <SeedPhraseModal
-          isOpen={!!seedModalWalletId}
-          onClose={() => setSeedModalWalletId(null)}
-          seedPhrase={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.seedWords || ''}
-          walletName={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
-        />
-      )}
       <WalletBrowserModal
         isOpen={showWalletBrowser}
         onClose={() => setShowWalletBrowser(false)}
@@ -907,6 +899,15 @@ export default function WalletInitialization() {
         onToggleFilterHasBalance={() => dispatch(toggleFilterHasBalance())}
         onToggleSortByBalance={() => dispatch(toggleSortByBalance())}
       />
+      {/* After the wallet browser, so it opens on top of it. */}
+      {seedModalWalletId && (
+        <SeedPhraseModal
+          isOpen={!!seedModalWalletId}
+          onClose={() => setSeedModalWalletId(null)}
+          seedPhrase={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.seedWords || ''}
+          walletName={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
+        />
+      )}
     </div>
   );
 }
