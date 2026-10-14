@@ -5,12 +5,13 @@
  * Each button source is opt-in via props so stages only show relevant options.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import { WELL_KNOWN_ADDRESSES } from '../../constants/addresses';
 import type { RootState } from '../../store';
+import { NETWORK_CONFIG } from '../../constants/network';
 
 export type AddressSource = 'snap' | 'test' | 'fund' | 'multisig';
 
@@ -50,6 +51,8 @@ export const AddressInput: React.FC<AddressInputProps> = ({
     }
   }, [suggestedValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [fillError, setFillError] = useState<string | null>(null);
+
   const fillFromWallet = async (wallet: ReturnType<typeof getWallet> | null) => {
     if (!wallet?.instance) return;
     try {
@@ -59,7 +62,21 @@ export const AddressInput: React.FC<AddressInputProps> = ({
     }
   };
 
-  const buttons: { key: AddressSource; label: string; disabled: boolean; onClick: () => void }[] = [];
+  /** Shielded addresses throw without a provider, while the scan key is locked, and for multisig. */
+  const fillShieldedFromWallet = async (wallet: ReturnType<typeof getWallet> | null) => {
+    if (!wallet?.instance) return;
+    setFillError(null);
+    try {
+      onChange(await wallet.instance.getAddressAtIndex(0, { legacy: false }));
+    } catch (err) {
+      setFillError(`Shielded address unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const supportsShielded = (wallet: ReturnType<typeof getWallet> | null) =>
+    !!wallet && NETWORK_CONFIG[wallet.metadata.network]?.supportsShielded;
+
+  const buttons: { key: string; label: string; disabled: boolean; onClick: () => void }[] = [];
 
   for (const src of sources) {
     switch (src) {
@@ -68,7 +85,9 @@ export const AddressInput: React.FC<AddressInputProps> = ({
           key: 'snap',
           label: 'Snap Addr0',
           disabled: !snapAddress,
-          onClick: () => { if (snapAddress) onChange(snapAddress); },
+          onClick: () => {
+            if (snapAddress) onChange(snapAddress);
+          },
         });
         break;
       case 'test':
@@ -78,6 +97,14 @@ export const AddressInput: React.FC<AddressInputProps> = ({
           disabled: !testWallet?.instance,
           onClick: () => fillFromWallet(testWallet),
         });
+        if (supportsShielded(testWallet)) {
+          buttons.push({
+            key: 'test-shielded',
+            label: 'Test Shielded Addr0',
+            disabled: testWallet?.status !== 'ready',
+            onClick: () => fillShieldedFromWallet(testWallet),
+          });
+        }
         break;
       case 'fund':
         buttons.push({
@@ -86,6 +113,14 @@ export const AddressInput: React.FC<AddressInputProps> = ({
           disabled: !fundingWallet?.instance,
           onClick: () => fillFromWallet(fundingWallet),
         });
+        if (supportsShielded(fundingWallet)) {
+          buttons.push({
+            key: 'fund-shielded',
+            label: 'Fund Shielded Addr0',
+            disabled: fundingWallet?.status !== 'ready',
+            onClick: () => fillShieldedFromWallet(fundingWallet),
+          });
+        }
         break;
       case 'multisig':
         buttons.push({
@@ -123,6 +158,7 @@ export const AddressInput: React.FC<AddressInputProps> = ({
           ))}
         </div>
       )}
+      {fillError && <p className="text-xs text-error mt-1">{fillError}</p>}
     </div>
   );
 };

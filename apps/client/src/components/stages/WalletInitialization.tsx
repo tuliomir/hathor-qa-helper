@@ -37,6 +37,7 @@ import { didYouMean, treatSeedWords } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
+import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
 import NetworkSwapButton from '../common/NetworkSwapButton';
 import Select from '../common/Select';
 import SeedPhraseModal from '../common/SeedPhraseModal';
@@ -531,6 +532,7 @@ export default function WalletInitialization() {
                     <td className="p-3">
                       <div className="flex flex-col items-start gap-1">
                         <span>{wallet.metadata.network}</span>
+                        <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />
                         <NetworkSwapButton
                           walletId={wallet.metadata.id}
                           currentNetwork={wallet.metadata.network}
