@@ -17,6 +17,35 @@ The old shortcuts survive only as thin aliases in the `LEGACY: delete in T10` bl
 
 Tailwind's preflight is wrapped in the `qa-base` cascade layer at the top of `src/index.css`. Without it, Tailwind 3's unlayered preflight overrides daisyUI 5's layered component styles (button backgrounds, borders).
 
+## Shared components
+
+Specs in `docs/design/components.md`. New stage code builds from these instead of ad-hoc markup.
+
+`src/components/ui/` (primitives, no Redux):
+
+- `Panel` (`variant="inset"` for sub-areas), `Callout` (tones `info|success|warning|error|shielded|dry-run`), `Field` (label, hint, error; wires `aria-describedby`/`aria-invalid` onto its child)
+- `SegmentedControl`: radiogroup; arrows/Home/End move focus, Space/Enter select
+- `StatusDot`, `StatusChip`: tone from `statusTone()` in `src/utils/statusTone.ts`, the single map from wallet/tx/session/server status words to tones
+- `EmptyState`, `ErrorState`, `DataTable` (stacked rows below 768px)
+- `ConfirmDialog`, or `useConfirm()` (`src/hooks/useConfirm.tsx`) as a promise-based drop-in for `window.confirm`. Don't use `window.confirm`.
+
+`src/components/common/` (may read Redux):
+
+- `StageHeader` (title and description from the stage registry, method chip), then `PreconditionStrip` fed by the `useRequire*` hooks in `src/hooks/useRequirements.ts`
+- `Identifier` for every hash, address, token UID or xpub (middle truncation, grouped popover, wallet tag); `TxIdDisplay` = Identifier + `TxStatus` + `ExplorerLink`. Never `break-all` an identifier.
+- `JsonPanel` (and `JsonHighlight`) for requests and responses
+- `AmountInput`: shows decimals, reports base units as a decimal string (`src/utils/amount.ts`, BigInt-safe)
+- `AddressInput`: `accept: 'transparent' | 'shielded' | 'any'`, optional `network`; kind comes from `detectAddressKind()` (`src/utils/addressKind.ts`), which decodes base58 and reads the version byte. Errors are advisory; the value always reaches `onChange`.
+
+Method stages and shielded pieces (reference implementations: `SendTransactionStage` + `rpc/RpcSendTransactionCard`, `SnapSendTransactionStage`):
+
+- `MethodCard`: Compose panel (inputs + `ExecuteBar`) and Inspect panel (request `JsonPanel`, outcome). The outcome region carries `data-result="success|error|rejected|dry-run"` for e2e. `snap/SnapMethodCard` is now a thin adapter over it; `useRpcMethod` is the RPC counterpart of `useSnapMethod`.
+- `ExecuteBar`: action-named primary button, global dry-run toggle, visible disabled reason (dry run stays available), mainnet arming (`src/utils/executeArming.ts`).
+- `OutputEditor`: value is `OutputRow[]` (`src/utils/outputRows.ts`); `toSendOutputs(rows)` maps it 1:1 onto the QA server's `SendOutput[]`. `privacy` shows the per-row `ShieldModeSelector`.
+- `ShieldedBadge`, `CapabilityBadge`. CapabilityBadge needs an explicit `canCreateShieldedOutputs`; never pass `canSpend`.
+
+Toasts sit bottom-right, max three visible. Success and info dismiss after 4s, warnings after 8s, errors stay until dismissed. `CopyButton` confirms inline and never toasts.
+
 ## Colors (theme `bench` in src/index.css)
 
 Colours are daisyUI 5 theme variables set by `[data-theme='bench']` on `<html>` (dark: `bench-dark`), plus app variables prefixed `--qa-`. Use the semantic utilities:

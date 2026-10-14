@@ -4,7 +4,7 @@
  * Tests htr_sendTransaction RPC call with Redux state persistence
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
@@ -15,228 +15,97 @@ import {
   setSendTransactionRequest,
   setSendTransactionResponse,
 } from '../../store/slices/sendTransactionSlice';
-import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { RpcSendTransactionCard } from '../rpc/RpcSendTransactionCard';
-import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
-import { createRpcHandlers } from '../../services/rpcHandlers';
-import { extractErrorMessage } from '../../utils/errorUtils';
+import { buildSendTransactionRequest } from '../../utils/rpcSendTransaction';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import type { OutputTokenOption } from '../common/OutputEditor';
+import { useRequireRpcSession } from '../../hooks/useRequirements';
+import { RpcRunError, useRpcMethod } from '../../hooks/useRpcMethod';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
+import { extractErrorMessage } from '../../utils/errorUtils';
+import { firstUnmetReason } from '../../utils/requirements';
+import { DEFAULT_NETWORK } from '../../constants/network';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
-interface Token {
-  uid: string;
-  name: string;
-  symbol: string;
-}
+const HTR: OutputTokenOption = { uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' };
 
 export const SendTransactionStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { getWallet } = useWalletStore();
+  const { isDryRun, run } = useRpcMethod();
+  const rpcSession = useRequireRpcSession();
 
-  // Redux state
-  const walletConnect = useSelector((state: RootState) => state.walletConnect);
-  const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
-  const isConnected = useSelector(selectIsWalletConnectConnected);
   const sendTransactionData = useSelector((state: RootState) => state.sendTransaction);
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
-
-  // Get the actual wallet instances
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
-  const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
 
-  // Local state for available tokens
-  const [availableTokens, setAvailableTokens] = useState<Token[]>([]);
-  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  // HTR plus the test wallet's custom tokens that the token registry knows.
+  const availableTokens = useMemo<OutputTokenOption[]>(() => {
+    const known = (testWallet?.tokenUids ?? [])
+      .filter((uid) => uid !== NATIVE_TOKEN_UID)
+      .map((uid) => allTokens.find((t) => t.uid === uid))
+      .filter((t): t is NonNullable<typeof t> => !!t)
+      .map((t) => ({ uid: t.uid, name: t.name, symbol: t.symbol }));
+    return [HTR, ...known];
+  }, [testWallet?.tokenUids, allTokens]);
 
-  // Load available tokens from wallet
-  useEffect(() => {
-    const loadTokens = async () => {
-      if (!testWallet?.instance || !testWallet.tokenUids) {
-        setAvailableTokens([{ uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' }]);
-        return;
-      }
-
-      setIsLoadingTokens(true);
-
-      try {
-        const tokensWithBalance: Token[] = [];
-
-        // Always include HTR
-        tokensWithBalance.push({ uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' });
-
-        // Check custom tokens
-        for (const uid of testWallet.tokenUids) {
-          if (uid === NATIVE_TOKEN_UID) continue;
-
-          try {
-            const tokenInfo = allTokens.find((t) => t.uid === uid);
-            if (tokenInfo) {
-              tokensWithBalance.push({
-                uid: tokenInfo.uid,
-                name: tokenInfo.name,
-                symbol: tokenInfo.symbol,
-              });
-            }
-          } catch (err) {
-            console.error(`Failed to load token ${uid}:`, err);
-          }
-        }
-
-        setAvailableTokens(tokensWithBalance);
-      } catch (error) {
-        console.error('Failed to load tokens:', error);
-        setAvailableTokens([{ uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' }]);
-      } finally {
-        setIsLoadingTokens(false);
-      }
-    };
-
-    loadTokens();
-  }, [testWallet, allTokens]);
-
-  // Deep link callback and cleanup for RPC requests
-  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
-
-  // Create RPC handlers
-  const rpcHandlers = useMemo(() => {
-    if (!walletConnect.client || !walletConnect.session) {
-      return null;
-    }
-
-    return createRpcHandlers({
-      client: walletConnect.client,
-      session: walletConnect.session,
-      dryRun: isDryRun,
-      onDeepLinkAvailable,
-    });
-  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
-
-  // Save form data to Redux whenever it changes in the card
-  useEffect(() => {
-    // This will be called by the card when form data changes
-  }, []);
-
-  // Wrapper for onExecute that stores results in Redux
-  const handleExecuteSendTransaction = async (outputs: SendTransactionOutput[], pushTx: boolean) => {
-    if (!rpcHandlers) {
-      throw new Error('RPC handlers not initialized');
-    }
-
-    // Save form data to Redux
+  const handleExecute = async (outputs: SendTransactionOutput[], pushTx: boolean) => {
     dispatch(setSendTransactionFormData({ outputs, pushTx }));
-
-    // Clear previous data before new request
     dispatch(clearSendTransactionData());
-
-    const startTime = Date.now();
-
     try {
-      const { request, response } = await rpcHandlers.getRpcSendTransaction(outputs, pushTx);
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification after RPC response
-      clearDeepLinkNotification();
-
-      // Convert BigInt to strings for Redux serialization
-      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
-
-      // Store request in Redux
-      dispatch(
-        setSendTransactionRequest({
-          method: request.method,
-          params: request.params,
-          isDryRun,
-        })
+      const { request, response, duration } = await run(
+        (h) => h.getRpcSendTransaction(outputs, pushTx),
+        buildSendTransactionRequest(outputs, pushTx)
       );
-
-      // Store response in Redux (with BigInt converted to strings)
-      dispatch(
-        setSendTransactionResponse({
-          response: serializedResponse,
-          duration,
-        })
-      );
-
-      return { request, response: serializedResponse };
+      dispatch(setSendTransactionRequest({ method: request.method, params: request.params, isDryRun }));
+      dispatch(setSendTransactionResponse({ response, duration }));
+      return response;
     } catch (error) {
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification on error too
-      clearDeepLinkNotification();
-
-      // Store error in Redux
-      const errorMessage = extractErrorMessage(error);
+      const original = error instanceof RpcRunError ? error.original : error;
+      const requestParams = (original as { requestParams?: { method: string; params: unknown } }).requestParams;
+      if (requestParams) {
+        dispatch(setSendTransactionRequest({ method: requestParams.method, params: requestParams.params, isDryRun }));
+      }
       dispatch(
         setSendTransactionError({
-          error: errorMessage,
-          duration,
+          error: extractErrorMessage(original),
+          duration: error instanceof RpcRunError ? error.duration : 0,
         })
       );
-
-      throw error;
+      throw original;
     }
   };
 
+  const methodData = {
+    request: sendTransactionData.request,
+    response: sendTransactionData.rawResponse,
+    error: sendTransactionData.error,
+    timestamp: sendTransactionData.timestamp,
+    duration: sendTransactionData.duration,
+    isDryRun: sendTransactionData.isDryRun,
+  };
+
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Send Transaction RPC</h1>
-      <p className="text-muted mb-7.5">
-        Test the htr_sendTransaction RPC method to send transactions with one or more outputs
-      </p>
-
-      {!isConnected && <RpcNotConnectedBanner />}
-
-      {/* Send Transaction Card */}
-      {isConnected && rpcHandlers && testWallet && (
-        <RpcSendTransactionCard
-          onExecute={handleExecuteSendTransaction}
-          disabled={false}
-          isDryRun={isDryRun}
-          network={testWallet.metadata.network}
-          testWallet={testWallet.instance}
-          fundingWallet={fundingWallet?.instance || null}
-          availableTokens={availableTokens}
-          isLoadingTokens={isLoadingTokens}
-          initialRequest={sendTransactionData.request}
-          initialResponse={sendTransactionData.rawResponse}
-          initialError={sendTransactionData.error}
-          initialFormData={sendTransactionData.formData}
-        />
-      )}
-
-      {/* Persisted Data Info */}
-      {sendTransactionData.timestamp && (
-        <div className="card-primary mt-7.5 bg-green-50 border border-success">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-success flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-green-900 m-0">Request duration</p>
-              <p className="text-sm text-green-800 mt-1 mb-0">
-                {sendTransactionData.duration !== null && (
-                  <span className="block mt-1">Last request took {sendTransactionData.duration}ms</span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="rpc-send-transaction"
+        title="Send transaction"
+        description="Send a transaction with one or more outputs through the connected wallet."
+        method="htr_sendTransaction"
+      />
+      <PreconditionStrip requirements={[rpcSession]} />
+      <RpcSendTransactionCard
+        onExecute={handleExecute}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        network={testWallet?.metadata.network ?? DEFAULT_NETWORK}
+        testWallet={testWallet?.instance ?? null}
+        availableTokens={availableTokens}
+        disabledReason={firstUnmetReason([rpcSession])}
+        initialFormData={sendTransactionData.formData}
+      />
     </div>
   );
 };

@@ -276,11 +276,18 @@ export default function WalletBrowserModal({
       <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wallet-browser-modal-title"
+      >
         <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold m-0">All Wallets ({wallets.length})</h2>
+            <h2 id="wallet-browser-modal-title" className="text-2xl font-bold m-0">
+              All Wallets ({wallets.length})
+            </h2>
             <div className="flex items-center gap-3">
               {/* Cloud Sync Button */}
               <button

@@ -147,3 +147,13 @@ describe('toastSlice', () => {
     });
   });
 });
+
+describe('defaultToastDuration', () => {
+  test('success and info dismiss after 4s, warning after 8s, error stays', async () => {
+    const { defaultToastDuration } = await import('../src/store/slices/toastSlice');
+    expect(defaultToastDuration('success')).toBe(4000);
+    expect(defaultToastDuration('info')).toBe(4000);
+    expect(defaultToastDuration('warning')).toBe(8000);
+    expect(defaultToastDuration('error')).toBeNull();
+  });
+});
