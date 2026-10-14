@@ -99,3 +99,12 @@ URL pattern: `/tools/{groupSlug}/{stageSlug}`
 | Initialize Fee | `/tools/snap-fee-nc/initialize` |
 | Deposit Fee Token | `/tools/snap-fee-nc/deposit` |
 | Withdraw Fee Token | `/tools/snap-fee-nc/withdraw` |
+
+## Shielded outputs (`/tools/shielded/...`)
+
+| Stage | URL |
+|-------|-----|
+| QA server | `/tools/shielded/qa-server` |
+| Shielded send | `/tools/shielded/send` |
+| Shielded balances | `/tools/shielded/balances` |
+| Transaction inspector | `/tools/shielded/inspector` |

@@ -25,24 +25,25 @@ Specs in `docs/design/components.md`. New stage code builds from these instead o
 
 - `Panel` (`variant="inset"` for sub-areas), `Callout` (tones `info|success|warning|error|shielded|dry-run`), `Field` (label, hint, error; wires `aria-describedby`/`aria-invalid` onto its child)
 - `SegmentedControl`: radiogroup; arrows/Home/End move focus, Space/Enter select
-- `StatusDot`, `StatusChip`: tone from `statusTone()` in `src/utils/statusTone.ts`, the single map from wallet/tx/session/server status words to tones
+- `StatusDot`, `StatusChip`: tone from `statusTone()` in `src/utils/statusTone.ts`, the single map from wallet/tx/session/server status words to tones. `warning` is a steady caution (network mismatch); `progress` is the animated ring
+- `usePopover` (`ui/usePopover.ts`): open/close, Escape and outside-click handling for anchored popovers and menus
 - `EmptyState`, `ErrorState`, `DataTable` (stacked rows below 768px)
 - `ConfirmDialog`, or `useConfirm()` (`src/hooks/useConfirm.tsx`) as a promise-based drop-in for `window.confirm`. Don't use `window.confirm`.
 
 `src/components/common/` (may read Redux):
 
-- `StageHeader` (title and description from the stage registry, method chip), then `PreconditionStrip` fed by the `useRequire*` hooks in `src/hooks/useRequirements.ts`
+- `StageHeader` (breadcrumb family / group, title and description from the stage registry, method chip; sets the tab title "Stage | Family | QA Helper" through `utils/documentTitle.ts`, which also carries NetworkRail's `[Mainnet] ` prefix), then `PreconditionStrip` fed by the `useRequire*` hooks in `src/hooks/useRequirements.ts`
 - `Identifier` for every hash, address, token UID or xpub (middle truncation, grouped popover, wallet tag); `TxIdDisplay` = Identifier + `TxStatus` + `ExplorerLink`. Never `break-all` an identifier.
 - `JsonPanel` (and `JsonHighlight`) for requests and responses
 - `AmountInput`: shows decimals, reports base units as a decimal string (`src/utils/amount.ts`, BigInt-safe)
-- `AddressInput`: `accept: 'transparent' | 'shielded' | 'any'`, optional `network`; kind comes from `detectAddressKind()` (`src/utils/addressKind.ts`), which decodes base58 and reads the version byte. Errors are advisory; the value always reaches `onChange`.
+- `AddressInput`: `accept: 'transparent' | 'shielded' | 'any'`, `network` (defaults to the active network; `null` accepts any), `customSources` for stage-specific quick-fill entries; kind comes from `detectAddressKind()` (`src/utils/addressKind.ts`), which decodes base58 and reads the version byte. Errors are advisory; the value always reaches `onChange`.
 
 Method stages and shielded pieces (reference implementations: `SendTransactionStage` + `rpc/RpcSendTransactionCard`, `SnapSendTransactionStage`):
 
 - `MethodCard`: Compose panel (inputs + `ExecuteBar`) and Inspect panel (request `JsonPanel`, outcome). The outcome region carries `data-result="success|error|rejected|dry-run"` for e2e. `snap/SnapMethodCard` is now a thin adapter over it; `useRpcMethod` is the RPC counterpart of `useSnapMethod`.
-- `ExecuteBar`: action-named primary button, global dry-run toggle, visible disabled reason (dry run stays available), mainnet arming (`src/utils/executeArming.ts`).
+- `ExecuteBar`: action-named primary button, global dry-run toggle, visible disabled reason (dry run stays available), mainnet arming (`src/utils/executeArming.ts`). Without `isMainnet` it arms when the active network is mainnet; pass it when the action runs elsewhere (the snap's network, a wallet's network). `MethodCard` passes it through and takes `renderError` for richer error blocks.
 - `OutputEditor`: value is `OutputRow[]` (`src/utils/outputRows.ts`); `toSendOutputs(rows)` maps it 1:1 onto the QA server's `SendOutput[]`. `privacy` shows the per-row `ShieldModeSelector`.
-- `ShieldedBadge`, `CapabilityBadge`. CapabilityBadge needs an explicit `canCreateShieldedOutputs`; never pass `canSpend`.
+- `ShieldedBadge`, `CapabilityBadge`, `HiddenAmount` (the hatched "hidden" pill). CapabilityBadge needs an explicit `canCreateShieldedOutputs`; never pass `canSpend`.
 
 Toasts sit bottom-right, max three visible. Success and info dismiss after 4s, warnings after 8s, errors stay until dismissed. `CopyButton` confirms inline and never toasts.
 
