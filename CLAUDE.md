@@ -30,7 +30,9 @@ Only use `bun` — `npx` and `yarn` are forbidden. Run these from the repo root;
 
 - **Stage** — A single QA screen/tool (e.g. "Send Transaction", "Get Balance"). Each is a React component in `src/components/stages/`. Defined as a `StageId` in `src/types/stage.ts`.
 - **Group** — A collection of related stages shown together in the sidebar (e.g. "MetaMask Snaps", "RPC Requests"). Defined as `GroupId` in `src/types/stage.ts`. The full registry is `STAGE_GROUPS` in the same file.
-- **Section** — Legacy term for group. The `StageSection` type exists for backward compat. When someone says "Snaps section" they mean the `snaps` group.
+- **Section** — Legacy term for group. When someone says "Snaps section" they mean the `snaps` group.
+- **Family** — A set of groups shown together in the stage nav (e.g. Wallets, WalletConnect RPC, Snap, Shielded). Defined as `STAGE_FAMILIES` in `src/types/stage.ts`.
+- **QA server** — The local Bun server in `apps/server` that holds wallets with the native shielded crypto provider so it can create shielded outputs. Used by the Shielded stages.
 - **Snap stages** — Stages prefixed with `Snap*` (e.g. `SnapConnectionStage.tsx`). They use MetaMask Snap RPC via `useSnapMethod` hook and `snapHandlers.ts`.
 - **RPC stages** — Stages using WalletConnect RPC via `rpcHandlers.ts` and the `rpcSlice`.
 
@@ -47,7 +49,7 @@ src/
 ├── hooks/                 # useSnapMethod, useStage, useWalletStore, useToast, etc.
 ├── services/              # RPC/snap handlers, wallet connect client, cleanup logic
 ├── types/                 # TypeScript types (stage.ts is the stage/group registry)
-├── constants/             # Network configs (TESTNET, MAINNET)
+├── constants/             # Client network config, built on @qa-helper/shared NETWORKS (TESTNET, MAINNET, SHIELDED_TESTNET)
 └── utils/                 # Utilities
 ```
 
