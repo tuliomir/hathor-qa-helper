@@ -11,6 +11,7 @@
 
 import React, { useState } from 'react';
 import CopyButton from '../common/CopyButton';
+import { JsonHighlight } from '../common/JsonPanel';
 import TxStatus from '../common/TxStatus';
 import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
@@ -21,69 +22,6 @@ import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../util
 import { useToast } from '../../hooks/useToast';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import type { SnapMethodData } from '../../store/slices/snapMethodsSlice';
-
-/* ------------------------------------------------------------------ */
-/*  JSON Syntax Highlighting (for request preview only)               */
-/* ------------------------------------------------------------------ */
-
-const JSON_TOKEN_RE =
-  /("(?:\\.|[^"\\])*")\s*:|("(?:\\.|[^"\\])*")|(\btrue\b|\bfalse\b)|(\bnull\b)|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g;
-
-function JsonHighlight({ json }: { json: string }) {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-
-  const re = new RegExp(JSON_TOKEN_RE.source, 'g');
-  let match = re.exec(json);
-  while (match !== null) {
-    if (match.index > lastIndex) {
-      parts.push(json.slice(lastIndex, match.index));
-    }
-
-    const [full, key, str, bool, nil, num] = match;
-    if (key !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-indigo-600">
-          {key}
-        </span>
-      );
-      parts.push(':');
-    } else if (str !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-emerald-600">
-          {full}
-        </span>
-      );
-    } else if (bool !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-amber-600">
-          {full}
-        </span>
-      );
-    } else if (nil !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-gray-400">
-          {full}
-        </span>
-      );
-    } else if (num !== undefined) {
-      parts.push(
-        <span key={match.index} className="text-blue-600">
-          {full}
-        </span>
-      );
-    }
-
-    lastIndex = match.index + full.length;
-    match = re.exec(json);
-  }
-
-  if (lastIndex < json.length) {
-    parts.push(json.slice(lastIndex));
-  }
-
-  return <>{parts}</>;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -162,7 +100,7 @@ export const SnapMethodCard: React.FC<SnapMethodCardProps> = ({
     const parsed = parseSnapResponse(response);
     const inner = isSnapEnvelope(parsed) ? (parsed as { response: unknown }).response : parsed;
     if (inner && typeof inner === 'object' && isTransactionLike(inner)) {
-      return (inner as Record<string, unknown>).hash as string | undefined ?? null;
+      return ((inner as Record<string, unknown>).hash as string | undefined) ?? null;
     }
     return null;
   })();

@@ -1,19 +1,25 @@
 /**
- * AddressInput — Centralized address input with quick-fill buttons.
+ * AddressInput — one address field with quick-fill sources, kind detection
+ * (transparent / shielded, via version byte) and specific errors.
  *
- * Replaces ad-hoc address inputs + button rows across all stages.
- * Each button source is opt-in via props so stages only show relevant options.
+ * Validation is advisory: the value always reaches `onChange`, so QA can
+ * still send a wrong-kind address on purpose. Each source is opt-in via
+ * `sources`; `test` and `fund` also offer the shielded addr0 when the
+ * wallet's network supports shielded outputs.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { MdArrowDropDown, MdShield } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import { WELL_KNOWN_ADDRESSES } from '../../constants/addresses';
 import type { RootState } from '../../store';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkKey } from '../../constants/network';
+import { addressAcceptError, detectAddressKind, type AddressAccept } from '../../utils/addressKind';
+import { groupChars } from '../../utils/truncate';
 
-export type AddressSource = 'snap' | 'test' | 'fund' | 'multisig';
+export type AddressSource = 'snap' | 'test' | 'fund' | 'multisig' | 'test-shielded' | 'fund-shielded' | 'snap-shielded';
 
 interface AddressInputProps {
   value: string;
@@ -24,7 +30,21 @@ interface AddressInputProps {
   suggestedValue?: string;
   placeholder?: string;
   label?: string;
+  /** Which kinds the field expects. Default 'transparent'. */
+  accept?: AddressAccept;
+  /** Validate against this network; without it any network is accepted. */
+  network?: NetworkKey;
+  id?: string;
 }
+
+interface FillSource {
+  key: string;
+  label: string;
+  disabledReason: string | null;
+  onClick: () => void;
+}
+
+const MAX_INLINE_SOURCES = 3;
 
 export const AddressInput: React.FC<AddressInputProps> = ({
   value,
@@ -33,11 +53,17 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   suggestedValue,
   placeholder = 'Address (base58)',
   label,
+  accept = 'transparent',
+  network,
+  id,
 }) => {
   const snapAddress = useSelector(selectSnapAddress);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
   const { getWallet } = useWalletStore();
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  const menuRef = useRef<HTMLDetailsElement>(null);
 
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
   const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : null;
@@ -55,6 +81,7 @@ export const AddressInput: React.FC<AddressInputProps> = ({
 
   const fillFromWallet = async (wallet: ReturnType<typeof getWallet> | null) => {
     if (!wallet?.instance) return;
+    setFillError(null);
     try {
       onChange(await wallet.instance.getAddressAtIndex(0));
     } catch {
@@ -76,89 +103,176 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   const supportsShielded = (wallet: ReturnType<typeof getWallet> | null) =>
     !!wallet && NETWORK_CONFIG[wallet.metadata.network]?.supportsShielded;
 
-  const buttons: { key: string; label: string; disabled: boolean; onClick: () => void }[] = [];
+  const walletReason = (wallet: ReturnType<typeof getWallet> | null, role: string, needReady: boolean) => {
+    if (!wallet) return `No ${role} wallet selected`;
+    if (needReady ? wallet.status !== 'ready' : !wallet.instance)
+      return `${role[0].toUpperCase()}${role.slice(1)} wallet not started`;
+    return null;
+  };
+
+  const fills: FillSource[] = [];
+  const add = (src: FillSource) => {
+    if (!fills.some((f) => f.key === src.key)) fills.push(src);
+  };
+  const addShielded = (role: 'test' | 'fund') => {
+    const wallet = role === 'test' ? testWallet : fundingWallet;
+    if (!supportsShielded(wallet)) return;
+    add({
+      key: `${role}-shielded`,
+      label: role === 'test' ? 'Test shielded addr 0' : 'Funding shielded addr 0',
+      disabledReason: walletReason(wallet, role === 'test' ? 'test' : 'funding', true),
+      onClick: () => fillShieldedFromWallet(wallet),
+    });
+  };
 
   for (const src of sources) {
     switch (src) {
       case 'snap':
-        buttons.push({
+        add({
           key: 'snap',
-          label: 'Snap Addr0',
-          disabled: !snapAddress,
+          label: 'Snap addr 0',
+          disabledReason: snapAddress ? null : 'Snap not connected',
           onClick: () => {
             if (snapAddress) onChange(snapAddress);
           },
         });
         break;
       case 'test':
-        buttons.push({
+        add({
           key: 'test',
-          label: 'Test Addr0',
-          disabled: !testWallet?.instance,
+          label: 'Test addr 0',
+          disabledReason: walletReason(testWallet, 'test', false),
           onClick: () => fillFromWallet(testWallet),
         });
-        if (supportsShielded(testWallet)) {
-          buttons.push({
-            key: 'test-shielded',
-            label: 'Test Shielded Addr0',
-            disabled: testWallet?.status !== 'ready',
-            onClick: () => fillShieldedFromWallet(testWallet),
-          });
-        }
+        addShielded('test');
         break;
       case 'fund':
-        buttons.push({
+        add({
           key: 'fund',
-          label: 'Fund Addr0',
-          disabled: !fundingWallet?.instance,
+          label: 'Funding addr 0',
+          disabledReason: walletReason(fundingWallet, 'funding', false),
           onClick: () => fillFromWallet(fundingWallet),
         });
-        if (supportsShielded(fundingWallet)) {
-          buttons.push({
-            key: 'fund-shielded',
-            label: 'Fund Shielded Addr0',
-            disabled: fundingWallet?.status !== 'ready',
-            onClick: () => fillShieldedFromWallet(fundingWallet),
-          });
-        }
+        addShielded('fund');
+        break;
+      case 'test-shielded':
+        addShielded('test');
+        break;
+      case 'fund-shielded':
+        addShielded('fund');
+        break;
+      case 'snap-shielded':
+        // The snap has no shielded address derivation yet; nothing to offer.
         break;
       case 'multisig':
-        buttons.push({
+        add({
           key: 'multisig',
-          label: 'Multisig Addr0',
-          disabled: false,
+          label: 'Multisig addr 0',
+          disabledReason: null,
           onClick: () => onChange(WELL_KNOWN_ADDRESSES.MULTISIG_ADDR0),
         });
         break;
     }
   }
 
+  const detection = useMemo(() => detectAddressKind(value, network), [value, network]);
+  const error = addressAcceptError(detection, accept, network) ?? fillError;
+  const hintId = `${inputId}-hint`;
+
+  const runFill = (f: FillSource) => {
+    menuRef.current?.removeAttribute('open');
+    f.onClick();
+  };
+
   return (
-    <div>
-      {label && <label className="block text-sm font-medium mb-1.5">{label}</label>}
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="input"
-      />
-      {buttons.length > 0 && (
-        <div className="flex gap-2 mt-1.5">
-          {buttons.map((btn) => (
-            <button
-              key={btn.key}
-              type="button"
-              onClick={btn.onClick}
-              disabled={btn.disabled}
-              className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
+    <div className="flex min-w-0 flex-col gap-1.5">
+      {label && (
+        <label htmlFor={inputId} className="text-body font-medium">
+          {label}
+        </label>
+      )}
+      <label className={`input w-full ${error ? 'input-error' : ''}`}>
+        {detection.kind === 'shielded' && <MdShield className="h-3.5 w-3.5 flex-none text-accent" aria-hidden="true" />}
+        <input
+          id={inputId}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          spellCheck={false}
+          autoComplete="off"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={hintId}
+          className="min-w-0 grow font-mono text-data"
+        />
+        {detection.kind === 'transparent' && (
+          <span className="flex-none rounded-selector bg-base-200 px-1.5 text-caption font-semibold text-ink-muted">
+            Transparent
+          </span>
+        )}
+        {detection.kind === 'shielded' && (
+          <span className="flex-none rounded-selector bg-tint-shielded px-1.5 text-caption font-semibold text-accent">
+            Shielded
+          </span>
+        )}
+      </label>
+
+      <div id={hintId} className="flex flex-col gap-1">
+        {error && <span className="text-caption text-error">{error}</span>}
+        {!error && detection.kind === 'shielded' && (
+          <>
+            <span
+              className="rounded-field border border-dashed border-base-300 bg-base-100 px-2 py-1.5 font-mono text-data-sm leading-[18px] [word-spacing:2px]"
+              aria-label="Full address, grouped"
             >
-              {btn.label}
-            </button>
-          ))}
+              <b className="text-accent">{value.trim().slice(0, 2)}</b>
+              {groupChars(value.trim().slice(2), 4)}
+            </span>
+            <span className="text-caption text-ink-muted">
+              {value.trim().length} characters, valid shielded address for {detection.network}
+            </span>
+          </>
+        )}
+      </div>
+
+      {fills.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-caption text-ink-muted">Fill from</span>
+          {fills.length <= MAX_INLINE_SOURCES ? (
+            fills.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                onClick={f.onClick}
+                disabled={f.disabledReason !== null}
+                title={f.disabledReason ?? undefined}
+                className="btn btn-secondary btn-xs whitespace-nowrap"
+              >
+                {f.label}
+              </button>
+            ))
+          ) : (
+            <details ref={menuRef} className="dropdown">
+              <summary className="btn btn-secondary btn-xs list-none">
+                Choose address
+                <MdArrowDropDown aria-hidden="true" />
+              </summary>
+              <ul className="menu dropdown-content z-20 mt-1 w-64 rounded-box border border-base-300 bg-base-100 p-1 shadow-float">
+                {fills.map((f) => (
+                  <li key={f.key} className={f.disabledReason ? 'menu-disabled' : ''}>
+                    <button type="button" disabled={f.disabledReason !== null} onClick={() => runFill(f)}>
+                      <span className="flex flex-col items-start">
+                        <span>{f.label}</span>
+                        {f.disabledReason && <span className="text-caption text-ink-muted">{f.disabledReason}</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
-      {fillError && <p className="text-xs text-error mt-1">{fillError}</p>}
     </div>
   );
 };

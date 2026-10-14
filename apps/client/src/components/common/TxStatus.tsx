@@ -52,7 +52,8 @@
 import { useState, useEffect } from 'react';
 import { useAppSelector } from '../../store/hooks';
 import { selectLatestEventForTx, walletInstancesMap } from '../../store/slices/walletStoreSlice';
-import { getTransactionStatus, getStatusColorClass, type TransactionStatus } from '../../utils/transactionStatus';
+import { getTransactionStatus, type TransactionStatus } from '../../utils/transactionStatus';
+import { StatusChip } from '../ui/StatusChip';
 
 interface TxStatusProps {
   hash: string;
@@ -250,12 +251,12 @@ export default function TxStatus({ hash, walletId }: TxStatusProps) {
   }, [status, hash, walletId]);
 
   if (isLoading) {
-    return <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Loading...</span>;
+    return <StatusChip status="checking" label="Checking…" />;
   }
 
-  if (!status) {
-    return <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">Unknown</span>;
+  if (!status || status === 'Unknown') {
+    return <StatusChip status="unknown" label="Unknown" />;
   }
 
-  return <span className={`px-2 py-0.5 rounded text-xs ${getStatusColorClass(status)}`}>{status}</span>;
+  return <StatusChip status={status} label={status === 'Valid' ? 'Confirmed' : status} />;
 }

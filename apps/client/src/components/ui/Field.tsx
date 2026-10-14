@@ -18,6 +18,12 @@ export interface FieldProps {
   /** Right of the label, e.g. a unit or a quick action. */
   trailing?: React.ReactNode;
   className?: string;
+  /**
+   * Wire id/aria props onto the child (default). Turn off when the child
+   * wraps the control; then set `id={htmlFor}` and
+   * `aria-describedby={`${htmlFor}-hint`}` on the control yourself.
+   */
+  wireControl?: boolean;
   children: React.ReactElement<Record<string, unknown>>;
 }
 
@@ -30,6 +36,7 @@ export function Field({
   htmlFor,
   trailing,
   className = '',
+  wireControl = true,
   children,
 }: FieldProps) {
   const autoId = useId();
@@ -37,12 +44,14 @@ export function Field({
   const hintId = `${id}-hint`;
   const describedBy = error || hint || warning ? hintId : undefined;
 
-  const control = React.cloneElement(children, {
-    id,
-    'aria-describedby': describedBy,
-    'aria-invalid': error ? true : undefined,
-    'aria-required': required || undefined,
-  });
+  const control = !wireControl
+    ? children
+    : React.cloneElement(children, {
+        id,
+        'aria-describedby': describedBy,
+        'aria-invalid': error ? true : undefined,
+        'aria-required': required || undefined,
+      });
 
   return (
     <div className={`flex min-w-0 flex-col gap-1.5 ${className}`}>

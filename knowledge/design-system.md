@@ -29,6 +29,14 @@ Specs in `docs/design/components.md`. New stage code builds from these instead o
 - `EmptyState`, `ErrorState`, `DataTable` (stacked rows below 768px)
 - `ConfirmDialog`, or `useConfirm()` (`src/hooks/useConfirm.tsx`) as a promise-based drop-in for `window.confirm`. Don't use `window.confirm`.
 
+`src/components/common/` (may read Redux):
+
+- `StageHeader` (title and description from the stage registry, method chip), then `PreconditionStrip` fed by the `useRequire*` hooks in `src/hooks/useRequirements.ts`
+- `Identifier` for every hash, address, token UID or xpub (middle truncation, grouped popover, wallet tag); `TxIdDisplay` = Identifier + `TxStatus` + `ExplorerLink`. Never `break-all` an identifier.
+- `JsonPanel` (and `JsonHighlight`) for requests and responses
+- `AmountInput`: shows decimals, reports base units as a decimal string (`src/utils/amount.ts`, BigInt-safe)
+- `AddressInput`: `accept: 'transparent' | 'shielded' | 'any'`, optional `network`; kind comes from `detectAddressKind()` (`src/utils/addressKind.ts`), which decodes base58 and reads the version byte. Errors are advisory; the value always reaches `onChange`.
+
 Toasts sit bottom-right, max three visible. Success and info dismiss after 4s, warnings after 8s, errors stay until dismissed. `CopyButton` confirms inline and never toasts.
 
 ## Colors (theme `bench` in src/index.css)
