@@ -1,5 +1,5 @@
-import { MdContentCopy } from 'react-icons/md';
-import { useToast } from '../../hooks/useToast';
+import { useEffect, useRef, useState } from 'react';
+import { MdCheck, MdContentCopy, MdErrorOutline } from 'react-icons/md';
 
 interface CopyButtonProps {
   text: string;
@@ -7,28 +7,48 @@ interface CopyButtonProps {
   className?: string;
 }
 
+/** Copies `text` and confirms inline (a tick for 1.5s); no toast. */
 export default function CopyButton({ text, label = 'Copy', className = '' }: CopyButtonProps) {
-  const { success, error } = useToast();
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
-      const truncatedText = text.length > 20 ? `${text.substring(0, 20)}...` : text;
-      success(`Copied: ${truncatedText}`);
+      setState('copied');
     } catch (err) {
       console.error('Failed to copy:', err);
-      error('Failed to copy to clipboard');
+      setState('failed');
     }
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setState('idle'), 1500);
   };
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
-      title={label}
-      className={`p-0 bg-transparent border-0 inline-flex items-center cursor-pointer ${className}`}
+      title={state === 'failed' ? 'Copy failed' : label}
       aria-label={label}
+      className={`inline-flex h-6 w-6 flex-none cursor-pointer items-center justify-center rounded-field border-0 bg-transparent p-0 text-ink-muted transition-colors duration-[120ms] hover:bg-base-200 hover:text-base-content ${className}`}
     >
-      <MdContentCopy />
+      {state === 'copied' ? (
+        <MdCheck className="text-success" aria-hidden="true" />
+      ) : state === 'failed' ? (
+        <MdErrorOutline className="text-error" aria-hidden="true" />
+      ) : (
+        <MdContentCopy aria-hidden="true" />
+      )}
+      <span className="sr-only" aria-live="polite">
+        {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : ''}
+      </span>
     </button>
   );
 }

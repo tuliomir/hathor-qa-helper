@@ -17,6 +17,20 @@ The old shortcuts survive only as thin aliases in the `LEGACY: delete in T10` bl
 
 Tailwind's preflight is wrapped in the `qa-base` cascade layer at the top of `src/index.css`. Without it, Tailwind 3's unlayered preflight overrides daisyUI 5's layered component styles (button backgrounds, borders).
 
+## Shared components
+
+Specs in `docs/design/components.md`. New stage code builds from these instead of ad-hoc markup.
+
+`src/components/ui/` (primitives, no Redux):
+
+- `Panel` (`variant="inset"` for sub-areas), `Callout` (tones `info|success|warning|error|shielded|dry-run`), `Field` (label, hint, error; wires `aria-describedby`/`aria-invalid` onto its child)
+- `SegmentedControl`: radiogroup; arrows/Home/End move focus, Space/Enter select
+- `StatusDot`, `StatusChip`: tone from `statusTone()` in `src/utils/statusTone.ts`, the single map from wallet/tx/session/server status words to tones
+- `EmptyState`, `ErrorState`, `DataTable` (stacked rows below 768px)
+- `ConfirmDialog`, or `useConfirm()` (`src/hooks/useConfirm.tsx`) as a promise-based drop-in for `window.confirm`. Don't use `window.confirm`.
+
+Toasts sit bottom-right, max three visible. Success and info dismiss after 4s, warnings after 8s, errors stay until dismissed. `CopyButton` confirms inline and never toasts.
+
 ## Colors (theme `bench` in src/index.css)
 
 Colours are daisyUI 5 theme variables set by `[data-theme='bench']` on `<html>` (dark: `bench-dark`), plus app variables prefixed `--qa-`. Use the semantic utilities:

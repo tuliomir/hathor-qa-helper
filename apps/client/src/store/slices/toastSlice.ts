@@ -17,6 +17,21 @@ export type ToastOptions = {
   actionType?: ToastActionType; // Action to dispatch when toast is clicked
 };
 
+/**
+ * How long a toast stays when the caller passes no duration (ms).
+ * `null` keeps it until dismissed: errors must not vanish unread.
+ */
+export function defaultToastDuration(type: ToastType): number | null {
+  switch (type) {
+    case 'error':
+      return null;
+    case 'warning':
+      return 8000;
+    default:
+      return 4000;
+  }
+}
+
 export interface ToastLink {
   url: string;
   label: string;

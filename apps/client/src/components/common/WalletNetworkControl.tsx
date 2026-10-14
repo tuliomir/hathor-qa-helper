@@ -8,6 +8,7 @@
 
 import type { NetworkKey } from '../../constants/network';
 import NetworkSwapButton from './NetworkSwapButton';
+import { useConfirm } from '../../hooks/useConfirm';
 
 interface WalletNetworkControlProps {
   walletId: string;
@@ -27,9 +28,11 @@ export default function WalletNetworkControl({
   onForceStop,
 }: WalletNetworkControlProps) {
   const isStuck = status === 'connecting' || status === 'syncing';
+  const { confirm, confirmDialog } = useConfirm();
 
   return (
     <div>
+      {confirmDialog}
       <div className="flex items-center gap-2">
         <span className="badge badge-lg">{network}</span>
         <NetworkSwapButton walletId={walletId} currentNetwork={network} walletStatus={status} onSwap={onSwapNetwork} />
@@ -45,8 +48,15 @@ export default function WalletNetworkControl({
       {/* Force stop for stuck wallets */}
       {isStuck && onForceStop && (
         <button
-          onClick={() => {
-            if (window.confirm('Force stop this wallet? It appears to be stuck in a connecting/syncing state.')) {
+          onClick={async () => {
+            if (
+              await confirm({
+                title: 'Force stop this wallet?',
+                body: `It appears stuck in the ${status} state.`,
+                confirmLabel: 'Force stop',
+                tone: 'danger',
+              })
+            ) {
               onForceStop(walletId);
             }
           }}

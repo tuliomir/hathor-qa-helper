@@ -1,6 +1,12 @@
 import { useCallback } from 'react';
 import { useAppDispatch } from '../store/hooks';
-import { addToast, removeToast, type ToastOptions, type ToastType } from '../store/slices/toastSlice';
+import {
+  addToast,
+  defaultToastDuration,
+  removeToast,
+  type ToastOptions,
+  type ToastType,
+} from '../store/slices/toastSlice';
 
 export function useToast() {
   const dispatch = useAppDispatch();
@@ -14,13 +20,11 @@ export function useToast() {
 
       dispatch(addToast({ id, message, type, duration, link, actionType }));
 
-      // Auto-remove toast after duration or default 2000ms
-      setTimeout(
-        () => {
-          dispatch(removeToast(id));
-        },
-        typeof duration === 'number' ? duration : 2000
-      );
+      // Errors stay until dismissed unless the caller sets a duration.
+      const timeout = typeof duration === 'number' ? duration : defaultToastDuration(type);
+      if (timeout !== null) {
+        setTimeout(() => dispatch(removeToast(id)), timeout);
+      }
     },
     [dispatch]
   );

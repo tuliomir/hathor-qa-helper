@@ -23,6 +23,7 @@ import Loading from '../common/Loading';
 import { ExplorerLink } from '../common/ExplorerLink';
 import AllConfigStringsModal from '../common/AllConfigStringsModal';
 import { applyNetworkServices } from '../../services/networkServices';
+import { useConfirm } from '../../hooks/useConfirm';
 
 type TabType = 'fund' | 'test';
 
@@ -161,6 +162,7 @@ function WalletTokensDisplay({
   const [tokenBalances, setTokenBalances] = useState<Map<string, bigint>>(new Map());
   const [isFetchingFirstEmpty, setIsFetchingFirstEmpty] = useState(false);
   const [isAllConfigStringsModalOpen, setIsAllConfigStringsModalOpen] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
   // Token UIDs fetched directly from wallet instance (more reliable than Redux store)
   const [fetchedTokenUids, setFetchedTokenUids] = useState<string[]>([]);
   // Pagination
@@ -591,10 +593,12 @@ function WalletTokensDisplay({
       console.log({ balanceNum, maxMeltable, token: selectedToken.symbol });
 
       // Confirm with user
-      const confirmed = window.confirm(
-        `Are you sure you want to melt ${maxMeltable} ${selectedToken.symbol} tokens?\n\n` +
-          `This operation is IRREVERSIBLE. The tokens will be converted back to HTR.`
-      );
+      const confirmed = await confirm({
+        title: `Melt ${maxMeltable} ${selectedToken.symbol}?`,
+        body: 'This cannot be undone. The tokens are converted back to HTR.',
+        confirmLabel: 'Melt tokens',
+        tone: 'danger',
+      });
 
       if (!confirmed) {
         return;
@@ -636,6 +640,7 @@ function WalletTokensDisplay({
 
   return (
     <>
+      {confirmDialog}
       {/* Loading overlay when sending transaction */}
       {isSending && <Loading overlay message="Sending transaction..." />}
 

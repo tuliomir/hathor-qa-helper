@@ -36,11 +36,18 @@ export default function DeepLinkModal() {
   return (
     <>
       {/* Modal - positioned on the right side to coexist with WalletConnect modal */}
-      <div className="fixed top-1/2 right-4 -translate-y-1/2 z-[60] max-w-sm w-full">
+      <div
+        className="fixed top-1/2 right-4 -translate-y-1/2 z-[60] max-w-sm w-full"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deep-link-modal-title"
+      >
         <div className="bg-white rounded-lg shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary text-white rounded-t-lg">
-            <h2 className="text-lg font-bold m-0">{title}</h2>
+            <h2 id="deep-link-modal-title" className="text-lg font-bold m-0">
+              {title}
+            </h2>
             <button
               onClick={handleClose}
               className="text-white hover:text-gray-200 text-xl font-bold"

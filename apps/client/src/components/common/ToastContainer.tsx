@@ -1,13 +1,18 @@
+import { MdCheckCircleOutline, MdClose, MdErrorOutline, MdInfoOutline, MdWarningAmber } from 'react-icons/md';
+import type React from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { removeToast, type Toast, type ToastActionType } from '../../store/slices/toastSlice';
 import { showDeepLinkModal } from '../../store/slices/deepLinkSlice';
 
-const toastTypeClasses: Record<NonNullable<Toast['type']>, string> = {
-  success: 'alert-success',
-  error: 'alert-error',
-  warning: 'alert-warning',
-  info: 'alert-info',
+/** Toast tones share the Callout palette. */
+const TONE: Record<Toast['type'], { box: string; icon: string; Icon: React.ComponentType<{ className?: string }> }> = {
+  success: { box: 'bg-tint-success', icon: 'text-success', Icon: MdCheckCircleOutline },
+  error: { box: 'bg-tint-error', icon: 'text-error', Icon: MdErrorOutline },
+  warning: { box: 'bg-tint-warning', icon: 'text-warning-ink', Icon: MdWarningAmber },
+  info: { box: 'bg-tint-info', icon: 'text-info', Icon: MdInfoOutline },
 };
+
+const MAX_VISIBLE = 3;
 
 // Map of action types to their corresponding Redux actions
 const actionHandlers: Record<ToastActionType, () => ReturnType<typeof showDeepLinkModal>> = {
@@ -32,19 +37,40 @@ export default function ToastContainer() {
     return null;
   }
 
+  // Newest at the bottom; older ones beyond the limit collapse into a counter.
+  const visible = toasts.slice(-MAX_VISIBLE);
+  const hidden = toasts.length - visible.length;
+
   return (
-    <div className="toast toast-start toast-bottom z-50 space-y-2">
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`alert ${toastTypeClasses[toast.type]} flex items-center justify-between ${toast.actionType ? 'cursor-pointer hover:opacity-90' : ''}`}
-          onClick={toast.actionType ? () => handleToastClick(toast) : undefined}
-          role={toast.actionType ? 'button' : undefined}
-          tabIndex={toast.actionType ? 0 : undefined}
-          onKeyDown={toast.actionType ? (e) => e.key === 'Enter' && handleToastClick(toast) : undefined}
+    <div className="toast toast-end toast-bottom z-50 w-[min(24rem,calc(100vw-2rem))] gap-2 p-4">
+      {hidden > 0 && (
+        <button
+          type="button"
+          className="self-end rounded-full bg-base-100 px-2.5 py-0.5 text-caption text-ink-muted shadow-float"
+          onClick={() => toasts.slice(0, hidden).forEach((t) => dispatch(removeToast(t.id)))}
+          title="Dismiss older notifications"
         >
-          <div className="flex-1">
-            <span>
+          +{hidden} more
+        </button>
+      )}
+      {visible.map((toast) => {
+        const { box, icon, Icon } = TONE[toast.type];
+        const urgent = toast.type === 'error' || toast.type === 'warning';
+        return (
+          <div
+            key={toast.id}
+            role={urgent ? 'alert' : 'status'}
+            aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+            className={`flex items-start gap-2.5 rounded-box border border-base-300 px-3 py-2.5 text-left text-body text-base-content shadow-float whitespace-normal ${box}`}
+          >
+            <Icon className={`mt-0.5 h-4 w-4 flex-none ${icon}`} aria-hidden="true" />
+            <div
+              className={`min-w-0 flex-1 break-words ${toast.actionType ? 'cursor-pointer underline-offset-2 hover:underline' : ''}`}
+              onClick={toast.actionType ? () => handleToastClick(toast) : undefined}
+              role={toast.actionType ? 'button' : undefined}
+              tabIndex={toast.actionType ? 0 : undefined}
+              onKeyDown={toast.actionType ? (e) => e.key === 'Enter' && handleToastClick(toast) : undefined}
+            >
               {toast.message}
               {toast.link && (
                 <>
@@ -53,29 +79,28 @@ export default function ToastContainer() {
                     href={toast.link.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline text-primary"
+                    className="link link-primary"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {toast.link.label}
                   </a>
                 </>
               )}
-            </span>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss notification"
+              className="btn btn-ghost btn-xs btn-square -mr-1 -mt-0.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch(removeToast(toast.id));
+              }}
+            >
+              <MdClose aria-hidden="true" />
+            </button>
           </div>
-
-          <button
-            type="button"
-            aria-label="Dismiss toast"
-            className="btn btn-ghost btn-sm ml-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch(removeToast(toast.id));
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

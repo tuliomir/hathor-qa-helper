@@ -44,6 +44,7 @@ import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
 import { NETWORK_CONFIG, NETWORK_KEYS, nextNetwork, type NetworkKey } from '../../constants/network';
 import { getAddressesForWallet } from '../../services/addressDatabase';
+import { useConfirm } from '../../hooks/useConfirm';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
 const MAX_VISIBLE_WALLETS = 5;
@@ -51,6 +52,7 @@ const MAX_VISIBLE_WALLETS = 5;
 export default function WalletInitialization() {
   const dispatch = useAppDispatch();
   const { wallets: walletsMap, addWallet, removeWallet, updateFriendlyName, updateNetwork } = useWalletStore();
+  const { confirm, confirmDialog } = useConfirm();
 
   const [seedInput, setSeedInput] = useState('');
   const [walletName, setWalletName] = useState('');
@@ -301,8 +303,16 @@ export default function WalletInitialization() {
     }
   };
 
-  const handleRemoveWallet = (walletId: string) => {
-    if (window.confirm('Are you sure you want to remove this wallet?')) {
+  const handleRemoveWallet = async (walletId: string) => {
+    const name = walletsMap.get(walletId)?.metadata.friendlyName ?? 'this wallet';
+    if (
+      await confirm({
+        title: `Remove ${name}?`,
+        body: 'The wallet is stopped and deleted from this browser.',
+        confirmLabel: 'Remove wallet',
+        tone: 'danger',
+      })
+    ) {
       removeWallet(walletId);
 
       // Clear default status if this wallet was default
@@ -458,6 +468,7 @@ export default function WalletInitialization() {
 
   return (
     <div className="max-w-300 mx-auto">
+      {confirmDialog}
       {/* Wallets Table */}
       <div className="mb-10">
         <div className="flex items-center justify-between mb-4">
@@ -611,11 +622,14 @@ export default function WalletInitialization() {
                               </button>
                             ) : (
                               <button
-                                onClick={() => {
+                                onClick={async () => {
                                   if (
-                                    window.confirm(
-                                      `Force stop "${wallet.metadata.friendlyName}"? It appears stuck in ${wallet.status} state.`
-                                    )
+                                    await confirm({
+                                      title: `Force stop ${wallet.metadata.friendlyName}?`,
+                                      body: `It appears stuck in the ${wallet.status} state.`,
+                                      confirmLabel: 'Force stop',
+                                      tone: 'danger',
+                                    })
                                   ) {
                                     handleStopWallet(wallet.metadata.id);
                                   }
