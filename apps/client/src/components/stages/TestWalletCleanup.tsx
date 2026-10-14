@@ -14,7 +14,7 @@ import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { WALLET_CONFIG } from '../../constants/network';
 import { applyNetworkServices } from '../../services/networkServices';
-import { fetchSwapTokens } from '../../store/slices/swapTokensSlice';
+import { fetchSwapTokens, swapTokenUidsForNetwork } from '../../store/slices/swapTokensSlice';
 import Loading from '../common/Loading';
 import { trackTokenFlow } from '../../services/tokenFlowTracker';
 import type { TokenFlowResult } from '../../types/tokenFlowTracker';
@@ -171,8 +171,7 @@ export default function TestWalletCleanup() {
             }
 
             // Check if this is a swap test token (never melt, send to funding)
-            const swapTokenUids =
-              testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapTokenUids = swapTokenUidsForNetwork(swapTokensState, testWallet.metadata.network);
             const swapToken = swapTokenUids.includes(uid);
             if (swapToken) {
               return {
@@ -685,8 +684,7 @@ export default function TestWalletCleanup() {
               };
             }
 
-            const swapTokenUids =
-              testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapTokenUids = swapTokenUidsForNetwork(swapTokensState, testWallet.metadata.network);
             const swapToken = swapTokenUids.includes(uid);
             if (swapToken) {
               return {

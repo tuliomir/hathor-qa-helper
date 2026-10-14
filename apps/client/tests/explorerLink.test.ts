@@ -30,6 +30,14 @@ describe('resolveExplorerUrl', () => {
     expect(resolveExplorerUrl('Testnet')).toBe('https://explorer.testnet.hathor.network/');
   });
 
+  test('resolves SHIELDED_TESTNET to its own explorer', () => {
+    expect(resolveExplorerUrl('SHIELDED_TESTNET')).toBe('https://explorer.shielded-outputs.testnet.hathor.network/');
+  });
+
+  test('resolves lowercase shielded_testnet', () => {
+    expect(resolveExplorerUrl('shielded_testnet')).toBe('https://explorer.shielded-outputs.testnet.hathor.network/');
+  });
+
   test('returns testnet URL for unknown network', () => {
     expect(resolveExplorerUrl('unknown')).toBe('https://explorer.testnet.hathor.network/');
   });

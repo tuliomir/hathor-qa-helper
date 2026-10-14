@@ -41,7 +41,7 @@ import NetworkSwapButton from '../common/NetworkSwapButton';
 import Select from '../common/Select';
 import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
-import type { NetworkKey } from '../../constants/network';
+import { NETWORK_CONFIG, NETWORK_KEYS, nextNetwork, type NetworkKey } from '../../constants/network';
 import { getAddressesForWallet } from '../../services/addressDatabase';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
@@ -336,7 +336,7 @@ export default function WalletInitialization() {
   };
 
   const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkKey, status: string) => {
-    const newNetwork: NetworkKey = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
+    const newNetwork: NetworkKey = nextNetwork(currentNetwork);
 
     // Stop the wallet if it's running in any state
     if (status === 'ready' || status === 'connecting' || status === 'syncing') {
@@ -854,8 +854,11 @@ export default function WalletInitialization() {
             Network:
           </label>
           <Select id="network-select" value={network} onChange={handleNetworkChange}>
-            <option value="TESTNET">Testnet</option>
-            <option value="MAINNET">Mainnet</option>
+            {NETWORK_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {NETWORK_CONFIG[key].label}
+              </option>
+            ))}
           </Select>
         </div>
 

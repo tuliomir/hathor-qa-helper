@@ -13,7 +13,7 @@ import CopyButton from '../common/CopyButton';
 import TxStatus from '../common/TxStatus';
 import Loading from '../common/Loading';
 import Select from '../common/Select';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { resolveExplorerUrl } from '../../utils/networkHelpers';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import type { Token } from '../../store/slices/tokensSlice';
@@ -194,8 +194,7 @@ export default function TransactionHistory() {
 
   // Get explorer URL based on network
   function getExplorerUrl(hash: string): string {
-    const network = testWallet?.metadata.network || 'testnet';
-    const baseUrl = network === 'MAINNET' ? NETWORK_CONFIG.MAINNET.explorerUrl : NETWORK_CONFIG.TESTNET.explorerUrl;
+    const baseUrl = resolveExplorerUrl(testWallet?.metadata.network ?? '');
     return `${baseUrl}transaction/${hash}`;
   }
 

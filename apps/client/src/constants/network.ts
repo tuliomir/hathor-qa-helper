@@ -12,6 +12,7 @@ import {
   type NetworkKey,
 } from '@qa-helper/shared/networks';
 
+export { NETWORK_KEYS };
 export type { NetworkKey };
 
 export interface ClientNetworkConfig extends NetworkDefinition {

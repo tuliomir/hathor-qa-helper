@@ -18,7 +18,7 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch } from '../../store/hooks';
 import { setTestWallet } from '../../store/slices/walletSelectionSlice';
 import { startWallet } from '../../store/slices/walletStoreSlice';
-import type { NetworkKey } from '../../constants/network';
+import { NETWORK_CONFIG, NETWORK_KEYS, type NetworkKey } from '../../constants/network';
 
 export default function SeedPhraseCapture() {
   const dispatch = useAppDispatch();
@@ -306,8 +306,11 @@ export default function SeedPhraseCapture() {
                       onChange={(e) => setNetwork(e.target.value as NetworkKey)}
                       className="w-full text-sm"
                     >
-                      <option value="TESTNET">Testnet</option>
-                      <option value="MAINNET">Mainnet</option>
+                      {NETWORK_KEYS.map((key) => (
+                        <option key={key} value={key}>
+                          {NETWORK_CONFIG[key].label}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 </div>
