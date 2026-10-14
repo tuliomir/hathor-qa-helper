@@ -7,7 +7,6 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { getConfigurationString } from '../../utils/tokenConfigString';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -15,6 +14,12 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import { refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import type { Token } from '../../store/slices/tokensSlice';
 import CopyButton from './CopyButton';
+import { Identifier } from './Identifier';
+import { PreconditionStrip } from './PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { useRequireTestWallet } from '../../hooks/useRequirements';
 
 type Mode = 'validate' | 'display';
 
@@ -27,6 +32,7 @@ function TokenConfigComponent({ mode }: TokenConfigComponentProps) {
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
   const allTokens = useAppSelector((s) => s.tokens.tokens);
   const { getWallet } = useWalletStore();
+  const testWalletRequirement = useRequireTestWallet();
 
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
 
@@ -89,139 +95,97 @@ function TokenConfigComponent({ mode }: TokenConfigComponentProps) {
     setHasValidated(false);
   };
 
-  if (!testWalletId) {
-    return (
-      <div className="p-4 bg-yellow-50 border border-warning rounded-lg">
-        <p className="text-yellow-800 m-0 text-sm mb-2">No test wallet selected.</p>
-        <Link to="/" className="text-blue-600 hover:text-blue-800 underline text-sm">
-          Go to Wallet Initialization to select a test wallet
-        </Link>
-      </div>
-    );
-  }
-
-  if (!testWallet || testWallet.status !== 'ready') {
-    return (
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-blue-800 m-0 text-sm">
-          <span className="inline-block animate-pulse mr-2">⏳</span>
-          Wallet is connecting... Please wait.
-        </p>
-      </div>
-    );
+  if (testWalletRequirement.met !== true) {
+    return <PreconditionStrip requirements={[testWalletRequirement]} />;
   }
 
   if (!mostRecentToken) {
     return (
-      <div className="p-4 bg-yellow-50 border border-warning rounded-lg">
-        <p className="text-yellow-800 m-0 text-sm mb-3">No custom tokens found in this wallet.</p>
-        <button onClick={handleRefresh} disabled={isRefreshing} className="btn btn-warning btn-sm">
-          {isRefreshing ? 'Refreshing...' : 'Refresh Tokens'}
-        </button>
-      </div>
+      <Callout
+        tone="warning"
+        title="No custom tokens in the test wallet"
+        action={
+          <button type="button" onClick={handleRefresh} disabled={isRefreshing} className="btn btn-secondary btn-sm">
+            {isRefreshing ? 'Refreshing…' : 'Refresh tokens'}
+          </button>
+        }
+      >
+        Create a token first, or refresh if you just created one.
+      </Callout>
     );
   }
 
-  const title = mode === 'validate' ? 'Token Configuration Validator' : 'Token Configuration String';
-
+  const title = mode === 'validate' ? 'Token configuration validator' : 'Token configuration string';
   const subtitle =
     mode === 'validate'
-      ? 'Paste the configuration string from the app to validate'
-      : 'Copy this configuration string to register the token in the app';
+      ? 'Paste the configuration string from the app to validate it.'
+      : 'Copy this configuration string to register the token in the app.';
 
   return (
-    <div className="card-primary space-y-4">
-      <div>
-        <h3 className="text-lg font-bold mb-2">{title}</h3>
-        <p className="text-xs text-muted mb-0">{subtitle}</p>
+    <Panel title={title} description={subtitle} bodyClassName="gap-4">
+      <dl className="m-0 grid grid-cols-1 gap-3 rounded-box bg-base-200 p-3 sm:grid-cols-3">
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-caption text-ink-muted">Name</dt>
+          <dd className="m-0 font-medium">{mostRecentToken.name}</dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-caption text-ink-muted">Symbol</dt>
+          <dd className="m-0 font-medium">{mostRecentToken.symbol}</dd>
+        </div>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <dt className="text-caption text-ink-muted">UID</dt>
+          <dd className="m-0 min-w-0">
+            <Identifier value={mostRecentToken.uid} kind="token" />
+          </dd>
+        </div>
+      </dl>
+
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-body font-medium">
+            {mode === 'validate' ? 'Expected configuration string' : 'Configuration string'}
+          </span>
+          {configString && <CopyButton text={configString} label="Copy configuration string" />}
+        </div>
+        <code className="block rounded-field border border-base-300 bg-base-200 px-3 py-2 font-mono text-data [overflow-wrap:anywhere]">
+          {configString}
+        </code>
       </div>
 
-      {/* Token Info */}
-      <div className="p-3 bg-gray-50 rounded-lg">
-        <div className="grid grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-xs text-muted mb-1">Name</p>
-            <p className="font-medium m-0">{mostRecentToken.name}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted mb-1">Symbol</p>
-            <p className="font-medium m-0">{mostRecentToken.symbol}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted mb-1">UID</p>
-            <p className="font-mono text-xs m-0 truncate" title={mostRecentToken.uid}>
-              {mostRecentToken.uid.slice(0, 8)}...{mostRecentToken.uid.slice(-8)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Configuration String */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-bold m-0">
-            {mode === 'validate' ? 'Expected Configuration String' : 'Configuration String'}
-          </p>
-          {configString && <CopyButton text={configString} label="Copy" />}
-        </div>
-        <div
-          className={`p-3 rounded-lg border ${
-            mode === 'display' ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'
-          }`}
-        >
-          <code className="text-xs font-mono break-all">{configString}</code>
-        </div>
-      </div>
-
-      {/* Validate mode: Paste Input */}
       {mode === 'validate' && (
         <>
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-bold m-0">Paste Configuration String from App</p>
-              {pastedConfig && (
-                <button onClick={handleClear} className="text-xs text-muted hover:text-gray-700">
+          <Field
+            label="Configuration string from the app"
+            trailing={
+              pastedConfig && (
+                <button type="button" onClick={handleClear} className="btn btn-ghost btn-xs">
                   Clear
                 </button>
-              )}
-            </div>
+              )
+            }
+          >
             <textarea
               value={pastedConfig}
               onChange={handlePasteChange}
-              placeholder="Paste the configuration string from the Desktop Wallet here..."
-              className="input w-full font-mono text-xs min-h-[80px] resize-y"
+              placeholder="Paste the configuration string from the Desktop Wallet here"
+              className="textarea min-h-20 w-full resize-y font-mono text-data"
             />
-          </div>
+          </Field>
 
-          {/* Validation Result */}
-          {hasValidated && pastedConfig.trim() && (
-            <div
-              className={`p-4 rounded-lg border ${isMatch ? 'bg-green-50 border-success' : 'bg-red-50 border-danger'}`}
-            >
-              {isMatch ? (
-                <div className="flex items-center gap-3">
-                  <span className="text-success text-xl">✓</span>
-                  <div>
-                    <p className="font-bold text-green-900 m-0">Configuration strings match!</p>
-                    <p className="text-sm text-green-800 mt-1 mb-0">The token configuration is correct.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-danger text-xl">✗</span>
-                  <div>
-                    <p className="font-bold text-red-900 m-0">Configuration strings do NOT match</p>
-                    <p className="text-sm text-red-800 mt-1 mb-0">
-                      Please verify you copied the correct configuration string.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {hasValidated &&
+            pastedConfig.trim() &&
+            (isMatch ? (
+              <Callout tone="success" title="Configuration strings match" role="status">
+                The token configuration is correct.
+              </Callout>
+            ) : (
+              <Callout tone="error" title="Configuration strings do not match" role="alert">
+                Check that you copied the configuration string of the right token.
+              </Callout>
+            ))}
         </>
       )}
-    </div>
+    </Panel>
   );
 }
 

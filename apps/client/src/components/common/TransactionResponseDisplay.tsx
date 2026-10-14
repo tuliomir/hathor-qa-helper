@@ -7,7 +7,8 @@
 
 import React from 'react';
 import { ExplorerLink } from './ExplorerLink';
-import CopyButton from './CopyButton';
+import { Identifier, type IdentifierKind } from './Identifier';
+import type { ExplorerPage } from '../../utils/networkHelpers';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -52,17 +53,57 @@ export interface TransactionResponseDisplayProps {
   network: string;
   /** Optional: Show NC-specific fields like nc_id, nc_method */
   showNcFields?: boolean;
-  /** Optional: Custom label for the hash (e.g., "Nano Contract ID" vs "Transaction Hash") */
+  /** Optional: Custom label for the hash (e.g., "Nano contract ID" vs "Transaction hash") */
   hashLabel?: string;
   /** Optional: Explorer page for the hash link (undefined = transaction, 'nc_detail', or 'token_detail') */
-  hashExplorerPage?: 'nc_detail' | 'token_detail';
+  hashExplorerPage?: ExplorerPage;
+}
+
+const PRE =
+  'm-0 max-h-64 overflow-auto rounded-field bg-base-200 p-2 font-mono text-data-sm whitespace-pre-wrap [overflow-wrap:anywhere]';
+
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-box border border-base-300">
+      <h4 className="m-0 border-b border-base-300 bg-base-200 px-3 py-1.5 text-caption font-semibold">{title}</h4>
+      <div className="flex flex-col gap-2 px-3 py-2 text-body">{children}</div>
+    </section>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+      <span className="text-caption text-ink-muted">{label}</span>
+      <span className="min-w-0">{children}</span>
+    </div>
+  );
+}
+
+function IdRow({
+  value,
+  kind,
+  network,
+  page,
+}: {
+  value: string;
+  kind: IdentifierKind;
+  network: string;
+  page?: ExplorerPage;
+}) {
+  return (
+    <span className="inline-flex min-w-0 flex-wrap items-center gap-2">
+      <Identifier value={value} kind={kind} />
+      <ExplorerLink hash={value} network={network} specificPage={page} />
+    </span>
+  );
 }
 
 export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProps> = ({
   response,
   network,
   showNcFields = false,
-  hashLabel = 'Transaction Hash',
+  hashLabel = 'Transaction hash',
   hashExplorerPage,
 }) => {
   // Render Buffer object
@@ -117,16 +158,10 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
   // Render hex string response
   const renderHexResponse = (data: unknown): React.ReactElement => {
     const hexString = typeof data === 'string' ? data : (data as { response?: string }).response;
-
     return (
-      <div className="bg-white border border-green-200 rounded overflow-hidden">
-        <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-          <span className="text-sm font-semibold text-green-800">Transaction Hex</span>
-        </div>
-        <div className="px-3 py-2 max-h-64 overflow-y-auto">
-          <pre className="text-xs font-mono text-gray-700 text-left break-all whitespace-pre-wrap">{hexString}</pre>
-        </div>
-      </div>
+      <Section title="Transaction hex">
+        <pre className={PRE}>{hexString}</pre>
+      </Section>
     );
   };
 
@@ -138,229 +173,148 @@ export const TransactionResponseDisplay: React.FC<TransactionResponseDisplayProp
       return renderRawJson(data);
     }
 
+    const hashKind: IdentifierKind =
+      hashExplorerPage === 'nc_detail' ? 'nc' : hashExplorerPage === 'token_detail' ? 'token' : 'tx';
+
     return (
-      <div className="space-y-3">
-        {/* Transaction/NC Hash */}
+      <div className="flex flex-col gap-3 text-left">
         {tx.hash && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200 flex items-center justify-between">
-              <span className="text-sm font-semibold text-green-800">{hashLabel}</span>
-              <div className="flex items-center gap-1.5">
-                <CopyButton text={tx.hash} label="Copy" />
-                <ExplorerLink hash={tx.hash} network={network} specificPage={hashExplorerPage} />
-              </div>
-            </div>
-            <div className="px-3 py-2">
-              <span className="font-mono text-xs break-all">{tx.hash}</span>
-            </div>
-          </div>
+          <Section title={hashLabel}>
+            <IdRow value={tx.hash} kind={hashKind} network={network} page={hashExplorerPage} />
+          </Section>
         )}
 
-        {/* NC-specific fields */}
         {showNcFields && (tx.nc_id || tx.nc_method || tx.nc_pubkey) && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Nano Contract Details</span>
-            </div>
-            <div className="px-3 py-2 space-y-1 text-sm">
-              {tx.nc_id && (
-                <div>
-                  <strong>NC ID:</strong>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="font-mono text-xs break-all">{tx.nc_id}</span>
-                    <CopyButton text={tx.nc_id} label="Copy" />
-                    <ExplorerLink hash={tx.nc_id} network={network} specificPage="nc_detail" />
-                  </div>
-                </div>
-              )}
-              {tx.nc_method && (
-                <div>
-                  <strong>Method:</strong> {tx.nc_method}
-                </div>
-              )}
-              {tx.nc_pubkey && (
-                <div>
-                  <strong>Public Key:</strong> <span className="font-mono text-xs">{tx.nc_pubkey}</span>
-                </div>
-              )}
-            </div>
-          </div>
+          <Section title="Nano contract">
+            {tx.nc_id && (
+              <Row label="NC ID">
+                <IdRow value={tx.nc_id} kind="nc" network={network} page="nc_detail" />
+              </Row>
+            )}
+            {tx.nc_method && (
+              <Row label="Method">
+                <code className="font-mono text-data">{tx.nc_method}</code>
+              </Row>
+            )}
+            {tx.nc_pubkey && (
+              <Row label="Public key">
+                <Identifier value={tx.nc_pubkey} kind="xpub" />
+              </Row>
+            )}
+          </Section>
         )}
 
-        {/* Transaction Metadata */}
         {(tx.version !== undefined ||
           tx.weight !== undefined ||
           tx.nonce !== undefined ||
           tx.timestamp !== undefined ||
           tx.signalBits !== undefined) && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Transaction Metadata</span>
-            </div>
-            <div className="px-3 py-2 space-y-1 text-sm">
-              {tx.version !== undefined && (
-                <div>
-                  <strong>Version:</strong> {tx.version}
-                </div>
-              )}
-              {tx.weight !== undefined && (
-                <div>
-                  <strong>Weight:</strong> {typeof tx.weight === 'number' ? tx.weight.toFixed(2) : tx.weight}
-                </div>
-              )}
-              {tx.nonce !== undefined && (
-                <div>
-                  <strong>Nonce:</strong> {tx.nonce}
-                </div>
-              )}
-              {tx.timestamp !== undefined && (
-                <div>
-                  <strong>Timestamp:</strong> {new Date(tx.timestamp * 1000).toLocaleString()} ({tx.timestamp})
-                </div>
-              )}
-              {tx.signalBits !== undefined && (
-                <div>
-                  <strong>Signal Bits:</strong> {tx.signalBits}
-                </div>
-              )}
-            </div>
-          </div>
+          <Section title="Metadata">
+            <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+              {(
+                [
+                  ['Version', tx.version],
+                  ['Weight', typeof tx.weight === 'number' ? tx.weight.toFixed(2) : tx.weight],
+                  ['Nonce', tx.nonce],
+                  [
+                    'Timestamp',
+                    tx.timestamp !== undefined
+                      ? `${new Date(tx.timestamp * 1000).toLocaleString()} (${tx.timestamp})`
+                      : undefined,
+                  ],
+                  ['Signal bits', tx.signalBits],
+                ] as const
+              )
+                .filter(([, v]) => v !== undefined)
+                .map(([k, v]) => (
+                  <React.Fragment key={k}>
+                    <dt className="text-caption text-ink-muted">{k}</dt>
+                    <dd className="m-0 font-mono text-data tabular-nums">{v}</dd>
+                  </React.Fragment>
+                ))}
+            </dl>
+          </Section>
         )}
 
-        {/* Inputs */}
         {tx.inputs && tx.inputs.length > 0 && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Inputs ({tx.inputs.length})</span>
-            </div>
-            <div className="px-3 py-2 space-y-2 max-h-48 overflow-y-auto">
+          <Section title={`Inputs (${tx.inputs.length})`}>
+            <ol className="m-0 flex max-h-48 list-none flex-col gap-2 overflow-y-auto p-0">
               {tx.inputs.map((input, idx) => (
-                <div key={idx} className="text-xs border-b border-gray-200 last:border-0 pb-2">
-                  <div className="font-semibold mb-1">Input {idx}</div>
-                  <div>
-                    <strong>Hash:</strong>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="font-mono text-2xs break-all">{input.hash}</span>
-                      <CopyButton text={input.hash} label="Copy" />
-                      <ExplorerLink hash={input.hash} network={network} />
-                    </div>
-                  </div>
-                  <div>
-                    <strong>Index:</strong> {input.index}
-                  </div>
-                  {input.data && (
-                    <div className="mt-1">
-                      <strong>Data:</strong>
-                      <pre className="text-xs mt-1 bg-gray-50 p-1 rounded overflow-x-auto">
-                        {renderBuffer(input.data)}
-                      </pre>
-                    </div>
-                  )}
-                </div>
+                <li key={idx} className="flex flex-col gap-1 border-b border-base-300 pb-2 last:border-0 last:pb-0">
+                  <span className="text-caption font-semibold">Input {idx}</span>
+                  <Row label="Hash">
+                    <IdRow value={input.hash} kind="tx" network={network} />
+                  </Row>
+                  <Row label="Index">
+                    <span className="font-mono text-data">{input.index}</span>
+                  </Row>
+                  {input.data && <pre className={PRE}>{renderBuffer(input.data)}</pre>}
+                </li>
               ))}
-            </div>
-          </div>
+            </ol>
+          </Section>
         )}
 
-        {/* Outputs */}
         {tx.outputs && tx.outputs.length > 0 && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Outputs ({tx.outputs.length})</span>
-            </div>
-            <div className="px-3 py-2 space-y-2 max-h-48 overflow-y-auto">
+          <Section title={`Outputs (${tx.outputs.length})`}>
+            <ol className="m-0 flex max-h-48 list-none flex-col gap-2 overflow-y-auto p-0">
               {tx.outputs.map((output, idx) => {
                 const isDataOutput = output.decodedScript?.data !== undefined;
                 return (
-                  <div key={idx} className="text-xs border-b border-gray-200 last:border-0 pb-2">
-                    <div className="font-semibold mb-1">
+                  <li key={idx} className="flex flex-col gap-1 border-b border-base-300 pb-2 last:border-0 last:pb-0">
+                    <span className="flex items-center gap-2 text-caption font-semibold">
                       Output {idx}
                       {isDataOutput && (
-                        <span className="ml-2 px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 rounded">
-                          DATA
-                        </span>
+                        <span className="rounded-selector bg-base-200 px-1.5 font-normal text-ink-muted">Data</span>
                       )}
-                    </div>
-                    <div>
-                      <strong>Value:</strong> {output.value}
-                    </div>
-                    <div>
-                      <strong>Token Data:</strong> {output.tokenData}
-                    </div>
+                    </span>
+                    <Row label="Value">
+                      <span className="font-mono text-data tabular-nums">{output.value}</span>
+                    </Row>
+                    <Row label="Token data">
+                      <span className="font-mono text-data">{output.tokenData}</span>
+                    </Row>
                     {output.decodedScript?.address?.base58 && (
-                      <div>
-                        <strong>Address:</strong> {output.decodedScript.address.base58}
-                      </div>
+                      <Row label="Address">
+                        <Identifier value={output.decodedScript.address.base58} kind="address" />
+                      </Row>
                     )}
-                    {output.decodedScript?.data !== undefined && (
-                      <div className="mt-1">
-                        <strong>Data:</strong>
-                        <pre className="mt-1 p-2 bg-purple-50 border border-purple-200 rounded text-xs font-mono whitespace-pre-wrap break-all">
-                          {output.decodedScript.data}
-                        </pre>
-                      </div>
-                    )}
+                    {output.decodedScript?.data !== undefined && <pre className={PRE}>{output.decodedScript.data}</pre>}
                     {output.decodedScript?.timelock !== undefined && output.decodedScript.timelock !== null && (
-                      <div>
-                        <strong>Timelock:</strong> {output.decodedScript.timelock}
-                      </div>
+                      <Row label="Timelock">
+                        <span className="font-mono text-data">{output.decodedScript.timelock}</span>
+                      </Row>
                     )}
-                  </div>
+                  </li>
                 );
               })}
-            </div>
-          </div>
+            </ol>
+          </Section>
         )}
 
-        {/* Parents */}
         {tx.parents && tx.parents.length > 0 && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Parents ({tx.parents.length})</span>
-            </div>
-            <div className="px-3 py-2 space-y-1">
-              {tx.parents.map((parent, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 text-xs">
-                  <span className="font-mono text-2xs break-all">{parent}</span>
-                  <CopyButton text={parent} label="Copy" />
-                  <ExplorerLink hash={parent} network={network} />
-                </div>
-              ))}
-            </div>
-          </div>
+          <Section title={`Parents (${tx.parents.length})`}>
+            {tx.parents.map((parent) => (
+              <IdRow key={parent} value={parent} kind="tx" network={network} />
+            ))}
+          </Section>
         )}
 
-        {/* Tokens */}
         {tx.tokens && tx.tokens.length > 0 && (
-          <div className="bg-white border border-green-200 rounded overflow-hidden">
-            <div className="bg-green-100 px-3 py-2 border-b border-green-200">
-              <span className="text-sm font-semibold text-green-800">Tokens ({tx.tokens.length})</span>
-            </div>
-            <div className="px-3 py-2 space-y-1">
-              {tx.tokens.map((token, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 text-xs">
-                  <span className="font-mono text-2xs break-all">{token}</span>
-                  <CopyButton text={token} label="Copy" />
-                  <ExplorerLink hash={token} specificPage="token_detail" network={network} />
-                </div>
-              ))}
-            </div>
-          </div>
+          <Section title={`Tokens (${tx.tokens.length})`}>
+            {tx.tokens.map((token) => (
+              <IdRow key={token} value={token} kind="token" network={network} page="token_detail" />
+            ))}
+          </Section>
         )}
 
-        {/* Full TX JSON is accessible via the parent's "Show Raw" toggle */}
+        {/* Full TX JSON is accessible via the parent's Formatted/Raw toggle */}
       </div>
     );
   };
 
   // Render raw JSON
-  const renderRawJson = (data: unknown): React.ReactElement => {
-    return (
-      <div className="bg-white border border-green-200 rounded p-3 overflow-auto max-h-64">
-        <pre className="text-sm font-mono text-gray-700 text-left">{safeStringify(data, 2)}</pre>
-      </div>
-    );
-  };
+  const renderRawJson = (data: unknown): React.ReactElement => <pre className={PRE}>{safeStringify(data, 2)}</pre>;
 
   // Determine which renderer to use
   if (isHexStringResponse(response)) {
