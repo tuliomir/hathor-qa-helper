@@ -32,6 +32,7 @@ import type { TokenFlowResult } from '../../types/tokenFlowTracker';
 import { waitForTxSettlement } from '../../utils/waitForTxSettlement';
 import { buildUnifiedCleanupTemplate, type ReturnToken } from '../../services/cleanupTemplateBuilder';
 import { splitIntoBatches } from '../../utils/cleanupBatching';
+import { cleanupBusyReason } from '../../utils/cleanupGating';
 import {
   getMeltableTokens,
   getSwapTokens,
@@ -132,6 +133,9 @@ export default function TestWalletCleanup() {
 
   // Track retrieve-from-funding transaction statuses
   const [isRetrieving, setIsRetrieving] = useState<string | null>(null); // tokenUid being retrieved
+
+  // Refresh, Retrieve and Execute run one at a time
+  const busyReason = cleanupBusyReason({ isExecuting, isRetrieving: isRetrieving !== null, isRefreshing });
 
   const testReady = testWallet?.status === 'ready';
   const fundingReady = fundingWallet?.status === 'ready';
@@ -277,7 +281,7 @@ export default function TestWalletCleanup() {
 
   // Refresh wallet data and reload preview
   const handleRefresh = useCallback(async () => {
-    if (!testWallet || isRefreshing) return;
+    if (!testWallet || busyReason) return;
 
     setIsRefreshing(true);
     try {
@@ -293,7 +297,7 @@ export default function TestWalletCleanup() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [testWallet, isRefreshing, dispatch, loadPreviewData]);
+  }, [testWallet, busyReason, dispatch, loadPreviewData]);
 
   // Fetch swap tokens registry and refresh wallet data on mount
 
@@ -308,6 +312,7 @@ export default function TestWalletCleanup() {
       setErrors((prev) => [...prev, 'Both wallets must be ready to retrieve tokens']);
       return;
     }
+    if (busyReason) return;
 
     setIsRetrieving(tokenUid);
 
@@ -372,7 +377,7 @@ export default function TestWalletCleanup() {
   };
 
   const handleExecuteCleanup = async () => {
-    if (!testWallet?.instance || !fundingWallet?.instance) return;
+    if (!testWallet?.instance || !fundingWallet?.instance || busyReason) return;
 
     // Clear previous debug logs
     setDebugLogs([]);
@@ -781,7 +786,7 @@ export default function TestWalletCleanup() {
   const canExecute =
     (hasTokensToMelt || hasSwapTokens || hasTokensToReturn || hasHtrToTransfer) &&
     fundingReady &&
-    !isExecuting &&
+    !busyReason &&
     !isLoading;
 
   // Calculate estimated HTR from melting (100 tokens = 1 HTR)
@@ -809,15 +814,17 @@ export default function TestWalletCleanup() {
 
   const executeReason = isLoading
     ? null
-    : !fundingReady
-      ? 'Funding wallet required for cleanup'
-      : !hasTokensToMelt && !hasSwapTokens && !hasTokensToReturn && !hasHtrToTransfer
-        ? shieldedNotice
-          ? `Nothing transparent to clean up. ${shieldedNotice}.`
-          : 'Nothing to clean up'
-        : !canExecute
-          ? 'Cannot execute cleanup'
-          : null;
+    : busyReason
+      ? busyReason
+      : !fundingReady
+        ? 'Funding wallet required for cleanup'
+        : !hasTokensToMelt && !hasSwapTokens && !hasTokensToReturn && !hasHtrToTransfer
+          ? shieldedNotice
+            ? `Nothing transparent to clean up. ${shieldedNotice}.`
+            : 'Nothing to clean up'
+          : !canExecute
+            ? 'Cannot execute cleanup'
+            : null;
 
   const tokenNameCell = (token: { symbol: string; name: string }) => (
     <span className="whitespace-nowrap">
@@ -984,7 +991,8 @@ export default function TestWalletCleanup() {
               <button
                 type="button"
                 onClick={handleRefresh}
-                disabled={isRefreshing}
+                disabled={busyReason !== null}
+                title={busyReason ?? undefined}
                 className="btn btn-secondary btn-sm"
               >
                 {isRefreshing ? spinner : <MdRefresh aria-hidden="true" />}
@@ -1100,7 +1108,7 @@ export default function TestWalletCleanup() {
                   <ul className="m-0 flex list-none flex-col gap-2 p-0">
                     {token.tokenFlow!.addressFlows.map((flow, idx) => {
                       const isFundingWallet = flow.walletId === fundingWalletId;
-                      const canRetrieve = isFundingWallet && fundingReady && !isRetrieving;
+                      const canRetrieve = isFundingWallet && fundingReady && !busyReason;
                       return (
                         <li
                           key={idx}
@@ -1125,6 +1133,7 @@ export default function TestWalletCleanup() {
                                   type="button"
                                   onClick={() => handleRetrieveFromFunding(token.uid, token.symbol, flow.netBalance)}
                                   disabled={!canRetrieve}
+                                  title={busyReason ?? undefined}
                                   className="btn btn-secondary btn-xs"
                                 >
                                   {isRetrieving === token.uid && (
