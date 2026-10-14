@@ -7,11 +7,41 @@
 import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { useRequireSnap } from '../../hooks/useRequirements';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
 import { AddressInput } from '../common/AddressInput';
+import { Field } from '../ui/Field';
+import { firstUnmetReason } from '../../utils/requirements';
+
+const MONO_INPUT = 'input w-full font-mono text-data';
+const ADDR_SOURCES: ('snap' | 'test' | 'fund' | 'multisig')[] = ['snap', 'test', 'fund', 'multisig'];
+
+function Check({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-body">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="checkbox checkbox-sm"
+      />
+      {children}
+    </label>
+  );
+}
 
 export const SnapCreateNcTokenStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('createNcToken');
+  const { isDryRun, methodData, execute } = useSnapMethod('createNcToken');
+  const snapRequirement = useRequireSnap();
 
   // NC params
   const [method, setMethod] = useState('initialize');
@@ -89,153 +119,136 @@ export const SnapCreateNcTokenStage: React.FC = () => {
   const handleExecute = () => execute((h) => h.createNanoContractCreateTokenTx(params));
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">NC + Create Token (Snap)</h1>
-      <p className="text-muted mb-7.5">Create a nano contract with simultaneous token creation via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-create-nc-token"
+        description="Call a nano contract method and create a token in the same transaction."
+        method="htr_createNanoContractCreateTokenTx"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="NC + Create Token"
-          description="Combined nano contract and token creation"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          {/* NC Fields */}
-          <h4 className="text-sm font-bold text-gray-700 mt-2">Nano Contract</h4>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Method</label>
-            <input
-              type="text"
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-              placeholder="initialize"
-              className="input"
-            />
+      <SnapMethodCard
+        title="Create NC and token"
+        description="Nano contract call, token options and transaction options."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <section className="flex flex-col gap-3" aria-labelledby="snap-nctoken-nc">
+          <h3 id="snap-nctoken-nc" className="m-0 text-body font-semibold">
+            Nano contract
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[12rem_minmax(0,1fr)]">
+            <Field label="Method">
+              <input
+                type="text"
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                placeholder="initialize"
+                className={MONO_INPUT}
+              />
+            </Field>
+            <Field label="Blueprint ID">
+              <input
+                type="text"
+                value={blueprintId}
+                onChange={(e) => setBlueprintId(e.target.value)}
+                className={MONO_INPUT}
+              />
+            </Field>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Blueprint ID</label>
-            <input type="text" value={blueprintId} onChange={(e) => setBlueprintId(e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Args (JSON array)</label>
+          <Field label="Args" hint="JSON array; anything else is sent as a single argument.">
             <textarea
               value={argsText}
               onChange={(e) => setArgsText(e.target.value)}
               placeholder='["arg1", "arg2"]'
-              className="input min-h-16"
+              className="textarea min-h-16 w-full font-mono text-data"
               rows={2}
             />
-          </div>
+          </Field>
+        </section>
 
-          {/* Token Fields */}
-          <h4 className="text-sm font-bold text-gray-700 mt-4">Token Options</h4>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Token Name</label>
-            <input type="text" value={tokenName} onChange={(e) => setTokenName(e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Symbol</label>
-            <input type="text" value={tokenSymbol} onChange={(e) => setTokenSymbol(e.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Amount</label>
-            <input type="text" value={tokenAmount} onChange={(e) => setTokenAmount(e.target.value)} className="input" />
+        <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-nctoken-token">
+          <h3 id="snap-nctoken-token" className="m-0 text-body font-semibold">
+            Token options
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_8rem_10rem]">
+            <Field label="Token name">
+              <input
+                type="text"
+                value={tokenName}
+                onChange={(e) => setTokenName(e.target.value)}
+                className="input w-full"
+              />
+            </Field>
+            <Field label="Symbol">
+              <input
+                type="text"
+                value={tokenSymbol}
+                onChange={(e) => setTokenSymbol(e.target.value)}
+                className="input w-full"
+              />
+            </Field>
+            <Field label="Amount">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={tokenAmount}
+                onChange={(e) => setTokenAmount(e.target.value)}
+                className="input w-full text-right font-mono text-data tabular-nums"
+              />
+            </Field>
           </div>
           <AddressInput
-            label="Address (optional)"
+            label="Destination address (optional)"
             value={tokenAddress}
             onChange={setTokenAddress}
-            sources={['snap', 'test', 'fund', 'multisig']}
+            sources={ADDR_SOURCES}
           />
           <AddressInput
-            label="Change Address (optional)"
+            label="Change address (optional)"
             value={changeAddress}
             onChange={setChangeAddress}
-            sources={['snap', 'test', 'fund', 'multisig']}
+            sources={ADDR_SOURCES}
           />
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={contractPaysDeposit}
-              onChange={(e) => setContractPaysDeposit(e.target.checked)}
-              className="checkbox checkbox-primary"
-              id="ncContractPays"
-            />
-            <label htmlFor="ncContractPays" className="text-sm cursor-pointer">
-              Contract Pays Token Deposit
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={createMint}
-              onChange={(e) => setCreateMint(e.target.checked)}
-              className="checkbox checkbox-primary"
-              id="ncCreateMint"
-            />
-            <label htmlFor="ncCreateMint" className="text-sm cursor-pointer">
-              Create Mint Authority
-            </label>
-          </div>
+          <Check checked={contractPaysDeposit} onChange={setContractPaysDeposit}>
+            Contract pays token deposit
+          </Check>
+          <Check checked={createMint} onChange={setCreateMint}>
+            Create mint authority
+          </Check>
           {createMint && (
-            <>
+            <div className="flex flex-col gap-3 border-l-2 border-base-300 pl-4">
               <AddressInput
-                label="Mint Authority Address"
+                label="Mint authority address"
                 value={mintAddress}
                 onChange={setMintAddress}
-                sources={['snap', 'test', 'fund', 'multisig']}
+                sources={ADDR_SOURCES}
               />
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={allowExternalMint}
-                  onChange={(e) => setAllowExternalMint(e.target.checked)}
-                  className="checkbox checkbox-primary"
-                  id="ncExtMint"
-                />
-                <label htmlFor="ncExtMint" className="text-sm cursor-pointer">
-                  Allow External Mint Authority
-                </label>
-              </div>
-            </>
+              <Check checked={allowExternalMint} onChange={setAllowExternalMint}>
+                Allow external mint authority address
+              </Check>
+            </div>
           )}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={createMelt}
-              onChange={(e) => setCreateMelt(e.target.checked)}
-              className="checkbox checkbox-primary"
-              id="ncCreateMelt"
-            />
-            <label htmlFor="ncCreateMelt" className="text-sm cursor-pointer">
-              Create Melt Authority
-            </label>
-          </div>
+          <Check checked={createMelt} onChange={setCreateMelt}>
+            Create melt authority
+          </Check>
+        </section>
 
-          {/* Transaction Options */}
-          <h4 className="text-sm font-bold text-gray-700 mt-4">Transaction Options</h4>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Max Fee (optional)</label>
-            <input type="text" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} className="input" />
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={contractPaysFees}
-              onChange={(e) => setContractPaysFees(e.target.checked)}
-              className="checkbox checkbox-primary"
-              id="ncContractPaysFees"
-            />
-            <label htmlFor="ncContractPaysFees" className="text-sm cursor-pointer">
-              Contract Pays Fees
-            </label>
-          </div>
-        </SnapMethodCard>
-      )}
+        <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-nctoken-tx">
+          <h3 id="snap-nctoken-tx" className="m-0 text-body font-semibold">
+            Transaction options
+          </h3>
+          <Field label="Max fee (optional)" className="max-w-60">
+            <input type="text" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} className={MONO_INPUT} />
+          </Field>
+          <Check checked={contractPaysFees} onChange={setContractPaysFees}>
+            Contract pays fees
+          </Check>
+        </section>
+      </SnapMethodCard>
     </div>
   );
 };
