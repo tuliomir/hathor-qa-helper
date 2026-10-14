@@ -6,14 +6,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  MdAdd,
   MdCamera,
   MdDelete,
   MdEdit,
+  MdHourglassEmpty,
   MdPlayArrow,
   MdQrCode,
   MdStar,
   MdStarBorder,
   MdStop,
+  MdSwapVert,
   MdViewList,
 } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -39,8 +42,14 @@ import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
 import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
-import NetworkSwapButton from '../common/NetworkSwapButton';
-import Select from '../common/Select';
+import NetworkChip from '../common/NetworkChip';
+import { Identifier } from '../common/Identifier';
+import { StageHeader } from '../common/StageHeader';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { StatusChip } from '../ui/StatusChip';
 import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
 import { NETWORK_CONFIG, NETWORK_KEYS, nextNetwork, type NetworkKey } from '../../constants/network';
@@ -372,47 +381,6 @@ export default function WalletInitialization() {
     return words.slice(0, n).join(' ') + '...';
   };
 
-  /**
-   * Truncate an address for display, keeping start and end for recognizability
-   * @param addr
-   * @param start
-   * @param end
-   * @deprecated Use the function from utils instead
-   */
-  const truncateAddress = (addr: string, start = 3, end = 8) => {
-    if (!addr) return '';
-    if (addr.length <= start + end + 3) return addr;
-    return addr.slice(0, start) + '...' + addr.slice(-end);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return 'text-success';
-      case 'error':
-        return 'text-danger';
-      case 'connecting':
-      case 'syncing':
-        return 'text-warning';
-      default:
-        return 'text-muted';
-    }
-  };
-
-  const getRowBackgroundColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return 'bg-green-50';
-      case 'error':
-        return 'bg-red-50';
-      case 'connecting':
-      case 'syncing':
-        return 'bg-yellow-50';
-      default:
-        return '';
-    }
-  };
-
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
@@ -469,437 +437,424 @@ export default function WalletInitialization() {
     }
   }, [readyWallets, fundingWalletId, testWalletId, dispatch]);
 
-  return (
-    <div className="max-w-300 mx-auto">
-      {confirmDialog}
-      {/* Wallets Table */}
-      <div className="mb-10">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold m-0">
-            Registered Wallets ({wallets.length})
-            {hasMoreWallets && (
-              <span className="text-base font-normal text-muted ml-2">
-                (showing {recentWallets.length} most recent)
-              </span>
-            )}
-          </h2>
-          {hasMoreWallets && (
-            <button onClick={() => setShowWalletBrowser(true)} className="btn-primary flex items-center gap-2">
-              <MdViewList size={18} />
-              View All Wallets
-            </button>
-          )}
-        </div>
-        {wallets.length === 0 ? (
-          <div className="p-10 text-center border-2 border-dashed border-muted rounded-lg text-muted">
-            <p className="text-lg m-0">No wallets registered yet</p>
-          </div>
+  const applySuggestion = (w: string, suggestion: string) => {
+    // Replace the invalid word (word-boundary) in the seed input with the suggestion
+    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('\\b' + escapeRegExp(w) + '\\b', 'gi');
+    const newSeed = seedInput.replace(re, suggestion);
+    setSeedInput(newSeed);
+    // Re-validate the updated seed input
+    const { valid: v, invalidWords: newInvalid } = treatSeedWords(newSeed);
+    if (v) {
+      setValidationError(null);
+      setInvalidWords([]);
+    } else {
+      setValidationError('Invalid seed phrase');
+      setInvalidWords(newInvalid || []);
+    }
+    textareaRef.current?.focus();
+  };
+
+  type WalletRow = (typeof wallets)[number];
+
+  const walletColumns: DataTableColumn<WalletRow>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (wallet) =>
+        editingId === wallet.metadata.id ? (
+          <input
+            type="text"
+            value={editingName}
+            onChange={(e) => setEditingName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
+            aria-label="Wallet name"
+            className="input input-sm w-40"
+            autoFocus
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse bg-white shadow-sm">
-              <thead>
-                <tr className="table-header">
-                  <th className="p-3 text-left font-bold">Name</th>
-                  <th className="p-3 text-left font-bold">Seed</th>
-                  <th className="p-3 text-left font-bold">Network</th>
-                  <th className="p-3 text-left font-bold">Status</th>
-                  <th className="p-3 text-left font-bold">First Address</th>
-                  <th className="p-3 text-center font-bold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentWallets.map((wallet) => (
-                  <tr key={wallet.metadata.id} className={`table-row ${getRowBackgroundColor(wallet.status)}`}>
-                    <td className="p-3">
-                      {editingId === wallet.metadata.id ? (
-                        <input
-                          type="text"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          className="input border-primary"
-                        />
-                      ) : (
-                        <strong>{wallet.metadata.friendlyName}</strong>
-                      )}
-                    </td>
-                    <td className="p-3 font-mono text-xs text-muted">
-                      <div className="flex items-center gap-2">
-                        {/* show first 3 words, allow wrapping inside the cell */}
-                        <span className="break-words max-w-[20rem] block font-mono">
-                          {firstNWords(wallet.metadata.seedWords, 3)}
-                        </span>
-                        <CopyButton
-                          text={wallet.metadata.seedWords}
-                          label={`Copy seed for ${wallet.metadata.friendlyName}`}
-                          className="text-muted"
-                        />
-                        <button
-                          onClick={() => setSeedModalWalletId(wallet.metadata.id)}
-                          title="Show QR Code"
-                          aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
-                          className="text-muted hover:text-primary transition-colors"
-                        >
-                          <MdQrCode size={16} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex flex-col items-start gap-1">
-                        <span>{wallet.metadata.network}</span>
-                        <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />
-                        <NetworkSwapButton
-                          walletId={wallet.metadata.id}
-                          currentNetwork={wallet.metadata.network}
-                          walletStatus={wallet.status}
-                          onSwap={handleSwapNetwork}
-                        />
-                      </div>
-                    </td>
-                    <td className={`p-3 ${getStatusColor(wallet.status)} font-bold text-sm`}>
-                      {wallet.status}
-                      {wallet.status === 'ready' && (
-                        <div className="text-xs text-success mt-1">
-                          Balance: {formatBalance(wallet.balance ?? 0n)} HTR
-                        </div>
-                      )}
-                      {wallet.error && <div className="text-xs text-danger mt-1">{wallet.error}</div>}
-                    </td>
-                    <td className="p-3 font-mono text-2.5xs">
-                      {(() => {
-                        const storedAddress = storedFirstAddresses[wallet.metadata.id];
-                        const displayAddress = wallet.firstAddress || storedAddress;
-                        const isStoredOnly = !wallet.firstAddress && storedAddress;
-
-                        if (displayAddress) {
-                          return (
-                            <div className={`flex items-center gap-2 ${isStoredOnly ? 'text-muted' : 'text-success'}`}>
-                              <span className="break-all text-xs">{truncateAddress(displayAddress)}</span>
-                              <CopyButton
-                                text={displayAddress}
-                                label={`Copy address for ${wallet.metadata.friendlyName}`}
-                                className="text-muted"
-                              />
-                            </div>
-                          );
-                        }
-                        return <span className="text-muted">-</span>;
-                      })()}
-                    </td>
-                    <td className="p-3">
-                      <div className="flex gap-1.5 justify-center flex-wrap">
-                        {editingId === wallet.metadata.id ? (
-                          <>
-                            <button onClick={handleSaveEdit} className="btn-success text-xs">
-                              {/* Keep Save text during edit for clarity */}
-                              Save
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditingName('');
-                              }}
-                              className="btn-secondary text-xs"
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            {wallet.status === 'idle' || wallet.status === 'error' ? (
-                              <button
-                                onClick={() => handleStartWallet(wallet.metadata.id)}
-                                title="Start"
-                                aria-label={`Start ${wallet.metadata.friendlyName}`}
-                                className="btn-primary btn-square text-xs p-2"
-                              >
-                                <MdPlayArrow />
-                              </button>
-                            ) : wallet.status === 'ready' ? (
-                              <button
-                                onClick={() => handleStopWallet(wallet.metadata.id)}
-                                title="Stop"
-                                aria-label={`Stop ${wallet.metadata.friendlyName}`}
-                                className="btn btn-square text-xs p-2 bg-black text-white hover:bg-gray-800"
-                              >
-                                <MdStop />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={async () => {
-                                  if (
-                                    await confirm({
-                                      title: `Force stop ${wallet.metadata.friendlyName}?`,
-                                      body: `It appears stuck in the ${wallet.status} state.`,
-                                      confirmLabel: 'Force stop',
-                                      tone: 'danger',
-                                    })
-                                  ) {
-                                    handleStopWallet(wallet.metadata.id);
-                                  }
-                                }}
-                                title="Force stop (wallet appears stuck)"
-                                aria-label={`Force stop ${wallet.metadata.friendlyName}`}
-                                className="btn-warning btn-square text-xs p-2"
-                              >
-                                ⏳
-                              </button>
-                            )}
-
-                            <button
-                              onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)}
-                              title="Rename"
-                              aria-label={`Rename ${wallet.metadata.friendlyName}`}
-                              className="btn-warning btn-square text-xs p-2"
-                            >
-                              <MdEdit />
-                            </button>
-
-                            <button
-                              onClick={() => handleRemoveWallet(wallet.metadata.id)}
-                              title="Remove"
-                              aria-label={`Remove ${wallet.metadata.friendlyName}`}
-                              className="btn-danger btn-square text-xs p-2"
-                            >
-                              <MdDelete />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Wallet Selection Cards */}
-      {readyWallets.length > 0 && (
-        <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Funding Wallet Selection */}
-          <div className="card-primary">
-            <h2 className="text-xl font-bold mb-4">Select Funding Wallet</h2>
-            <p className="text-muted text-sm mb-4">
-              Choose a wallet with funds to use for testing. Sorted by highest balance.
-            </p>
-            <Select
-              id="funding-wallet-select"
-              value={fundingWalletId || ''}
-              onChange={(e) => dispatch(setFundingWallet(e.target.value || null))}
-              className="w-full mb-3"
+          <span className="font-semibold">{wallet.metadata.friendlyName}</span>
+        ),
+    },
+    {
+      key: 'seed',
+      header: 'Seed',
+      render: (wallet) => (
+        <span className="inline-flex items-center gap-1">
+          <span className="whitespace-nowrap font-mono text-data-sm text-ink-muted">
+            {firstNWords(wallet.metadata.seedWords, 3)}
+          </span>
+          <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} />
+          <button
+            type="button"
+            onClick={() => setSeedModalWalletId(wallet.metadata.id)}
+            title="Show QR code"
+            aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
+            className="inline-flex h-6 w-6 items-center justify-center rounded-field text-ink-muted hover:bg-base-200 hover:text-base-content"
+          >
+            <MdQrCode aria-hidden="true" />
+          </button>
+        </span>
+      ),
+    },
+    {
+      key: 'network',
+      header: 'Network',
+      render: (wallet) => {
+        const target = NETWORK_CONFIG[nextNetwork(wallet.metadata.network)].label;
+        const isSwapping = wallet.status === 'connecting' || wallet.status === 'syncing';
+        return (
+          <span className="inline-flex flex-wrap items-center gap-1">
+            <NetworkChip network={wallet.metadata.network} size="sm" />
+            <button
+              type="button"
+              onClick={() => handleSwapNetwork(wallet.metadata.id, wallet.metadata.network, wallet.status)}
+              title={`Switch to ${target}`}
+              aria-label={`Switch ${wallet.metadata.friendlyName} to ${target}`}
+              className="btn btn-ghost btn-xs btn-square"
+              disabled={isSwapping}
             >
-              <option value="">-- Select funding wallet --</option>
-              {walletsSortedByBalanceDesc.map((wallet) => (
-                <option key={wallet.metadata.id} value={wallet.metadata.id}>
-                  {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
-                </option>
-              ))}
-            </Select>
+              <MdSwapVert aria-hidden="true" />
+            </button>
+            <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />
+          </span>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (wallet) => (
+        <span className="flex flex-col items-start gap-0.5">
+          <StatusChip status={wallet.status} />
+          {wallet.status === 'ready' && (
+            <span className="whitespace-nowrap font-mono text-data-sm">
+              {formatBalance(wallet.balance ?? 0n)} <span className="font-sans text-ink-muted">HTR</span>
+            </span>
+          )}
+          {wallet.error && <span className="text-caption text-error">{wallet.error}</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'address',
+      header: 'First address',
+      type: 'identifier',
+      render: (wallet) => {
+        const storedAddress = storedFirstAddresses[wallet.metadata.id];
+        const displayAddress = wallet.firstAddress || storedAddress;
+        const isStoredOnly = !wallet.firstAddress && storedAddress;
+        if (!displayAddress) return null;
+        return (
+          <span
+            className={isStoredOnly ? 'text-ink-muted' : undefined}
+            title={isStoredOnly ? 'Stored address; the wallet is not running' : undefined}
+          >
+            <Identifier value={displayAddress} kind="address" walletTag={false} head={4} tail={6} />
+          </span>
+        );
+      },
+    },
+    {
+      key: 'actions',
+      header: <span className="sr-only">Actions</span>,
+      type: 'actions',
+      hideLabelWhenStacked: true,
+      render: (wallet) => (
+        <span className="inline-flex flex-wrap items-center justify-end gap-1">
+          {editingId === wallet.metadata.id ? (
+            <>
+              <button type="button" onClick={handleSaveEdit} className="btn btn-primary btn-xs">
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setEditingName('');
+                }}
+                className="btn btn-ghost btn-xs"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              {wallet.status === 'idle' || wallet.status === 'error' ? (
+                <button
+                  type="button"
+                  onClick={() => handleStartWallet(wallet.metadata.id)}
+                  title="Start"
+                  aria-label={`Start ${wallet.metadata.friendlyName}`}
+                  className="btn btn-primary btn-xs btn-square"
+                >
+                  <MdPlayArrow aria-hidden="true" />
+                </button>
+              ) : wallet.status === 'ready' ? (
+                <button
+                  type="button"
+                  onClick={() => handleStopWallet(wallet.metadata.id)}
+                  title="Stop"
+                  aria-label={`Stop ${wallet.metadata.friendlyName}`}
+                  className="btn btn-secondary btn-xs btn-square"
+                >
+                  <MdStop aria-hidden="true" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (
+                      await confirm({
+                        title: `Force stop ${wallet.metadata.friendlyName}?`,
+                        body: `It appears stuck in the ${wallet.status} state.`,
+                        confirmLabel: 'Force stop',
+                        tone: 'danger',
+                      })
+                    ) {
+                      handleStopWallet(wallet.metadata.id);
+                    }
+                  }}
+                  title="Force stop (wallet appears stuck)"
+                  aria-label={`Force stop ${wallet.metadata.friendlyName}`}
+                  className="btn btn-outline btn-warning btn-xs btn-square"
+                >
+                  <MdHourglassEmpty aria-hidden="true" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)}
+                title="Rename"
+                aria-label={`Rename ${wallet.metadata.friendlyName}`}
+                className="btn btn-ghost btn-xs btn-square"
+              >
+                <MdEdit aria-hidden="true" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRemoveWallet(wallet.metadata.id)}
+                title="Remove"
+                aria-label={`Remove ${wallet.metadata.friendlyName}`}
+                className="btn btn-ghost btn-xs btn-square text-error"
+              >
+                <MdDelete aria-hidden="true" />
+              </button>
+            </>
+          )}
+        </span>
+      ),
+    },
+  ];
+
+  const canAdd = !!seedInput.trim() && !!walletName.trim();
+
+  return (
+    <div className="flex max-w-stage flex-col gap-4">
+      {confirmDialog}
+      <StageHeader
+        stageId="wallet-initialization"
+        description="Add wallets and start them. Wallets persist across all QA stages until stopped or removed."
+        docsUrl="https://docs.hathor.network/"
+      />
+
+      <Panel
+        title={`Registered wallets (${wallets.length})`}
+        description={hasMoreWallets ? `Showing the ${recentWallets.length} most recent` : undefined}
+        actions={
+          hasMoreWallets && (
+            <button type="button" onClick={() => setShowWalletBrowser(true)} className="btn btn-secondary btn-sm">
+              <MdViewList aria-hidden="true" />
+              View all wallets
+            </button>
+          )
+        }
+      >
+        <DataTable
+          caption="Registered wallets"
+          columns={walletColumns}
+          rows={recentWallets}
+          getRowKey={(wallet) => wallet.metadata.id}
+          empty="No wallets registered yet. Add one with its seed phrase below."
+        />
+      </Panel>
+
+      {readyWallets.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Panel title="Funding wallet" description="A wallet with funds for testing. Sorted by highest balance.">
+            <Field label="Funding wallet" htmlFor="funding-wallet-select">
+              <select
+                value={fundingWalletId || ''}
+                onChange={(e) => dispatch(setFundingWallet(e.target.value || null))}
+                className="select w-full"
+              >
+                <option value="">Select funding wallet</option>
+                {walletsSortedByBalanceDesc.map((wallet) => (
+                  <option key={wallet.metadata.id} value={wallet.metadata.id}>
+                    {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
+                  </option>
+                ))}
+              </select>
+            </Field>
             {fundingWalletId && (
               <button
+                type="button"
                 onClick={() =>
                   handleSetDefaultFundWallet(defaultFundWalletId === fundingWalletId ? null : fundingWalletId)
                 }
-                className={`btn text-xs flex items-center gap-1 w-full ${
-                  defaultFundWalletId === fundingWalletId ? 'btn-warning' : 'btn-secondary'
-                }`}
+                className="btn btn-ghost btn-sm self-start"
+                aria-pressed={defaultFundWalletId === fundingWalletId}
               >
-                {defaultFundWalletId === fundingWalletId ? <MdStar /> : <MdStarBorder />}
-                {defaultFundWalletId === fundingWalletId ? 'Unset Default Fund Wallet' : 'Set as Default Fund Wallet'}
+                {defaultFundWalletId === fundingWalletId ? (
+                  <MdStar className="text-warning-ink" aria-hidden="true" />
+                ) : (
+                  <MdStarBorder aria-hidden="true" />
+                )}
+                {defaultFundWalletId === fundingWalletId
+                  ? 'Unset default funding wallet'
+                  : 'Set as default funding wallet'}
               </button>
             )}
-          </div>
+          </Panel>
 
-          {/* Test Wallet Selection */}
-          <div className="card-primary">
-            <h2 className="text-xl font-bold mb-4">Select Wallet Being Tested</h2>
-            <p className="text-muted text-sm mb-4">Choose a wallet to test. Sorted by lowest balance.</p>
-            <Select
-              id="test-wallet-select"
-              value={testWalletId || ''}
-              onChange={(e) => dispatch(setTestWallet(e.target.value || null))}
-              className="w-full mb-3"
-            >
-              <option value="">-- Select test wallet --</option>
-              {walletsSortedByBalanceAsc.map((wallet) => (
-                <option key={wallet.metadata.id} value={wallet.metadata.id}>
-                  {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
-                </option>
-              ))}
-            </Select>
+          <Panel title="Test wallet" description="The wallet being tested. Sorted by lowest balance.">
+            <Field label="Test wallet" htmlFor="test-wallet-select">
+              <select
+                value={testWalletId || ''}
+                onChange={(e) => dispatch(setTestWallet(e.target.value || null))}
+                className="select w-full"
+              >
+                <option value="">Select test wallet</option>
+                {walletsSortedByBalanceAsc.map((wallet) => (
+                  <option key={wallet.metadata.id} value={wallet.metadata.id}>
+                    {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
+                  </option>
+                ))}
+              </select>
+            </Field>
             {testWalletId && (
               <button
+                type="button"
                 onClick={() => handleSetDefaultTestWallet(defaultTestWalletId === testWalletId ? null : testWalletId)}
-                className={`btn text-xs flex items-center gap-1 w-full ${
-                  defaultTestWalletId === testWalletId ? 'btn-warning' : 'btn-secondary'
-                }`}
+                className="btn btn-ghost btn-sm self-start"
+                aria-pressed={defaultTestWalletId === testWalletId}
               >
-                {defaultTestWalletId === testWalletId ? <MdStar /> : <MdStarBorder />}
-                {defaultTestWalletId === testWalletId ? 'Unset Default Test Wallet' : 'Set as Default Test Wallet'}
+                {defaultTestWalletId === testWalletId ? (
+                  <MdStar className="text-warning-ink" aria-hidden="true" />
+                ) : (
+                  <MdStarBorder aria-hidden="true" />
+                )}
+                {defaultTestWalletId === testWalletId ? 'Unset default test wallet' : 'Set as default test wallet'}
               </button>
             )}
-          </div>
+          </Panel>
         </div>
       )}
 
-      <h1 className="mt-0 text-3xl font-bold">Wallet Initialization</h1>
-      <p className="text-muted mb-7.5">
-        Add wallets and explicitly start them. Wallets persist globally across all QA stages until stopped or removed.
-      </p>
-
-      {/* Add Wallet Form */}
-      <div className="card-primary mb-7.5">
-        <h2 className="text-xl font-bold mb-4">Add New Wallet</h2>
-
-        <div className="mb-4">
-          <label htmlFor="wallet-name" className="block mb-1.5 font-bold">
-            Wallet Name:
-          </label>
+      <Panel title="Add new wallet">
+        <Field label="Wallet name" htmlFor="wallet-name">
           <input
-            id="wallet-name"
             type="text"
             value={walletName}
             onChange={(e) => setWalletName(e.target.value)}
-            placeholder="e.g., Android Nov14"
-            className="input"
+            placeholder="e.g. Android Nov14"
+            className="input w-full"
           />
-        </div>
+        </Field>
 
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-1.5">
-            <label htmlFor="seed-input" className="font-bold m-0">
-              Seed Phrase (24 words):
-            </label>
-            <button
-              onClick={() => setShowCamera(true)}
-              className="btn bg-info text-white hover:bg-cyan-600 text-xs flex items-center gap-1"
-            >
-              <MdCamera />
-              Open Camera
+        <Field
+          label="Seed phrase (24 words)"
+          htmlFor="seed-input"
+          hint="Tip: paste an image of the seed words here to extract them with OCR."
+          trailing={
+            <button type="button" onClick={() => setShowCamera(true)} className="btn btn-secondary btn-sm">
+              <MdCamera aria-hidden="true" />
+              Open camera
             </button>
-          </div>
+          }
+        >
           <textarea
             ref={textareaRef}
-            id="seed-input"
             value={seedInput}
             onChange={handleSeedChange}
             onPaste={handlePaste}
-            placeholder="Enter your 24-word seed phrase separated by spaces, or paste an image with seed words..."
+            placeholder="Enter the 24-word seed phrase separated by spaces, or paste an image with the seed words"
             rows={3}
-            className={
-              validationError
-                ? 'input-error font-mono resize-y whitespace-pre-wrap break-words'
-                : 'input font-mono resize-y whitespace-pre-wrap break-words'
-            }
-            style={{ minHeight: '4.5rem' }}
+            className={`textarea min-h-[4.5rem] w-full resize-y whitespace-pre-wrap break-words border-field-border font-mono text-data ${
+              validationError ? 'textarea-error' : ''
+            }`}
           />
-          <p className="text-muted text-xs mt-2 mb-0">
-            💡 <strong>Tip:</strong> You can paste an image of your seed words here for automatic extraction using OCR.
-          </p>
+        </Field>
 
-          {/* OCR Reference Section - Show when validation error exists AND OCR image available */}
-          {validationError && ocrSourceImageUrl && (
-            <div className="mt-4 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Left side: OCR Source Image */}
-              <div>
-                <h3 className="text-sm font-bold mb-2 text-muted">OCR Source Image</h3>
-                <OCRReferenceImage
-                  imageDataUrl={ocrSourceImageUrl}
-                  onExpand={() => setShowOcrReferenceModal(true)}
-                  onDismiss={() => setOcrSourceImageUrl(null)}
-                />
-              </div>
-
-              {/* Right side: Extracted Words */}
-              <div>
-                <h3 className="text-sm font-bold mb-2 text-muted">Extracted Seed Words</h3>
-                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-sm font-mono break-words max-h-[300px] overflow-y-auto">
-                  {seedInput}
-                </div>
+        {validationError && ocrSourceImageUrl && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <h3 className="m-0 text-body font-semibold">OCR source image</h3>
+              <OCRReferenceImage
+                imageDataUrl={ocrSourceImageUrl}
+                onExpand={() => setShowOcrReferenceModal(true)}
+                onDismiss={() => setOcrSourceImageUrl(null)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <h3 className="m-0 text-body font-semibold">Extracted seed words</h3>
+              <div className="max-h-[300px] overflow-y-auto break-words rounded-field bg-base-200 p-3 font-mono text-data">
+                {seedInput}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {validationError && (
-            <div className="mt-1.5">
-              <p className="text-danger text-sm m-0 mb-1.5">⚠️ {validationError}</p>
-              {invalidWords.length > 0 && (
-                <div className="text-danger text-xs m-0">
-                  <div className="font-bold mb-1">Invalid words:</div>
-                  {invalidWords.map((w, idx) => {
-                    const suggestion = didYouMean(w);
-                    return (
-                      <div key={`${w}-${idx}`} className="mb-1">
-                        <span className="mr-2">{w}</span>
-                        {suggestion ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              // Replace the invalid word (word-boundary) in the seed input with the suggestion
-                              const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                              const re = new RegExp('\\b' + escapeRegExp(w) + '\\b', 'gi');
-                              const newSeed = seedInput.replace(re, suggestion);
-                              setSeedInput(newSeed);
-                              // Re-validate the updated seed input
-                              const { valid: v, invalidWords: newInvalid } = treatSeedWords(newSeed);
-                              if (v) {
-                                setValidationError(null);
-                                setInvalidWords([]);
-                              } else {
-                                setValidationError('Invalid seed phrase');
-                                setInvalidWords(newInvalid || []);
-                              }
-                              textareaRef.current?.focus();
-                            }}
-                            className="text-info underline cursor-pointer text-xs bg-transparent border-0 p-0"
-                          >
-                            Did you mean: <strong className="ml-1">{suggestion}</strong>?
-                          </button>
-                        ) : (
-                          <span className="text-xs text-muted">(no suggestion available)</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {validationError && (
+          <Callout tone="error" title={validationError}>
+            {invalidWords.length > 0 && (
+              <ul>
+                {invalidWords.map((w, idx) => {
+                  const suggestion = didYouMean(w);
+                  return (
+                    <li key={`${w}-${idx}`}>
+                      <span className="mr-2 font-mono text-data">{w}</span>
+                      {suggestion ? (
+                        <button
+                          type="button"
+                          onClick={() => applySuggestion(w, suggestion)}
+                          className="link link-primary"
+                        >
+                          Did you mean <strong>{suggestion}</strong>?
+                        </button>
+                      ) : (
+                        <span className="text-ink-muted">(no suggestion available)</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Callout>
+        )}
 
-        <div className="mb-4">
-          <label htmlFor="network-select" className="block mb-1.5 font-bold">
-            Network:
-          </label>
-          <Select id="network-select" value={network} onChange={handleNetworkChange}>
+        <Field label="Network" htmlFor="network-select">
+          <select value={network} onChange={handleNetworkChange} className="select w-full sm:w-64">
             {NETWORK_KEYS.map((key) => (
               <option key={key} value={key}>
                 {NETWORK_CONFIG[key].label}
               </option>
             ))}
-          </Select>
+          </select>
+        </Field>
+
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {!canAdd && (
+            <span className="text-caption text-ink-muted">Enter a name and a seed phrase to add the wallet</span>
+          )}
+          <button type="button" onClick={handleAddWallet} disabled={!canAdd} className="btn btn-primary">
+            <MdAdd aria-hidden="true" />
+            Add wallet
+          </button>
         </div>
-
-        <button
-          onClick={handleAddWallet}
-          disabled={!seedInput.trim() || !walletName.trim()}
-          className={`w-full btn text-base font-bold ${seedInput.trim() && walletName.trim() ? 'btn-success' : 'btn-secondary cursor-not-allowed'}`}
-        >
-          Add Wallet
-        </button>
-      </div>
-
-      <div className="card-primary mb-7.5">
-        <ul>
-          <li>
-            Link to the official docs:{' '}
-            <a href="https://docs.hathor.network/" target="_blank">
-              Official Docs
-            </a>
-          </li>
-        </ul>
-      </div>
+      </Panel>
 
       {showCamera && (
         <CameraCapture
