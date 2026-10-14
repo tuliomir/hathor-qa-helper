@@ -14,10 +14,8 @@ import { buildGetBalanceRequest } from '../../utils/rpcCoreRequests';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { RpcAddressMismatchCallout } from '../rpc/RpcAddressMismatchCallout';
-import { createRpcHandlers } from '../../services/rpcHandlers';
 import { useRequireRpcSession } from '../../hooks/useRequirements';
 import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
-import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { useToast } from '../../hooks/useToast';
 import { ADDRESS_MISMATCH_REASON, useRpcAddressMismatch } from '../../hooks/useRpcAddressMismatch';
 import { firstUnmetReason } from '../../utils/requirements';
@@ -39,10 +37,6 @@ export const GetBalanceStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
   const rpcSession = useRequireRpcSession();
-  const { isDryRun, execute } = useRpcStageCall(GET_BALANCE_ACTIONS);
-  const { onDeepLinkAvailable } = useDeepLinkCallback();
-
-  const walletConnect = useSelector((state: RootState) => state.walletConnect);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const testWallet = useSelector((state: RootState) => (testWalletId ? state.walletStore.wallets[testWalletId] : null));
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
@@ -61,27 +55,9 @@ export const GetBalanceStage: React.FC = () => {
   }, [testWallet, allTokens]);
 
   const tokenUids = useMemo(() => walletTokens.map((t) => t.uid), [walletTokens]);
+  const { isDryRun, execute } = useRpcStageCall(GET_BALANCE_ACTIONS, { balanceTokens: tokenUids });
 
-  // useRpcMethod's handlers query HTR only; htr_getBalance needs the token list.
-  const balanceHandlers = useMemo(
-    () =>
-      walletConnect.client && walletConnect.session
-        ? createRpcHandlers({
-            client: walletConnect.client,
-            session: walletConnect.session,
-            balanceTokens: tokenUids,
-            dryRun: isDryRun,
-            onDeepLinkAvailable,
-          })
-        : null,
-    [walletConnect.client, walletConnect.session, tokenUids, isDryRun, onDeepLinkAvailable]
-  );
-
-  const handleExecute = () =>
-    execute(() => {
-      if (!balanceHandlers) throw new Error('Connect an RPC session first');
-      return balanceHandlers.getRpcBalance();
-    }, buildGetBalanceRequest(tokenUids));
+  const handleExecute = () => execute((h) => h.getRpcBalance(), buildGetBalanceRequest(tokenUids));
 
   const handleRefreshTokens = async () => {
     if (!testWalletId || isRefreshing) return;
