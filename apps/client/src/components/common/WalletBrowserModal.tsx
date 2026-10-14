@@ -213,7 +213,7 @@ export default function WalletBrowserModal({
         return 'text-danger';
       case 'connecting':
       case 'syncing':
-        return 'text-warning';
+        return 'text-warning-ink';
       default:
         return 'text-muted';
     }
