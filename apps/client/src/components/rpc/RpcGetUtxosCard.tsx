@@ -1,355 +1,185 @@
 /**
- * RPC Get UTXOs Card Component
- *
- * Card for testing htr_getUtxos RPC call
+ * RPC Get UTXOs Card — htr_getUtxos for one token, with count and amount
+ * filters.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useToast } from '../../hooks/useToast';
-import CopyButton from '../common/CopyButton';
+import React from 'react';
+import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
+import type { GetUtxosResponse, UtxoData } from '../../store/slices/getUtxosSlice';
+import { MethodCard, type MethodData } from '../common/MethodCard';
+import { Identifier } from '../common/Identifier';
 import { ExplorerLink } from '../common/ExplorerLink';
-import DryRunCheckbox from '../common/DryRunCheckbox';
-import { RpcRequestPreview } from './RpcRequestPreview';
-import type { UtxoData } from '../../store/slices/getUtxosSlice';
-import { DEFAULT_NETWORK, type NetworkKey } from '../../constants/network';
-import { LoadingOverlay } from '../common/LoadingOverlay';
-import { extractErrorMessage } from '../../utils/errorUtils';
+import { AmountInput } from '../common/AmountInput';
+import { Field } from '../ui/Field';
+import { DataTable } from '../ui/DataTable';
+import { StatusChip } from '../ui/StatusChip';
+import { formatAmount } from '../../utils/amount';
+import { buildGetUtxosRequest, unwrapResponse, type UtxoFilters } from '../../utils/rpcCoreRequests';
 
-/**
- * Helper function to safely stringify objects containing BigInt values
- */
-const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
-};
+const fmt = (v: string | number | undefined) =>
+  v === undefined || v === null
+    ? null
+    : /^-?\d+$/.test(String(v))
+      ? formatAmount(String(v), DECIMAL_PLACES)
+      : String(v);
+
+function UtxoResponse({ data }: { data: GetUtxosResponse }) {
+  const totals = [
+    { label: 'Available', amount: data.total_amount_available, count: data.total_utxos_available },
+    { label: 'Locked', amount: data.total_amount_locked, count: data.total_utxos_locked },
+  ];
+  return (
+    <div className="flex flex-col gap-3">
+      <dl className="m-0 grid grid-cols-2 gap-3">
+        {totals.map((t) => (
+          <div key={t.label} className="flex flex-col gap-0.5 rounded-box bg-base-200 p-3">
+            <dt className="text-caption text-ink-muted">{t.label}</dt>
+            <dd className="m-0 font-mono text-data tabular-nums">
+              {fmt(t.amount) ?? 'n/a'} <span className="font-sans text-ink-muted">in {t.count ?? 0} UTXOs</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <DataTable<UtxoData>
+        caption="UTXOs"
+        rows={data.utxos ?? []}
+        getRowKey={(u) => `${u.tx_id}-${u.index}`}
+        empty="No UTXOs match these filters."
+        maxHeight="24rem"
+        columns={[
+          {
+            key: 'tx',
+            header: 'Transaction',
+            type: 'identifier',
+            render: (u) => (
+              <span className="inline-flex items-center gap-2">
+                <Identifier value={u.tx_id} kind="tx" />
+                <ExplorerLink hash={u.tx_id} />
+              </span>
+            ),
+          },
+          { key: 'index', header: 'Index', type: 'amount', value: (u) => u.index },
+          {
+            key: 'address',
+            header: 'Address',
+            type: 'identifier',
+            render: (u) => <Identifier value={u.address} kind="address" />,
+          },
+          { key: 'amount', header: 'Amount', type: 'amount', value: (u) => fmt(u.amount) },
+          {
+            key: 'status',
+            header: 'Status',
+            type: 'status',
+            render: (u) => (
+              <StatusChip
+                status={u.locked ? 'locked' : 'ready'}
+                label={u.locked ? 'Locked' : 'Available'}
+                tone={u.locked ? 'idle' : 'success'}
+              />
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+export interface UtxoToken {
+  uid: string;
+  name: string;
+  symbol: string;
+}
 
 export interface RpcGetUtxosCardProps {
-  onExecute: () => Promise<{ request: unknown; response: unknown }>;
-  disabled?: boolean;
-  isDryRun?: boolean;
-  network?: NetworkKey;
-  // Persisted data from Redux
-  initialRequest?: { method: string; params: unknown } | null;
-  initialResponse?: unknown | null;
-  initialError?: string | null;
+  onExecute: () => Promise<unknown>;
+  methodData: MethodData | null;
+  isDryRun: boolean;
+  disabledReason?: string | null;
+  filters: UtxoFilters;
+  onFiltersChange: (next: UtxoFilters) => void;
+  tokens: UtxoToken[];
+  isLoadingTokens?: boolean;
 }
 
 export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
   onExecute,
-  disabled = false,
-  isDryRun = false,
-  network = DEFAULT_NETWORK,
-  initialRequest = null,
-  initialResponse = null,
-  initialError = null,
+  methodData,
+  isDryRun,
+  disabledReason = null,
+  filters,
+  onFiltersChange,
+  tokens,
+  isLoadingTokens = false,
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<unknown>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const { showToast } = useToast();
-
-  const liveRequest = useMemo(
-    () => ({
-      method: 'htr_getUtxos',
-      params: { network: 'testnet' },
-    }),
-    []
-  );
-
-  // Load persisted data from Redux when component mounts or when initial data changes
-  useEffect(() => {
-    if (initialRequest) {
-      setRequestInfo(initialRequest);
-    }
-    if (initialResponse) {
-      setResult(initialResponse);
-      setExpanded(true);
-    }
-    if (initialError) {
-      setError(initialError);
-      setExpanded(true);
-    }
-  }, [initialRequest, initialResponse, initialError]);
-
-  const handleExecute = async () => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setRequestInfo(null);
-
-    try {
-      const { request, response } = await onExecute();
-
-      // Store request and response separately
-      setRequestInfo(request as { method: string; params: unknown });
-      setResult(response);
-      setExpanded(true);
-
-      console.log(`[RPC Request] Get UTXOs`, request);
-      console.log(`[RPC Success] Get UTXOs`, response);
-
-      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'UTXOs retrieved successfully', 'success');
-    } catch (err: unknown) {
-      console.error('Error in handleExecute:', err);
-      const errorMessage = extractErrorMessage(err);
-      setError(errorMessage);
-      setExpanded(true);
-
-      // Capture request params from error if available
-      if (err && typeof err === 'object' && 'requestParams' in err) {
-        setRequestInfo(err.requestParams as { method: string; params: unknown });
-      }
-
-      console.error(`[RPC Error] Get UTXOs`, {
-        message: errorMessage,
-        error: err,
-        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
-      });
-
-      showToast(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const hasResult = result !== null || error !== null;
-
-  // Check if result is a getUtxos response
-  const isGetUtxosResponse = (
-    data: unknown
-  ): data is {
-    type: number;
-    response: {
-      total_amount_available: string;
-      total_utxos_available: string;
-      total_amount_locked: string;
-      total_utxos_locked: string;
-      utxos: UtxoData[];
-    };
-  } => {
-    return !!(
-      data &&
-      typeof data === 'object' &&
-      'type' in data &&
-      (data as { type?: number }).type === 5 &&
-      'response' in data
-    );
-  };
-
-  // Render result
-  const renderResult = () => {
-    if (!result) return null;
-
-    try {
-      const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
-
-      // Special handling for getUtxos response
-      if (isGetUtxosResponse(parsedResult)) {
-        const response = parsedResult.response;
-
-        return (
-          <div className="space-y-4">
-            {/* Summary Statistics */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white border border-gray-300 rounded p-3">
-                <p className="text-xs text-muted mb-1">Total Amount Available</p>
-                <p className="text-lg font-bold font-mono m-0">{response.total_amount_available}</p>
-              </div>
-              <div className="bg-white border border-gray-300 rounded p-3">
-                <p className="text-xs text-muted mb-1">Total UTXOs Available</p>
-                <p className="text-lg font-bold font-mono m-0">{response.total_utxos_available}</p>
-              </div>
-              <div className="bg-white border border-gray-300 rounded p-3">
-                <p className="text-xs text-muted mb-1">Total Amount Locked</p>
-                <p className="text-lg font-bold font-mono m-0">{response.total_amount_locked}</p>
-              </div>
-              <div className="bg-white border border-gray-300 rounded p-3">
-                <p className="text-xs text-muted mb-1">Total UTXOs Locked</p>
-                <p className="text-lg font-bold font-mono m-0">{response.total_utxos_locked}</p>
-              </div>
-            </div>
-
-            {/* UTXOs List */}
-            {response.utxos && response.utxos.length > 0 && (
-              <div className="bg-white border border-gray-300 rounded overflow-hidden">
-                <div className="bg-gray-100 px-3 py-2 border-b border-gray-300">
-                  <span className="text-sm font-semibold text-primary">UTXOs ({response.utxos.length})</span>
-                </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {response.utxos.map((utxo, index) => (
-                    <div
-                      key={`${utxo.tx_id}-${utxo.index}`}
-                      className={`p-3 ${index > 0 ? 'border-t border-gray-200' : ''}`}
-                    >
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted">Address:</span>
-                          <p className="font-mono text-2xs break-all mt-1 mb-0">{utxo.address}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted">Amount:</span>
-                          <p className="font-mono font-semibold mt-1 mb-0">{utxo.amount}</p>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <span className="text-muted">TX ID:</span>
-                              <p className="font-mono text-2xs break-all mt-1 mb-0">{utxo.tx_id}</p>
-                            </div>
-                            <ExplorerLink hash={utxo.tx_id} network={network} />
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-muted">Index:</span>
-                          <p className="font-mono mt-1 mb-0">{utxo.index}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted">Status:</span>
-                          <p className="mt-1 mb-0">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
-                                utxo.locked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                              }`}
-                            >
-                              {utxo.locked ? 'Locked' : 'Available'}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {response.utxos && response.utxos.length === 0 && (
-              <div className="bg-gray-50 border border-gray-300 rounded p-4 text-center">
-                <p className="text-muted m-0">No UTXOs found matching the criteria</p>
-              </div>
-            )}
-          </div>
-        );
-      }
-
-      // Fallback to raw JSON view
-      return (
-        <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50">
-          <pre className="text-sm font-mono text-left whitespace-pre-wrap break-words m-0">
-            {safeStringify(parsedResult, 2)}
-          </pre>
-        </div>
-      );
-    } catch {
-      return (
-        <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
-          <pre className="text-sm font-mono">{String(result)}</pre>
-        </div>
-      );
-    }
-  };
+  const set = (patch: Partial<UtxoFilters>) => onFiltersChange({ ...filters, ...patch });
+  const token = tokens.find((t) => t.uid === filters.tokenUid);
+  const amountToken = { uid: filters.tokenUid, symbol: token?.symbol ?? 'HTR' };
 
   return (
-    <>
-      {/* Execute Button */}
-      <div className="card-primary mb-7.5 relative">
-        {loading && <LoadingOverlay />}
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold">Execute RPC Call</h3>
-            <p className="text-sm text-muted mt-1">
-              {isDryRun
-                ? 'Generate request (will not be sent to RPC server)'
-                : 'Send htr_getUtxos request to RPC server'}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <DryRunCheckbox />
-            <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
-              {loading ? 'Loading...' : 'Execute'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Request Section */}
-      <div className="card-primary mb-7.5">
-        <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
-      </div>
-
-      {/* Response Section */}
-      {hasResult && (
-        <div className="card-primary mb-7.5">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
-            >
-              <span>{expanded ? '▼' : '▶'}</span>
-              {error ? 'Error Details' : 'Response'}
-            </button>
-            <CopyButton text={result ? safeStringify(result, 2) : error || ''} label="Copy response" />
-          </div>
-
-          {expanded && (
-            <div className="relative">
-              {isDryRun && result === null ? (
-                <div className="bg-purple-50 border border-purple-300 rounded p-4">
-                  <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-                    </svg>
-                    <span className="text-sm font-medium">Dry Run Mode</span>
-                  </div>
-                  <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request section above to see the
-                    parameters that would be sent.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {error ? (
-                    <div className="flex items-start gap-2 p-4 bg-red-50 border border-danger rounded">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-danger flex-shrink-0 mt-0.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <p className="text-sm text-red-900 break-words">{error}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-success">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <span className="text-sm font-medium">Success</span>
-                      </div>
-                      {renderResult()}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+    <MethodCard
+      title="Get UTXOs"
+      liveRequest={buildGetUtxosRequest(filters)}
+      methodData={methodData}
+      isDryRun={isDryRun}
+      onExecute={onExecute}
+      disabledReason={disabledReason}
+      successToast="UTXOs received"
+      renderResponse={(response) => {
+        const data = unwrapResponse<GetUtxosResponse>(response);
+        return data && Array.isArray(data.utxos) ? <UtxoResponse data={data} /> : undefined;
+      }}
+    >
+      <Field label="Token" hint="Tokens with an unlocked balance in the test wallet.">
+        <select
+          className="select w-full"
+          value={filters.tokenUid}
+          onChange={(e) => set({ tokenUid: e.target.value })}
+          disabled={isLoadingTokens || tokens.length === 0}
+        >
+          {isLoadingTokens ? (
+            <option>Loading tokens…</option>
+          ) : tokens.length === 0 ? (
+            <option>No tokens with balance</option>
+          ) : (
+            tokens.map((t) => (
+              <option key={t.uid} value={t.uid}>
+                {t.symbol} ({t.name})
+              </option>
+            ))
           )}
-        </div>
-      )}
-    </>
+        </select>
+      </Field>
+      <Field label="Max UTXOs">
+        <input
+          type="number"
+          min={1}
+          step={1}
+          value={filters.maxUtxos}
+          onChange={(e) => {
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val) && val > 0) set({ maxUtxos: val });
+          }}
+          className="input w-40 font-mono"
+        />
+      </Field>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <AmountInput
+          label="Amount smaller than"
+          value={filters.amountSmallerThan}
+          onChange={(v) => set({ amountSmallerThan: v })}
+          token={amountToken}
+          allowZero
+          hint="Optional; empty means no filter."
+        />
+        <AmountInput
+          label="Amount bigger than"
+          value={filters.amountBiggerThan}
+          onChange={(v) => set({ amountBiggerThan: v })}
+          token={amountToken}
+          allowZero
+          hint="Optional; empty means no filter."
+        />
+      </div>
+    </MethodCard>
   );
 };

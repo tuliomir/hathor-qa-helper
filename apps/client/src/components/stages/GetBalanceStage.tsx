@@ -1,108 +1,120 @@
 /**
  * Get Balance Stage
  *
- * Tests htr_getBalance RPC call with Redux state persistence
+ * Tests htr_getBalance for HTR and the test wallet's custom tokens.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import { setGetBalanceError, setGetBalanceRequest, setGetBalanceResponse } from '../../store/slices/getBalanceSlice';
-import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
+import { selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
-import { RpcGetBalanceCard } from '../rpc/RpcGetBalanceCard';
-import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
+import { RpcGetBalanceCard, type BalanceToken } from '../rpc/RpcGetBalanceCard';
+import { buildGetBalanceRequest } from '../../utils/rpcCoreRequests';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Identifier } from '../common/Identifier';
+import { Callout } from '../ui/Callout';
 import { createRpcHandlers } from '../../services/rpcHandlers';
-import { useToast } from '../../hooks/useToast';
+import { useRequireRpcSession } from '../../hooks/useRequirements';
+import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
-import { extractErrorMessage } from '../../utils/errorUtils';
+import { useToast } from '../../hooks/useToast';
+import { firstUnmetReason } from '../../utils/requirements';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
+
+const GET_BALANCE_ACTIONS = {
+  setRequest: setGetBalanceRequest,
+  setResponse: setGetBalanceResponse,
+  setError: setGetBalanceError,
+};
+
+const HTR: BalanceToken = {
+  uid: NATIVE_TOKEN_UID,
+  symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+  name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+};
 
 export const GetBalanceStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { showToast } = useToast();
+  const rpcSession = useRequireRpcSession();
+  const { isDryRun, isConnected, execute } = useRpcStageCall(GET_BALANCE_ACTIONS);
+  const { onDeepLinkAvailable } = useDeepLinkCallback();
 
-  // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
-  const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const testWallet = useSelector((state: RootState) => (testWalletId ? state.walletStore.wallets[testWalletId] : null));
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
-  const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const getBalanceData = useSelector((state: RootState) => state.getBalance);
 
-  // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Get test wallet address at index 0
   useEffect(() => {
-    const getAddress = async () => {
-      if (testWallet?.instance) {
-        try {
-          // Type assertion since we know the instance has getAddressAtIndex method
-          const wallet = testWallet.instance as { getAddressAtIndex: (index: number) => Promise<string> };
-          const address = await wallet.getAddressAtIndex(0);
-          setTestWalletAddress(address);
-        } catch (error) {
-          console.error('Failed to get test wallet address:', error);
-          setTestWalletAddress(null);
-        }
-      } else {
+    const instance = testWallet?.instance as { getAddressAtIndex?: (index: number) => Promise<string> } | undefined;
+    if (!instance?.getAddressAtIndex) {
+      setTestWalletAddress(null);
+      return;
+    }
+    instance
+      .getAddressAtIndex(0)
+      .then(setTestWalletAddress)
+      .catch((error) => {
+        console.error('Failed to get test wallet address:', error);
         setTestWalletAddress(null);
-      }
-    };
-
-    getAddress();
+      });
   }, [testWallet]);
 
-  // Check if connected address matches test wallet address at index 0
-  const addressMismatch = useMemo(() => {
-    if (!isConnected || !connectedAddress || !testWalletAddress) return false;
+  const addressMismatch =
+    isConnected &&
+    !!connectedAddress &&
+    !!testWalletAddress &&
+    connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
 
-    return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
-  }, [isConnected, connectedAddress, testWalletAddress]);
-
-  // Get tokens for the test wallet (include HTR + custom tokens)
-  const walletTokens = useMemo(() => {
-    const tokens = [
-      {
-        uid: NATIVE_TOKEN_UID,
-        symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
-        name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
-      },
-    ];
-
-    if (testWallet?.tokenUids) {
-      const customTokens = testWallet.tokenUids
-        .filter((uid) => uid !== NATIVE_TOKEN_UID)
-        .map((uid) => allTokens.find((t) => t.uid === uid))
-        .filter((t): t is { uid: string; name: string; symbol: string } => t !== undefined);
-
-      tokens.push(...customTokens);
-    }
-
-    return tokens;
+  const walletTokens = useMemo<BalanceToken[]>(() => {
+    const custom = (testWallet?.tokenUids ?? [])
+      .filter((uid) => uid !== NATIVE_TOKEN_UID)
+      .map((uid) => allTokens.find((t) => t.uid === uid))
+      .filter((t): t is NonNullable<typeof t> => t !== undefined)
+      .map((t) => ({ uid: t.uid, name: t.name, symbol: t.symbol }));
+    return [HTR, ...custom];
   }, [testWallet, allTokens]);
 
-  // Get token UIDs for RPC call
   const tokenUids = useMemo(() => walletTokens.map((t) => t.uid), [walletTokens]);
 
-  // Deep link callback and cleanup for RPC requests
-  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
+  // useRpcMethod's handlers query HTR only; htr_getBalance needs the token list.
+  const balanceHandlers = useMemo(
+    () =>
+      walletConnect.client && walletConnect.session
+        ? createRpcHandlers({
+            client: walletConnect.client,
+            session: walletConnect.session,
+            balanceTokens: tokenUids,
+            dryRun: isDryRun,
+            onDeepLinkAvailable,
+          })
+        : null,
+    [walletConnect.client, walletConnect.session, tokenUids, isDryRun, onDeepLinkAvailable]
+  );
+
+  const handleExecute = () =>
+    execute(() => {
+      if (!balanceHandlers) throw new Error('Connect an RPC session first');
+      return balanceHandlers.getRpcBalance();
+    }, buildGetBalanceRequest(tokenUids));
 
   const handleRefreshTokens = async () => {
     if (!testWalletId || isRefreshing) return;
-
     setIsRefreshing(true);
     try {
       await Promise.all([
         dispatch(refreshWalletTokens(testWalletId)).unwrap(),
         dispatch(refreshWalletBalance(testWalletId)).unwrap(),
       ]);
-      showToast('Tokens refreshed successfully', 'success');
+      showToast('Tokens refreshed', 'success');
     } catch (error) {
       console.error('Failed to refresh tokens:', error);
       showToast('Failed to refresh tokens', 'error');
@@ -111,156 +123,45 @@ export const GetBalanceStage: React.FC = () => {
     }
   };
 
-  // Create RPC handlers
-  const rpcHandlers = useMemo(() => {
-    if (!walletConnect.client || !walletConnect.session) {
-      return null;
-    }
-
-    return createRpcHandlers({
-      client: walletConnect.client,
-      session: walletConnect.session,
-      balanceTokens: tokenUids,
-      dryRun: isDryRun,
-      onDeepLinkAvailable,
-    });
-  }, [walletConnect.client, walletConnect.session, tokenUids, isDryRun, onDeepLinkAvailable]);
-
-  // Wrapper for onExecute that stores results in Redux
-  const handleExecuteGetBalance = async () => {
-    if (!rpcHandlers) {
-      throw new Error('RPC handlers not initialized');
-    }
-
-    const startTime = Date.now();
-
-    try {
-      const { request, response } = await rpcHandlers.getRpcBalance();
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification after RPC response
-      clearDeepLinkNotification();
-
-      // Store request in Redux
-      dispatch(
-        setGetBalanceRequest({
-          method: request.method,
-          params: request.params,
-          isDryRun,
-        })
-      );
-
-      // Serialize response to convert BigInt values to strings before dispatching
-      const serializedResponse = JSON.parse(JSONBigInt.stringify(response));
-
-      // Store response in Redux
-      dispatch(
-        setGetBalanceResponse({
-          response: serializedResponse,
-          duration,
-        })
-      );
-
-      return { request, response };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification on error too
-      clearDeepLinkNotification();
-
-      // Store error in Redux
-      const errorMessage = extractErrorMessage(error);
-      dispatch(
-        setGetBalanceError({
-          error: errorMessage,
-          duration,
-        })
-      );
-
-      throw error;
-    }
-  };
+  const disabledReason = addressMismatch
+    ? 'Connected wallet differs from the test wallet'
+    : firstUnmetReason([rpcSession]);
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Get Balance RPC</h1>
-      <p className="text-muted mb-7.5">Test the htr_getBalance RPC method to query token balances</p>
-
-      {!isConnected && <RpcNotConnectedBanner />}
-
-      {/* Address Mismatch Warning */}
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="rpc-get-balance"
+        description="Query the connected wallet's balance for HTR and the test wallet's tokens."
+        method="htr_getBalance"
+      />
+      <PreconditionStrip requirements={[rpcSession]} />
       {addressMismatch && (
-        <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-warning flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
-              <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC testing has been
-                disabled. Please connect the correct wallet or select a different test wallet.
-              </p>
-            </div>
-          </div>
-        </div>
+        <Callout tone="warning" title="Connected wallet differs from the test wallet">
+          <p className="m-0">
+            The RPC session's first address does not match the test wallet's address 0, so sending is disabled. Connect
+            the matching wallet or choose another test wallet.
+          </p>
+          <dl className="m-0 mt-2 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1">
+            <dt>RPC session</dt>
+            <dd className="m-0 min-w-0">
+              <Identifier value={connectedAddress!} kind="address" walletTag={false} />
+            </dd>
+            <dt>Test wallet</dt>
+            <dd className="m-0 min-w-0">
+              <Identifier value={testWalletAddress!} kind="address" walletTag={false} />
+            </dd>
+          </dl>
+        </Callout>
       )}
-
-      {/* GetBalance Card */}
-      {isConnected && !addressMismatch && rpcHandlers && (
-        <RpcGetBalanceCard
-          onExecute={handleExecuteGetBalance}
-          disabled={false}
-          tokens={walletTokens}
-          isDryRun={isDryRun}
-          onRefresh={handleRefreshTokens}
-          isRefreshing={isRefreshing}
-          initialRequest={getBalanceData.request}
-          initialResponse={getBalanceData.rawResponse}
-          initialError={getBalanceData.error}
-        />
-      )}
-
-      {/* Persisted Data Info */}
-      {getBalanceData.timestamp && (
-        <div className="card-primary mt-7.5 bg-green-50 border border-success">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-success flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-green-900 m-0">Request duration</p>
-              <p className="text-sm text-green-800 mt-1 mb-0">
-                {getBalanceData.duration !== null && (
-                  <span className="block mt-1">Last request took {getBalanceData.duration}ms</span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <RpcGetBalanceCard
+        onExecute={handleExecute}
+        methodData={toMethodData(getBalanceData)}
+        isDryRun={isDryRun}
+        disabledReason={disabledReason}
+        tokens={walletTokens}
+        onRefresh={testWalletId ? handleRefreshTokens : undefined}
+        isRefreshing={isRefreshing}
+      />
     </div>
   );
 };

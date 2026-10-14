@@ -1,0 +1,63 @@
+import { describe, expect, test } from 'bun:test';
+import {
+  buildGetAddressRequest,
+  buildGetBalanceRequest,
+  buildGetUtxosRequest,
+  toFilterNumber,
+  unwrapResponse,
+} from '../src/utils/rpcCoreRequests';
+
+describe('buildGetAddressRequest', () => {
+  test('adds the index only for type index', () => {
+    expect(buildGetAddressRequest('index', 3).params).toEqual({ network: 'testnet', type: 'index', index: 3 });
+    expect(buildGetAddressRequest('first_empty', 3).params).toEqual({ network: 'testnet', type: 'first_empty' });
+    expect(buildGetAddressRequest('client', 0).params).toEqual({ network: 'testnet', type: 'client' });
+  });
+});
+
+describe('buildGetBalanceRequest', () => {
+  test('drops blank token uids', () => {
+    expect(buildGetBalanceRequest(['00', ' ', 'abc']).params).toEqual({ network: 'testnet', tokens: ['00', 'abc'] });
+  });
+});
+
+describe('buildGetUtxosRequest', () => {
+  const base = { tokenUid: '00', maxUtxos: 10, amountSmallerThan: '', amountBiggerThan: '' };
+
+  test('omits empty filters', () => {
+    expect(buildGetUtxosRequest(base)).toEqual({
+      method: 'htr_getUtxos',
+      params: { network: 'testnet', token: '00', maxUtxos: 10 },
+    });
+  });
+
+  test('sends filters as numbers, including zero', () => {
+    expect(buildGetUtxosRequest({ ...base, amountSmallerThan: '500', amountBiggerThan: '0' }).params).toEqual({
+      network: 'testnet',
+      token: '00',
+      maxUtxos: 10,
+      amountSmallerThan: 500,
+      amountBiggerThan: 0,
+    });
+  });
+});
+
+describe('toFilterNumber', () => {
+  test('empty is no filter', () => {
+    expect(toFilterNumber('')).toBeNull();
+    expect(toFilterNumber('12')).toBe(12);
+  });
+});
+
+describe('unwrapResponse', () => {
+  test('unwraps type-tagged responses', () => {
+    expect(unwrapResponse({ type: 12, response: { network: 'testnet' } })).toEqual({ network: 'testnet' });
+    expect(unwrapResponse({ type: 3, response: [1, 2] })).toEqual([1, 2]);
+  });
+
+  test('passes plain objects through and rejects non-objects', () => {
+    expect(unwrapResponse({ address: 'H1' })).toEqual({ address: 'H1' });
+    expect(unwrapResponse(null)).toBeNull();
+    expect(unwrapResponse('x')).toBeNull();
+  });
+});
