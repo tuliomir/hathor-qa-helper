@@ -9,8 +9,18 @@ import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { setAddressIndex, setAmount } from '../../store/slices/addressValidationSlice';
+import { MdClose, MdQrCodeScanner } from 'react-icons/md';
 import CopyButton from '../common/CopyButton';
-import Loading from '../common/Loading';
+import NetworkChip from '../common/NetworkChip';
+import { Identifier } from '../common/Identifier';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { EmptyState } from '../ui/EmptyState';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { useRequireFundingWallet, useRequireTestWallet } from '../../hooks/useRequirements';
 import { formatBalance } from '../../utils/balanceUtils';
 import type { WalletInfo } from '../../types/walletStore';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
@@ -263,225 +273,218 @@ function WalletAddressDisplay({
     });
   };
 
+  const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
+
   return (
     <>
-      {/* Loading overlay when sending transaction */}
-      {isSending && <Loading overlay message="Sending transaction..." />}
-
-      {/* Wallet Info */}
-      <div className="card-primary mb-7.5">
-        <h2 className="text-xl font-bold mb-4">Wallet Information</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-muted mb-1">Name:</p>
-            <p className="font-bold m-0">{wallet.metadata.friendlyName}</p>
+      <Panel title="Wallet information">
+        <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-caption text-ink-muted">Name</dt>
+            <dd className="m-0 font-semibold">{wallet.metadata.friendlyName}</dd>
           </div>
-          <div>
-            <p className="text-sm text-muted mb-1">Network:</p>
-            <p className="font-bold m-0">{wallet.metadata.network}</p>
+          <div className="flex min-w-0 flex-col items-start gap-0.5">
+            <dt className="text-caption text-ink-muted">Network</dt>
+            <dd className="m-0">
+              <NetworkChip network={wallet.metadata.network} size="sm" />
+            </dd>
           </div>
-          <div>
-            <p className="text-sm text-muted mb-1">Balance:</p>
-            <p className="font-bold m-0 text-success">
-              {wallet.balance !== undefined ? `${formatBalance(wallet.balance)} HTR` : 'N/A'}
-            </p>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-caption text-ink-muted">Balance</dt>
+            <dd className="m-0 font-mono text-data">
+              {wallet.balance !== undefined ? (
+                <>
+                  {formatBalance(wallet.balance)} <span className="font-sans text-ink-muted">HTR</span>
+                </>
+              ) : (
+                'N/A'
+              )}
+            </dd>
           </div>
-          <div>
-            <p className="text-sm text-muted mb-1">First Address:</p>
-            <p className="font-mono text-2xs m-0">{wallet.firstAddress || 'N/A'}</p>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-caption text-ink-muted">First address</dt>
+            <dd className="m-0 min-w-0">
+              {wallet.firstAddress ? (
+                <Identifier value={wallet.firstAddress} kind="address" walletTag={false} />
+              ) : (
+                'N/A'
+              )}
+            </dd>
           </div>
-        </div>
-      </div>
+        </dl>
+      </Panel>
 
-      {/* Address Index Control */}
-      <div className="card-primary mb-7.5">
-        <label htmlFor="address-index" className="block mb-1.5 font-bold">
-          Address Index:
-        </label>
-        <div className="flex gap-2 items-start">
-          <input
-            id="address-index"
-            type="number"
-            min={0}
-            step={1}
-            value={addressIndex}
-            onChange={handleIndexChange}
-            className="input flex-1"
-          />
-          <button
-            type="button"
-            onClick={handleGetAddr0}
-            disabled={!wallet || !wallet.instance}
-            className="btn-secondary px-3 py-2 whitespace-nowrap"
-          >
-            Get Addr0
-          </button>
-          <button
-            type="button"
-            onClick={handleGetFirstEmpty}
-            disabled={isFetchingFirstEmpty || !wallet || !wallet.instance}
-            className="btn-primary px-3 py-2 whitespace-nowrap"
-          >
-            {isFetchingFirstEmpty ? 'Loading...' : 'Get First Empty'}
-          </button>
-        </div>
-        <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
-      </div>
+      <Panel title="Address">
+        <Field
+          label="Address index"
+          htmlFor="address-index"
+          hint="Index used to derive the address (default 0)"
+          wireControl={false}
+        >
+          <div className="flex flex-wrap items-start gap-2">
+            <input
+              id="address-index"
+              aria-describedby="address-index-hint"
+              type="number"
+              min={0}
+              step={1}
+              value={addressIndex}
+              onChange={handleIndexChange}
+              className="input w-32 font-mono text-data"
+            />
+            <button
+              type="button"
+              onClick={handleGetAddr0}
+              disabled={!wallet || !wallet.instance}
+              className="btn btn-secondary"
+            >
+              Get addr0
+            </button>
+            <button
+              type="button"
+              onClick={handleGetFirstEmpty}
+              disabled={isFetchingFirstEmpty || !wallet || !wallet.instance}
+              className="btn btn-secondary"
+            >
+              {isFetchingFirstEmpty && spinner}
+              Get first empty
+            </button>
+          </div>
+        </Field>
 
-      {(error || transactionError) && (
-        <div className="card-primary mb-7.5 bg-red-50 border border-danger">
-          <p className="m-0 text-red-900">{error || transactionError}</p>
-        </div>
-      )}
+        {(error || transactionError) && <Callout tone="error">{error || transactionError}</Callout>}
 
-      {isLoading && (
-        <div className="card-primary mb-7.5 text-center">
-          <p className="m-0">Loading address...</p>
-        </div>
-      )}
+        {isLoading && (
+          <p className="m-0 flex items-center gap-2 text-body text-ink-muted">
+            <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+            Loading address…
+          </p>
+        )}
+
+        {derivedAddress && !isLoading && (
+          <section className="flex flex-col gap-3 border-t border-base-300 pt-3">
+            <h3 className="m-0 text-body font-semibold">Address at index {addressIndex}</h3>
+            <Identifier value={derivedAddress} kind="address" head={derivedAddress.length} tail={0} />
+            <div className="flex flex-col items-start gap-3 sm:flex-row">
+              <div className="flex-none rounded-field border border-base-300 bg-base-100 p-3">
+                <QRCode value={getAddressUri()} size={176} />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-caption text-ink-muted">Address URI</span>
+                <span className="flex min-w-0 items-start gap-1">
+                  <code className="min-w-0 rounded-field bg-base-200 px-2 py-1 font-mono text-data-sm [overflow-wrap:anywhere]">
+                    {getAddressUri()}
+                  </code>
+                  <CopyButton text={getAddressUri()} label="Copy address URI" />
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+      </Panel>
 
       {derivedAddress && !isLoading && (
         <>
-          {/* Address Display */}
-          <div className="card-primary mb-7.5">
-            <div className="mb-3 text-center">
-              <h3 className="text-lg font-bold m-0">Address (Index {addressIndex})</h3>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded inline-block">{derivedAddress}</p>
-              <CopyButton text={derivedAddress} label="Copy address" className="ml-2" />
-            </div>
-          </div>
-
-          {/* Address URI QR Code */}
-          <div className="card-primary mb-7.5">
-            <div className="mb-3 text-center">
-              <h3 className="text-lg font-bold m-0">Address QR Code</h3>
-            </div>
-            <div className="flex flex-col items-center gap-3">
-              <div className="p-4 bg-white border-2 border-gray-300 rounded">
-                <QRCode value={getAddressUri()} size={200} />
-              </div>
-              <div className="flex items-center w-full justify-center">
-                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded text-center">
-                  {getAddressUri()}
-                </p>
-                <CopyButton text={getAddressUri()} label="Copy address URI" className="ml-2" />
-              </div>
-            </div>
-          </div>
-
-          {/* Amount Field */}
-          <div className="card-primary mb-7.5">
-            <label htmlFor="amount-input" className="block mb-1.5 font-bold">
-              Payment Amount:
-            </label>
-            <input
-              id="amount-input"
-              type="number"
-              min="1"
-              step="1"
-              value={amount}
-              onChange={handleAmountChange}
-              className="input"
-              placeholder="Enter amount"
-            />
-            <p className="text-muted text-xs mt-1.5 mb-0">
-              Enter a positive integer for the payment amount (HTR tokens)
-            </p>
-          </div>
-
-          {/* Payment Request QR Code */}
-          <div className="card-primary mb-7.5">
-            <div className="mb-3 text-center">
-              <h3 className="text-lg font-bold m-0">Payment Request QR Code</h3>
-            </div>
-            <div className="flex flex-col items-center gap-3">
-              <div className="p-4 bg-white border-2 border-gray-300 rounded">
-                <QRCode value={getPaymentRequest()} size={200} />
-              </div>
-              <div className="flex items-center w-full">
-                <p className="font-mono text-2xs break-all m-0 p-2 bg-gray-100 rounded w-full">{getPaymentRequest()}</p>
-                <CopyButton text={getPaymentRequest()} label="Copy payment request" className="ml-2" />
-              </div>
-
-              {/* Send button for fund wallet */}
-              <div className="flex items-center justify-center mt-3">
-                <button
-                  type="button"
-                  onClick={handleSendFromFundWallet}
-                  className="btn-primary px-4 py-2"
-                  disabled={isSending || !fundingWalletId}
-                >
-                  {isSending ? 'Sending...' : 'Send from Fund Wallet'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Inject Initial Fund */}
-          <div className="card-primary mb-7.5">
-            <h3 className="text-lg font-bold mb-4">Inject Initial Fund</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Address</label>
-                <input
-                  type="text"
-                  value={
-                    derivedAddress
-                      ? `${derivedAddress.slice(0, 12)}...${derivedAddress.slice(-8)} (index 0)`
-                      : 'Deriving...'
-                  }
-                  disabled
-                  className="input bg-gray-50"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Unlocked</label>
-                  <input
-                    type="number"
-                    value={injectUnlocked}
-                    onChange={(e) => setInjectUnlocked(parseInt(e.target.value) || 0)}
-                    min="0"
-                    className="input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Locked</label>
-                  <input
-                    type="number"
-                    value={injectLocked}
-                    onChange={(e) => setInjectLocked(parseInt(e.target.value) || 0)}
-                    min="0"
-                    className="input"
-                  />
-                </div>
-              </div>
-
-              <TimelockPicker
-                value={injectTimestamp}
-                onChange={setInjectTimestamp}
-                label="Timestamp (lock until)"
-                hint="Locked funds will be unavailable until this time (default: 5 min from now)"
+          <Panel title="Payment request" description="A QR code asking for HTR at the address above.">
+            <Field label="Payment amount" htmlFor="amount-input" hint="A positive integer amount of HTR">
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={amount}
+                onChange={handleAmountChange}
+                className="input w-40 font-mono text-data"
+                placeholder="Amount"
               />
+            </Field>
+            <div className="flex flex-col items-start gap-3 sm:flex-row">
+              <div className="flex-none rounded-field border border-base-300 bg-base-100 p-3">
+                <QRCode value={getPaymentRequest()} size={176} />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-caption text-ink-muted">Payment request</span>
+                <span className="flex min-w-0 items-start gap-1">
+                  <code className="min-w-0 rounded-field bg-base-200 px-2 py-1 font-mono text-data-sm [overflow-wrap:anywhere]">
+                    {getPaymentRequest()}
+                  </code>
+                  <CopyButton text={getPaymentRequest()} label="Copy payment request" />
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {!fundingWalletId && <span className="text-caption text-ink-muted">Select a funding wallet to send</span>}
+              <button
+                type="button"
+                onClick={handleSendFromFundWallet}
+                className="btn btn-primary"
+                disabled={isSending || !fundingWalletId}
+              >
+                {isSending && spinner}
+                {isSending ? 'Sending' : 'Send from funding wallet'}
+              </button>
+            </div>
+          </Panel>
 
-              {injectError && (
-                <div className="p-3 bg-red-50 border border-danger rounded text-sm text-red-900">{injectError}</div>
+          <Panel
+            title="Inject initial fund"
+            description="Send unlocked and time-locked HTR from the funding wallet to address 0."
+          >
+            <Field label="Address" htmlFor="inject-address" hint="Index 0">
+              <input
+                type="text"
+                value={
+                  derivedAddress ? `${derivedAddress.slice(0, 12)}…${derivedAddress.slice(-8)} (index 0)` : 'Deriving…'
+                }
+                disabled
+                className="input w-full font-mono text-data"
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Unlocked" htmlFor="inject-unlocked">
+                <input
+                  type="number"
+                  value={injectUnlocked}
+                  onChange={(e) => setInjectUnlocked(parseInt(e.target.value) || 0)}
+                  min="0"
+                  className="input w-full font-mono text-data"
+                />
+              </Field>
+              <Field label="Locked" htmlFor="inject-locked">
+                <input
+                  type="number"
+                  value={injectLocked}
+                  onChange={(e) => setInjectLocked(parseInt(e.target.value) || 0)}
+                  min="0"
+                  className="input w-full font-mono text-data"
+                />
+              </Field>
+            </div>
+
+            <TimelockPicker
+              value={injectTimestamp}
+              onChange={setInjectTimestamp}
+              label="Timestamp (lock until)"
+              hint="Locked funds will be unavailable until this time (default: 5 min from now)"
+            />
+
+            {injectError && <Callout tone="error">{injectError}</Callout>}
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {!fundingWalletId && (
+                <span className="text-caption text-ink-muted">Select a funding wallet to inject</span>
               )}
-
               <button
                 type="button"
                 onClick={handleInjectFund}
                 disabled={isInjecting || isSending || !fundingWalletId || (injectUnlocked === 0 && injectLocked === 0)}
-                className="btn-primary w-full"
+                className="btn btn-primary"
               >
-                {isInjecting ? 'Injecting...' : 'Inject Fund'}
+                {isInjecting && spinner}
+                {isInjecting ? 'Injecting' : 'Inject fund'}
               </button>
             </div>
-          </div>
+          </Panel>
         </>
       )}
     </>
@@ -499,6 +502,8 @@ export default function AddressValidation() {
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
 
   const [activeTab, setActiveTab] = useState<TabType>('test');
+  const testWalletRequirement = useRequireTestWallet();
+  const fundingWalletRequirement = useRequireFundingWallet();
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [lookupResult, setLookupResult] = useState<AddressLookupResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -649,97 +654,88 @@ export default function AddressValidation() {
 
   const noWalletsSelected = !fundingWallet && !testWallet;
 
-  return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Address Validation</h1>
-      <p className="text-muted mb-7.5">
-        View and share wallet addresses through QR codes for the funding and test wallets.
-      </p>
-
-      {/* Address Lookup Section */}
-      {!noWalletsSelected && (
-        <div className="card-primary mb-7.5">
-          <h3 className="text-lg font-bold mb-3">Address Lookup</h3>
-          <p className="text-sm text-muted mb-4">
-            Enter an address or scan a QR code to find out which wallet it belongs to.
-          </p>
-
-          {/* Text Input */}
-          <div className="mb-4">
-            <label htmlFor="address-lookup-input" className="block mb-1.5 font-bold text-sm">
-              Paste Address:
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="address-lookup-input"
-                type="text"
-                value={addressInput}
-                onChange={(e) => setAddressInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddressInputSubmit()}
-                placeholder="Enter a Hathor address..."
-                className="input flex-1 font-mono text-sm"
-                disabled={isValidating}
-              />
-              <button
-                onClick={handleAddressInputSubmit}
-                className="btn-primary px-4 py-2 whitespace-nowrap"
-                disabled={isValidating || !addressInput.trim()}
-              >
-                {isValidating ? 'Looking up...' : 'Look Up'}
-              </button>
-            </div>
-          </div>
-
-          {/* QR Scanner Button */}
-          <div className="border-t border-gray-200 pt-4">
-            <button onClick={() => setShowQrScanner(true)} className="btn-secondary px-4 py-2" disabled={isValidating}>
-              {isValidating ? 'Looking up...' : 'Scan QR Code'}
-            </button>
-          </div>
-        </div>
+  const belongsTo = (r: AddressLookupResult) => (
+    <>
+      This address belongs to <strong>{r.walletName}</strong>
+      {r.addressIndex !== undefined && (
+        <>
+          {' '}
+          at index <strong>{r.addressIndex}</strong>
+        </>
       )}
+    </>
+  );
+
+  return (
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="address-validation"
+        description="View and share wallet addresses through QR codes for the funding and test wallets."
+      />
+      <PreconditionStrip requirements={[testWalletRequirement, fundingWalletRequirement]} />
 
       {noWalletsSelected ? (
-        <div className="p-10 text-center border-2 border-dashed border-warning rounded-lg bg-yellow-50 text-yellow-800">
-          <h2 className="mt-0 text-2xl font-bold">No Wallets Selected</h2>
-          <p className="text-base">
-            Please go to the <strong>Wallet Initialization</strong> stage, start wallets, and select both a funding
-            wallet and a test wallet.
-          </p>
-        </div>
+        <Panel title="Addresses">
+          <EmptyState>
+            Start wallets and choose a funding wallet and a test wallet; their addresses and QR codes appear here.
+          </EmptyState>
+        </Panel>
       ) : (
         <>
-          {/* Tab Navigation */}
-          <div className="mb-7.5">
-            <div className="flex border-b border-gray-300">
-              <button
-                onClick={() => setActiveTab('funding')}
-                className={`px-6 py-3 font-bold text-base border-b-2 transition-colors ${
-                  activeTab === 'funding'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted hover:text-primary'
-                }`}
-                disabled={!fundingWallet}
-              >
-                Funding Wallet
-                {!fundingWallet && ' (Not Selected)'}
-              </button>
-              <button
-                onClick={() => setActiveTab('test')}
-                className={`px-6 py-3 font-bold text-base border-b-2 transition-colors ${
-                  activeTab === 'test'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted hover:text-primary'
-                }`}
-                disabled={!testWallet}
-              >
-                Test Wallet
-                {!testWallet && ' (Not Selected)'}
-              </button>
-            </div>
-          </div>
+          <Panel
+            title="Address lookup"
+            description="Enter an address or scan a QR code to find out which wallet it belongs to."
+          >
+            <Field label="Address" htmlFor="address-lookup-input" wireControl={false}>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  id="address-lookup-input"
+                  type="text"
+                  value={addressInput}
+                  onChange={(e) => setAddressInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddressInputSubmit()}
+                  placeholder="Enter a Hathor address"
+                  className="input min-w-0 flex-1 font-mono text-data"
+                  disabled={isValidating}
+                />
+                <button
+                  type="button"
+                  onClick={handleAddressInputSubmit}
+                  className="btn btn-primary"
+                  disabled={isValidating || !addressInput.trim()}
+                >
+                  {isValidating && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}
+                  Look up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowQrScanner(true)}
+                  className="btn btn-secondary"
+                  disabled={isValidating}
+                >
+                  <MdQrCodeScanner aria-hidden="true" />
+                  Scan QR code
+                </button>
+              </div>
+            </Field>
+          </Panel>
 
-          {/* Tab Content */}
+          <SegmentedControl<TabType>
+            aria-label="Wallet"
+            value={activeTab}
+            onChange={setActiveTab}
+            options={[
+              {
+                value: 'funding',
+                label: 'Funding wallet',
+                disabled: !fundingWallet,
+                reason: 'No funding wallet selected',
+              },
+              { value: 'test', label: 'Test wallet', disabled: !testWallet, reason: 'No test wallet selected' },
+            ]}
+            className="self-start"
+          />
+
           {activeTab === 'funding' && fundingWallet && (
             <WalletAddressDisplay
               wallet={fundingWallet}
@@ -764,224 +760,81 @@ export default function AddressValidation() {
         </>
       )}
 
-      {/* QR Scanner Modal */}
       {showQrScanner && <QrScanner onScan={handleQrScan} onCancel={() => setShowQrScanner(false)} />}
 
-      {/* Address Lookup Results Modal */}
       {lookupResult && (
-        <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setLookupResult(null)} />
+        <div className="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="lookup-result-title">
+          <div className="modal-box flex max-w-2xl flex-col gap-4 rounded-box border border-base-300 p-5 text-left shadow-float">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="lookup-result-title" className="m-0 text-title">
+                Address lookup result
+              </h2>
+              <button
+                type="button"
+                onClick={() => setLookupResult(null)}
+                className="btn btn-ghost btn-sm btn-square"
+                aria-label="Close"
+              >
+                <MdClose aria-hidden="true" />
+              </button>
+            </div>
 
-          {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-2xl font-bold m-0">Address Lookup Result</h2>
-                <button
-                  onClick={() => setLookupResult(null)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                  aria-label="Close"
-                >
-                  ×
+            {lookupResult.address && (
+              <div className="flex flex-col gap-1">
+                <span className="text-caption text-ink-muted">Address</span>
+                <Identifier value={lookupResult.address} kind="address" walletTag={false} />
+              </div>
+            )}
+
+            {lookupResult.category === 'current-wallet' && (
+              <Callout tone="success" title="Belongs to the current wallet">
+                {belongsTo(lookupResult)}
+              </Callout>
+            )}
+            {lookupResult.category === 'other-active-wallet' && (
+              <Callout tone="info" title="Belongs to the other active wallet">
+                {belongsTo(lookupResult)}
+              </Callout>
+            )}
+            {lookupResult.category === 'known-wallet' && (
+              <Callout tone="warning" title="Belongs to another wallet">
+                {belongsTo(lookupResult)}
+              </Callout>
+            )}
+            {lookupResult.category === 'unknown' && (
+              <Callout tone="info" title="Unknown address">
+                This address is not found in any known wallet.
+              </Callout>
+            )}
+            {lookupResult.category === 'error' && (
+              <Callout tone="error" title="Error">
+                {lookupResult.error}
+              </Callout>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              {lookupResult.category === 'current-wallet' && lookupResult.addressIndex !== undefined && (
+                <button type="button" onClick={handleUseInTest} className="btn btn-primary">
+                  Use this in the test below
                 </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-6">
-                {/* Address Display */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-bold mb-2">Address</h3>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono text-xs break-all m-0 p-3 bg-gray-100 rounded flex-1">
-                      {lookupResult.address}
-                    </p>
-                    <CopyButton text={lookupResult.address} label="Copy" className="flex-shrink-0" />
-                  </div>
-                </div>
-
-                {/* Result Status - Color coded based on category */}
-                {lookupResult.category === 'current-wallet' && (
-                  <div className="p-4 rounded mb-4 bg-green-50 border border-success">
-                    <div className="flex items-start gap-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 flex-shrink-0 text-success"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="font-bold m-0 text-green-900">Belongs to current wallet</p>
-                        <p className="text-sm mt-2 mb-0 text-green-800">
-                          This address belongs to <strong>{lookupResult.walletName}</strong>
-                          {lookupResult.addressIndex !== undefined && (
-                            <>
-                              {' '}
-                              at index <strong>{lookupResult.addressIndex}</strong>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {lookupResult.category === 'other-active-wallet' && (
-                  <div className="p-4 rounded mb-4 bg-blue-50 border border-info">
-                    <div className="flex items-start gap-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 flex-shrink-0 text-info"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="font-bold m-0 text-blue-900">Belongs to other active wallet</p>
-                        <p className="text-sm mt-2 mb-0 text-blue-800">
-                          This address belongs to <strong>{lookupResult.walletName}</strong>
-                          {lookupResult.addressIndex !== undefined && (
-                            <>
-                              {' '}
-                              at index <strong>{lookupResult.addressIndex}</strong>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {lookupResult.category === 'known-wallet' && (
-                  <div className="p-4 rounded mb-4 bg-yellow-50 border border-warning">
-                    <div className="flex items-start gap-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 flex-shrink-0 text-warning"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="font-bold m-0 text-yellow-900">Belongs to another wallet</p>
-                        <p className="text-sm mt-2 mb-0 text-yellow-800">
-                          This address belongs to <strong>{lookupResult.walletName}</strong>
-                          {lookupResult.addressIndex !== undefined && (
-                            <>
-                              {' '}
-                              at index <strong>{lookupResult.addressIndex}</strong>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {lookupResult.category === 'unknown' && (
-                  <div className="p-4 rounded mb-4 bg-gray-100 border border-gray-300">
-                    <div className="flex items-start gap-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 flex-shrink-0 text-gray-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="font-bold m-0 text-gray-700">Unknown address</p>
-                        <p className="text-sm mt-2 mb-0 text-gray-600">
-                          This address is not found in any known wallet.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {lookupResult.category === 'error' && (
-                  <div className="p-4 rounded mb-4 bg-red-50 border border-danger">
-                    <div className="flex items-start gap-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 flex-shrink-0 text-danger"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <div className="flex-1">
-                        <p className="font-bold m-0 text-red-900">Error</p>
-                        {lookupResult.error && <p className="text-sm mt-2 mb-0 text-red-800">{lookupResult.error}</p>}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between p-6 border-t border-gray-200">
-                <div>
-                  {/* "Use this in the test below" button - only for current-wallet with known index */}
-                  {lookupResult.category === 'current-wallet' && lookupResult.addressIndex !== undefined && (
-                    <button onClick={handleUseInTest} className="btn-success px-4 py-2">
-                      Use this in the test below
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => setLookupResult(null)} className="btn btn-ghost px-6 py-2">
-                    Close
-                  </button>
-                  <button
-                    onClick={() => {
-                      setLookupResult(null);
-                      setShowQrScanner(true);
-                    }}
-                    className="btn-secondary px-6 py-2"
-                  >
-                    Scan Another
-                  </button>
-                </div>
-              </div>
+              )}
+              <button type="button" onClick={() => setLookupResult(null)} className="btn btn-ghost ml-auto">
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLookupResult(null);
+                  setShowQrScanner(true);
+                }}
+                className="btn btn-secondary"
+              >
+                Scan another
+              </button>
             </div>
           </div>
-        </>
+          <div className="modal-backdrop" onClick={() => setLookupResult(null)} aria-hidden="true" />
+        </div>
       )}
     </div>
   );
