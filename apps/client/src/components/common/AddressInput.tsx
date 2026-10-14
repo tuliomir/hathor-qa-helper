@@ -5,7 +5,11 @@
  * Validation is advisory: the value always reaches `onChange`, so QA can
  * still send a wrong-kind address on purpose. Each source is opt-in via
  * `sources`; `test` and `fund` also offer the shielded addr0 when the
- * wallet's network supports shielded outputs.
+ * wallet's network supports shielded outputs. `customSources` adds
+ * stage-specific ones (e.g. QA server sessions).
+ *
+ * Validation uses `network`, defaulting to the active network; pass `null`
+ * to accept any network.
  */
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -14,6 +18,7 @@ import { MdArrowDropDown, MdShield } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import { WELL_KNOWN_ADDRESSES } from '../../constants/addresses';
+import { selectActiveNetwork } from '../../store/slices/networkSlice';
 import type { RootState } from '../../store';
 import { NETWORK_CONFIG, type NetworkKey } from '../../constants/network';
 import { addressAcceptError, detectAddressKind, type AddressAccept } from '../../utils/addressKind';
@@ -21,19 +26,29 @@ import { groupChars } from '../../utils/truncate';
 
 export type AddressSource = 'snap' | 'test' | 'fund' | 'multisig' | 'test-shielded' | 'fund-shielded' | 'snap-shielded';
 
+/** A stage-specific quick-fill entry. */
+export interface CustomAddressSource {
+  key: string;
+  label: string;
+  /** The address, or a loader for addresses that need deriving. */
+  value: string | (() => Promise<string>);
+  disabledReason?: string | null;
+}
+
 interface AddressInputProps {
   value: string;
   onChange: (value: string) => void;
   /** Which quick-fill buttons to show */
   sources?: AddressSource[];
+  customSources?: CustomAddressSource[];
   /** Pre-populate on mount (only if value is empty) */
   suggestedValue?: string;
   placeholder?: string;
   label?: string;
   /** Which kinds the field expects. Default 'transparent'. */
   accept?: AddressAccept;
-  /** Validate against this network; without it any network is accepted. */
-  network?: NetworkKey;
+  /** Validate against this network. Defaults to the active network; `null` accepts any. */
+  network?: NetworkKey | null;
   id?: string;
 }
 
@@ -50,13 +65,16 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   value,
   onChange,
   sources = [],
+  customSources = [],
   suggestedValue,
   placeholder = 'Address (base58)',
   label,
   accept = 'transparent',
-  network,
+  network: networkProp,
   id,
 }) => {
+  const activeNetwork = useSelector(selectActiveNetwork);
+  const network = networkProp === undefined ? activeNetwork : (networkProp ?? undefined);
   const snapAddress = useSelector(selectSnapAddress);
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const fundingWalletId = useSelector((state: RootState) => state.walletSelection.fundingWalletId);
@@ -173,6 +191,23 @@ export const AddressInput: React.FC<AddressInputProps> = ({
         });
         break;
     }
+  }
+
+  for (const src of customSources) {
+    add({
+      key: `custom-${src.key}`,
+      label: src.label,
+      disabledReason: src.disabledReason ?? null,
+      onClick: async () => {
+        setFillError(null);
+        if (typeof src.value === 'string') return onChange(src.value);
+        try {
+          onChange(await src.value());
+        } catch (err) {
+          setFillError(`${src.label} unavailable: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      },
+    });
   }
 
   const detection = useMemo(() => detectAddressKind(value, network), [value, network]);
