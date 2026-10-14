@@ -6,13 +6,16 @@ The redesign spec lives in `docs/design/` (tokens in `docs/design/tokens.md`). T
 
 ## Component Classes (src/index.css)
 
-**Buttons**: `btn`, `btn-primary`, `btn-success`, `btn-danger`, `btn-warning`, `btn-secondary`
-**Cards**: `card`, `card-primary`
-**Inputs**: `input`, `input-error`
-**Tables**: `table-header`, `table-row`
-**Status**: `status-idle`, `status-connecting`, `status-syncing`, `status-ready`, `status-error`
+daisyUI 5 owns `btn`, `card`, `input`, `select`, `alert`, `badge` and friends; use them directly (`btn btn-primary btn-sm`).
 
-These are custom classes defined in `src/index.css` using `@layer components`.
+The old shortcuts survive only as thin aliases in the `LEGACY: delete in T10` block, so existing call sites keep rendering until the stage sweep replaces them. Don't use them in new code:
+
+- `btn-primary`, `btn-secondary`, `btn-success`, `btn-warning`, `btn-info` without `btn` get the daisyUI `btn` base; `btn-danger` is `btn btn-error`
+- `card-primary`: `bg-base-100 border border-base-300 rounded-box p-4`
+- `input`, `input-error`: daisyUI `input`, full width, `field-border` border
+- `table-header`, `table-row`, `status-idle|connecting|syncing|ready|error`
+
+Tailwind's preflight is wrapped in the `qa-base` cascade layer at the top of `src/index.css`. Without it, Tailwind 3's unlayered preflight overrides daisyUI 5's layered component styles (button backgrounds, borders).
 
 ## Colors (theme `bench` in src/index.css)
 

@@ -1,4 +1,12 @@
-@tailwind base;
+/* Tailwind 3 emits preflight unlayered, and unlayered rules beat every
+   cascade layer, so preflight's button/input/border resets were winning
+   over daisyUI 5's layered component styles. Putting the base output in
+   a layer declared first (lowest priority) restores daisyUI, which is
+   what Tailwind 4 does natively. */
+@layer qa-base;
+@layer qa-base {
+  @tailwind base;
+}
 @tailwind components;
 @tailwind utilities;
 
@@ -180,75 +188,60 @@
   }
 }
 
+/* LEGACY: delete in T10.
+   Thin aliases so pre-redesign class names render with daisyUI 5 and the
+   bench theme. daisyUI's own .btn, .card and .input are left unmodified.
+   The stage sweep (T9) replaces every call site. */
 @layer components {
-  /* Button shortcuts - migrated from UnoCSS */
-  .btn {
-    @apply px-3 py-2 rounded cursor-pointer font-medium transition-colors duration-200 border-none;
-  }
-  .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary-dark;
-  }
-  .btn-success {
-    @apply btn bg-success text-white hover:bg-green-600;
+  /* Legacy call sites use btn-* without the daisyUI .btn base. :where()
+     keeps the copied base at zero specificity so daisyUI's colour and size
+     modifiers still win, and the attribute selector stands in for
+     :not(.btn), which Tailwind 3 rejects as a circular @apply. */
+  :where(.btn-primary, .btn-secondary, .btn-success, .btn-warning, .btn-info, .btn-danger):where(:not([class~='btn'])) {
+    @apply btn;
   }
   .btn-danger {
-    @apply btn bg-danger text-white hover:bg-red-600;
-  }
-  .btn-warning {
-    @apply btn bg-warning text-black hover:bg-yellow-500;
-  }
-  .btn-secondary {
-    @apply btn bg-muted text-white hover:bg-gray-600;
+    @apply btn-error;
   }
 
-  /* Card shortcuts */
-  .card {
-    @apply p-5 rounded-lg border-2 bg-white;
-  }
   .card-primary {
-    @apply card border-primary bg-light;
+    @apply bg-base-100 border border-base-300 rounded-box p-4;
   }
 
-  /* Input shortcuts */
-  .input {
-    @apply w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white text-gray-900;
+  /* Legacy inputs expect full width, a 3:1 border and growing textareas.
+     Focus and error states keep daisyUI's own border colour. */
+  :where(.input-error:not([class~='input'])) {
+    @apply input;
   }
-  .input-error {
-    @apply input border-danger border-2;
+  :where(.input, .input-error) {
+    @apply w-full;
   }
-
-  /* Ensure textareas also have proper styling */
-  textarea.input {
-    @apply bg-white text-gray-900;
+  .input:not(.input-error, :focus, :focus-within) {
+    --input-color: var(--qa-field-border);
   }
-
-  /* Ensure selects have proper styling */
-  select.input {
-    @apply bg-white text-gray-900;
+  :where(textarea).input,
+  :where(textarea).input-error {
+    @apply h-auto py-2;
   }
 
-  /* Table shortcuts */
   .table-header {
-    @apply bg-light border-b-2 border-border;
+    @apply bg-base-200 border-b border-base-300;
   }
   .table-row {
-    @apply border-b border-border;
+    @apply border-b border-base-300;
   }
 
-  /* Status badges */
   .status-idle {
-    @apply text-muted font-bold text-sm;
+    @apply text-ink-muted font-bold text-sm;
   }
-  .status-connecting {
-    @apply text-warning font-bold text-sm;
-  }
+  .status-connecting,
   .status-syncing {
-    @apply text-warning font-bold text-sm;
+    @apply text-warning-ink font-bold text-sm;
   }
   .status-ready {
     @apply text-success font-bold text-sm;
   }
   .status-error {
-    @apply text-danger font-bold text-sm;
+    @apply text-error font-bold text-sm;
   }
 }
