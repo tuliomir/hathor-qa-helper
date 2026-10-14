@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
 import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../store/slices/walletConnectSlice';
-import { DEFAULT_NETWORK } from '../constants/network';
+import { selectActiveNetwork } from '../store/slices/networkSlice';
 import { getStageUrl } from '../config/stageRoutes';
 import { useWalletStore } from './useWalletStore';
 import { useRequireRpcSession, useRequireTestWallet } from './useRequirements';
@@ -58,6 +58,7 @@ export function useNanoStageWallet(addressIndex: number) {
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
+  const activeNetwork = useSelector(selectActiveNetwork);
 
   const address0 = useAddressAt(testWallet, 0);
   const derivedAddress = useAddressAt(testWallet, addressIndex);
@@ -71,7 +72,8 @@ export function useNanoStageWallet(addressIndex: number) {
 
   return {
     testWallet,
-    network: testWallet?.metadata.network ?? DEFAULT_NETWORK,
+    // The test wallet's network; without one, the network picked in the shell.
+    network: testWallet?.metadata.network ?? activeNetwork,
     derivedAddress: derivedAddress ?? '',
     requirements,
   };
