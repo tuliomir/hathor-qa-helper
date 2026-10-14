@@ -5,6 +5,7 @@
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import type { NetworkKey } from '../constants/network';
 import type { WalletStatus } from './wallet';
+import type { ShieldedCapabilitySummary } from '../services/shieldedCapability';
 
 /**
  * Metadata for a wallet that can be serialized to LocalStorage
@@ -31,6 +32,8 @@ export interface WalletInfo {
   balance?: bigint; // BigInt for type safety and consistency with wallet-lib
   tokenUids?: string[]; // Array of token UIDs for this wallet
   error?: string;
+  /** Set only for wallets started on a network that supports shielded outputs. */
+  shieldedCapability?: ShieldedCapabilitySummary;
 }
 
 /**
