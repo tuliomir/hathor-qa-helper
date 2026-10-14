@@ -174,7 +174,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
             {balances.map((item, idx: number) => (
               <div key={idx} className="border border-gray-300 rounded overflow-hidden">
                 {/* Token Header */}
-                <div className="bg-primary/10 px-4 py-3 border-b border-gray-300">
+                <div className="bg-tint-info px-4 py-3 border-b border-gray-300">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-lg font-bold text-primary m-0">

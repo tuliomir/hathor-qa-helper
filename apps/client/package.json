@@ -31,6 +31,7 @@
     "deploy:firebase": "./scripts/deploy-firebase.sh"
   },
   "dependencies": {
+    "@fontsource/atkinson-hyperlegible-next": "5.3.0",
     "@hathor/ct-crypto-wasm": "0.5.0",
     "@hathor/snap-utils": "^0.1.0",
     "@hathor/wallet-lib": "4.2.0",

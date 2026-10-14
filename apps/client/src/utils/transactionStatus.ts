@@ -47,12 +47,12 @@ export function getTransactionStatus(tx: Transaction): TransactionStatus {
 export function getStatusColorClass(status: TransactionStatus): string {
   switch (status) {
     case 'Valid':
-      return 'bg-success/10 text-success';
+      return 'bg-tint-success text-success';
     case 'Unconfirmed':
-      return 'bg-warning/10 text-warning';
+      return 'bg-tint-warning text-warning-ink';
     case 'Voided':
-      return 'bg-danger/10 text-danger';
+      return 'bg-tint-error text-error';
     default:
-      return 'bg-gray-100 text-gray-600';
+      return 'bg-base-200 text-ink-muted';
   }
 }
