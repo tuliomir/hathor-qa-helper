@@ -4,11 +4,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import type { IShieldedCapability } from '@hathor/wallet-lib';
-import {
-  canCreateShieldedOutputs,
-  shieldedCapabilityBadge,
-  summarizeShieldedCapability,
-} from '../src/services/shieldedCapability';
+import { canCreateShieldedOutputs, summarizeShieldedCapability } from '../src/services/shieldedCapability';
 
 // What a WASM-backed wallet reports right after start (see research probe).
 const wasmFull: IShieldedCapability = {
@@ -47,29 +43,5 @@ describe('canCreateShieldedOutputs', () => {
 
   test('is false without a capability', () => {
     expect(canCreateShieldedOutputs(undefined)).toBe(false);
-  });
-});
-
-describe('shieldedCapabilityBadge', () => {
-  test('no badge without a capability', () => {
-    expect(shieldedCapabilityBadge(undefined)).toBeNull();
-  });
-
-  test('a full WASM capability is shown as receive-only, never as spendable', () => {
-    expect(shieldedCapabilityBadge(summarizeShieldedCapability(wasmFull))?.label).toBe('Shielded: receive-only');
-  });
-
-  test('a wallet without a provider shows the reason', () => {
-    const badge = shieldedCapabilityBadge(
-      summarizeShieldedCapability({ ...wasmFull, level: 'none', reason: 'no-provider', canReceive: false })
-    );
-    expect(badge?.label).toBe('Shielded: off (no-provider)');
-  });
-
-  test('a locked scan key is shown as watch-only', () => {
-    const badge = shieldedCapabilityBadge(
-      summarizeShieldedCapability({ ...wasmFull, level: 'watch', reason: 'locked', canReceive: false })
-    );
-    expect(badge?.label).toBe('Shielded: watch-only');
   });
 });

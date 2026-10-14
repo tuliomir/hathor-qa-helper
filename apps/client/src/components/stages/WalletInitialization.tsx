@@ -40,7 +40,8 @@ import { didYouMean, treatSeedWords } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
-import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
+import { CapabilityBadge } from '../common/CapabilityBadge';
+import { canCreateShieldedOutputs } from '../../services/shieldedCapability';
 import NetworkChip from '../common/NetworkChip';
 import NetworkSwapButton from '../common/NetworkSwapButton';
 import { Identifier } from '../common/Identifier';
@@ -511,7 +512,13 @@ export default function WalletInitialization() {
               walletStatus={wallet.status}
               onSwap={handleSwapNetwork}
             />
-            <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />
+            {NETWORK_CONFIG[wallet.metadata.network].supportsShielded && wallet.shieldedCapability && (
+              <CapabilityBadge
+                level={wallet.shieldedCapability.level}
+                reason={wallet.shieldedCapability.reason}
+                canCreateShieldedOutputs={canCreateShieldedOutputs(wallet.shieldedCapability)}
+              />
+            )}
           </span>
         );
       },

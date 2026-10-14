@@ -55,20 +55,3 @@ const BROWSER_PROVIDER_CAN_PROVE = false;
 export function canCreateShieldedOutputs(capability: ShieldedCapabilitySummary | undefined): boolean {
   return BROWSER_PROVIDER_CAN_PROVE && !!capability?.canSpend;
 }
-
-export function shieldedCapabilityBadge(
-  capability: ShieldedCapabilitySummary | undefined
-): { label: string; className: string; title: string } | null {
-  if (!capability) return null;
-  const title = `wallet-lib level: ${capability.level}${capability.reason ? ` (${capability.reason})` : ''}`;
-  switch (capability.level) {
-    case 'full':
-    case 'view':
-      // Never "full": the browser cannot spend shielded UTXOs (see above).
-      return { label: 'Shielded: receive-only', className: 'badge-info', title };
-    case 'watch':
-      return { label: 'Shielded: watch-only', className: 'badge-warning', title };
-    default:
-      return { label: `Shielded: off (${capability.reason ?? 'unknown'})`, className: 'badge-ghost', title };
-  }
-}

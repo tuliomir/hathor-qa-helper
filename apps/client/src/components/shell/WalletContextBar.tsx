@@ -20,7 +20,8 @@ import { resolveNetworkKey } from '../../utils/networkHelpers';
 import type { NetworkKey } from '../../constants/network';
 import type { WalletStatus } from '../../types/wallet';
 import NetworkChip from '../common/NetworkChip';
-import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
+import { CapabilityBadge } from '../common/CapabilityBadge';
+import { canCreateShieldedOutputs } from '../../services/shieldedCapability';
 import { StatusDot } from '../ui/StatusDot';
 import type { StatusTone } from '../../utils/statusTone';
 import { useRpcStatus, useSnapStatus } from './connectionStatus';
@@ -119,7 +120,13 @@ function WalletSegment({ role, variant }: { role: 'test' | 'funding'; variant: '
           </span>
         )}
         <MismatchChip network={network} active={active} />
-        {active === 'SHIELDED_TESTNET' && <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />}
+        {active === 'SHIELDED_TESTNET' && wallet.shieldedCapability && (
+          <CapabilityBadge
+            level={wallet.shieldedCapability.level}
+            reason={wallet.shieldedCapability.reason}
+            canCreateShieldedOutputs={canCreateShieldedOutputs(wallet.shieldedCapability)}
+          />
+        )}
       </button>
       {open && (
         <div

@@ -26,7 +26,9 @@ export interface CapabilityDisplay {
 
 export function capabilityDisplay(
   reported: ShieldedCapabilityLevel | undefined,
-  canCreateShieldedOutputs: boolean
+  canCreateShieldedOutputs: boolean,
+  /** wallet-lib's reason for a reduced level (e.g. `no-provider`), shown in the tooltip. */
+  reason?: string | null
 ): CapabilityDisplay {
   const lib = reported ?? 'none';
   const receiveOnly = lib === 'full' && !canCreateShieldedOutputs;
@@ -38,6 +40,8 @@ export function capabilityDisplay(
     receiveOnly,
     title: receiveOnly
       ? `${MEANING.view}. wallet-lib reports full, but this wallet can't create shielded outputs here; shielded sends go through the QA server.`
-      : MEANING[level],
+      : reason
+        ? `${MEANING[level]} (${reason})`
+        : MEANING[level],
   };
 }

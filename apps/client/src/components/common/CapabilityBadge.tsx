@@ -15,11 +15,13 @@ export interface CapabilityBadgeProps {
   level: ShieldedCapabilityLevel | undefined;
   /** Whether this context can build shielded outputs (never `canSpend`). */
   canCreateShieldedOutputs: boolean;
+  /** wallet-lib's reason for a reduced level, for the tooltip. */
+  reason?: string | null;
   className?: string;
 }
 
-export function CapabilityBadge({ level, canCreateShieldedOutputs, className = '' }: CapabilityBadgeProps) {
-  const d = capabilityDisplay(level, canCreateShieldedOutputs);
+export function CapabilityBadge({ level, canCreateShieldedOutputs, reason, className = '' }: CapabilityBadgeProps) {
+  const d = capabilityDisplay(level, canCreateShieldedOutputs, reason);
   const muted = d.segments === 0;
 
   return (

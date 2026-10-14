@@ -27,7 +27,7 @@ With the WASM provider, `getShieldedCapability()` still reports `level: 'full', 
 
 - Never gate a client-side shielded send on `canSpend` or `level`.
 - Use `canCreateShieldedOutputs()` (`src/services/shieldedCapability.ts`). It is false while `BROWSER_PROVIDER_CAN_PROVE` is false.
-- The capability badge (`ShieldedCapabilityBadge`) shows `full` and `view` as "receive-only".
+- `CapabilityBadge` takes `canCreateShieldedOutputs(capability)` for browser wallets, so a lib-reported `full` shows as "View · receive-only" (wallet-lib's `reason` goes in the tooltip).
 
 ## UTXOs and balances
 
