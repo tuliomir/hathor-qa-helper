@@ -21,7 +21,7 @@ src/
 ├── hooks/                # useSnapMethod, useWalletStore, useStage, useToast, useSendTransaction
 ├── services/             # snapHandlers, rpcHandlers, walletConnectClient, tokenFlowTracker, cleanupTemplateBuilder
 ├── types/                # TypeScript types (stage.ts is the stage/group registry)
-├── constants/            # Network configs (TESTNET, MAINNET)
+├── constants/            # Network configs (TESTNET, MAINNET, SHIELDED_TESTNET)
 ├── utils/                # Utilities (balanceUtils, transactionStatus, waitForTxSettlement)
 └── polyfills/            # Buffer polyfill for browser
 ```
@@ -72,8 +72,14 @@ idle → connecting → syncing → ready
 - State in `snapSlice` (connection, addr0, network) + `snapMethodsSlice` (per-method results)
 
 ## Network Config
-- TESTNET (default), MAINNET
-- Network constants in `src/constants/network.ts`
+- Three networks, keyed by `NetworkKey`: `TESTNET` (default), `MAINNET`, `SHIELDED_TESTNET`.
+- The registry lives in `packages/shared/src/networks.ts` (`NETWORKS`, `NETWORK_KEYS`). `src/constants/network.ts` builds `NETWORK_CONFIG` from it, adding `name` (the wallet-lib network name) and, in dev, fullnode URLs through the Vite proxy of the page's own origin (`/hathor-node/{testnet,mainnet,shielded}`).
+- The shielded testnet uses the wallet-lib name `testnet`, but has its own genesis, explorer and tx-mining service.
+- Network switches cycle with `nextNetwork()`; selects are built from `NETWORK_KEYS`. Never hardcode a two-way `TESTNET`/`MAINNET` toggle.
+- Explorer links: `resolveExplorerUrl(network)` / `ExplorerLink network=...`.
+- Tx mining: call `applyNetworkServices(network)` (`src/services/networkServices.ts`) before every wallet start and send. wallet-lib keeps the tx-mining URL in a global singleton.
+- QA blueprints (bet, fee) exist only where `NETWORKS[key].blueprints` is set (testnet). Use `blueprintIdFor()`; stages show `BlueprintUnavailable` elsewhere.
+- Shielded outputs: see `shielded-outputs.md`.
 
 ## Common Pitfalls
 
