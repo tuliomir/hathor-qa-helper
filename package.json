@@ -23,7 +23,10 @@
     "test": "bun --filter '*' test",
     "test:e2e": "bun --filter @qa-helper/client test:e2e",
     "deploy": "bun --filter @qa-helper/client deploy",
-    "upload": "bun --filter @qa-helper/client upload"
+    "upload": "bun --filter @qa-helper/client upload",
+    "helper:up": "scripts/qa-helper.sh up",
+    "helper:down": "scripts/qa-helper.sh down",
+    "helper:status": "scripts/qa-helper.sh status"
   },
   "devDependencies": {
     "@types/bun": "latest",

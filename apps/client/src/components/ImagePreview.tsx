@@ -1,9 +1,13 @@
 /**
- * Image Preview Component
- * Displays pasted image with zoom, pan, and crop functionality for OCR processing
+ * Crop dialog for OCR: shows the pasted/captured image in ImageZoomPan,
+ * lets the user select the seed words and extracts from the selection
+ * (or the whole image when nothing is selected).
  */
 
-import ImageZoomPan from './ImageZoomPan';
+import { useState } from 'react';
+import { MdTextSnippet } from 'react-icons/md';
+import ImageZoomPan, { type Rect } from './ImageZoomPan';
+import { Modal } from './ui/Modal';
 
 interface ImagePreviewProps {
   imageDataUrl: string;
@@ -12,87 +16,64 @@ interface ImagePreviewProps {
   isProcessing: boolean;
 }
 
+/** Copies `rect` (image pixels) of the image into a new PNG data URL. */
+function cropImage(imageDataUrl: string, rect: Rect): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const x = Math.round(rect.x);
+      const y = Math.round(rect.y);
+      const width = Math.max(1, Math.round(rect.width));
+      const height = Math.max(1, Math.round(rect.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Could not get canvas context'));
+        return;
+      }
+      ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('Failed to load image for cropping'));
+    img.src = imageDataUrl;
+  });
+}
+
 export default function ImagePreview({ imageDataUrl, onExtractText, onCancel, isProcessing }: ImagePreviewProps) {
+  const [crop, setCrop] = useState<Rect | null>(null);
+
+  const handleExtract = async () => {
+    onExtractText(crop ? await cropImage(imageDataUrl, crop) : imageDataUrl);
+  };
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
+    <Modal
+      title="Select the seed words"
+      size="max-w-6xl"
+      onClose={() => !isProcessing && onCancel()}
+      footer={
+        <button type="button" onClick={handleExtract} disabled={isProcessing} className="btn btn-primary">
+          {isProcessing ? (
+            <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+          ) : (
+            <MdTextSnippet aria-hidden="true" />
+          )}
+          {isProcessing ? 'Extracting' : crop ? 'Extract from selection' : 'Extract seed words'}
+        </button>
+      }
     >
-      <div
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          padding: '20px',
-          width: '90%',
-          height: '90%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '15px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <h2 style={{ margin: 0 }}>Preview and Crop Image</h2>
-        </div>
-
-        {/* Use shared ImageZoomPan component with crop controls */}
-        <ImageZoomPan
-          imageDataUrl={imageDataUrl}
-          showCropControls={true}
-          onExtract={onExtractText}
-          isProcessing={isProcessing}
-          className="flex-1"
-        />
-
-        <div
-          style={{
-            display: 'flex',
-            gap: '10px',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <button
-            onClick={onCancel}
-            disabled={isProcessing}
-            style={{
-              padding: '10px 20px',
-              fontSize: '14px',
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
-              opacity: isProcessing ? 0.6 : 1,
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
-    </div>
+      <p className="m-0 text-body text-ink-muted">
+        Drag a box around the seed words for better results, or extract from the whole image.
+      </p>
+      <ImageZoomPan
+        imageDataUrl={imageDataUrl}
+        crop={crop}
+        onCropChange={setCrop}
+        disabled={isProcessing}
+        viewportClassName="h-[55vh]"
+      />
+    </Modal>
   );
 }

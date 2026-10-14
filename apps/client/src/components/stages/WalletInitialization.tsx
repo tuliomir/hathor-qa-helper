@@ -36,7 +36,8 @@ import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
 import OCRReferenceImage from '../OCRReferenceImage';
 import OCRReferenceModal from '../OCRReferenceModal';
-import { didYouMean, treatSeedWords } from '../../utils/walletUtils';
+import { treatSeedWords } from '../../utils/walletUtils';
+import { replaceWordAt, splitSeedWords, validateSeedWords } from '../../utils/seedWords';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
@@ -438,11 +439,9 @@ export default function WalletInitialization() {
     }
   }, [readyWallets, fundingWalletId, testWalletId, dispatch]);
 
-  const applySuggestion = (w: string, suggestion: string) => {
-    // Replace the invalid word (word-boundary) in the seed input with the suggestion
-    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp('\\b' + escapeRegExp(w) + '\\b', 'gi');
-    const newSeed = seedInput.replace(re, suggestion);
+  const applySuggestion = (index: number, suggestion: string) => {
+    // Only this position: the same misspelling elsewhere may be a different word.
+    const newSeed = replaceWordAt(seedInput, index, suggestion);
     setSeedInput(newSeed);
     // Re-validate the updated seed input
     const { valid: v, invalidWords: newInvalid } = treatSeedWords(newSeed);
@@ -813,25 +812,24 @@ export default function WalletInitialization() {
           <Callout tone="error" title={validationError}>
             {invalidWords.length > 0 && (
               <ul>
-                {invalidWords.map((w, idx) => {
-                  const suggestion = didYouMean(w);
-                  return (
-                    <li key={`${w}-${idx}`}>
-                      <span className="mr-2 font-mono text-data">{w}</span>
-                      {suggestion ? (
-                        <button
-                          type="button"
-                          onClick={() => applySuggestion(w, suggestion)}
-                          className="link link-primary"
-                        >
-                          Did you mean <strong>{suggestion}</strong>?
-                        </button>
-                      ) : (
-                        <span className="text-ink-muted">(no suggestion available)</span>
-                      )}
-                    </li>
-                  );
-                })}
+                {validateSeedWords(splitSeedWords(seedInput)).map(({ index, word, suggestion }) => (
+                  <li key={index}>
+                    <span className="mr-2">
+                      Word {index + 1}: <span className="font-mono text-data">{word}</span>
+                    </span>
+                    {suggestion ? (
+                      <button
+                        type="button"
+                        onClick={() => applySuggestion(index, suggestion)}
+                        className="link link-primary"
+                      >
+                        Did you mean <strong>{suggestion}</strong>?
+                      </button>
+                    ) : (
+                      <span className="text-ink-muted">(no suggestion available)</span>
+                    )}
+                  </li>
+                ))}
               </ul>
             )}
           </Callout>

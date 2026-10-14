@@ -3,11 +3,12 @@
  * Uses tesseract.js for text recognition with preprocessing
  */
 
-import { createWorker, type Worker } from 'tesseract.js';
+import { createWorker, type Block, type Worker } from 'tesseract.js';
+import { parseSeedWordsFromOcr, parseSeedWordsFromText, type OcrWord, type SeedWordBox } from './seedWords';
 
 /**
  * Preprocesses an image to improve OCR accuracy
- * Applies contrast adjustment and binarization
+ * Applies contrast adjustment and binarization. Keeps the image size.
  */
 export async function preprocessImage(imageDataUrl: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -65,33 +66,45 @@ export async function preprocessImage(imageDataUrl: string): Promise<string> {
   });
 }
 
+export interface OcrResult {
+  text: string;
+  /** Word tokens in reading order, with boxes in the recognized image's pixels. */
+  words: OcrWord[];
+}
+
+/** Flattens tesseract's blocks → paragraphs → lines → words tree. */
+function collectWords(blocks: Block[] | null): OcrWord[] {
+  const words: OcrWord[] = [];
+  for (const block of blocks ?? []) {
+    for (const paragraph of block.paragraphs) {
+      for (const line of paragraph.lines) {
+        for (const word of line.words) {
+          const { x0, y0, x1, y1 } = word.bbox;
+          words.push({ text: word.text, bbox: { x0, y0, x1, y1 } });
+        }
+      }
+    }
+  }
+  return words;
+}
+
 /**
- * Extracts text from an image using OCR
+ * Runs OCR on an image. Preprocessing keeps the image size, so word boxes
+ * are in the coordinates of `imageDataUrl`.
  */
-export async function extractTextFromImage(imageDataUrl: string): Promise<string> {
+export async function extractTextFromImage(imageDataUrl: string): Promise<OcrResult> {
   let worker: Worker | null = null;
 
   try {
-    // Create and initialize tesseract worker
-    worker = await createWorker('eng', 1, {
-      // Performance optimization - use less logging
-      logger: () => {}, // Disable logging for better performance
-    });
-
-    // Preprocess the image for better accuracy
+    worker = await createWorker('eng', 1, { logger: () => {} });
     const processedImage = await preprocessImage(imageDataUrl);
-
-    // Recognize text
-    const {
-      data: { text },
-    } = await worker.recognize(processedImage);
-
-    return text;
+    // tesseract.js v6 only returns the word tree when `blocks` is requested.
+    const { data } = await worker.recognize(processedImage, {}, { text: true, blocks: true });
+    return { text: data.text, words: collectWords(data.blocks) };
   } catch (error) {
     console.error('OCR error:', error);
     throw new Error('Failed to extract text from image');
   } finally {
-    // Clean up worker
     if (worker) {
       await worker.terminate();
     }
@@ -99,74 +112,35 @@ export async function extractTextFromImage(imageDataUrl: string): Promise<string
 }
 
 /**
- * Parses seed words from OCR text
- * Handles various formats:
- * - Numbered lists (1. word, 2. word)
- * - Simple word lists
- * - Multi-column layouts
- */
-export function parseSeedWords(ocrText: string): string {
-  // Split by lines and clean up
-  const lines = ocrText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  const words: string[] = [];
-
-  for (const line of lines) {
-    // Remove common OCR artifacts and numbers
-    const cleanedLine = line
-      .replace(/^\d+[\s.)\-:]+/g, '') // Remove leading numbers with separators (1. word, 1) word, 1- word)
-      .replace(/[^\w\s]/g, ' ') // Remove special characters except word chars and spaces
-      .trim()
-      .toLowerCase();
-
-    // Split by whitespace and collect valid words
-    const lineWords = cleanedLine.split(/\s+/).filter((word) => {
-      // Filter out empty strings and common OCR artifacts
-      return word.length > 2 && word.length < 15 && /^[a-z]+$/.test(word);
-    });
-
-    words.push(...lineWords);
-  }
-
-  // Return the first 24 words (standard seed phrase length)
-  return words.slice(0, 24).join(' ');
-}
-
-/**
- * Main OCR function to extract seed words from a clipboard image
+ * Main OCR function to extract seed words from an image.
+ * `words` lists each seed word with its box (null when OCR gave no word data).
  */
 export async function extractSeedWordsFromImage(imageDataUrl: string): Promise<{
   success: boolean;
   seedWords: string;
+  words: SeedWordBox[];
   error?: string;
 }> {
   try {
-    // Extract text using OCR
-    const rawText = await extractTextFromImage(imageDataUrl);
+    const { text, words: ocrWords } = await extractTextFromImage(imageDataUrl);
+    const words = ocrWords.length > 0 ? parseSeedWordsFromOcr(ocrWords) : parseSeedWordsFromText(text);
 
-    // Parse seed words from the extracted text
-    const seedWords = parseSeedWords(rawText);
-
-    if (!seedWords || seedWords.split(' ').length < 12) {
+    if (words.length < 12) {
       return {
         success: false,
         seedWords: '',
+        words: [],
         error: 'Could not extract enough valid words. Please ensure the image is clear and contains seed words.',
       };
     }
 
-    return {
-      success: true,
-      seedWords,
-    };
+    return { success: true, seedWords: words.map((w) => w.word).join(' '), words };
   } catch (error) {
     console.error('Error extracting seed words:', error);
     return {
       success: false,
       seedWords: '',
+      words: [],
       error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }

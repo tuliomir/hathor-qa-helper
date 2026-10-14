@@ -18,7 +18,8 @@ Only use `bun` — `npx` and `yarn` are forbidden. Run these from the repo root;
 |---|---|
 | `bun dev` | Client dev server on localhost:5173 |
 | `bun run dev:server` | QA server on 127.0.0.1:5180 |
-| `bun run dev:all` | Client and server together |
+| `bun run dev:all` | Client and server together, in the foreground |
+| `bun run helper:up` / `helper:down` / `helper:status` | Client + server as background systemd user units, published on the tailnet (`scripts/qa-helper.sh`, see `knowledge/helper-script.md`) |
 | `bun run build` | Client production build (`tsc -b && vite build`) |
 | `bun run typecheck` | TypeScript check in every workspace |
 | `bun lint` / `bun lint:fix` | ESLint (client) |
@@ -88,6 +89,7 @@ In-depth guides live in `knowledge/`:
 | Doc | Topic |
 |---|---|
 | `monorepo.md` | Workspace layout, shared package rules, deployment (incl. planned server hosting) |
+| `helper-script.md` | `scripts/qa-helper.sh` up/down/status: systemd user units, tailnet URL, `--json` contract for Ruffus |
 | `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
 | `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
 | `shielded-qa-stages.md` | The Shielded stages (QA server, send, balances, inspector) and the fund → shield → inspect → unshield flow |
