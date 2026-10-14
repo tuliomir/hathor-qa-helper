@@ -51,7 +51,11 @@ export type StageId =
   | 'snap-bet-withdraw'
   | 'snap-fee-initialize'
   | 'snap-fee-deposit'
-  | 'snap-fee-withdraw';
+  | 'snap-fee-withdraw'
+  | 'shielded-qa-server'
+  | 'shielded-send'
+  | 'shielded-balances'
+  | 'shielded-inspector';
 
 /**
  * Available stage groups
@@ -66,7 +70,8 @@ export type GroupId =
   | 'multisig'
   | 'snaps'
   | 'snap-bet-nc'
-  | 'snap-fee-nc';
+  | 'snap-fee-nc'
+  | 'shielded';
 
 /**
  * Families sit above groups in the stage navigation. They carry the
@@ -466,6 +471,33 @@ export const STAGE_GROUPS: StageGroup[] = [
         title: 'Withdraw fee token',
         description: 'Withdraw a fee-based token via Snap',
         methods: ['htr_sendNanoContractTx'],
+      },
+    ],
+  },
+  {
+    id: 'shielded',
+    title: 'Shielded outputs',
+    family: 'shielded',
+    stages: [
+      {
+        id: 'shielded-qa-server',
+        title: 'QA server',
+        description: 'Run client wallets on the local QA server, which can create shielded outputs, and fund them',
+      },
+      {
+        id: 'shielded-send',
+        title: 'Shielded send',
+        description: 'Send shielded, fully shielded and transparent outputs from a QA server wallet',
+      },
+      {
+        id: 'shielded-balances',
+        title: 'Shielded balances',
+        description: 'Compare transparent and shielded balances decoded by the server and by the browser',
+      },
+      {
+        id: 'shielded-inspector',
+        title: 'Transaction inspector',
+        description: 'Look up a transaction and see its shielded outputs and what each wallet can unblind',
       },
     ],
   },
