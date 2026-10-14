@@ -92,6 +92,7 @@ In-depth guides live in `knowledge/`:
 | `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
 | `shielded-qa-stages.md` | The Shielded stages (QA server, send, balances, inspector) and the fund → shield → inspect → unshield flow |
 | `../docs/design/` | UI redesign: audit, direction, tokens, shell, components, rollout, Claude Design brief |
+| `redesign-changes.md` | Behaviour that changed in the redesign (decimal amounts, enforced checks, previews, confirmations) |
 | `architecture.md` | System structure, Redux patterns, two integration paths (RPC vs Snap) |
 | `creating-stages.md` | Step-by-step guide for adding new stages (RPC and Snap paths) |
 | `wallet-state-management.md` | Redux + external map pattern, wallet lifecycle, thunks |

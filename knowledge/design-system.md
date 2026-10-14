@@ -77,6 +77,12 @@ Specs in `docs/design/components.md`. Build stages from these, not ad-hoc markup
 | `NetworkChip`, `NetworkSwapButton`, `ExplorerLink` | Network label, wallet network swap, explorer link (defaults to the active network) |
 | `BlueprintUnavailable` | Warning when the network has no QA blueprint |
 
+### Amounts
+
+Amount fields take decimal token units, as client wallets display them: `1.50` HTR, not `150`. Use `AmountInput`; it keeps the value as base units (a decimal string, BigInt-safe) and shows `= 150 base units` under the field, because QA checks the raw value in requests. Requests and Redux always carry base units. Results that list amounts (UTXO tables, Scatter's summary) show decimals too, with base units alongside where QA compares them against a request (`utils/scatterFunds.ts`).
+
+Exception: the Snap stages still take base-unit integers in plain inputs.
+
 Toasts sit bottom-right, at most three. Success and info dismiss after 4s, warnings after 8s, errors stay. `CopyButton` confirms inline and never toasts.
 
 ## Shell
