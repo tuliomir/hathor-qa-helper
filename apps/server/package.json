@@ -10,7 +10,10 @@
     "test": "bun test --pass-with-no-tests tests/"
   },
   "dependencies": {
-    "@qa-helper/shared": "workspace:*"
+    "@hathor/ct-crypto-node": "0.5.0",
+    "@hathor/wallet-lib": "4.2.0",
+    "@qa-helper/shared": "workspace:*",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bun": "latest",
