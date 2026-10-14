@@ -59,7 +59,13 @@ export const SnapGetAddressStage: React.FC = () => {
       >
         <div className="flex flex-col gap-1.5">
           <span className="text-body font-medium">Address type</span>
-          <SegmentedControl aria-label="Address type" options={ADDRESS_TYPES} value={type} onChange={setType} />
+          <SegmentedControl
+            className="self-start"
+            aria-label="Address type"
+            options={ADDRESS_TYPES}
+            value={type}
+            onChange={setType}
+          />
           <span className="text-caption text-ink-muted">{ADDRESS_TYPES.find((t) => t.value === type)?.hint}</span>
         </div>
         {needsIndex && (

@@ -62,7 +62,13 @@ export const SnapGetXpubStage: React.FC = () => {
       >
         <div className="flex flex-col gap-1.5">
           <span className="text-body font-medium">Network</span>
-          <SegmentedControl aria-label="Network" options={NETWORK_OPTIONS} value={network} onChange={setNetwork} />
+          <SegmentedControl
+            className="self-start"
+            aria-label="Network"
+            options={NETWORK_OPTIONS}
+            value={network}
+            onChange={setNetwork}
+          />
           <span className="text-caption text-ink-muted">The network whose xpub the snap returns.</span>
         </div>
       </SnapMethodCard>

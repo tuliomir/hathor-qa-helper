@@ -49,6 +49,7 @@ export const SnapChangeNetworkStage: React.FC = () => {
         <div className="flex flex-col gap-1.5">
           <span className="text-body font-medium">Network</span>
           <SegmentedControl
+            className="self-start"
             aria-label="Target network"
             options={NETWORK_OPTIONS}
             value={newNetwork}

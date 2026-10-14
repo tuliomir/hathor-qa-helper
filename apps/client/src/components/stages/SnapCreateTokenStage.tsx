@@ -133,7 +133,13 @@ export const SnapCreateTokenStage: React.FC = () => {
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-body font-medium">Token version</span>
-          <SegmentedControl aria-label="Token version" options={TOKEN_VERSIONS} value={version} onChange={setVersion} />
+          <SegmentedControl
+            className="self-start"
+            aria-label="Token version"
+            options={TOKEN_VERSIONS}
+            value={version}
+            onChange={setVersion}
+          />
         </div>
 
         <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-token-addresses">

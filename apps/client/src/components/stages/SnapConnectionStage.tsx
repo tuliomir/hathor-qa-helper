@@ -73,7 +73,7 @@ function CommandBlock({ lines, copyText }: { lines: string[]; copyText?: string 
           </span>
         ))}
       </pre>
-      <div className="absolute right-1.5 top-1.5">
+      <div className="absolute right-1 top-1 rounded-field bg-base-200">
         <CopyButton text={copyText ?? lines.join('\n')} label="Copy command" />
       </div>
     </div>
@@ -327,6 +327,7 @@ export const SnapConnectionStage: React.FC = () => {
         <div className="flex flex-col gap-1.5">
           <span className="text-body font-medium">Preset</span>
           <SegmentedControl
+            className="self-start"
             aria-label="Snap origin preset"
             options={ORIGIN_PRESETS}
             value={presetOf(originInput)}
@@ -508,29 +509,29 @@ export const SnapConnectionStage: React.FC = () => {
             </div>
 
             <ol className="m-0 flex list-decimal flex-col gap-4 pl-5 marker:font-semibold marker:text-ink-muted">
-              <li className="flex flex-col gap-2 pl-1">
-                <span className="font-semibold">Clone the RPC library</span>
+              <li className="space-y-2 pl-1">
+                <span className="block font-semibold">Clone the RPC library</span>
                 <CommandBlock
                   lines={['git clone https://github.com/HathorNetwork/hathor-rpc-lib.git', 'cd hathor-rpc-lib']}
                   copyText="git clone https://github.com/HathorNetwork/hathor-rpc-lib.git && cd hathor-rpc-lib"
                 />
               </li>
-              <li className="flex flex-col gap-2 pl-1">
-                <span className="font-semibold">Install dependencies</span>
+              <li className="space-y-2 pl-1">
+                <span className="block font-semibold">Install dependencies</span>
                 <CommandBlock lines={['yarn install']} />
               </li>
-              <li className="flex flex-col gap-2 pl-1">
-                <span className="font-semibold">Start the snap dev server</span>
+              <li className="space-y-2 pl-1">
+                <span className="block font-semibold">Start the snap dev server</span>
                 <CommandBlock lines={['yarn snap-start']} />
-                <span className="text-body text-ink-muted">
+                <span className="block text-body text-ink-muted">
                   This builds the snap and serves it on{' '}
                   <code className="rounded-selector bg-base-200 px-1 font-mono text-data">localhost:8080</code>, which
                   is the Local dev origin.
                 </span>
               </li>
-              <li className="flex flex-col gap-1 pl-1">
-                <span className="font-semibold">Connect</span>
-                <span>
+              <li className="space-y-1 pl-1">
+                <span className="block font-semibold">Connect</span>
+                <span className="block">
                   With the dev server running and the Local dev origin selected, press Connect snap. MetaMask asks you
                   to install the Hathor Snap.
                 </span>

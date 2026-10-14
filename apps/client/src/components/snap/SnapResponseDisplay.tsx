@@ -14,7 +14,7 @@ import { Identifier } from '../common/Identifier';
 import { JsonHighlight } from '../common/JsonPanel';
 import { TransactionResponseDisplay } from '../common/TransactionResponseDisplay';
 import { Panel } from '../ui/Panel';
-import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { EmptyState } from '../ui/EmptyState';
 import { StatusChip } from '../ui/StatusChip';
 import { safeStringify } from '../../utils/betHelpers';
 import { snapNetworkKey } from '../../utils/blueprints';
@@ -185,47 +185,6 @@ function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
   const network = useSnapExplorerNetwork();
   const utxos = Array.isArray(data.utxos) ? (data.utxos as Record<string, unknown>[]) : [];
 
-  const columns: DataTableColumn<Record<string, unknown>>[] = [
-    {
-      key: 'tx',
-      header: 'Transaction',
-      type: 'identifier',
-      render: (u) =>
-        typeof u.tx_id === 'string' ? (
-          <span className="inline-flex items-center gap-2">
-            <Identifier value={u.tx_id} kind="tx" />
-            <ExplorerLink hash={u.tx_id} network={network} />
-          </span>
-        ) : (
-          safeDisplayValue(u.tx_id)
-        ),
-    },
-    { key: 'index', header: 'Index', type: 'amount', value: (u) => safeDisplayValue(u.index) },
-    {
-      key: 'address',
-      header: 'Address',
-      type: 'identifier',
-      render: (u) =>
-        typeof u.address === 'string' && u.address ? (
-          <Identifier value={u.address} kind="address" />
-        ) : (
-          safeDisplayValue(u.address)
-        ),
-    },
-    { key: 'amount', header: 'Amount', type: 'amount', value: (u) => safeDisplayValue(u.amount, '0') },
-    {
-      key: 'status',
-      header: 'Status',
-      type: 'status',
-      render: (u) =>
-        u.locked ? (
-          <StatusChip status="locked" label="Locked" tone="idle" />
-        ) : (
-          <StatusChip status="available" label="Available" tone="success" />
-        ),
-    },
-  ];
-
   return (
     <div className="flex flex-col gap-3">
       <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
@@ -242,14 +201,41 @@ function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
           <span className="font-mono text-data tabular-nums">{safeDisplayValue(data.total_utxos_locked, '0')}</span>
         </Stat>
       </dl>
-      <DataTable
-        caption={`UTXOs (${utxos.length})`}
-        columns={columns}
-        rows={utxos}
-        getRowKey={(u, i) => `${safeDisplayValue(u.tx_id, i.toString())}-${safeDisplayValue(u.index, '0')}`}
-        empty="No UTXOs match these filters."
-        maxHeight="24rem"
-      />
+      {utxos.length === 0 ? (
+        <EmptyState>No UTXOs match these filters.</EmptyState>
+      ) : (
+        <ul className="m-0 flex max-h-96 list-none flex-col overflow-y-auto p-0" aria-label={`UTXOs (${utxos.length})`}>
+          {utxos.map((u, i) => (
+            <li
+              key={`${safeDisplayValue(u.tx_id, i.toString())}-${safeDisplayValue(u.index, '0')}`}
+              className="flex flex-col gap-1 border-b border-base-300 py-2 last:border-b-0"
+            >
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {typeof u.tx_id === 'string' ? (
+                  <Identifier value={u.tx_id} kind="tx" />
+                ) : (
+                  <code className="font-mono text-data">{safeDisplayValue(u.tx_id)}</code>
+                )}
+                <span className="text-caption text-ink-muted">output {safeDisplayValue(u.index)}</span>
+                {typeof u.tx_id === 'string' && <ExplorerLink hash={u.tx_id} network={network} className="ml-auto" />}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {typeof u.address === 'string' && u.address ? (
+                  <Identifier value={u.address} kind="address" />
+                ) : (
+                  <span className="text-caption text-ink-muted">No address</span>
+                )}
+                <span className="ml-auto font-mono text-data tabular-nums">{safeDisplayValue(u.amount, '0')}</span>
+                {u.locked ? (
+                  <StatusChip status="locked" label="Locked" tone="idle" />
+                ) : (
+                  <StatusChip status="available" label="Available" tone="success" />
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
