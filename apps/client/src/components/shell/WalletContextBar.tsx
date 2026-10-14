@@ -21,9 +21,10 @@ import type { NetworkKey } from '../../constants/network';
 import type { WalletStatus } from '../../types/wallet';
 import NetworkChip from '../common/NetworkChip';
 import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
-import StatusDot, { type StatusTone } from './StatusDot';
+import { StatusDot } from '../ui/StatusDot';
+import type { StatusTone } from '../../utils/statusTone';
 import { useRpcStatus, useSnapStatus } from './connectionStatus';
-import { MENU_ITEM_CLASS, POPOVER_PANEL_CLASS, usePopover } from './usePopover';
+import { MENU_ITEM_CLASS, POPOVER_PANEL_CLASS, usePopover } from '../ui/usePopover';
 
 type Variant = 'bar' | 'compact' | 'stacked';
 
@@ -31,7 +32,7 @@ const WALLET_STATUS: Record<WalletStatus, { tone: StatusTone; word: string }> = 
   idle: { tone: 'idle', word: 'Stopped' },
   connecting: { tone: 'progress', word: 'Connecting' },
   syncing: { tone: 'progress', word: 'Syncing' },
-  ready: { tone: 'ok', word: 'Ready' },
+  ready: { tone: 'success', word: 'Ready' },
   error: { tone: 'error', word: 'Error' },
 };
 
@@ -180,7 +181,7 @@ function SessionSegment({ kind, variant }: { kind: 'rpc' | 'snap'; variant: 'bar
 
   const status = kind === 'rpc' ? rpc : snap;
   const rawNetwork = kind === 'rpc' ? (rpcChain?.split(':')[1] ?? null) : snap.network;
-  const network = status.tone === 'ok' ? resolveNetworkKey(rawNetwork) : null;
+  const network = status.tone === 'success' ? resolveNetworkKey(rawNetwork) : null;
   const tone = withMismatch(status.tone, network, active);
   const label = kind === 'rpc' ? 'RPC' : 'Snap';
   const detail =
@@ -224,7 +225,7 @@ function useContextTones(): StatusTone[] {
   const snap = useSnapStatus();
   const walletTone = (w: typeof test) =>
     w ? withMismatch(WALLET_STATUS[w.status].tone, w.metadata.network, active) : 'idle';
-  const snapNetwork = snap.tone === 'ok' ? resolveNetworkKey(snap.network) : null;
+  const snapNetwork = snap.tone === 'success' ? resolveNetworkKey(snap.network) : null;
   return [walletTone(test), walletTone(funding), rpc.tone, withMismatch(snap.tone, snapNetwork, active)];
 }
 

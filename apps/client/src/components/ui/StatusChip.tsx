@@ -10,6 +10,7 @@ const CHIP: Record<StatusTone, string> = {
   idle: 'bg-base-200 text-ink-muted',
   progress: 'bg-tint-warning text-warning-ink',
   success: 'bg-tint-success text-success',
+  warning: 'bg-tint-warning text-warning-ink',
   error: 'bg-tint-error text-error',
   'dry-run': 'bg-base-100 text-base-content border border-dashed border-field-border',
   info: 'bg-tint-info text-info',

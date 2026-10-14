@@ -9,7 +9,13 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiChevronDown } from 'react-icons/fi';
 import { WORKSPACES, useWorkspace } from './useWorkspace';
-import { focusFirstMenuItem, handleMenuKeyDown, MENU_ITEM_CLASS, POPOVER_PANEL_CLASS, usePopover } from './usePopover';
+import {
+  focusFirstMenuItem,
+  handleMenuKeyDown,
+  MENU_ITEM_CLASS,
+  POPOVER_PANEL_CLASS,
+  usePopover,
+} from '../ui/usePopover';
 
 export function WorkspaceProgress({ className = '' }: { className?: string }) {
   const { progress } = useWorkspace();

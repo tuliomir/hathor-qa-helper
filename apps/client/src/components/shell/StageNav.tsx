@@ -10,6 +10,9 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiChevronDown, FiSearch } from 'react-icons/fi';
+import { MdShield } from 'react-icons/md';
+import { useAppSelector } from '../../store/hooks';
+import { selectActiveNetworkKind } from '../../store/slices/networkSlice';
 import { useStage } from '../../hooks/useStage';
 import { getStageUrl } from '../../config/stageRoutes';
 import {
@@ -21,7 +24,7 @@ import {
   type Stage,
   type StageGroup,
 } from '../../types/stage';
-import StatusDot from './StatusDot';
+import { StatusDot } from '../ui/StatusDot';
 import { useRpcStatus, useSnapStatus } from './connectionStatus';
 
 const STAGE_ROW =
@@ -54,9 +57,24 @@ function filterStages(query: string): FilterMatch[] {
   return matches;
 }
 
+const SHIELDED_HINT = 'Shielded tools work with Shielded testnet wallets';
+
+/** Veil glyph for the Shielded family: accent on Shielded testnet, muted elsewhere. */
+function ShieldedIndicator() {
+  const onShielded = useAppSelector(selectActiveNetworkKind) === 'shielded-test';
+  const detail = onShielded ? 'Active network: Shielded testnet' : SHIELDED_HINT;
+  return (
+    <span title={detail} className="inline-flex items-center">
+      <MdShield aria-hidden="true" className={onShielded ? 'text-accent' : 'text-ink-muted'} />
+      <span className="sr-only">{detail}</span>
+    </span>
+  );
+}
+
 function FamilyIndicator({ family }: { family: FamilyId }) {
   const rpc = useRpcStatus();
   const snap = useSnapStatus();
+  if (family === 'shielded') return <ShieldedIndicator />;
   const status = family === 'rpc' ? rpc : family === 'snap' ? snap : null;
   if (!status) return null;
   return (

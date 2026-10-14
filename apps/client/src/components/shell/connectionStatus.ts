@@ -4,7 +4,7 @@
  */
 
 import { useAppSelector } from '../../store/hooks';
-import type { StatusTone } from './StatusDot';
+import type { StatusTone } from '../../utils/statusTone';
 
 export interface ConnectionStatus {
   tone: StatusTone;
@@ -18,7 +18,7 @@ export function useRpcStatus(): ConnectionStatus {
   const peer = useAppSelector((s) => s.walletConnect.session?.peer?.metadata?.name ?? null);
 
   if (hasSession)
-    return { tone: 'ok', word: 'On', detail: peer ? `RPC session connected to ${peer}` : 'RPC session connected' };
+    return { tone: 'success', word: 'On', detail: peer ? `RPC session connected to ${peer}` : 'RPC session connected' };
   if (connecting) return { tone: 'progress', word: 'Connecting', detail: 'RPC session connecting' };
   return { tone: 'idle', word: 'Off', detail: 'RPC session not connected' };
 }
@@ -28,7 +28,12 @@ export function useSnapStatus(): ConnectionStatus & { network: string | null } {
   const network = useAppSelector((s) => s.snap.network);
 
   if (connected) {
-    return { tone: 'ok', word: 'On', detail: network ? `Snap connected on ${network}` : 'Snap connected', network };
+    return {
+      tone: 'success',
+      word: 'On',
+      detail: network ? `Snap connected on ${network}` : 'Snap connected',
+      network,
+    };
   }
   return { tone: 'idle', word: 'Off', detail: 'Snap not connected', network };
 }

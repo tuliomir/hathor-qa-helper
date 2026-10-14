@@ -17,7 +17,7 @@ import { selectActiveNetworkInfo, selectPreferredNetwork, setPreferredNetwork } 
 import { useStage } from '../../hooks/useStage';
 import NetworkChip from '../common/NetworkChip';
 import { NETWORK_FILL_CLASS, VEIL_ON_SOLID } from '../../utils/networkVisuals';
-import { POPOVER_PANEL_CLASS, usePopover } from './usePopover';
+import { POPOVER_PANEL_CLASS, usePopover } from '../ui/usePopover';
 
 const DISPLAY_ORDER: NetworkKey[] = ['TESTNET', 'SHIELDED_TESTNET', 'MAINNET'];
 
