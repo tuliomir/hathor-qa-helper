@@ -59,6 +59,11 @@ export default defineConfig({
     // exports like toMiliseconds, isReactNative, pino). The SES issue is now
     // handled by dynamically importing @walletconnect/sign-client in
     // walletConnectClient.ts, so pre-bundling is safe.
+    //
+    // ct-crypto-wasm loads its .wasm via `new URL(..., import.meta.url)`.
+    // Pre-bundling moves the JS into .vite/deps and breaks that relative
+    // URL, so it must be served as-is.
+    exclude: ['@hathor/ct-crypto-wasm'],
   },
   build: {
     // Disable modulepreload to prevent WalletConnect from loading before dynamic import
