@@ -7,7 +7,11 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { buildUnifiedCleanupTemplate, type CleanupToken, type ReturnToken } from '../src/services/cleanupTemplateBuilder';
+import {
+  buildUnifiedCleanupTemplate,
+  type CleanupToken,
+  type ReturnToken,
+} from '../src/services/cleanupTemplateBuilder';
 
 // ---------------------------------------------------------------------------
 // Test constants — valid 64-char hex UIDs required by wallet-lib's Zod schema
@@ -30,8 +34,7 @@ const SENDER_ADDR_2 = 'WSenderAddr2xyzDEF456';
 // ---------------------------------------------------------------------------
 type TemplateOp = { type: string; [key: string]: unknown };
 
-const ops = (template: TemplateOp[], type: string) =>
-  template.filter((op) => op.type === type);
+const ops = (template: TemplateOp[], type: string) => template.filter((op) => op.type === type);
 
 const utxoSelects = (template: TemplateOp[]) => ops(template, 'input/utxo');
 const authoritySelects = (template: TemplateOp[]) => ops(template, 'input/authority');
@@ -45,8 +48,7 @@ const tokenOutputsFor = (template: TemplateOp[], uid: string) =>
   tokenOutputs(template).filter((op) => op.token === uid);
 
 /** Find utxo selects for a specific token UID */
-const utxoSelectsFor = (template: TemplateOp[], uid: string) =>
-  utxoSelects(template).filter((op) => op.token === uid);
+const utxoSelectsFor = (template: TemplateOp[], uid: string) => utxoSelects(template).filter((op) => op.token === uid);
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -74,7 +76,6 @@ const returnToken = (uid: string, amount: number, recipientAddress: string): Ret
 // ===========================================================================
 
 describe('buildUnifiedCleanupTemplate', () => {
-
   // -------------------------------------------------------------------------
   // Structural invariants (should hold for ALL templates)
   // -------------------------------------------------------------------------
@@ -145,14 +146,7 @@ describe('buildUnifiedCleanupTemplate', () => {
   describe('single meltable token + HTR', () => {
     test('melts token and combines HTR output', () => {
       // 200 tokens → melt produces 2 HTR. Existing 300 HTR. Total = 302 HTR.
-      const template = buildUnifiedCleanupTemplate(
-        [meltToken(TOKEN_A, 200)],
-        [],
-        [],
-        TEST_ADDR,
-        FUNDING_ADDR,
-        300n
-      );
+      const template = buildUnifiedCleanupTemplate([meltToken(TOKEN_A, 200)], [], [], TEST_ADDR, FUNDING_ADDR, 300n);
 
       // Token melt: utxoSelect + authoritySelect + authorityOutput
       const tokenSelects = utxoSelectsFor(template, TOKEN_A);
@@ -363,14 +357,7 @@ describe('buildUnifiedCleanupTemplate', () => {
   describe('zero meltableAmount token', () => {
     test('skips tokens with meltableAmount of 0', () => {
       // Balance is 50 but meltableAmount is 0 (< 100 units)
-      const template = buildUnifiedCleanupTemplate(
-        [meltToken(TOKEN_A, 0, 50n)],
-        [],
-        [],
-        TEST_ADDR,
-        FUNDING_ADDR,
-        200n
-      );
+      const template = buildUnifiedCleanupTemplate([meltToken(TOKEN_A, 0, 50n)], [], [], TEST_ADDR, FUNDING_ADDR, 200n);
 
       // No melt operations
       expect(utxoSelectsFor(template, TOKEN_A)).toHaveLength(0);
@@ -413,14 +400,7 @@ describe('buildUnifiedCleanupTemplate', () => {
   describe('large melt amounts', () => {
     test('correctly calculates HTR from large token melts', () => {
       // 10000 tokens → 100 HTR from melt. Plus 50 existing = 150 total.
-      const template = buildUnifiedCleanupTemplate(
-        [meltToken(TOKEN_A, 10000)],
-        [],
-        [],
-        TEST_ADDR,
-        FUNDING_ADDR,
-        50n
-      );
+      const template = buildUnifiedCleanupTemplate([meltToken(TOKEN_A, 10000)], [], [], TEST_ADDR, FUNDING_ADDR, 50n);
 
       const htrOutputs = tokenOutputsFor(template, HTR_UID);
       expect(htrOutputs).toHaveLength(1);
@@ -594,10 +574,7 @@ describe('buildUnifiedCleanupTemplate', () => {
       const template = buildUnifiedCleanupTemplate(
         [],
         [],
-        [
-          returnToken(RETURN_TOKEN_C, 30, SENDER_ADDR_1),
-          returnToken(TOKEN_B, 70, SENDER_ADDR_2),
-        ],
+        [returnToken(RETURN_TOKEN_C, 30, SENDER_ADDR_1), returnToken(TOKEN_B, 70, SENDER_ADDR_2)],
         TEST_ADDR,
         FUNDING_ADDR,
         0n
@@ -730,7 +707,7 @@ describe('buildUnifiedCleanupTemplate', () => {
         TEST_ADDR,
         FUNDING_ADDR,
         0n,
-        false, // includeHtr=false — the old buggy fallback path
+        false // includeHtr=false — the old buggy fallback path
       );
 
       // No HTR select (expected)
@@ -748,8 +725,8 @@ describe('buildUnifiedCleanupTemplate', () => {
         [],
         TEST_ADDR,
         FUNDING_ADDR,
-        0n,   // no existing HTR to select — avoids the hundreds of scattered UTXOs
-        true, // include HTR output for melt-produced amount
+        0n, // no existing HTR to select — avoids the hundreds of scattered UTXOs
+        true // include HTR output for melt-produced amount
       );
 
       // No HTR UTXO select (existingHtrBalance=0 → skips addUtxoSelect)

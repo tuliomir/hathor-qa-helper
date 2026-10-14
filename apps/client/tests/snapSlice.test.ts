@@ -36,7 +36,7 @@ describe('snapSlice', () => {
       setSnapConnected({
         installedSnap: { id: 'snap-id', version: '1.0.0' },
         snapOrigin: 'npm:@hathor/hathor-snap',
-      }),
+      })
     );
     expect(state.isConnected).toBe(true);
     expect(state.installedSnap).toEqual({ id: 'snap-id', version: '1.0.0' });
@@ -51,7 +51,7 @@ describe('snapSlice', () => {
       setSnapConnected({
         installedSnap: { id: 'snap-id', version: '1.0.0' },
         snapOrigin: 'local:http://localhost:8080',
-      }),
+      })
     );
     expect(state.error).toBeNull();
     expect(state.isConnected).toBe(true);
@@ -68,10 +68,7 @@ describe('snapSlice', () => {
   });
 
   test('setSnapWalletInfo stores address and network', () => {
-    const state = snapReducer(
-      initialState,
-      setSnapWalletInfo({ address: 'WZ1abc', network: 'testnet' }),
-    );
+    const state = snapReducer(initialState, setSnapWalletInfo({ address: 'WZ1abc', network: 'testnet' }));
     expect(state.address).toBe('WZ1abc');
     expect(state.network).toBe('testnet');
   });

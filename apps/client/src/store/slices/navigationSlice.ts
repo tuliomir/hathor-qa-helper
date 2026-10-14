@@ -113,10 +113,7 @@ const navigationSlice = createSlice({
     },
 
     // Snap: Navigate to Snap Sign Oracle Data with data
-    navigateToSnapSignOracleData: (
-      state,
-      action: PayloadAction<{ ncId: string; result: string }>
-    ) => {
+    navigateToSnapSignOracleData: (state, action: PayloadAction<{ ncId: string; result: string }>) => {
       state.snapSignOracleData.ncId = action.payload.ncId;
       state.snapSignOracleData.result = action.payload.result;
     },

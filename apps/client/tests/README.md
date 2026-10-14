@@ -17,6 +17,7 @@ Smoke tests verify that critical functionality works at a basic level. This test
 Tests are organized by module:
 
 ### Utility Tests
+
 - `balanceUtils.test.ts` - Balance formatting utilities
 - `valuesUtils.test.ts` - Time formatting utilities
 - `walletUtils.test.ts` - Wallet operations (seed validation, word suggestions)
@@ -24,11 +25,13 @@ Tests are organized by module:
 - `transactionStatus.test.ts` - Transaction status and styling logic
 
 ### Redux Slice Tests
+
 - `stageSlice.test.ts` - Stage navigation and scroll position management
 - `toastSlice.test.ts` - Toast notification state management
 - `navigationSlice.test.ts` - Cross-stage navigation data passing
 
 ### Configuration & Type Tests
+
 - `network.test.ts` - Network configuration constants (testnet/mainnet)
 - `walletConnect.test.ts` - WalletConnect configuration constants
 - `stage.test.ts` - Stage types, groups, and helper functions
@@ -85,13 +88,16 @@ describe('myModule', () => {
 ## Test Categories
 
 ### 1. Unit Tests (Current)
+
 Pure function testing with no external dependencies:
+
 - Utility functions
 - Redux reducers (synchronous logic)
 - Type validators
 - Configuration constants
 
 ### 2. Future Expansion
+
 This test suite can be expanded to include:
 
 - **Integration Tests**: Multi-module workflows
@@ -104,19 +110,19 @@ This test suite can be expanded to include:
 
 Current test coverage includes:
 
-| Module | Coverage |
-|--------|----------|
-| `utils/balanceUtils.ts` | Full |
-| `utils/valuesUtils.ts` | Full |
-| `utils/walletUtils.ts` | Partial (didYouMean function) |
-| `utils/betHelpers.ts` | Full (safeStringify) |
-| `utils/transactionStatus.ts` | Full |
-| `constants/network.ts` | Full |
-| `constants/walletConnect.ts` | Full |
-| `types/stage.ts` | Full |
-| `store/slices/stageSlice.ts` | Full |
-| `store/slices/toastSlice.ts` | Full |
-| `store/slices/navigationSlice.ts` | Full |
+| Module                            | Coverage                      |
+| --------------------------------- | ----------------------------- |
+| `utils/balanceUtils.ts`           | Full                          |
+| `utils/valuesUtils.ts`            | Full                          |
+| `utils/walletUtils.ts`            | Partial (didYouMean function) |
+| `utils/betHelpers.ts`             | Full (safeStringify)          |
+| `utils/transactionStatus.ts`      | Full                          |
+| `constants/network.ts`            | Full                          |
+| `constants/walletConnect.ts`      | Full                          |
+| `types/stage.ts`                  | Full                          |
+| `store/slices/stageSlice.ts`      | Full                          |
+| `store/slices/toastSlice.ts`      | Full                          |
+| `store/slices/navigationSlice.ts` | Full                          |
 
 ## Adding New Tests
 
@@ -134,6 +140,7 @@ When adding new tests, follow these guidelines:
 Tests use only Bun's built-in test runner - no additional testing libraries required.
 
 For component testing, consider adding:
+
 - `@testing-library/react` - React component testing
 - `@testing-library/user-event` - User interaction simulation
 - `happy-dom` or `jsdom` - DOM environment

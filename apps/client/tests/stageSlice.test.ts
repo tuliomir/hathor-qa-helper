@@ -21,10 +21,7 @@ describe('stageSlice', () => {
 
   describe('saveScrollPosition', () => {
     test('saves scroll position for a stage', () => {
-      const state = stageReducer(
-        initialState,
-        saveScrollPosition({ stageId: 'wallet-initialization', position: 250 })
-      );
+      const state = stageReducer(initialState, saveScrollPosition({ stageId: 'wallet-initialization', position: 250 }));
 
       expect(state.scrollPositions['wallet-initialization']).toBe(250);
     });

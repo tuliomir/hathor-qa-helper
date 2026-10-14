@@ -247,12 +247,7 @@ describe('cleanupTokenCategorizer', () => {
   // Mixed scenarios — categories are mutually exclusive
   // -------------------------------------------------------------------------
   describe('mutual exclusivity', () => {
-    const allTokenTypes = [
-      meltableToken('M'),
-      swapToken('S'),
-      feeToken('F'),
-      returnableToken('R'),
-    ];
+    const allTokenTypes = [meltableToken('M'), swapToken('S'), feeToken('F'), returnableToken('R')];
 
     test('fee tokens appear only in fee list, never meltable or swap', () => {
       const meltable = getMeltableTokens(allTokenTypes);
