@@ -14,6 +14,7 @@ import NavDrawer from './NavDrawer';
 import { WorkspaceLinks, WorkspaceProgress } from './WorkspaceSwitcher';
 import { useWorkspace } from './useWorkspace';
 import WalletContextBar from './WalletContextBar';
+import CommandPalette from './CommandPalette';
 import ToastContainer from '../common/ToastContainer';
 import DeepLinkModal from '../common/DeepLinkModal';
 
@@ -35,6 +36,29 @@ export default function AppShell({ nav, navWidth = 'stage', children }: AppShell
   const { progress } = useWorkspace();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const paletteReturnFocus = useRef<HTMLElement | null>(null);
+
+  const openPalette = useCallback(() => {
+    paletteReturnFocus.current = document.activeElement as HTMLElement | null;
+    setPaletteOpen(true);
+  }, []);
+  const closePalette = useCallback(() => {
+    setPaletteOpen(false);
+    paletteReturnFocus.current?.focus?.();
+  }, []);
+
+  // Ctrl K / ⌘K toggles the command palette from anywhere.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 'k') return;
+      event.preventDefault();
+      if (paletteOpen) closePalette();
+      else openPalette();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [paletteOpen, openPalette, closePalette]);
 
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
@@ -54,7 +78,12 @@ export default function AppShell({ nav, navWidth = 'stage', children }: AppShell
         <NetworkRail />
       </div>
       <div className="col-span-full relative">
-        <TopBar ref={menuButtonRef} drawerOpen={drawerOpen} onOpenDrawer={() => setDrawerOpen(true)} />
+        <TopBar
+          ref={menuButtonRef}
+          drawerOpen={drawerOpen}
+          onOpenDrawer={() => setDrawerOpen(true)}
+          onOpenPalette={openPalette}
+        />
         {percent !== null && (
           <div
             role="progressbar"
@@ -84,6 +113,8 @@ export default function AppShell({ nav, navWidth = 'stage', children }: AppShell
           <div className="flex-1 min-h-0 flex">{nav}</div>
         </NavDrawer>
       )}
+
+      {paletteOpen && <CommandPalette onClose={closePalette} />}
 
       <ToastContainer />
       <DeepLinkModal />

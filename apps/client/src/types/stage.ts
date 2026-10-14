@@ -95,6 +95,8 @@ export interface Stage {
   id: StageId;
   title: string;
   description: string;
+  /** RPC / Snap methods the stage calls, for search and the stage header. */
+  methods?: string[];
   /** @deprecated Stage emoji were dropped in the redesign; kept optional so nothing breaks. */
   icon?: string;
 }
@@ -162,41 +164,49 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'rpc-basic-info',
         title: 'Basic information',
         description: 'Test basic wallet information RPC methods',
+        methods: ['htr_getWalletInformation', 'htr_getConnectedNetwork'],
       },
       {
         id: 'rpc-get-address',
         title: 'Get address',
         description: 'Retrieve addresses by type (first empty, index, or client)',
+        methods: ['htr_getAddress'],
       },
       {
         id: 'rpc-get-balance',
         title: 'Get balance',
         description: 'Test htr_getBalance RPC method to query token balances',
+        methods: ['htr_getBalance'],
       },
       {
         id: 'rpc-get-utxos',
         title: 'Get UTXOs',
         description: 'Retrieve unspent transaction outputs for a specific token',
+        methods: ['htr_getUtxos'],
       },
       {
         id: 'rpc-sign-with-address',
         title: 'Sign with address',
         description: 'Test htr_signWithAddress RPC method to sign messages',
+        methods: ['htr_signWithAddress'],
       },
       {
         id: 'rpc-create-token',
         title: 'Create token',
         description: 'Create a new custom token with mint/melt authorities',
+        methods: ['htr_createToken'],
       },
       {
         id: 'rpc-send-transaction',
         title: 'Send transaction',
         description: 'Send a transaction with one or more outputs',
+        methods: ['htr_sendTransaction'],
       },
       {
         id: 'rpc-sign-oracle-data',
         title: 'Sign oracle data',
         description: 'Sign data as oracle for a nano contract',
+        methods: ['htr_signOracleData'],
       },
       {
         id: 'rpc-raw-editor',
@@ -214,21 +224,25 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'rpc-bet-initialize',
         title: 'Initialize bet',
         description: 'Initialize a new bet nano contract with oracle and token configuration',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-bet-deposit',
         title: 'Place bet',
         description: 'Place a bet on an existing bet nano contract',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-set-bet-result',
         title: 'Set bet result',
         description: 'Set the result for a bet nano contract (oracle action)',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-bet-withdraw',
         title: 'Withdraw prize',
         description: 'Withdraw your prize from a bet nano contract',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },
@@ -241,16 +255,19 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'rpc-fee-initialize',
         title: 'Initialize fee',
         description: 'Initialize a new fee nano contract with an HTR deposit',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-fee-deposit',
         title: 'Deposit fee token',
         description: 'Deposit a fee-based token into the fee nano contract',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-fee-withdraw',
         title: 'Withdraw fee token',
         description: 'Withdraw a fee-based token from the fee nano contract',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },
@@ -316,70 +333,83 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'snap-get-connected-network',
         title: 'Get network',
         description: 'Get the connected network information via Snap',
+        methods: ['htr_getConnectedNetwork'],
       },
       {
         id: 'snap-get-wallet-info',
         title: 'Wallet information',
         description: 'Get wallet network and address via Snap',
+        methods: ['htr_getWalletInformation'],
       },
       // 3. Read-only (require approval)
       {
         id: 'snap-get-address',
         title: 'Get address',
         description: 'Retrieve addresses by type and index via Snap',
+        methods: ['htr_getAddress'],
       },
       {
         id: 'snap-get-balance',
         title: 'Get balance',
         description: 'Query token balances via Snap',
+        methods: ['htr_getBalance'],
       },
       {
         id: 'snap-get-utxos',
         title: 'Get UTXOs',
         description: 'Retrieve unspent transaction outputs via Snap',
+        methods: ['htr_getUtxos'],
       },
       {
         id: 'snap-get-xpub',
         title: 'Get xpub',
         description: 'Retrieve the wallet extended public key via Snap',
+        methods: ['htr_getXpub'],
       },
       // 4. Signatures (no side effects)
       {
         id: 'snap-sign-with-address',
         title: 'Sign with address',
         description: 'Sign a message using a specific address via Snap',
+        methods: ['htr_signWithAddress'],
       },
       {
         id: 'snap-sign-oracle-data',
         title: 'Sign oracle data',
         description: 'Sign oracle data for a nano contract via Snap',
+        methods: ['htr_signOracleData'],
       },
       // 5. Transactions & token creation
       {
         id: 'snap-send-transaction',
         title: 'Send transaction',
         description: 'Send a transaction with outputs via Snap',
+        methods: ['htr_sendTransaction'],
       },
       {
         id: 'snap-create-token',
         title: 'Create token',
         description: 'Create a new custom token via Snap',
+        methods: ['htr_createToken'],
       },
       {
         id: 'snap-change-network',
         title: 'Change network',
         description: 'Change the connected network via Snap',
+        methods: ['htr_changeNetwork'],
       },
       // 6. Nano contract stages
       {
         id: 'snap-send-nano-contract-tx',
         title: 'Nano contract tx',
         description: 'Send a nano contract transaction via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-create-nc-token',
         title: 'NC + create token',
         description: 'Create a nano contract with token creation via Snap',
+        methods: ['htr_createNanoContractCreateTokenTx'],
       },
     ],
   },
@@ -392,21 +422,25 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'snap-bet-initialize',
         title: 'Initialize bet',
         description: 'Initialize a bet nano contract via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-bet-deposit',
         title: 'Place bet',
         description: 'Place a bet on a nano contract via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-set-bet-result',
         title: 'Set bet result',
         description: 'Set the result for a bet nano contract via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-bet-withdraw',
         title: 'Withdraw prize',
         description: 'Withdraw prize from a bet nano contract via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },
@@ -419,16 +453,19 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'snap-fee-initialize',
         title: 'Initialize fee',
         description: 'Initialize a fee nano contract via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-fee-deposit',
         title: 'Deposit fee token',
         description: 'Deposit a fee-based token via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-fee-withdraw',
         title: 'Withdraw fee token',
         description: 'Withdraw a fee-based token via Snap',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },

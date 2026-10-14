@@ -53,6 +53,35 @@ test.describe('App shell', () => {
     await expect(trigger).toBeFocused();
   });
 
+  test('command palette: open, type, Enter navigates', async ({ page }) => {
+    await page.goto('/tools/rpc/connection');
+    await page.keyboard.press('Control+k');
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    const input = palette.getByRole('combobox');
+    await expect(input).toBeFocused();
+
+    await input.fill('htr_getBalance');
+    const options = palette.getByRole('option');
+    await expect(options.filter({ hasText: 'Get balance' })).toHaveCount(2);
+    await expect(options.nth(0)).toContainText(/RPC|Snap/);
+
+    await input.press('ArrowDown');
+    await input.press('Enter');
+    await expect(palette).toBeHidden();
+    await expect(page).toHaveURL(/\/tools\/(rpc|snaps)\/get-balance$/);
+  });
+
+  test('command palette: Escape restores focus to the trigger', async ({ page }) => {
+    await page.goto('/tools/rpc/connection');
+    const trigger = page.getByRole('button', { name: 'Find stage' });
+    await trigger.click();
+    const palette = page.getByRole('dialog', { name: 'Command palette' });
+    await expect(palette).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(palette).toBeHidden();
+    await expect(trigger).toBeFocused();
+  });
+
   test.describe('phone width', () => {
     test.use({ viewport: { width: 390, height: 844 } });
 

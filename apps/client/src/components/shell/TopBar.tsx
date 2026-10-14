@@ -7,7 +7,7 @@
  */
 
 import { forwardRef } from 'react';
-import { FiMenu } from 'react-icons/fi';
+import { FiMenu, FiSearch } from 'react-icons/fi';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import OverflowMenu from './OverflowMenu';
 import WalletContextBar from './WalletContextBar';
@@ -17,9 +17,16 @@ import NetworkSwitcher from './NetworkSwitcher';
 interface TopBarProps {
   drawerOpen: boolean;
   onOpenDrawer: () => void;
+  onOpenPalette: () => void;
 }
 
-const TopBar = forwardRef<HTMLButtonElement, TopBarProps>(function TopBar({ drawerOpen, onOpenDrawer }, menuRef) {
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+const PALETTE_HINT = IS_MAC ? '⌘K' : 'Ctrl K';
+
+const TopBar = forwardRef<HTMLButtonElement, TopBarProps>(function TopBar(
+  { drawerOpen, onOpenDrawer, onOpenPalette },
+  menuRef
+) {
   return (
     <header className="flex items-center gap-3 h-12 pl-2 pr-3 lg:pl-4 bg-base-100 border-b border-base-300 min-w-0">
       <button
@@ -44,6 +51,19 @@ const TopBar = forwardRef<HTMLButtonElement, TopBarProps>(function TopBar({ draw
           <WalletContextBar variant="compact" />
         </div>
       </div>
+      <button
+        type="button"
+        onClick={onOpenPalette}
+        aria-label="Find stage"
+        aria-keyshortcuts={IS_MAC ? 'Meta+K' : 'Control+K'}
+        className="flex-none inline-flex items-center gap-2 h-8 w-8 lg:w-44 justify-center lg:justify-start lg:pl-2.5 lg:pr-1.5 rounded-field border border-base-300 bg-base-200 text-ink-muted hover:border-field-border"
+      >
+        <FiSearch aria-hidden="true" size={14} className="flex-none" />
+        <span className="hidden lg:inline text-body">Find stage</span>
+        <kbd className="hidden lg:inline ml-auto text-[11px] leading-4 px-1.5 border border-base-300 rounded-selector bg-base-100 font-sans">
+          {PALETTE_HINT}
+        </kbd>
+      </button>
       <HelperServerPill />
       <NetworkSwitcher />
       <OverflowMenu />

@@ -77,12 +77,22 @@ export default function StageNav() {
   const [query, setQuery] = useState('');
   const filterRef = useRef<HTMLInputElement>(null);
   const activeRowRef = useRef<HTMLAnchorElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // A new active stage always shows its group.
   useEffect(() => setActiveClosed(false), [currentStage]);
 
+  // Scroll the list itself rather than calling scrollIntoView, which would
+  // also move the browser's Tab starting point into the middle of the nav.
   useEffect(() => {
-    activeRowRef.current?.scrollIntoView?.({ block: 'nearest' });
+    const row = activeRowRef.current;
+    const list = listRef.current;
+    if (!row || !list) return;
+    const rowTop = row.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+    if (rowTop < list.scrollTop) list.scrollTop = rowTop;
+    else if (rowTop + row.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = rowTop + row.offsetHeight - list.clientHeight;
+    }
   }, [currentStage]);
 
   // `/` focuses the filter of the visible nav.
@@ -168,7 +178,7 @@ export default function StageNav() {
         </label>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-4">
+      <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto px-2 pb-4">
         {query ? (
           matches.length > 0 ? (
             <ul aria-label="Matching stages" className="flex flex-col gap-0.5">
