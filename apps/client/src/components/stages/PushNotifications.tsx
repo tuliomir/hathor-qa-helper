@@ -12,13 +12,21 @@ import WalletNetworkControl from '../common/WalletNetworkControl';
 import { nextNetwork, type NetworkKey } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
 import type { WalletInfo } from '../../types/walletStore';
-import { MdQrCode, MdWarning } from 'react-icons/md';
+import { MdQrCode } from 'react-icons/md';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { addSentToken, clearSentTokens } from '../../store/slices/pushNotificationsSlice';
-import Loading from '../common/Loading';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
-import Select from '../common/Select';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { EmptyState } from '../ui/EmptyState';
+import { StatusChip } from '../ui/StatusChip';
+import { DataTable } from '../ui/DataTable';
+import { useRequireFundingWallet, useRequireTestWallet } from '../../hooks/useRequirements';
+import type { Requirement } from '../../utils/requirements';
 import ConfigurationStringModal from '../common/ConfigurationStringModal';
 
 interface Token {
@@ -62,6 +70,18 @@ export default function PushNotifications() {
   const bothOnMainnet = fundingOnMainnet && testOnMainnet;
 
   const canSendTokens = bothReady && bothOnMainnet;
+
+  const fundingRequirement = useRequireFundingWallet();
+  const testRequirement = useRequireTestWallet();
+  const mainnetRequirement: Requirement = bothOnMainnet
+    ? { id: 'mainnet', short: 'Mainnet', met: true, label: 'Both wallets on Mainnet' }
+    : {
+        id: 'mainnet',
+        short: 'Mainnet',
+        met: false,
+        label: 'Both wallets must be on Mainnet',
+        action: 'Switch both wallets to Mainnet',
+      };
 
   // Load tokens with balances from funding wallet
   useEffect(() => {
@@ -204,73 +224,48 @@ export default function PushNotifications() {
     }
   };
 
-  const renderWalletCard = (wallet: WalletInfo | undefined, label: string, isOnMainnet: boolean) => {
+  const renderWalletCard = (wallet: WalletInfo | undefined, label: string) => {
     if (!wallet) {
       return (
-        <div className="card bg-white shadow-md border-2 border-warning">
-          <div className="card-body">
-            <h3 className="card-title text-warning">No {label} Wallet Selected</h3>
-            <p className="text-sm text-muted">
-              Please select a {label.toLowerCase()} wallet in the Wallet Initialization stage.
-            </p>
-          </div>
-        </div>
+        <Panel title={`${label} wallet`}>
+          <EmptyState>Select a {label.toLowerCase()} wallet in Wallet initialization.</EmptyState>
+        </Panel>
       );
     }
 
-    const isReady = wallet.status === 'ready';
-    const isLoading = wallet.status === 'connecting' || wallet.status === 'syncing';
-
     return (
-      <div
-        className={`card bg-white shadow-md border-2 ${isReady && isOnMainnet ? 'border-success' : 'border-gray-300'}`}
-      >
-        <div className="card-body">
-          <h3 className="card-title">{label} Wallet</h3>
-
-          <div className="space-y-2">
-            <div>
-              <span className="text-sm font-bold text-muted">Name:</span>
-              <p className="text-base m-0">{wallet.metadata.friendlyName}</p>
-            </div>
-
-            <div>
-              <span className="text-sm font-bold text-muted">Network:</span>
-              <div className="mt-1">
-                <WalletNetworkControl
-                  walletId={wallet.metadata.id}
-                  network={wallet.metadata.network}
-                  status={wallet.status}
-                  error={wallet.error}
-                  onSwapNetwork={handleSwapNetwork}
-                  onForceStop={handleForceStop}
-                />
-              </div>
-            </div>
-
-            <div>
-              <span className="text-sm font-bold text-muted">Status:</span>
-              <div className="flex items-center gap-2 mt-1">
-                {isLoading && (
-                  <span className="badge badge-warning">
-                    {wallet.status === 'connecting' ? 'Connecting...' : 'Syncing...'}
-                  </span>
-                )}
-                {isReady && (
-                  <>
-                    <span className="badge badge-success">Ready</span>
-                    <span className="text-sm">
-                      Balance: <strong>{formatBalance(wallet.balance ?? 0n)} HTR</strong>
-                    </span>
-                  </>
-                )}
-                {wallet.status === 'idle' && <span className="badge badge-ghost">Idle</span>}
-                {wallet.status === 'error' && <span className="badge badge-error">Error</span>}
-              </div>
-            </div>
+      <Panel title={`${label} wallet`}>
+        <dl className="m-0 flex flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-caption text-ink-muted">Name</dt>
+            <dd className="m-0 font-semibold">{wallet.metadata.friendlyName}</dd>
           </div>
-        </div>
-      </div>
+          <div className="flex flex-col items-start gap-0.5">
+            <dt className="text-caption text-ink-muted">Network</dt>
+            <dd className="m-0">
+              <WalletNetworkControl
+                walletId={wallet.metadata.id}
+                network={wallet.metadata.network}
+                status={wallet.status}
+                error={wallet.error}
+                onSwapNetwork={handleSwapNetwork}
+                onForceStop={handleForceStop}
+              />
+            </dd>
+          </div>
+          <div className="flex flex-col items-start gap-0.5">
+            <dt className="text-caption text-ink-muted">Status</dt>
+            <dd className="m-0 flex flex-wrap items-center gap-2">
+              <StatusChip status={wallet.status} />
+              {wallet.status === 'ready' && (
+                <span className="font-mono text-data">
+                  {formatBalance(wallet.balance ?? 0n)} <span className="font-sans text-ink-muted">HTR</span>
+                </span>
+              )}
+            </dd>
+          </div>
+        </dl>
+      </Panel>
     );
   };
 
@@ -610,525 +605,258 @@ export default function PushNotifications() {
     }
   };
 
+  const ordinal = ['first', 'second', 'third'];
+
+  /** Token select + amount for one slot (shared between the send cards). */
+  const tokenSlot = (
+    slot: 0 | 1 | 2,
+    multi: boolean,
+    value: string,
+    setValue: (v: string) => void,
+    amount: string,
+    setAmountValue: (v: string) => void,
+    exclude: string[],
+    idPrefix: string
+  ) => {
+    const word = ordinal[slot];
+    const available = fundTokens.find((t) => t.uid === value)?.balance || 0n;
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_12rem]" key={`${idPrefix}-${slot}`}>
+        <Field
+          label={multi ? `${word[0].toUpperCase()}${word.slice(1)} token` : 'Token'}
+          htmlFor={`${idPrefix}-token-${slot}`}
+          wireControl={false}
+        >
+          <div className="flex gap-2">
+            <select
+              id={`${idPrefix}-token-${slot}`}
+              value={value}
+              onChange={(e) => {
+                const newToken = e.target.value;
+                setValue(newToken);
+                if (newToken) setAmountValue(generateRandomAmount(newToken));
+              }}
+              className="select min-w-0 flex-1"
+            >
+              <option value="">{multi ? `Select ${word} token` : 'Select a token'}</option>
+              {fundTokens
+                .filter((token) => !exclude.includes(token.uid))
+                .map((token) => (
+                  <option key={token.uid} value={token.uid}>
+                    {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
+                  </option>
+                ))}
+            </select>
+            {value && (
+              <button
+                type="button"
+                onClick={() => handleOpenConfigModal(value)}
+                className="btn btn-ghost btn-square"
+                title="View configuration string QR code"
+                aria-label="View configuration string QR code"
+              >
+                <MdQrCode aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </Field>
+        {value && (
+          <Field
+            label="Amount"
+            htmlFor={`${idPrefix}-amount-${slot}`}
+            trailing={<span className="text-caption text-ink-muted">Available {formatBalance(available)}</span>}
+          >
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmountValue(e.target.value)}
+              placeholder="Amount"
+              className="input w-full font-mono text-data"
+              min="1"
+            />
+          </Field>
+        )}
+      </div>
+    );
+  };
+
+  const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
+  const loadingTokens = (
+    <p className="m-0 flex items-center gap-2 text-body text-ink-muted">
+      <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+      Loading tokens…
+    </p>
+  );
+  const sendButton = (label: string, onClick: () => void, disabled: boolean) => (
+    <div className="flex justify-end">
+      <button type="button" onClick={onClick} disabled={disabled} className="btn btn-primary">
+        {isSending && spinner}
+        {isSending ? 'Sending' : label}
+      </button>
+    </div>
+  );
+
+  const slot1 = (multi: boolean, id: string) =>
+    tokenSlot(0, multi, selectedToken1, setSelectedToken1, token1Amount, setToken1Amount, [], id);
+  const slot2 = (id: string) =>
+    tokenSlot(1, true, selectedToken2, setSelectedToken2, token2Amount, setToken2Amount, [selectedToken1], id);
+  const slot3 = (id: string) =>
+    tokenSlot(
+      2,
+      true,
+      selectedToken3,
+      setSelectedToken3,
+      token3Amount,
+      setToken3Amount,
+      [selectedToken1, selectedToken2],
+      id
+    );
+
+  const groupedSentTokens = Array.from(
+    sentTokens
+      .reduce((acc, token) => {
+        const existing = acc.get(token.tokenId);
+        if (existing) {
+          existing.amount = (BigInt(existing.amount) + BigInt(token.amount)).toString();
+        } else {
+          acc.set(token.tokenId, { ...token });
+        }
+        return acc;
+      }, new Map<string, (typeof sentTokens)[0]>())
+      .values()
+  );
+
   return (
-    <div className="max-w-300 mx-auto">
-      {isSending && <Loading overlay message="Sending transaction..." />}
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="push-notifications"
+        description="Test push notifications by sending tokens to the test wallet."
+      />
+      <PreconditionStrip requirements={[fundingRequirement, testRequirement, mainnetRequirement]} />
 
-      <h1 className="mt-0 text-3xl font-bold">Push Notifications</h1>
-      <p className="text-muted mb-7.5">Test push notification functionality by sending tokens to the test wallet.</p>
-
-      {/* Wallets Status */}
-      <div className="mb-7.5">
-        <h2 className="text-2xl font-bold mb-4">Wallet Status</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {renderWalletCard(fundingWallet, 'Funding', fundingOnMainnet)}
-          {renderWalletCard(testWallet, 'Test', testOnMainnet)}
-        </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {renderWalletCard(fundingWallet, 'Funding')}
+        {renderWalletCard(testWallet, 'Test')}
       </div>
 
-      {/* Network Warning */}
       {bothReady && !bothOnMainnet && (
-        <div className="alert alert-warning mb-7.5 flex items-start gap-3">
-          <MdWarning className="text-2xl flex-shrink-0" />
-          <div>
-            <h3 className="font-bold text-lg mt-0 mb-2">Network Check Required</h3>
-            <p className="m-0">
-              Both wallets must be on <strong>MAINNET</strong> before continuing with push notification tests. Please
-              use the swap buttons above to change the network.
-            </p>
-          </div>
-        </div>
+        <Callout tone="warning" title="Both wallets must be on Mainnet">
+          Push notification tests need both wallets on <strong>Mainnet</strong>. Use the network controls above to
+          switch them.
+        </Callout>
       )}
 
-      {/* Send Buttons */}
       {canSendTokens && (
         <>
-          <div className="mb-7.5">
-            <h2 className="text-2xl font-bold mb-4">Send Test Transactions</h2>
+          <Panel title="Send 1 HTR" description="Send 1 HTR from the funding wallet to the test wallet.">
+            {sendButton('Send 1 HTR', handleSend1HTR, isSending)}
+          </Panel>
 
-            {/* Send 1 HTR */}
-            <div className="card bg-white shadow-md mb-4">
-              <div className="card-body">
-                <h3 className="card-title">Send 1 HTR</h3>
-                <p className="text-sm text-muted mb-4">Send 1 HTR from the funding wallet to the test wallet.</p>
-                <button onClick={handleSend1HTR} disabled={isSending} className="btn btn-primary w-full">
-                  {isSending ? 'Sending...' : 'Send 1 HTR'}
+          <Panel
+            title="Send 1 HTR + 1 custom token"
+            description="Send 1 HTR and 1 custom token in a single transaction."
+          >
+            {isLoadingTokens ? (
+              loadingTokens
+            ) : fundTokens.length === 0 ? (
+              <Callout tone="info">No custom tokens with balance found in the funding wallet.</Callout>
+            ) : (
+              <>
+                {slot1(false, 'push1')}
+                {sendButton(
+                  'Send 1 HTR + 1 token',
+                  handleSend1HTRPlus1Token,
+                  isSending || !selectedToken1 || !token1Amount || parseFloat(token1Amount) <= 0
+                )}
+              </>
+            )}
+          </Panel>
+
+          <Panel
+            title="Send 1 HTR + 2 custom tokens"
+            description="Send 1 HTR and 2 different custom tokens in a single transaction."
+          >
+            {isLoadingTokens ? (
+              loadingTokens
+            ) : fundTokens.length < 2 ? (
+              <Callout tone="info">At least 2 custom tokens with balance are required in the funding wallet.</Callout>
+            ) : (
+              <>
+                {slot1(true, 'push2')}
+                {slot2('push2')}
+                {sendButton(
+                  'Send 1 HTR + 2 tokens',
+                  handleSend1HTRPlus2Tokens,
+                  isSending ||
+                    !selectedToken1 ||
+                    !selectedToken2 ||
+                    !token1Amount ||
+                    !token2Amount ||
+                    parseFloat(token1Amount) <= 0 ||
+                    parseFloat(token2Amount) <= 0
+                )}
+              </>
+            )}
+          </Panel>
+
+          <Panel
+            title="Send 1 HTR + 3 custom tokens"
+            description="Send 1 HTR and 3 different custom tokens in a single transaction."
+          >
+            {isLoadingTokens ? (
+              loadingTokens
+            ) : fundTokens.length < 3 ? (
+              <Callout tone="info">At least 3 custom tokens with balance are required in the funding wallet.</Callout>
+            ) : (
+              <>
+                {slot1(true, 'push3')}
+                {slot2('push3')}
+                {slot3('push3')}
+                {sendButton(
+                  'Send 1 HTR + 3 tokens',
+                  handleSend1HTRPlus3Tokens,
+                  isSending ||
+                    !selectedToken1 ||
+                    !selectedToken2 ||
+                    !selectedToken3 ||
+                    !token1Amount ||
+                    !token2Amount ||
+                    !token3Amount ||
+                    parseFloat(token1Amount) <= 0 ||
+                    parseFloat(token2Amount) <= 0 ||
+                    parseFloat(token3Amount) <= 0
+                )}
+              </>
+            )}
+          </Panel>
+
+          {sentTokens.length > 0 && (
+            <Panel title="Return tokens" description="Tokens sent to the test wallet in this session.">
+              <DataTable
+                caption="Tokens sent this session"
+                columns={[
+                  { key: 'token', header: 'Token', className: 'font-semibold', value: (t) => t.tokenSymbol },
+                  { key: 'amount', header: 'Total amount', type: 'amount', value: (t) => t.amount },
+                ]}
+                rows={groupedSentTokens}
+                getRowKey={(t) => t.tokenId}
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleReturnAllTokens}
+                  disabled={isSending}
+                  className="btn btn-secondary"
+                >
+                  {isSending && spinner}
+                  {isSending ? 'Returning' : 'Return all tokens to funding wallet'}
                 </button>
               </div>
-            </div>
-
-            {/* Send 1 HTR + 1 Custom Token */}
-            <div className="card bg-white shadow-md mb-4">
-              <div className="card-body">
-                <h3 className="card-title">Send 1 HTR + 1 Custom Token</h3>
-                <p className="text-sm text-muted mb-4">Send 1 HTR and 1 custom token in a single transaction.</p>
-
-                {isLoadingTokens ? (
-                  <div className="text-sm text-muted mb-4">Loading tokens...</div>
-                ) : fundTokens.length === 0 ? (
-                  <div className="alert alert-info mb-4">
-                    <p className="m-0 text-sm">No custom tokens with balance found in funding wallet.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="form-control mb-3">
-                      <label className="label">
-                        <span className="label-text font-bold">Select Token:</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={selectedToken1}
-                          onChange={(e) => {
-                            const newToken = e.target.value;
-                            setSelectedToken1(newToken);
-                            if (newToken) setToken1Amount(generateRandomAmount(newToken));
-                          }}
-                          className="flex-1"
-                        >
-                          <option value="">-- Select a token --</option>
-                          {fundTokens.map((token) => (
-                            <option key={token.uid} value={token.uid}>
-                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                            </option>
-                          ))}
-                        </Select>
-                        {selectedToken1 && (
-                          <button
-                            onClick={() => handleOpenConfigModal(selectedToken1)}
-                            className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String QR Code"
-                          >
-                            <MdQrCode size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedToken1 && (
-                      <div className="form-control mb-4">
-                        <label className="label">
-                          <span className="label-text font-bold">Amount:</span>
-                          <span className="label-text-alt text-muted">
-                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken1)?.balance || 0n)}
-                          </span>
-                        </label>
-                        <input
-                          type="number"
-                          value={token1Amount}
-                          onChange={(e) => setToken1Amount(e.target.value)}
-                          placeholder="Amount"
-                          className="input"
-                          min="1"
-                        />
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleSend1HTRPlus1Token}
-                      disabled={isSending || !selectedToken1 || !token1Amount || parseFloat(token1Amount) <= 0}
-                      className="btn btn-primary w-full"
-                    >
-                      {isSending ? 'Sending...' : 'Send 1 HTR + 1 Token'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Send 1 HTR + 2 Custom Tokens */}
-            <div className="card bg-white shadow-md mb-4">
-              <div className="card-body">
-                <h3 className="card-title">Send 1 HTR + 2 Custom Tokens</h3>
-                <p className="text-sm text-muted mb-4">
-                  Send 1 HTR and 2 different custom tokens in a single transaction.
-                </p>
-
-                {isLoadingTokens ? (
-                  <div className="text-sm text-muted mb-4">Loading tokens...</div>
-                ) : fundTokens.length < 2 ? (
-                  <div className="alert alert-info mb-4">
-                    <p className="m-0 text-sm">At least 2 custom tokens with balance required in funding wallet.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="form-control mb-3">
-                      <label className="label">
-                        <span className="label-text font-bold">Select First Token:</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={selectedToken1}
-                          onChange={(e) => {
-                            const newToken = e.target.value;
-                            setSelectedToken1(newToken);
-                            if (newToken) setToken1Amount(generateRandomAmount(newToken));
-                          }}
-                          className="flex-1"
-                        >
-                          <option value="">-- Select first token --</option>
-                          {fundTokens.map((token) => (
-                            <option key={token.uid} value={token.uid}>
-                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                            </option>
-                          ))}
-                        </Select>
-                        {selectedToken1 && (
-                          <button
-                            onClick={() => handleOpenConfigModal(selectedToken1)}
-                            className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String QR Code"
-                          >
-                            <MdQrCode size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedToken1 && (
-                      <div className="form-control mb-3">
-                        <label className="label">
-                          <span className="label-text font-bold">Amount for First Token:</span>
-                          <span className="label-text-alt text-muted">
-                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken1)?.balance || 0n)}
-                          </span>
-                        </label>
-                        <input
-                          type="number"
-                          value={token1Amount}
-                          onChange={(e) => setToken1Amount(e.target.value)}
-                          placeholder="Amount"
-                          className="input"
-                          min="1"
-                        />
-                      </div>
-                    )}
-
-                    <div className="form-control mb-3">
-                      <label className="label">
-                        <span className="label-text font-bold">Select Second Token:</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={selectedToken2}
-                          onChange={(e) => {
-                            const newToken = e.target.value;
-                            setSelectedToken2(newToken);
-                            if (newToken) setToken2Amount(generateRandomAmount(newToken));
-                          }}
-                          className="flex-1"
-                        >
-                          <option value="">-- Select second token --</option>
-                          {fundTokens
-                            .filter((token) => token.uid !== selectedToken1)
-                            .map((token) => (
-                              <option key={token.uid} value={token.uid}>
-                                {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                              </option>
-                            ))}
-                        </Select>
-                        {selectedToken2 && (
-                          <button
-                            onClick={() => handleOpenConfigModal(selectedToken2)}
-                            className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String QR Code"
-                          >
-                            <MdQrCode size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedToken2 && (
-                      <div className="form-control mb-4">
-                        <label className="label">
-                          <span className="label-text font-bold">Amount for Second Token:</span>
-                          <span className="label-text-alt text-muted">
-                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken2)?.balance || 0n)}
-                          </span>
-                        </label>
-                        <input
-                          type="number"
-                          value={token2Amount}
-                          onChange={(e) => setToken2Amount(e.target.value)}
-                          placeholder="Amount"
-                          className="input"
-                          min="1"
-                        />
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleSend1HTRPlus2Tokens}
-                      disabled={
-                        isSending ||
-                        !selectedToken1 ||
-                        !selectedToken2 ||
-                        !token1Amount ||
-                        !token2Amount ||
-                        parseFloat(token1Amount) <= 0 ||
-                        parseFloat(token2Amount) <= 0
-                      }
-                      className="btn btn-primary w-full"
-                    >
-                      {isSending ? 'Sending...' : 'Send 1 HTR + 2 Tokens'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Send 1 HTR + 3 Custom Tokens */}
-            <div className="card bg-white shadow-md mb-4">
-              <div className="card-body">
-                <h3 className="card-title">Send 1 HTR + 3 Custom Tokens</h3>
-                <p className="text-sm text-muted mb-4">
-                  Send 1 HTR and 3 different custom tokens in a single transaction.
-                </p>
-
-                {isLoadingTokens ? (
-                  <div className="text-sm text-muted mb-4">Loading tokens...</div>
-                ) : fundTokens.length < 3 ? (
-                  <div className="alert alert-info mb-4">
-                    <p className="m-0 text-sm">At least 3 custom tokens with balance required in funding wallet.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="form-control mb-3">
-                      <label className="label">
-                        <span className="label-text font-bold">Select First Token:</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={selectedToken1}
-                          onChange={(e) => {
-                            const newToken = e.target.value;
-                            setSelectedToken1(newToken);
-                            if (newToken) setToken1Amount(generateRandomAmount(newToken));
-                          }}
-                          className="flex-1"
-                        >
-                          <option value="">-- Select first token --</option>
-                          {fundTokens.map((token) => (
-                            <option key={token.uid} value={token.uid}>
-                              {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                            </option>
-                          ))}
-                        </Select>
-                        {selectedToken1 && (
-                          <button
-                            onClick={() => handleOpenConfigModal(selectedToken1)}
-                            className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String QR Code"
-                          >
-                            <MdQrCode size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedToken1 && (
-                      <div className="form-control mb-3">
-                        <label className="label">
-                          <span className="label-text font-bold">Amount for First Token:</span>
-                          <span className="label-text-alt text-muted">
-                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken1)?.balance || 0n)}
-                          </span>
-                        </label>
-                        <input
-                          type="number"
-                          value={token1Amount}
-                          onChange={(e) => setToken1Amount(e.target.value)}
-                          placeholder="Amount"
-                          className="input"
-                          min="1"
-                        />
-                      </div>
-                    )}
-
-                    <div className="form-control mb-3">
-                      <label className="label">
-                        <span className="label-text font-bold">Select Second Token:</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={selectedToken2}
-                          onChange={(e) => {
-                            const newToken = e.target.value;
-                            setSelectedToken2(newToken);
-                            if (newToken) setToken2Amount(generateRandomAmount(newToken));
-                          }}
-                          className="flex-1"
-                        >
-                          <option value="">-- Select second token --</option>
-                          {fundTokens
-                            .filter((token) => token.uid !== selectedToken1)
-                            .map((token) => (
-                              <option key={token.uid} value={token.uid}>
-                                {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                              </option>
-                            ))}
-                        </Select>
-                        {selectedToken2 && (
-                          <button
-                            onClick={() => handleOpenConfigModal(selectedToken2)}
-                            className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String QR Code"
-                          >
-                            <MdQrCode size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedToken2 && (
-                      <div className="form-control mb-3">
-                        <label className="label">
-                          <span className="label-text font-bold">Amount for Second Token:</span>
-                          <span className="label-text-alt text-muted">
-                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken2)?.balance || 0n)}
-                          </span>
-                        </label>
-                        <input
-                          type="number"
-                          value={token2Amount}
-                          onChange={(e) => setToken2Amount(e.target.value)}
-                          placeholder="Amount"
-                          className="input"
-                          min="1"
-                        />
-                      </div>
-                    )}
-
-                    <div className="form-control mb-3">
-                      <label className="label">
-                        <span className="label-text font-bold">Select Third Token:</span>
-                      </label>
-                      <div className="flex gap-2">
-                        <Select
-                          value={selectedToken3}
-                          onChange={(e) => {
-                            const newToken = e.target.value;
-                            setSelectedToken3(newToken);
-                            if (newToken) setToken3Amount(generateRandomAmount(newToken));
-                          }}
-                          className="flex-1"
-                        >
-                          <option value="">-- Select third token --</option>
-                          {fundTokens
-                            .filter((token) => token.uid !== selectedToken1 && token.uid !== selectedToken2)
-                            .map((token) => (
-                              <option key={token.uid} value={token.uid}>
-                                {token.symbol} ({token.name}) - Balance: {formatBalance(token.balance)}
-                              </option>
-                            ))}
-                        </Select>
-                        {selectedToken3 && (
-                          <button
-                            onClick={() => handleOpenConfigModal(selectedToken3)}
-                            className="btn btn-ghost btn-sm px-3"
-                            title="View Configuration String QR Code"
-                          >
-                            <MdQrCode size={18} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedToken3 && (
-                      <div className="form-control mb-4">
-                        <label className="label">
-                          <span className="label-text font-bold">Amount for Third Token:</span>
-                          <span className="label-text-alt text-muted">
-                            Available: {formatBalance(fundTokens.find((t) => t.uid === selectedToken3)?.balance || 0n)}
-                          </span>
-                        </label>
-                        <input
-                          type="number"
-                          value={token3Amount}
-                          onChange={(e) => setToken3Amount(e.target.value)}
-                          placeholder="Amount"
-                          className="input"
-                          min="1"
-                        />
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleSend1HTRPlus3Tokens}
-                      disabled={
-                        isSending ||
-                        !selectedToken1 ||
-                        !selectedToken2 ||
-                        !selectedToken3 ||
-                        !token1Amount ||
-                        !token2Amount ||
-                        !token3Amount ||
-                        parseFloat(token1Amount) <= 0 ||
-                        parseFloat(token2Amount) <= 0 ||
-                        parseFloat(token3Amount) <= 0
-                      }
-                      className="btn btn-primary w-full"
-                    >
-                      {isSending ? 'Sending...' : 'Send 1 HTR + 3 Tokens'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Return Tokens Section */}
-          {sentTokens.length > 0 &&
-            (() => {
-              // Group tokens by token ID and sum amounts
-              const tokenGroups = sentTokens.reduce((acc, token) => {
-                const existing = acc.get(token.tokenId);
-                if (existing) {
-                  existing.amount = (BigInt(existing.amount) + BigInt(token.amount)).toString();
-                } else {
-                  acc.set(token.tokenId, { ...token });
-                }
-                return acc;
-              }, new Map<string, (typeof sentTokens)[0]>());
-
-              const groupedTokens = Array.from(tokenGroups.values());
-
-              return (
-                <div className="mb-7.5">
-                  <h2 className="text-2xl font-bold mb-4">Return Tokens</h2>
-                  <div className="card bg-blue-50 border-2 border-blue-400">
-                    <div className="card-body">
-                      <h3 className="card-title text-blue-900">Tokens Sent This Session</h3>
-                      <div className="overflow-x-auto mb-4">
-                        <table className="table table-sm w-full">
-                          <thead>
-                            <tr>
-                              <th>Token</th>
-                              <th>Total Amount</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {groupedTokens.map((token, idx) => (
-                              <tr key={idx}>
-                                <td className="font-bold">{token.tokenSymbol}</td>
-                                <td>{token.amount}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <button onClick={handleReturnAllTokens} disabled={isSending} className="btn btn-warning w-full">
-                        {isSending ? 'Returning...' : 'Return All Tokens to Funding Wallet'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            </Panel>
+          )}
         </>
       )}
 
-      {/* Configuration String Modal */}
       {configModalToken && (
         <ConfigurationStringModal
           isOpen={isConfigModalOpen}
