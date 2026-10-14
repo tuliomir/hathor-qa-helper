@@ -1,86 +1,48 @@
-# DaisyUI Components Reference
+# daisyUI in QA Helper
 
-**Docs**: https://daisyui.com/components/
+**Docs**: https://daisyui.com/components/ (version 5).
 
-This project uses **Tailwind CSS v3** with the **DaisyUI plugin** for pre-built component classes.
+daisyUI is pinned to **5.5.20**: 5.7.x emits CSS that Tailwind 3 rejects. Don't bump it. It is loaded as a plugin in `apps/client/tailwind.config.ts`; the themes are defined in `src/index.css` as `[data-theme='bench']` and `[data-theme='bench-dark']` (see `docs/design/tokens.md`), so every daisyUI class picks up the bench palette.
 
-## Available Components
+Prefer the app components (`knowledge/design-system.md`) over raw daisyUI markup: `Panel` instead of `card`, `Callout` instead of `alert`, `DataTable` instead of `table`, `Modal` / `ConfirmDialog` instead of hand-built `modal` markup. Use daisyUI classes directly for the leaf controls below.
 
-### Actions
-- **Button**: `btn`, `btn-primary`, `btn-secondary`, `btn-accent`, `btn-ghost`, `btn-link`
-- **Dropdown**: `dropdown`, `dropdown-content`
-- **Modal**: `modal`, `modal-box`, `modal-action`
-- **Swap**: `swap`, `swap-rotate`, `swap-flip`
+## What we use
 
-### Data Display
-- **Alert**: `alert`, `alert-info`, `alert-success`, `alert-warning`, `alert-error`
-- **Badge**: `badge`, `badge-primary`, `badge-secondary`
-- **Card**: `card`, `card-body`, `card-title`, `card-actions`
-- **Table**: `table`, `table-zebra`, `table-pin-rows`
-- **Toast**: `toast`, `toast-top`, `toast-bottom`, `toast-start`, `toast-end`, `toast-center`
+| Kind | Classes | Notes |
+|---|---|---|
+| Buttons | `btn` + `btn-primary` (one per view, the main action), `btn-secondary`, `btn-ghost` (tertiary, icon buttons), `btn-error` / `btn-outline` (destructive); sizes `btn-sm`, `btn-xs`; `btn-square` for icon-only | Always with the `btn` base class. Icon-only buttons need `aria-label` |
+| Text inputs | `input` (also as a `<label>` wrapper with an icon and a bare `<input>` inside), `input-error` | Add `w-full`: daisyUI's default is 20rem. The field border colour comes from `src/index.css` |
+| Other controls | `select`, `textarea`, `checkbox checkbox-sm`, `toggle toggle-sm`, `join` (segmented groups) | Wrap in `Field` for label, hint and error |
+| Feedback | `loading loading-spinner loading-xs|sm` (inside buttons while running), `skeleton` (loading rows), `progress progress-primary` | No full-screen loading overlays |
+| Overlays | `modal modal-open` + `modal-box` + `modal-backdrop` | Via `ui/Modal` or `ui/ConfirmDialog` |
+| Menus | `menu`, `dropdown`, `dropdown-content` | Popovers use `ui/usePopover` |
+| Misc | `kbd kbd-sm` (shortcuts), `link link-primary`, `collapse`, `steps`, `toast` (ToastContainer only) | |
 
-### Data Input
-- **Checkbox**: `checkbox`, `checkbox-primary`
-- **Input**: `input`, `input-bordered`, `input-primary`
-- **Radio**: `radio`, `radio-primary`
-- **Select**: `select`, `select-bordered`
-- **Textarea**: `textarea`, `textarea-bordered`
-- **Toggle**: `toggle`, `toggle-primary`
+Not used: `card` / `alert` / `badge` colour variants in stages (use `Panel`, `Callout`, `StatusChip`), `table-zebra`, opacity-modifier colours.
 
-### Layout
-- **Divider**: `divider`
-- **Drawer**: `drawer`, `drawer-side`, `drawer-content`
-- **Footer**: `footer`
-- **Hero**: `hero`, `hero-content`
-- **Stack**: `stack`
-
-### Navigation
-- **Breadcrumbs**: `breadcrumbs`
-- **Menu**: `menu`, `menu-title`
-- **Navbar**: `navbar`, `navbar-start`, `navbar-center`, `navbar-end`
-- **Tabs**: `tabs`, `tab`, `tab-active`
-
-### Feedback
-- **Loading**: `loading`, `loading-spinner`, `loading-dots`
-- **Progress**: `progress`, `progress-primary`
-- **Skeleton**: `skeleton`
-- **Tooltip**: `tooltip`, `tooltip-top`, `tooltip-bottom`
-
-## Usage Pattern
+## Patterns
 
 ```tsx
-// Alert in Toast (current implementation)
-<div className="toast toast-bottom toast-start">
-  <div className="alert alert-success">
-    <span>Message</span>
-  </div>
-</div>
+// Primary action with a running state
+<button type="button" className="btn btn-primary" disabled={running}>
+  {running && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}
+  Send transaction
+</button>
 
-// Button
-<button className="btn btn-primary">Click</button>
+// Input with a leading icon
+<label className="input w-full">
+  <MdSearch className="h-4 w-4 text-ink-muted" aria-hidden="true" />
+  <input type="search" aria-label="Search wallets" className="min-w-0 grow" />
+</label>
 
-// Card
-<div className="card bg-base-100 shadow-xl">
-  <div className="card-body">
-    <h2 className="card-title">Title</h2>
-    <p>Content</p>
-  </div>
-</div>
+// Icon-only button
+<button type="button" className="btn btn-ghost btn-sm btn-square" aria-label="Close">
+  <MdClose aria-hidden="true" />
+</button>
 ```
 
-## Configuration
+## Gotchas
 
-DaisyUI is configured in `tailwind.config.ts`:
-```typescript
-plugins: [require('daisyui')],
-daisyui: {
-  themes: ['light'],
-  logs: false,
-}
-```
-
-## Notes
-- DaisyUI components work natively with Tailwind CSS v3
-- Use DaisyUI docs for detailed API and examples
-- Combine with Tailwind utilities
-- Custom component classes are defined in `src/index.css` using `@layer components`
+- Tailwind's preflight is wrapped in the `qa-base` cascade layer at the top of `src/index.css`. Without it, Tailwind 3's unlayered preflight beats daisyUI 5's layered component styles (button backgrounds, borders).
+- `btn-primary` without `btn` renders as plain text. The legacy shortcut that made it work was removed in T10.
+- daisyUI colour classes follow the theme, so `text-warning` on white is too light for text: use `text-warning-ink`.

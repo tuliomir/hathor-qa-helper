@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en" data-theme="bench" data-net="testnet">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get balance | RPC | QA Helper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* QA Helper "test bench" mockup styles. Values mirror docs/design/tokens.md. */
+:root,
+[data-theme='bench'] {
+  color-scheme: light;
+  --base-100: #ffffff;
+  --base-200: #f1f2f5;
+  --base-300: #d9dce3;
+  --ink: #1a1d24;
+  --ink-muted: #5a6170;
+  --field-border: #8b92a1;
+  --primary: #2747c8;
+  --primary-content: #ffffff;
+  --quiet: #e4e7ee;
+  --accent: #6a3bd1;
+  --accent-content: #ffffff;
+  --neutral: #262a33;
+  --info: #2e6a9e;
+  --success: #1b7a47;
+  --warning: #e8a317;
+  --warning-content: #2b1d00;
+  --warning-ink: #8a5300;
+  --error: #c0262d;
+  --tint-success: #e6f4ec;
+  --tint-warning: #fdf3dc;
+  --tint-error: #fbe9ea;
+  --tint-info: #e7f0f8;
+  --tint-shielded: #efe9fc;
+  --tint-testnet: #e3f3f1;
+  --net-testnet: #0b7a73;
+  --net-shielded: #6a3bd1;
+  --net-mainnet: #c0262d;
+  --shadow-float: 0 10px 28px -8px rgb(16 20 30 / 0.22), 0 2px 6px -2px rgb(16 20 30 / 0.14);
+  --veil: repeating-linear-gradient(135deg, color-mix(in oklab, var(--accent) 22%, transparent) 0 2px, transparent 2px 6px);
+  --veil-on-solid: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.38) 0 2px, transparent 2px 6px);
+}
+[data-theme='bench-dark'] {
+  color-scheme: dark;
+  --base-100: #1c1f26;
+  --base-200: #15171c;
+  --base-300: #2c313b;
+  --ink: #e6e8ee;
+  --ink-muted: #9aa1af;
+  --field-border: #6e7687;
+  --primary: #7e9bff;
+  --primary-content: #0e1530;
+  --quiet: #2c313b;
+  --accent: #b39bff;
+  --accent-content: #1b0f3a;
+  --neutral: #0e1014;
+  --info: #6cb4f0;
+  --success: #4cc38a;
+  --warning: #f2b33d;
+  --warning-content: #2b1d00;
+  --warning-ink: #f2b33d;
+  --error: #ff7a7a;
+  --tint-success: #12301f;
+  --tint-warning: #33270d;
+  --tint-error: #3a1416;
+  --tint-info: #11263a;
+  --tint-shielded: #251c40;
+  --tint-testnet: #0f2e2c;
+  --net-testnet: #3cc4b9;
+  --net-shielded: #b39bff;
+  --net-mainnet: #ff6b6b;
+  --shadow-float: 0 10px 28px -8px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.5);
+  --veil: repeating-linear-gradient(135deg, color-mix(in oklab, var(--accent) 30%, transparent) 0 2px, transparent 2px 6px);
+  --veil-on-solid: repeating-linear-gradient(135deg, rgb(0 0 0 / 0.3) 0 2px, transparent 2px 6px);
+}
+[data-net='testnet'] { --net: var(--net-testnet); }
+[data-net='shielded'] { --net: var(--net-shielded); }
+[data-net='mainnet'] { --net: var(--net-mainnet); }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+  background: var(--base-200);
+}
+.mono, code, pre, kbd {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-feature-settings: 'zero' 1;
+  font-variant-numeric: tabular-nums;
+}
+.mono { font-size: 13px; }
+.muted { color: var(--ink-muted); }
+.caption { font-size: 12px; line-height: 16px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+a { color: var(--primary); }
+
+/* ---------- shell ---------- */
+.app {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-rows: auto 48px minmax(0, 1fr);
+  height: 100vh;
+}
+.rail { grid-column: 1 / -1; background: var(--net); height: 3px; }
+[data-net='shielded'] .rail { height: 4px; background: var(--veil-on-solid), var(--net); }
+[data-net='mainnet'] .rail {
+  height: 22px; color: #fff; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+[data-theme='bench-dark'][data-net='mainnet'] .rail { color: #2a0505; }
+.rail-label { display: none; }
+[data-net='mainnet'] .rail-label { display: inline; }
+
+.topbar {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 12px 0 16px;
+  background: var(--base-100);
+  border-bottom: 1px solid var(--base-300);
+  position: relative;
+  min-width: 0;
+}
+.brand { font-weight: 700; font-size: 16px; white-space: nowrap; }
+.ws { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; border-radius: 4px; border: 0; background: transparent; cursor: pointer; color: var(--ink-muted); }
+.ws:hover { background: var(--base-200); }
+.ctx { display: flex; align-items: stretch; height: 32px; min-width: 0; flex: 1; overflow: hidden; }
+.seg {
+  display: flex; align-items: center; gap: 6px; padding: 0 10px;
+  border: 0; background: transparent; cursor: pointer; white-space: nowrap;
+  border-left: 1px solid var(--base-300); border-radius: 0;
+}
+.seg:first-child { border-left: 0; }
+.seg:hover { background: var(--base-200); }
+.seg .role { font-size: 12px; color: var(--ink-muted); }
+.seg .name { font-weight: 600; }
+.find {
+  display: inline-flex; align-items: center; gap: 8px; width: 168px; height: 32px; padding: 0 8px 0 10px;
+  border: 1px solid var(--base-300); background: var(--base-200); border-radius: 4px; color: var(--ink-muted); cursor: pointer;
+}
+.find kbd { margin-left: auto; font-size: 11px; padding: 1px 5px; border: 1px solid var(--base-300); border-radius: 3px; background: var(--base-100); }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px;
+  border-radius: 999px; border: 1px solid var(--base-300); background: var(--base-100); cursor: pointer; white-space: nowrap;
+}
+.netchip {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px;
+  border-radius: 999px; border: 1.5px solid var(--net); color: var(--net); background: var(--base-100);
+  font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.netchip .ndot { width: 10px; height: 10px; border-radius: 50%; background: var(--net); }
+[data-net='shielded'] .netchip .ndot { background: var(--veil-on-solid), var(--net); }
+[data-net='mainnet'] .netchip { background: var(--net); color: #fff; }
+[data-theme='bench-dark'][data-net='mainnet'] .netchip { color: #2a0505; }
+[data-net='mainnet'] .netchip .ndot { background: #fff; }
+.iconbtn { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 0; border-radius: 4px; background: transparent; cursor: pointer; color: var(--ink-muted); }
+.iconbtn:hover { background: var(--base-200); }
+
+.popover {
+  position: absolute; top: 44px; z-index: 20; width: 400px;
+  background: var(--base-100); border: 1px solid var(--base-300); border-radius: 6px; box-shadow: var(--shadow-float);
+  padding: 6px;
+}
+.popover h4 { margin: 6px 8px 8px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+.netrow { display: grid; grid-template-columns: 16px 1fr auto; gap: 4px 10px; align-items: center; padding: 8px; border-radius: 4px; cursor: pointer; }
+.netrow:hover { background: var(--base-200); }
+.netrow[aria-current='true'] { background: var(--base-200); }
+.netrow .sw { width: 12px; height: 12px; border-radius: 50%; }
+.netrow .host { grid-column: 2 / 4; font-size: 12px; color: var(--ink-muted); }
+.netrow .tag { font-size: 12px; }
+.confirm { margin: 4px 8px 8px 34px; padding: 10px; border-radius: 4px; background: var(--tint-error); color: var(--ink); font-size: 13px; }
+.confirm .actions { display: flex; gap: 8px; margin-top: 8px; }
+
+.sidebar {
+  background: var(--base-200); border-right: 1px solid var(--base-300);
+  overflow-y: auto; padding: 12px 8px 16px; display: flex; flex-direction: column; gap: 2px;
+}
+.filter {
+  height: 32px; border: 1px solid var(--field-border); border-radius: 4px; background: var(--base-100);
+  display: flex; align-items: center; gap: 6px; padding: 0 8px; color: var(--ink-muted); margin: 0 4px 8px;
+}
+.filter kbd { margin-left: auto; font-size: 11px; border: 1px solid var(--base-300); border-radius: 3px; padding: 0 4px; }
+.fam { display: flex; align-items: center; justify-content: space-between; padding: 12px 8px 4px; font-size: 12px; font-weight: 700; color: var(--ink-muted); }
+.fam.disabled { opacity: 0.6; }
+.grp { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 8px; border-radius: 4px; cursor: pointer; font-weight: 600; }
+.grp:hover { background: var(--base-300); }
+.grp .count { margin-left: auto; font-size: 12px; color: var(--ink-muted); font-weight: 400; }
+.chev { width: 12px; color: var(--ink-muted); display: inline-block; transition: transform 0.18s; }
+.grp[aria-expanded='false'] .chev { transform: rotate(-90deg); }
+.stage { display: flex; align-items: center; height: 32px; padding: 0 8px 0 26px; border-radius: 4px; color: var(--ink); text-decoration: none; position: relative; }
+.stage:hover { background: var(--base-300); }
+.stage[aria-current='page'] { background: color-mix(in oklab, var(--primary) 9%, transparent); color: var(--primary); font-weight: 700; }
+.stage[aria-current='page']::before { content: ''; position: absolute; left: 10px; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--primary); }
+
+.content { overflow-y: auto; }
+.stagewrap { max-width: 1120px; padding: 20px 24px 48px; display: flex; flex-direction: column; gap: 16px; }
+.crumb { font-size: 12px; color: var(--ink-muted); }
+.crumb a { color: inherit; text-decoration: none; }
+.crumb a:hover { text-decoration: underline; }
+.titlerow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+h1 { font-size: 24px; line-height: 32px; margin: 2px 0 0; font-weight: 700; }
+.desc { margin: 2px 0 0; color: var(--ink-muted); }
+.method { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 4px; background: var(--base-100); border: 1px solid var(--base-300); font-size: 12px; }
+
+.pre { display: flex; flex-wrap: wrap; gap: 8px; }
+.req { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 999px; background: var(--base-100); border: 1px solid var(--base-300); font-size: 13px; }
+.req.bad { background: var(--tint-error); border-color: transparent; }
+.req.bad a { font-weight: 700; }
+.ok { color: var(--success); font-weight: 700; }
+.no { color: var(--error); font-weight: 700; }
+
+.cols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.panel { background: var(--base-100); border: 1px solid var(--base-300); border-radius: 6px; }
+.panel > header { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--base-300); }
+.panel > header h2 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 700; }
+.panel > header .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.panel > .body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.panel > footer { padding: 12px 16px; border-top: 1px solid var(--base-300); display: flex; align-items: center; gap: 12px; }
+.inset { background: var(--base-200); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+.inset.shielded { padding-left: 16px; }
+.inset.shielded::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 6px 0 0 6px; background: var(--veil-on-solid), var(--accent); }
+
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field label, .label { font-weight: 600; }
+.input {
+  height: 36px; border: 1px solid var(--field-border); border-radius: 4px; background: var(--base-100);
+  padding: 0 10px; display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--ink);
+}
+.input .val { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.input .val.right { text-align: right; }
+.input.invalid { border-color: var(--error); box-shadow: inset 0 0 0 1px var(--error); }
+.hint { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+.err { font-size: 12px; line-height: 16px; color: var(--error); }
+.row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.row > .field { flex: 1 1 120px; }
+.grouped { font-size: 12px; line-height: 18px; color: var(--ink); word-spacing: 2px; background: var(--base-100); border: 1px dashed var(--base-300); border-radius: 4px; padding: 6px 8px; }
+.grouped .k3 { color: var(--accent); font-weight: 700; }
+
+.btn {
+  height: 36px; padding: 0 14px; border-radius: 4px; border: 1px solid transparent; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.btn.primary { background: var(--primary); color: var(--primary-content); }
+.btn.quiet { background: var(--quiet); color: var(--ink); }
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn.ghost:hover { background: var(--base-200); }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 13px; font-weight: 600; }
+.btn.mainnet { background: var(--base-100); color: var(--net-mainnet); border: 2px solid var(--net-mainnet); }
+.fillers { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.seg-ctl { display: inline-flex; border: 1px solid var(--field-border); border-radius: 4px; overflow: hidden; background: var(--base-100); }
+.seg-ctl button { height: 30px; padding: 0 10px; border: 0; border-left: 1px solid var(--base-300); background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; }
+.seg-ctl button:first-child { border-left: 0; }
+.seg-ctl button[aria-checked='true'] { background: color-mix(in oklab, var(--primary) 12%, transparent); color: var(--primary); font-weight: 700; }
+.seg-ctl.privacy button[aria-checked='true'] { background: var(--tint-shielded); color: var(--accent); }
+.seg-ctl.privacy button.transparent[aria-checked='true'] { background: var(--base-200); color: var(--ink); }
+
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggle .track { width: 32px; height: 18px; border-radius: 999px; background: var(--base-300); position: relative; border: 1px solid var(--field-border); }
+.toggle .track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--base-100); box-shadow: 0 0 0 1px var(--field-border); }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.ok { background: var(--success); }
+.dot.warn { border: 2px solid var(--warning); border-top-color: transparent; animation: spin 1s linear infinite; }
+.dot.idle { border: 1.5px solid var(--ink-muted); }
+.dot.err { background: var(--error); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dot.warn { animation: none; border-top-color: var(--warning); border-right-color: transparent; } }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.chip.success { background: var(--tint-success); color: var(--success); }
+.chip.warning { background: var(--tint-warning); color: var(--warning-ink); }
+.chip.testnet { background: var(--tint-testnet); color: var(--net-testnet); }
+.kind { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 3px; font-size: 11px; font-weight: 700; flex: none; }
+.kind.transparent { background: var(--base-200); color: var(--ink-muted); }
+.kind.shielded, .sbadge { background: var(--tint-shielded); color: var(--accent); }
+.sbadge { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px 0 10px; border-radius: 3px; font-size: 12px; font-weight: 700; position: relative; overflow: hidden; white-space: nowrap; }
+.sbadge::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+.hidden-pill {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px;
+  background: var(--veil), var(--tint-shielded); color: var(--accent); font-size: 12px; font-weight: 700; border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.cap { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent); font-weight: 700; }
+.cap .m { display: inline-flex; gap: 2px; }
+.cap .m i { width: 5px; height: 11px; border-radius: 1px; border: 1px solid var(--accent); }
+.cap .m i.on { background: var(--accent); }
+.shield { width: 14px; height: 14px; flex: none; }
+
+.json { margin: 0; padding: 12px; background: var(--base-200); border-radius: 4px; font-size: 12.5px; line-height: 19px; overflow: auto; max-height: 360px; white-space: pre; }
+.json .k { color: var(--primary); }
+.json .s { color: var(--success); }
+.json .n { color: var(--info); }
+.json .b { color: var(--warning-ink); }
+.json .z { color: var(--ink-muted); }
+.tag { display: inline-flex; height: 20px; align-items: center; padding: 0 6px; border-radius: 3px; font-size: 11px; font-weight: 700; background: var(--base-200); color: var(--ink-muted); }
+
+.callout { display: flex; gap: 10px; padding: 10px 12px; border-radius: 6px; align-items: flex-start; }
+.callout.shielded { background: var(--tint-shielded); position: relative; padding-left: 16px; overflow: hidden; }
+.callout.shielded::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--veil-on-solid), var(--accent); }
+.callout.info { background: var(--tint-info); }
+.callout .t { font-weight: 700; }
+
+.ident { display: inline-flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.tablewrap { overflow-x: auto; }
+.copy { width: 24px; height: 24px; border: 0; background: transparent; border-radius: 4px; display: inline-grid; place-items: center; color: var(--ink-muted); cursor: pointer; }
+.copy:hover { background: var(--base-200); color: var(--ink); }
+.explorer { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; text-decoration: none; border: 1px solid var(--net); color: var(--net); }
+.wtag { font-size: 11px; padding: 0 5px; border-radius: 3px; background: var(--base-200); color: var(--ink-muted); white-space: nowrap; }
+
+table.dt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dt th { text-align: left; font-weight: 600; font-size: 12px; color: var(--ink-muted); background: var(--base-200); height: 32px; padding: 0 12px; border-bottom: 1px solid var(--base-300); }
+.dt td { height: 40px; padding: 4px 12px; border-bottom: 1px solid var(--base-300); vertical-align: middle; }
+.dt tr:last-child td { border-bottom: 0; }
+.dt .num { text-align: right; }
+.dt tr.sh td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+
+.mockbar { position: fixed; right: 12px; bottom: 12px; z-index: 50; display: flex; gap: 4px; padding: 4px; background: var(--neutral); color: #fff; border-radius: 6px; box-shadow: var(--shadow-float); font-size: 12px; }
+.mockbar button { background: transparent; border: 0; color: #fff; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+.mockbar button:hover { background: rgb(255 255 255 / 0.12); }
+.mockbar .sep { width: 1px; background: rgb(255 255 255 / 0.2); }
+
+@media (max-width: 1279px) {
+  .cols { grid-template-columns: minmax(0, 1fr); }
+  .ctx .seg:not(.compact) { display: none; }
+  .ctx .seg.compact { display: flex; }
+}
+@media (min-width: 1280px) { .ctx .seg.compact { display: none; } }
+@media (max-width: 1023px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { display: none; }
+  .menu { display: inline-grid !important; }
+  .find { width: 36px; padding: 0; justify-content: center; }
+  .find span, .find kbd { display: none; }
+}
+@media (max-width: 767px) {
+  .stagewrap { padding: 16px; }
+  .pill .lbl, .ws, .ctx { display: none; }
+  .netchip .long { display: none; }
+  .netchip .short { display: inline !important; }
+}
+@media (max-width: 1535px) { .ctx .bal { display: none; } }
+
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-shield-o" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z"/></symbol>
+  <symbol id="i-shield-f" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5 4 5.7v5.8c0 5 3.4 9 8 10.3 4.6-1.3 8-5.3 8-10.3V5.7l-8-3.2Z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M9 9h10v11H9zM5 15V4h10"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3" fill="currentColor"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2"/></symbol>
+</svg>
+<div class="app">
+
+<div class="rail" aria-hidden="true"><span class="rail-label">Mainnet: real funds</span></div>
+<header class="topbar">
+  <button class="iconbtn menu" style="display:none" aria-label="Open navigation"><svg class="shield" width="18" height="18" aria-hidden="true" ><use href="#i-menu"/></svg></button>
+  <span class="brand">QA Helper</span>
+  <button class="ws" aria-haspopup="menu">Tools <svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></button>
+  <div class="ctx" role="group" aria-label="Wallet context">
+    <button class="seg"><span class="role">Test</span><span class="name">Android Nov14</span>
+      <span class="status"><span class="dot ok"></span>Ready</span><span class="mono bal">12.50 HTR</span>
+      
+    </button>
+    <button class="seg"><span class="role">Funding</span><span class="name">Funding 01</span>
+      <span class="status"><span class="dot ok"></span>Ready</span><span class="mono bal">1,204.00 HTR</span></button>
+    <button class="seg" title="RPC session connected to Android Nov14"><span class="role">RPC</span><span class="status"><span class="dot ok"></span>On</span></button>
+    <button class="seg" title="Snap not connected"><span class="role">Snap</span><span class="status"><span class="dot idle"></span>Off</span></button>
+    <button class="seg compact"><span class="role">Context</span><span class="dot ok"></span><span class="dot ok"></span><span class="dot ok"></span><span class="dot idle"></span></button>
+  </div>
+  <button class="find" aria-label="Find stage"><svg class="shield" width="14" height="14" aria-hidden="true" ><use href="#i-search"/></svg><span>Find stage</span><kbd>Ctrl K</kbd></button>
+  <button class="pill" aria-label="Helper server connected"><span class="dot ok"></span><span class="lbl">Helper</span></button>
+  <button class="netchip" id="netchip" aria-haspopup="menu" aria-expanded="true">
+    <span class="ndot"></span><span class="long" id="netname">Testnet</span><span class="short" style="display:none" id="netshort">Test</span><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg>
+  </button>
+  <button class="iconbtn" aria-label="More"><svg class="shield" width="18" height="18" aria-hidden="true" ><use href="#i-more"/></svg></button>
+  <div class="popover" role="menu" aria-label="Network" style="right:52px">
+    <h4>Network</h4>
+    <div class="netrow" role="menuitemradio" aria-checked="true" aria-current="true"><span class="sw" style="background:var(--net-testnet)"></span><b>Testnet</b><span class="tag ok">Active</span><span class="host mono">node1.testnet.hathor.network</span></div>
+    <div class="netrow" role="menuitemradio" aria-checked="false"><span class="sw" style="background:var(--veil-on-solid),var(--net-shielded)"></span><b>Shielded testnet</b><span class="tag" style="color:var(--accent)">Shielded outputs</span><span class="host mono">shielded node (set in network config)</span></div>
+    <div class="netrow" role="menuitemradio" aria-checked="false"><span class="sw" style="background:var(--net-mainnet)"></span><b>Mainnet</b><span class="tag no">Real funds</span><span class="host mono">node1.mainnet.hathor.network</span></div>
+    <div class="confirm">Funding and Test wallets will restart on mainnet. RPC and Snap sessions keep their own network.
+      <div class="actions"><button class="btn sm" style="background:var(--net-mainnet);color:#fff">Switch to mainnet</button><button class="btn sm ghost">Cancel</button></div></div>
+  </div>
+</header>
+<nav class="sidebar" aria-label="Stages">
+  <div class="filter"><svg class="shield" width="14" height="14" aria-hidden="true" ><use href="#i-search"/></svg><span>Filter stages</span><kbd>/</kbd></div><div class="fam"><span>Wallets</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Main QA<span class="count mono">3</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Auditing<span class="count mono">3</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Push notifications<span class="count mono">1</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Multisig<span class="count mono">1</span></div><div class="fam"><span>WalletConnect RPC</span><span class="dot ok" title="Session connected"></span></div><div class="grp" role="button" tabindex="0" aria-expanded="true"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>RPC requests<span class="count mono">10</span></div><a class="stage" href="#" >Connection</a><a class="stage" href="#" >Basic information</a><a class="stage" href="#" >Get address</a><a class="stage" href="#" aria-current="page">Get balance</a><a class="stage" href="#" >Get UTXOs</a><a class="stage" href="#" >Sign with address</a><a class="stage" href="#" >Create token</a><a class="stage" href="#" >Send transaction</a><a class="stage" href="#" >Sign oracle data</a><a class="stage" href="#" >Raw RPC editor</a><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Bet nano contract<span class="count mono">4</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Fee nano contract<span class="count mono">3</span></div><div class="fam"><span>MetaMask Snap</span><span class="dot idle" title="Not connected"></span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Snap requests<span class="count mono">14</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Bet nano contract<span class="count mono">4</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Fee nano contract<span class="count mono">3</span></div><div class="fam"><span>Shielded</span><span class="sbadge" style="height:18px;font-size:11px"><svg class="shield" width="11" height="11" aria-hidden="true" ><use href="#i-shield-f"/></svg>Shielded testnet</span></div><div class="grp" role="button" tabindex="0" aria-expanded="false"><span class="chev"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></span>Shielded outputs<span class="count mono">3</span></div></nav>
+<main class="content">
+<div class="stagewrap">
+
+<div>
+  <div class="crumb"><a href="#">WalletConnect RPC</a> / <a href="#">RPC requests</a></div>
+  <div class="titlerow"><h1>Get balance</h1><span class="method mono">htr_getBalance <button class="copy" aria-label="Copy method name"><svg class="shield" width="14" height="14" aria-hidden="true" ><use href="#i-copy"/></svg></button></span></div>
+  <p class="desc">Query token balances of the connected wallet.</p>
+</div>
+<div class="pre" aria-label="Preconditions">
+  <span class="req"><span class="ok">✓</span>RPC session connected</span>
+  <span class="req"><span class="ok">✓</span>Helper server</span>
+</div>
+<div class="cols">
+  <section class="panel" aria-labelledby="compose">
+    <header><h2 id="compose">Compose</h2></header>
+    <div class="body">
+      <div class="field"><span class="label">Network</span>
+        <div class="input"><span class="val">Same as connected wallet (testnet)</span><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-chev"/></svg></div></div>
+      <div class="field"><span class="label">Tokens</span>
+        <div class="input"><span class="val mono">00</span><span class="kind transparent">HTR</span></div>
+        <div class="input"><span class="val mono">0000a3f1c2…9c0e77b2</span><span class="kind transparent">TST</span></div>
+        <div class="fillers"><button class="btn quiet sm"><svg class="shield" width="12" height="12" aria-hidden="true" ><use href="#i-plus"/></svg>Add token</button><button class="btn quiet sm">Fill from test wallet tokens</button></div>
+      </div>
+    </div>
+    <footer>
+      <label class="toggle"><span class="track"></span>Dry run</label>
+      <span style="margin-left:auto"></span>
+      <button class="btn primary">Get balance</button>
+    </footer>
+  </section>
+  <section class="panel" aria-labelledby="inspect">
+    <header><h2 id="inspect">Inspect</h2><div class="right"><span class="tag">Received in 812 ms</span><button class="copy" aria-label="Copy response"><svg class="shield" width="14" height="14" aria-hidden="true" ><use href="#i-copy"/></svg></button></div></header>
+    <div class="body">
+      <div class="tablewrap"><table class="dt">
+        <thead><tr><th>Token</th><th class="num">Available</th><th class="num">Locked</th></tr></thead>
+        <tbody>
+          <tr><td>HTR <span class="muted mono caption">00</span></td><td class="num mono">12.50</td><td class="num mono">0.00</td></tr>
+          <tr><td>TST <span class="muted mono caption">0000a3f1…9c0e77b2</span></td><td class="num mono">100.00</td><td class="num mono">0.00</td></tr>
+        </tbody>
+      </table></div>
+      <details open><summary class="label" style="cursor:pointer">Request</summary>
+<pre class="json mono" style="margin-top:8px">{
+  <span class="k">"method"</span>: <span class="s">"htr_getBalance"</span>,
+  <span class="k">"params"</span>: {
+    <span class="k">"network"</span>: <span class="s">"testnet"</span>,
+    <span class="k">"tokens"</span>: [<span class="s">"00"</span>, <span class="s">"0000a3f1c2d4…9c0e77b2"</span>]
+  }
+}</pre></details>
+    </div>
+  </section>
+</div>
+</div>
+</main>
+</div>
+
+<div class="mockbar" role="toolbar" aria-label="Mockup controls">
+  <button data-net="testnet">Testnet</button><button data-net="shielded">Shielded</button><button data-net="mainnet">Mainnet</button>
+  <span class="sep"></span><button data-theme-toggle>Dark</button>
+</div>
+<script>
+  const root = document.documentElement;
+  const names = { testnet: ['Testnet', 'Test'], shielded: ['Shielded testnet', 'Shielded'], mainnet: ['Mainnet', 'Main'] };
+  function setNet(n) {
+    root.dataset.net = n;
+    document.getElementById('netname').textContent = names[n][0];
+    document.getElementById('netshort').textContent = names[n][1];
+    document.title = (n === 'mainnet' ? '[Mainnet] ' : '') + document.title.replace('[Mainnet] ', '');
+    document.querySelectorAll('[data-mainnet-label]').forEach((b) => {
+      b.classList.toggle('mainnet', n === 'mainnet'); b.classList.toggle('primary', n !== 'mainnet');
+      b.textContent = n === 'mainnet' ? b.dataset.mainnetLabel : b.dataset.label;
+    });
+  }
+  document.querySelectorAll('.mockbar [data-net]').forEach((b) => b.addEventListener('click', () => setNet(b.dataset.net)));
+  document.querySelector('[data-theme-toggle]').addEventListener('click', (e) => {
+    const dark = root.dataset.theme !== 'bench-dark';
+    root.dataset.theme = dark ? 'bench-dark' : 'bench';
+    e.target.textContent = dark ? 'Light' : 'Dark';
+  });
+  const initial = new URLSearchParams(location.search).get('net');
+  if (initial && names[initial]) setNet(initial); else setNet(root.dataset.net);
+  if (new URLSearchParams(location.search).get('theme') === 'dark') document.querySelector('[data-theme-toggle]').click();
+</script>
+</body>
+</html>

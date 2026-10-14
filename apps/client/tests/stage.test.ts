@@ -1,0 +1,243 @@
+/**
+ * Smoke tests for stage types and constants
+ * Tests stage configuration, groups, and helper functions
+ */
+
+import { describe, expect, test } from 'bun:test';
+import {
+  getGroupForStage,
+  type Stage,
+  STAGE_FAMILIES,
+  STAGE_GROUPS,
+  type StageGroup,
+  type StageId,
+} from '../src/types/stage';
+
+describe('stage types', () => {
+  describe('STAGE_GROUPS', () => {
+    test('is defined and non-empty', () => {
+      expect(STAGE_GROUPS).toBeDefined();
+      expect(Array.isArray(STAGE_GROUPS)).toBe(true);
+      expect(STAGE_GROUPS.length).toBeGreaterThan(0);
+    });
+
+    test('contains main-qa group', () => {
+      const mainQA = STAGE_GROUPS.find((g) => g.id === 'main-qa');
+      expect(mainQA).toBeDefined();
+      expect(mainQA!.title).toBe('Main QA');
+    });
+
+    test('contains rpc group', () => {
+      const rpc = STAGE_GROUPS.find((g) => g.id === 'rpc');
+      expect(rpc).toBeDefined();
+      expect(rpc!.title).toBe('RPC requests');
+    });
+
+    test('contains bet-nano-contracts group', () => {
+      const bet = STAGE_GROUPS.find((g) => g.id === 'bet-nano-contracts');
+      expect(bet).toBeDefined();
+      expect(bet!.title).toBe('Bet nano contract');
+    });
+
+    test('contains fee-nano-contracts group', () => {
+      const fee = STAGE_GROUPS.find((g) => g.id === 'fee-nano-contracts');
+      expect(fee).toBeDefined();
+      expect(fee!.title).toBe('Fee nano contract');
+    });
+
+    test('contains auditing group', () => {
+      const auditing = STAGE_GROUPS.find((g) => g.id === 'auditing');
+      expect(auditing).toBeDefined();
+      expect(auditing!.title).toBe('Auditing');
+    });
+
+    test('contains multisig group', () => {
+      const multisig = STAGE_GROUPS.find((g) => g.id === 'multisig');
+      expect(multisig).toBeDefined();
+      expect(multisig!.title).toBe('Multisig');
+    });
+
+    test('contains snaps group', () => {
+      const snaps = STAGE_GROUPS.find((g) => g.id === 'snaps');
+      expect(snaps).toBeDefined();
+      expect(snaps!.title).toBe('Snap requests');
+      expect(snaps!.stages).toHaveLength(14);
+    });
+
+    test('all groups have required properties', () => {
+      STAGE_GROUPS.forEach((group: StageGroup) => {
+        expect(group.id).toBeDefined();
+        expect(group.title).toBeDefined();
+        expect(Array.isArray(group.stages)).toBe(true);
+        expect(group.stages.length).toBeGreaterThan(0);
+      });
+    });
+
+    test('all stages in groups have required properties', () => {
+      STAGE_GROUPS.forEach((group: StageGroup) => {
+        group.stages.forEach((stage: Stage) => {
+          expect(stage.id).toBeDefined();
+          expect(stage.title).toBeDefined();
+          expect(stage.description).toBeDefined();
+          expect(typeof stage.id).toBe('string');
+          expect(typeof stage.title).toBe('string');
+          expect(typeof stage.description).toBe('string');
+        });
+      });
+    });
+  });
+
+  describe('getGroupForStage', () => {
+    test('returns correct group for wallet-initialization', () => {
+      const group = getGroupForStage('wallet-initialization');
+      expect(group).toBe('main-qa');
+    });
+
+    test('returns correct group for rpc-connection', () => {
+      const group = getGroupForStage('rpc-connection');
+      expect(group).toBe('rpc');
+    });
+
+    test('returns correct group for rpc-get-balance', () => {
+      const group = getGroupForStage('rpc-get-balance');
+      expect(group).toBe('rpc');
+    });
+
+    test('returns correct group for rpc-bet-initialize', () => {
+      const group = getGroupForStage('rpc-bet-initialize');
+      expect(group).toBe('bet-nano-contracts');
+    });
+
+    test('returns correct group for rpc-fee-initialize', () => {
+      const group = getGroupForStage('rpc-fee-initialize');
+      expect(group).toBe('fee-nano-contracts');
+    });
+
+    test('returns correct group for transaction-history', () => {
+      const group = getGroupForStage('transaction-history');
+      expect(group).toBe('auditing');
+    });
+
+    test('returns correct group for multisig-wallet-management', () => {
+      const group = getGroupForStage('multisig-wallet-management');
+      expect(group).toBe('multisig');
+    });
+
+    test('returns correct group for snap stages', () => {
+      expect(getGroupForStage('snap-connection')).toBe('snaps');
+      expect(getGroupForStage('snap-get-address')).toBe('snaps');
+      expect(getGroupForStage('snap-change-network')).toBe('snaps');
+      expect(getGroupForStage('snap-get-xpub')).toBe('snaps');
+      expect(getGroupForStage('snap-get-wallet-info')).toBe('snaps');
+    });
+
+    test('returns null for invalid stage id', () => {
+      const group = getGroupForStage('invalid-stage' as StageId);
+      expect(group).toBeNull();
+    });
+
+    test('can find group for all defined stages', () => {
+      const allStageIds: StageId[] = STAGE_GROUPS.flatMap((g) => g.stages.map((s) => s.id));
+
+      allStageIds.forEach((stageId) => {
+        const group = getGroupForStage(stageId);
+        expect(group).not.toBeNull();
+      });
+    });
+  });
+
+  describe('stage id uniqueness', () => {
+    test('all stage ids are unique', () => {
+      const allStageIds = STAGE_GROUPS.flatMap((g) => g.stages.map((s) => s.id));
+      const uniqueIds = new Set(allStageIds);
+
+      expect(uniqueIds.size).toBe(allStageIds.length);
+    });
+  });
+
+  describe('group id uniqueness', () => {
+    test('all group ids are unique', () => {
+      const groupIds = STAGE_GROUPS.map((g) => g.id);
+      const uniqueIds = new Set(groupIds);
+
+      expect(uniqueIds.size).toBe(groupIds.length);
+    });
+  });
+
+  describe('specific stages exist', () => {
+    const expectedStages: StageId[] = [
+      'wallet-initialization',
+      'address-validation',
+      'custom-tokens',
+      'rpc-connection',
+      'rpc-get-balance',
+      'rpc-send-transaction',
+      'rpc-create-token',
+      'rpc-bet-initialize',
+      'rpc-fee-initialize',
+      'rpc-fee-deposit',
+      'rpc-fee-withdraw',
+      'transaction-history',
+      'multisig-wallet-management',
+      'snap-connection',
+      'snap-get-address',
+      'snap-get-balance',
+      'snap-send-transaction',
+      'snap-sign-oracle-data',
+      'snap-change-network',
+      'snap-get-xpub',
+      'snap-get-wallet-info',
+    ];
+
+    expectedStages.forEach((stageId) => {
+      test(`stage "${stageId}" exists`, () => {
+        const found = STAGE_GROUPS.some((g) => g.stages.some((s) => s.id === stageId));
+        expect(found).toBe(true);
+      });
+    });
+  });
+
+  describe('STAGE_FAMILIES', () => {
+    test('lists the four families in order', () => {
+      expect(STAGE_FAMILIES.map((f) => f.id)).toEqual(['wallets', 'rpc', 'snap', 'shielded']);
+    });
+
+    test('every group belongs to a known family', () => {
+      const ids = new Set(STAGE_FAMILIES.map((f) => f.id));
+      for (const group of STAGE_GROUPS) {
+        expect(ids.has(group.family)).toBe(true);
+      }
+    });
+
+    test('groups are assigned per shell.md', () => {
+      const family = (id: string) => STAGE_GROUPS.find((g) => g.id === id)!.family;
+      expect(['main-qa', 'auditing', 'push-notifications', 'multisig'].map(family)).toEqual([
+        'wallets',
+        'wallets',
+        'wallets',
+        'wallets',
+      ]);
+      expect(['rpc', 'bet-nano-contracts', 'fee-nano-contracts'].map(family)).toEqual(['rpc', 'rpc', 'rpc']);
+      expect(['snaps', 'snap-bet-nc', 'snap-fee-nc'].map(family)).toEqual(['snap', 'snap', 'snap']);
+    });
+  });
+
+  describe('titles', () => {
+    test('stages carry no emoji icon', () => {
+      for (const group of STAGE_GROUPS) {
+        for (const stage of group.stages) {
+          expect(stage.icon).toBeUndefined();
+        }
+      }
+    });
+
+    test('titles drop family prefixes and suffixes', () => {
+      for (const group of STAGE_GROUPS) {
+        expect(group.title).not.toMatch(/^Snap (Bet|Fee)| NC$/);
+        for (const stage of group.stages) {
+          expect(stage.title).not.toMatch(/\(Snap\)|^Snap | RPC$/);
+        }
+      }
+    });
+  });
+});

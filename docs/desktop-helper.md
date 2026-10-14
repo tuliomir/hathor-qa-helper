@@ -63,8 +63,8 @@ src/
 └── components/desktop/
     ├── DesktopQALayout.tsx            # Main layout (sidebar + content)
     ├── DesktopQASidebar.tsx           # Section navigation
-    ├── DesktopQAStepContent.tsx       # Step instructions with inline tools
-    └── DesktopQAHeader.tsx            # Header with progress bar
+    └── DesktopQAStepContent.tsx       # Step instructions with inline tools
+    # The header and progress bar come from the app shell (src/components/shell/)
 ```
 
 ### Layout Architecture

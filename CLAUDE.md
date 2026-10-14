@@ -1,26 +1,38 @@
 # QA Helper — Hathor Wallet Testing Tool
 
-React + TypeScript + Redux Toolkit + Vite app for testing Hathor wallet-lib, WalletConnect RPC, and MetaMask Snap integration.
+Bun-workspaces monorepo for testing Hathor wallet-lib, WalletConnect RPC, MetaMask Snap integration and Shielded Outputs.
+
+| Workspace | What |
+|---|---|
+| `apps/client` | React + TypeScript + Redux Toolkit + Vite app (the QA Helper UI) |
+| `apps/server` | Local Bun server for what browsers can't do — shielded sends (see `knowledge/server.md`) |
+| `packages/shared` | Network registry and client↔server API contract (`@qa-helper/shared`) |
+
+Unless stated otherwise, `src/`, `tests/` and `e2e/` paths in this file and in `knowledge/` are relative to `apps/client/`. Layout details: `knowledge/monorepo.md`.
 
 ## Commands
 
-Only use `bun` — `npx` and `yarn` are forbidden.
+Only use `bun` — `npx` and `yarn` are forbidden. Run these from the repo root; they delegate to workspaces with `bun --filter`.
 
 | Command | Purpose |
 |---|---|
-| `bun dev` | Dev server on localhost:5173 |
-| `bun run build` | Production build (`tsc -b && vite build`) |
-| `bun run typecheck` | TypeScript check (`tsc --noEmit`) |
-| `bun lint` / `bun lint:fix` | ESLint |
-| `bun format` / `bun format:check` | Prettier |
-| `bun test` | Unit tests (bun test runner, `tests/` dir) |
-| `bun run test:e2e` | Playwright e2e (`e2e/` dir) |
+| `bun dev` | Client dev server on localhost:5173 |
+| `bun run dev:server` | QA server on 127.0.0.1:5180 |
+| `bun run dev:all` | Client and server together |
+| `bun run build` | Client production build (`tsc -b && vite build`) |
+| `bun run typecheck` | TypeScript check in every workspace |
+| `bun lint` / `bun lint:fix` | ESLint (client) |
+| `bun format` / `bun format:check` | Prettier (all workspaces) |
+| `bun run test` | Unit tests in every workspace (each has a `tests/` dir) |
+| `bun run test:e2e` | Playwright e2e (`apps/client/e2e/`) |
 
 ## Domain Glossary
 
 - **Stage** — A single QA screen/tool (e.g. "Send Transaction", "Get Balance"). Each is a React component in `src/components/stages/`. Defined as a `StageId` in `src/types/stage.ts`.
 - **Group** — A collection of related stages shown together in the sidebar (e.g. "MetaMask Snaps", "RPC Requests"). Defined as `GroupId` in `src/types/stage.ts`. The full registry is `STAGE_GROUPS` in the same file.
-- **Section** — Legacy term for group. The `StageSection` type exists for backward compat. When someone says "Snaps section" they mean the `snaps` group.
+- **Section** — Legacy term for group. When someone says "Snaps section" they mean the `snaps` group.
+- **Family** — A set of groups shown together in the stage nav (e.g. Wallets, WalletConnect RPC, Snap, Shielded). Defined as `STAGE_FAMILIES` in `src/types/stage.ts`.
+- **QA server** — The local Bun server in `apps/server` that holds wallets with the native shielded crypto provider so it can create shielded outputs. Used by the Shielded stages.
 - **Snap stages** — Stages prefixed with `Snap*` (e.g. `SnapConnectionStage.tsx`). They use MetaMask Snap RPC via `useSnapMethod` hook and `snapHandlers.ts`.
 - **RPC stages** — Stages using WalletConnect RPC via `rpcHandlers.ts` and the `rpcSlice`.
 
@@ -37,7 +49,7 @@ src/
 ├── hooks/                 # useSnapMethod, useStage, useWalletStore, useToast, etc.
 ├── services/              # RPC/snap handlers, wallet connect client, cleanup logic
 ├── types/                 # TypeScript types (stage.ts is the stage/group registry)
-├── constants/             # Network configs (TESTNET, MAINNET)
+├── constants/             # Client network config, built on @qa-helper/shared NETWORKS (TESTNET, MAINNET, SHIELDED_TESTNET)
 └── utils/                 # Utilities
 ```
 
@@ -75,6 +87,12 @@ In-depth guides live in `knowledge/`:
 
 | Doc | Topic |
 |---|---|
+| `monorepo.md` | Workspace layout, shared package rules, deployment (incl. planned server hosting) |
+| `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
+| `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
+| `shielded-qa-stages.md` | The Shielded stages (QA server, send, balances, inspector) and the fund → shield → inspect → unshield flow |
+| `../docs/design/` | UI redesign: audit, direction, tokens, shell, components, rollout, Claude Design brief |
+| `redesign-changes.md` | Behaviour that changed in the redesign (decimal amounts, enforced checks, previews, confirmations) |
 | `architecture.md` | System structure, Redux patterns, two integration paths (RPC vs Snap) |
 | `creating-stages.md` | Step-by-step guide for adding new stages (RPC and Snap paths) |
 | `wallet-state-management.md` | Redux + external map pattern, wallet lifecycle, thunks |

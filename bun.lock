@@ -4,9 +4,20 @@
   "workspaces": {
     "": {
       "name": "hathor-qa-helper",
+      "devDependencies": {
+        "@types/bun": "latest",
+        "prettier": "^3.8.3",
+      },
+    },
+    "apps/client": {
+      "name": "@qa-helper/client",
+      "version": "0.3.0",
       "dependencies": {
+        "@fontsource/atkinson-hyperlegible-next": "5.3.0",
+        "@hathor/ct-crypto-wasm": "0.5.0",
         "@hathor/snap-utils": "^0.1.0",
-        "@hathor/wallet-lib": "^3.1.1",
+        "@hathor/wallet-lib": "4.2.0",
+        "@qa-helper/shared": "workspace:*",
         "@reduxjs/toolkit": "^2.12.0",
         "@walletconnect/core": "^2.23.9",
         "@walletconnect/modal": "^2.7.0",
@@ -36,7 +47,7 @@
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^5.2.0",
         "autoprefixer": "^10.5.0",
-        "daisyui": "^5.5.20",
+        "daisyui": "5.5.20",
         "eslint": "^9.39.4",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-react-hooks": "^5.2.0",
@@ -49,6 +60,27 @@
         "typescript-eslint": "^8.60.0",
         "vite": "npm:rolldown-vite@7.1.14",
         "vite-plugin-node-polyfills": "^0.24.0",
+      },
+    },
+    "apps/server": {
+      "name": "@qa-helper/server",
+      "version": "0.1.0",
+      "dependencies": {
+        "@hathor/ct-crypto-node": "0.5.0",
+        "@hathor/wallet-lib": "4.2.0",
+        "@qa-helper/shared": "workspace:*",
+        "zod": "^4.6.7",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "~5.9.3",
+      },
+    },
+    "packages/shared": {
+      "name": "@qa-helper/shared",
+      "version": "0.1.0",
+      "devDependencies": {
+        "typescript": "~5.9.3",
       },
     },
   },
@@ -132,9 +164,31 @@
 
     "@ethereumjs/util": ["@ethereumjs/util@8.1.0", "", { "dependencies": { "@ethereumjs/rlp": "^4.0.1", "ethereum-cryptography": "^2.0.0", "micro-ftch": "^0.3.1" } }, "sha512-zQ0IqbdX8FZ9aw11vP+dZkKDkS+kgIvQPHnSAXzP9pLu+Rfu3D3XEeLbicvoXJTYnhZiPmsZUxgdzXwNKxRPbA=="],
 
+    "@fontsource/atkinson-hyperlegible-next": ["@fontsource/atkinson-hyperlegible-next@5.3.0", "", {}, "sha512-8p1tHVoPDo6oYwSO3sMw5snGwFwSf3TmeSF9Gcj792GXdsg6oqvhoItbj6Hj/XZIk0Xs+Cwu6pkLBAl3Q5HrwA=="],
+
+    "@hathor/ct-crypto-node": ["@hathor/ct-crypto-node@0.5.0", "", { "dependencies": { "@hathor/ct-crypto-provider": "0.5.0" }, "optionalDependencies": { "@hathor/ct-crypto-node-darwin-arm64": "0.5.0", "@hathor/ct-crypto-node-darwin-x64": "0.5.0", "@hathor/ct-crypto-node-linux-arm64-gnu": "0.5.0", "@hathor/ct-crypto-node-linux-arm64-musl": "0.5.0", "@hathor/ct-crypto-node-linux-x64-gnu": "0.5.0", "@hathor/ct-crypto-node-linux-x64-musl": "0.5.0", "@hathor/ct-crypto-node-win32-x64-msvc": "0.5.0" } }, "sha512-Qhr7iMnQZlPbNYRN05wKCni3BEPIpKMJh9ZpRhyG76x6FF3IulgTsttXwXy9/LzRsNrMruh4qRGksT8Rg5Lk8A=="],
+
+    "@hathor/ct-crypto-node-darwin-arm64": ["@hathor/ct-crypto-node-darwin-arm64@0.5.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-jwjW70Kh/wPUAMx0NoXkX82hI4yuD6ASMFUqtKjgyVvkLLMYcUQN8Atj/wnXhx2d40+KATHqSDcnrbIYa9mLaw=="],
+
+    "@hathor/ct-crypto-node-darwin-x64": ["@hathor/ct-crypto-node-darwin-x64@0.5.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-0YeULVvP0HXp033xIizkE0ELNwx7VR4PPq7mH+GckzrDkSEg2irLgNNxmx6POiSfW/qYgtu7TZ8VL/sJBHTHqQ=="],
+
+    "@hathor/ct-crypto-node-linux-arm64-gnu": ["@hathor/ct-crypto-node-linux-arm64-gnu@0.5.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-t3eR2NZNBHuszQbGsanmBETrqcNy7IqYhQdGaMFCHDGRD+DqycF92QshSges9mpL/bPGeBnWRV9qE1u86Rq5Hg=="],
+
+    "@hathor/ct-crypto-node-linux-arm64-musl": ["@hathor/ct-crypto-node-linux-arm64-musl@0.5.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-S059K///ZLq0ckyOrQVi0U3+TAiL3SsipJQvMVyxMGOwgFSKGV2gx6aBiFqRC2JArpy6cp1haSbeC6KExZ93ew=="],
+
+    "@hathor/ct-crypto-node-linux-x64-gnu": ["@hathor/ct-crypto-node-linux-x64-gnu@0.5.0", "", { "os": "linux", "cpu": "x64" }, "sha512-a90iAJ1rewt4VEamPQffOu1YK19l+wAWJz1hOQjTwJWj8AOfddcgmHSDZyLL8a0SK6wyrFuxWMLSbUCfcJ1iog=="],
+
+    "@hathor/ct-crypto-node-linux-x64-musl": ["@hathor/ct-crypto-node-linux-x64-musl@0.5.0", "", { "os": "linux", "cpu": "x64" }, "sha512-GqGvZXGe6bkad4Bx3Env1Zub5SC1vA1nFS5v7LDtyLhra+jq/m6CwzNDYXZB9XTKO4rKPJBX6n4fEtPf0oZT1A=="],
+
+    "@hathor/ct-crypto-node-win32-x64-msvc": ["@hathor/ct-crypto-node-win32-x64-msvc@0.5.0", "", { "os": "win32", "cpu": "x64" }, "sha512-lqcFsEt2u+BoOcq/GjhsyF/2YFhapFpPmVKpUX6qmySK5dJAbYbqi0zYkoTCog5wrFzPizO/LSXxIRFtS53DfA=="],
+
+    "@hathor/ct-crypto-provider": ["@hathor/ct-crypto-provider@0.5.0", "", { "dependencies": { "@types/node": "20.14.2" } }, "sha512-me2LA6XWvIRhAoNslzZLtcZEITJFAXzmgVwhZ0ePenuUVK1JTztSGLOJtHgPVCDSDmmGxcbIsrxef/5UvLC+jw=="],
+
+    "@hathor/ct-crypto-wasm": ["@hathor/ct-crypto-wasm@0.5.0", "", { "dependencies": { "@hathor/ct-crypto-provider": "0.5.0", "buffer": "6.0.3" } }, "sha512-CRY4jbMc3wtYr+k9rqVZShlcglK9NCniRD/QyO7M01Olw30GG1bEgBgua/Xfu9CtmKfIypZZwqxuQAJOqLi/YA=="],
+
     "@hathor/snap-utils": ["@hathor/snap-utils@0.1.0", "", { "dependencies": { "@metamask/providers": "16.1.0" }, "peerDependencies": { "react": "^18.2.0" } }, "sha512-o0r1KXSGk5+I57ZGdhjxG18AOn5cxb3yZE4zXElARRoIuTZ+k4EL2nRysxA5N6tQrRu9FlUrS6CYEd21tKhArw=="],
 
-    "@hathor/wallet-lib": ["@hathor/wallet-lib@3.1.1", "", { "dependencies": { "axios": "1.7.7", "bitcore-lib": "8.25.10", "bitcore-mnemonic": "8.25.10", "buffer": "6.0.3", "crypto-js": "4.2.0", "isomorphic-ws": "5.0.0", "lodash": "4.17.21", "queue-microtask": "1.2.3", "ws": "8.17.1", "zod": "3.23.8" } }, "sha512-D1ZC7IxVd9DtycgqSnVNByGnQiTJLNoUlgk8sBlCKmVMO3AehNo3t6PVkyXEUA2DOjW/rACqPVbYBPiprbPR0g=="],
+    "@hathor/wallet-lib": ["@hathor/wallet-lib@4.2.0", "", { "dependencies": { "@hathor/ct-crypto-provider": "0.5.0", "axios": "1.7.7", "bitcore-lib": "8.25.10", "bitcore-mnemonic": "8.25.10", "buffer": "6.0.3", "crypto-js": "4.2.0", "isomorphic-ws": "5.0.0", "lodash": "4.17.21", "queue-microtask": "1.2.3", "ws": "8.17.1", "zod": "3.23.8" } }, "sha512-iEIS4pXWc1/lDJyAGw+wADUatgD9oZOJvxoyC2d14S0yZEaIBCHimFG39R+79Z3NCREwM9GnVtKjKqaVycoklA=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.1", "", {}, "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA=="],
 
@@ -212,6 +266,12 @@
 
     "@playwright/test": ["@playwright/test@1.60.0", "", { "dependencies": { "playwright": "1.60.0" }, "bin": { "playwright": "cli.js" } }, "sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag=="],
 
+    "@qa-helper/client": ["@qa-helper/client@workspace:apps/client"],
+
+    "@qa-helper/server": ["@qa-helper/server@workspace:apps/server"],
+
+    "@qa-helper/shared": ["@qa-helper/shared@workspace:packages/shared"],
+
     "@reduxjs/toolkit": ["@reduxjs/toolkit@2.12.0", "", { "dependencies": { "@standard-schema/spec": "^1.0.0", "@standard-schema/utils": "^0.3.0", "immer": "^11.0.0", "redux": "^5.0.1", "redux-thunk": "^3.1.0", "reselect": "^5.1.0" }, "peerDependencies": { "react": "^16.9.0 || ^17.0.0 || ^18 || ^19", "react-redux": "^7.2.1 || ^8.1.3 || ^9.0.0" }, "optionalPeers": ["react", "react-redux"] }, "sha512-KiT+RzZbp6mQET+Mg+h2c97+9j1sNflUxQkIHI7Yuzf6Peu+OYpmkn6nbHWmLLWj+1ZODUJFwGZ7gx3L9R9EOw=="],
 
     "@rolldown/binding-android-arm64": ["@rolldown/binding-android-arm64@1.0.0-beta.41", "", { "os": "android", "cpu": "arm64" }, "sha512-Edflndd9lU7JVhVIvJlZhdCj5DkhYDJPIRn4Dx0RUdfc8asP9xHOI5gMd8MesDDx+BJpdIT/uAmVTearteU/mQ=="],
@@ -269,6 +329,8 @@
     "@types/babel__template": ["@types/babel__template@7.4.4", "", { "dependencies": { "@babel/parser": "^7.1.0", "@babel/types": "^7.0.0" } }, "sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A=="],
 
     "@types/babel__traverse": ["@types/babel__traverse@7.28.0", "", { "dependencies": { "@babel/types": "^7.28.2" } }, "sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q=="],
+
+    "@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
 
     "@types/debug": ["@types/debug@4.1.12", "", { "dependencies": { "@types/ms": "*" } }, "sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ=="],
 
@@ -449,6 +511,8 @@
     "buffer-xor": ["buffer-xor@1.0.3", "", {}, "sha512-571s0T7nZWK6vB67HI5dyUF7wXiNcfaPPPTl6zYCNApANjIvYJTg7hlud/+cJpdAhS7dVzqMLmfhfHR3rAcOjQ=="],
 
     "builtin-status-codes": ["builtin-status-codes@3.0.0", "", {}, "sha512-HpGFw18DgFWlncDfjTa2rcQ4W88O1mC8e8yZ2AvQY5KDaktSTwo+KRf6nHK6FRI5FyRyb/5T6+TSxfP7QyGsmQ=="],
+
+    "bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
 
     "call-bind": ["call-bind@1.0.8", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.0", "es-define-property": "^1.0.0", "get-intrinsic": "^1.2.4", "set-function-length": "^1.2.2" } }, "sha512-oKlSFMcMwpUg2ednkhQ454wfWiU/ul3CkJe/PEHcTKuiX6RpbehUiFMXu13HalGZxfUwCQzZG747YXBn1im9ww=="],
 
@@ -1200,7 +1264,7 @@
 
     "zlibjs": ["zlibjs@0.3.1", "", {}, "sha512-+J9RrgTKOmlxFSDHo0pI1xM6BLVUv+o0ZT9ANtCxGkjIVCCUdx9alUF8Gm+dGLKbkkkidWIHFDZHDMpfITt4+w=="],
 
-    "zod": ["zod@3.23.8", "", {}, "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g=="],
+    "zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "@emnapi/core/tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
@@ -1211,6 +1275,10 @@
     "@eslint-community/eslint-utils/eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
 
     "@eslint/eslintrc/globals": ["globals@14.0.0", "", {}, "sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ=="],
+
+    "@hathor/ct-crypto-provider/@types/node": ["@types/node@20.14.2", "", { "dependencies": { "undici-types": "~5.26.4" } }, "sha512-xyu6WAMVwv6AKFLB+e/7ySZVr/0zLCzOa7rSpq6jNwpqOrUbcACDWC+53d4n2QHOnDou0fbIsg8wZu/sxrnI4Q=="],
+
+    "@hathor/wallet-lib/zod": ["zod@3.23.8", "", {}, "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g=="],
 
     "@metamask/rpc-errors/@metamask/utils": ["@metamask/utils@9.3.0", "", { "dependencies": { "@ethereumjs/tx": "^4.2.0", "@metamask/superstruct": "^3.1.0", "@noble/hashes": "^1.3.1", "@scure/base": "^1.1.3", "@types/debug": "^4.1.7", "debug": "^4.3.4", "pony-cause": "^2.1.10", "semver": "^7.5.4", "uuid": "^9.0.1" } }, "sha512-w8CVbdkDrVXFJbfBSlDfafDR6BAkpDmv1bC1UJVCoVny5tW2RKAdn9i68Xf7asYT4TnUhl/hN4zfUiKQq9II4g=="],
 
@@ -1359,6 +1427,8 @@
     "vite/postcss": ["postcss@8.5.6", "", { "dependencies": { "nanoid": "^3.3.11", "picocolors": "^1.1.1", "source-map-js": "^1.2.1" } }, "sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg=="],
 
     "yargs/find-up": ["find-up@4.1.0", "", { "dependencies": { "locate-path": "^5.0.0", "path-exists": "^4.0.0" } }, "sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw=="],
+
+    "@hathor/ct-crypto-provider/@types/node/undici-types": ["undici-types@5.26.5", "", {}, "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="],
 
     "@metamask/rpc-errors/@metamask/utils/semver": ["semver@7.7.3", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q=="],
 

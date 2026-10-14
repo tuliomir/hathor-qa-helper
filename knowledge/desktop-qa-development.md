@@ -204,24 +204,19 @@ Stage components are **self-contained** - they read from Redux, not props:
 
 ```typescript
 // src/components/stages/MyNewTool.tsx
-import { useState } from 'react';
-import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { useRequireTestWallet } from '../../hooks/useRequirements';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
 
 export default function MyNewTool() {
-  const dispatch = useAppDispatch();
-
-  // Read from Redux
-  const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
-
-  // Component logic here
+  // Preconditions come from the shared hooks; the strip explains what is missing.
+  const testWallet = useRequireTestWallet();
+  if (testWallet.met !== true) return <PreconditionStrip requirements={[testWallet]} />;
 
   return (
-    <div className="space-y-4">
-      <div className="card-primary">
-        <h2 className="text-xl font-bold mb-2">Tool Title</h2>
-        {/* Tool UI */}
-      </div>
-    </div>
+    <Panel title="Tool title" description="One line on what the tool checks.">
+      {/* Tool UI: Field, AddressInput, Identifier, Callout … (see knowledge/design-system.md) */}
+    </Panel>
   );
 }
 ```
