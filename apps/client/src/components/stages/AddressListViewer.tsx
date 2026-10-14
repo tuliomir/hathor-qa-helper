@@ -5,11 +5,15 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAppSelector } from '../../store/hooks';
 import { useWalletStore } from '../../hooks/useWalletStore';
-import CopyButton from '../common/CopyButton';
-import Loading from '../common/Loading';
+import { Identifier } from '../common/Identifier';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { EmptyState } from '../ui/EmptyState';
+import { StatusChip } from '../ui/StatusChip';
+import { useRequireTestWallet } from '../../hooks/useRequirements';
 
 interface AddressInfo {
   index: number;
@@ -22,6 +26,7 @@ const ADDRESS_COUNT = 10;
 export default function AddressListViewer() {
   const testWalletId = useAppSelector((s) => s.walletSelection.testWalletId);
   const { getWallet } = useWalletStore();
+  const testWalletRequirement = useRequireTestWallet();
 
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
 
@@ -75,105 +80,75 @@ export default function AddressListViewer() {
     fetchAddresses();
   }, [testWallet]);
 
-  // Truncate address for display
-  function truncateAddress(address: string): string {
-    if (address.length <= 16) return address;
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
-  }
-
-  if (!testWalletId) {
-    return (
-      <div className="p-4 bg-yellow-50 border border-warning rounded-lg">
-        <p className="text-yellow-800 m-0 text-sm mb-2">No test wallet selected.</p>
-        <Link to="/" className="text-blue-600 hover:text-blue-800 underline text-sm">
-          Go to Wallet Initialization to select a test wallet
-        </Link>
-      </div>
-    );
-  }
-
-  if (!testWallet) {
-    return (
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-blue-800 m-0 text-sm">
-          <span className="inline-block animate-pulse mr-2">⏳</span>
-          Wallet is connecting... Please wait.
-        </p>
-      </div>
-    );
-  }
+  const columns: DataTableColumn<AddressInfo>[] = [
+    { key: 'index', header: 'Index', className: 'w-16 font-mono text-data tabular-nums', value: (a) => a.index },
+    {
+      key: 'address',
+      header: 'Address',
+      type: 'identifier',
+      render: (a) => (
+        <>
+          <Identifier value={a.address} kind="address" head={34} tail={0} className="hidden md:inline-flex" />
+          <Identifier value={a.address} kind="address" className="md:hidden" />
+        </>
+      ),
+    },
+    {
+      key: 'transactions',
+      header: 'Transactions',
+      type: 'status',
+      className: 'w-28',
+      render: (a) => (
+        <StatusChip
+          status={String(a.transactionCount)}
+          tone={a.transactionCount > 0 ? 'success' : 'idle'}
+          label={`${a.transactionCount} ${a.transactionCount === 1 ? 'tx' : 'txs'}`}
+        />
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-4">
-      <div className="card-primary">
-        <h2 className="text-xl font-bold mb-2">Wallet Addresses</h2>
-        <p className="text-muted text-sm mb-4">
-          First {ADDRESS_COUNT} addresses from{' '}
-          <span className="font-medium text-gray-900">{testWallet.metadata.friendlyName}</span>. Compare these with the
-          addresses shown in the Desktop Wallet app.
-        </p>
-
-        {isLoading && <Loading message="Loading addresses and transaction counts..." />}
-
-        {error && (
-          <div className="p-3 bg-red-50 border border-danger rounded">
-            <p className="m-0 text-red-900 text-sm">{error}</p>
-          </div>
+    <div className="flex flex-col gap-4">
+      <PreconditionStrip requirements={[testWalletRequirement]} />
+      <Panel
+        title="Wallet addresses"
+        description={
+          testWallet ? (
+            <>
+              First {ADDRESS_COUNT} addresses from{' '}
+              <span className="font-medium text-base-content">{testWallet.metadata.friendlyName}</span>. Compare them
+              with the addresses shown in the Desktop Wallet app.
+            </>
+          ) : (
+            `First ${ADDRESS_COUNT} addresses of the test wallet, to compare with the Desktop Wallet app.`
+          )
+        }
+      >
+        {!testWalletId ? (
+          <EmptyState>Addresses appear here once a test wallet is selected.</EmptyState>
+        ) : !testWallet ? (
+          <p className="m-0 flex items-center gap-2 text-body text-ink-muted">
+            <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+            Wallet is connecting…
+          </p>
+        ) : (
+          <>
+            <DataTable
+              caption="Test wallet addresses"
+              columns={columns}
+              rows={addresses}
+              getRowKey={(a) => String(a.index)}
+              loading={isLoading}
+              error={error ? { message: 'Could not load addresses.', detail: error } : null}
+              empty="No addresses found."
+            />
+            {!isLoading && !error && addresses.length > 0 && (
+              <p className="m-0 text-caption text-ink-muted">Addresses with transactions show a green count.</p>
+            )}
+          </>
         )}
-
-        {!isLoading && !error && addresses.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b-2 border-gray-300">
-                <tr>
-                  <th className="text-left py-2 px-3 font-bold w-16">Index</th>
-                  <th className="text-left py-2 px-3 font-bold">Address</th>
-                  <th className="text-center py-2 px-3 font-bold w-24">Transactions</th>
-                  <th className="text-center py-2 px-3 font-bold w-16">Copy</th>
-                </tr>
-              </thead>
-              <tbody>
-                {addresses.map((addr) => (
-                  <tr
-                    key={addr.index}
-                    className={`border-b border-gray-200 ${addr.transactionCount > 0 ? 'bg-green-50' : ''}`}
-                  >
-                    <td className="py-2 px-3 font-mono text-center font-bold text-blue-600">{addr.index}</td>
-                    <td className="py-2 px-3 font-mono text-xs" title={addr.address}>
-                      <span className="hidden md:inline">{addr.address}</span>
-                      <span className="md:hidden">{truncateAddress(addr.address)}</span>
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          addr.transactionCount > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
-                        }`}
-                      >
-                        {addr.transactionCount}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <CopyButton text={addr.address} label="" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {!isLoading && !error && addresses.length === 0 && <p className="text-muted text-sm">No addresses found.</p>}
-
-        {/* Legend */}
-        {!isLoading && !error && addresses.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-xs text-muted m-0">
-              <span className="inline-block w-3 h-3 bg-green-50 border border-green-200 rounded mr-1 align-middle"></span>
-              Addresses with transactions are highlighted in green.
-            </p>
-          </div>
-        )}
-      </div>
+      </Panel>
     </div>
   );
 }
