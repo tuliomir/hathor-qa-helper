@@ -18,7 +18,7 @@ import { type TokenOption } from '../rpc/NanoFields';
 import { BlueprintUnavailable } from '../common/BlueprintUnavailable';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkKey } from '../../constants/network';
 import { blueprintIdFor } from '../../utils/blueprints';
 import { getOracleBuffer } from '../../utils/betHelpers';
 import { buildInitializeBetRequest, nanoTxHash } from '../../utils/nanoRpcRequests';
@@ -27,10 +27,10 @@ import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
 /** The handler's oracle script; a placeholder for the no-session dry run when it can't be derived. */
-function oracleScriptOrPlaceholder(address: string): string {
+function oracleScriptOrPlaceholder(address: string, network: NetworkKey): string {
   if (!address.trim()) return '<oracle_script>';
   try {
-    return getOracleBuffer(address);
+    return getOracleBuffer(address, network);
   } catch {
     return '<oracle_script>';
   }
@@ -50,7 +50,7 @@ export const BetInitializeStage: React.FC = () => {
   const [addressIndex, setAddressIndex] = useState<number>(0);
   const { testWallet, network, derivedAddress: oracleAddress, requirements } = useNanoStageWallet(addressIndex);
 
-  // QA blueprints exist only on some networks; the test wallet's network decides.
+  // QA blueprints exist only on some networks; the RPC session's chain decides.
   const defaultBlueprintId = blueprintIdFor(network, 'bet');
   const [blueprintId, setBlueprintId] = useState<string>(defaultBlueprintId ?? '');
   useEffect(() => {
@@ -108,10 +108,10 @@ export const BetInitializeStage: React.FC = () => {
   const handleExecute = async () => {
     const deadlineDate = new Date(deadline);
     const response = await execute(
-      (h) => h.getRpcInitializeBet(blueprintId, oracleAddress, token, deadlineDate, pushTx),
+      (h) => h.getRpcInitializeBet(blueprintId, oracleAddress, token, deadlineDate, pushTx, network),
       buildInitializeBetRequest({
         blueprintId,
-        oracleScript: oracleScriptOrPlaceholder(oracleAddress),
+        oracleScript: oracleScriptOrPlaceholder(oracleAddress, network),
         token,
         timestamp: Math.floor(deadlineDate.getTime() / 1000),
         pushTx,
@@ -133,7 +133,11 @@ export const BetInitializeStage: React.FC = () => {
       />
       <PreconditionStrip requirements={requirements} />
       {defaultBlueprintId === null ? (
-        <BlueprintUnavailable kind="Bet" networkLabel={NETWORK_CONFIG[network].label} switchWhat="test wallet" />
+        <BlueprintUnavailable
+          kind="Bet"
+          networkLabel={NETWORK_CONFIG[network].label}
+          switchWhat="WalletConnect session"
+        />
       ) : (
         <RpcBetInitializeCard
           onExecute={handleExecute}

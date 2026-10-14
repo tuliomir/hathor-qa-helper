@@ -30,7 +30,7 @@ export const FeeInitializeStage: React.FC = () => {
   const [addressIndex, setAddressIndex] = useState<number>(0);
   const { network, derivedAddress: changeAddress, requirements } = useNanoStageWallet(addressIndex);
 
-  // QA blueprints exist only on some networks; the test wallet's network decides.
+  // QA blueprints exist only on some networks; the RPC session's chain decides.
   const defaultBlueprintId = blueprintIdFor(network, 'fee');
   const [blueprintId, setBlueprintId] = useState<string>(defaultBlueprintId ?? '');
   useEffect(() => {
@@ -77,7 +77,11 @@ export const FeeInitializeStage: React.FC = () => {
       />
       <PreconditionStrip requirements={requirements} />
       {defaultBlueprintId === null ? (
-        <BlueprintUnavailable kind="Fee" networkLabel={NETWORK_CONFIG[network].label} switchWhat="test wallet" />
+        <BlueprintUnavailable
+          kind="Fee"
+          networkLabel={NETWORK_CONFIG[network].label}
+          switchWhat="WalletConnect session"
+        />
       ) : (
         <RpcFeeInitializeCard
           onExecute={handleExecute}

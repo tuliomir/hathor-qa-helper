@@ -26,7 +26,8 @@ interface SessionStruct {
 }
 import { clearDeepLink, setDeepLink, showDeepLinkModal } from './deepLinkSlice';
 import { addToast } from './toastSlice';
-import { DEFAULT_PROJECT_ID, HATHOR_MAINNET_CHAIN } from '../../constants/walletConnect';
+import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
+import { rpcNetworkKey } from '../../utils/blueprints';
 import type { RootState } from '../index';
 
 interface WalletConnectState {
@@ -357,7 +358,11 @@ export const selectIsWalletConnectConnected = (state: { walletConnect: WalletCon
  * never arm for mainnet whatever the active network is.
  */
 export const selectRpcSessionIsMainnet = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
-  state.walletConnect.chains.includes(HATHOR_MAINNET_CHAIN);
+  selectRpcNetwork(state) === 'MAINNET';
+
+/** The network RPC requests act on (see rpcNetworkKey); decides QA blueprints and explorer links. */
+export const selectRpcNetwork = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
+  rpcNetworkKey(state.walletConnect.chains);
 
 export const selectWalletConnectFirstAddress = (state: { walletConnect: WalletConnectState }) => {
   const session = state.walletConnect.session;

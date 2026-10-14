@@ -9,8 +9,11 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../store';
-import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../store/slices/walletConnectSlice';
-import { selectActiveNetwork } from '../store/slices/networkSlice';
+import {
+  selectIsWalletConnectConnected,
+  selectRpcNetwork,
+  selectWalletConnectFirstAddress,
+} from '../store/slices/walletConnectSlice';
 import { getStageUrl } from '../config/stageRoutes';
 import { useWalletStore } from './useWalletStore';
 import { useRequireRpcSession, useRequireTestWallet } from './useRequirements';
@@ -48,7 +51,7 @@ function useAddressAt(testWallet: TestWallet, index: number | null): string | nu
 }
 
 /**
- * The test wallet, its network, the address at `addressIndex`, and the
+ * The test wallet, the RPC network, the address at `addressIndex`, and the
  * stage preconditions: RPC session, test wallet, and the session's wallet
  * being the test wallet (compared on address 0).
  */
@@ -58,7 +61,7 @@ export function useNanoStageWallet(addressIndex: number) {
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
-  const activeNetwork = useSelector(selectActiveNetwork);
+  const rpcNetwork = useSelector(selectRpcNetwork);
 
   const address0 = useAddressAt(testWallet, 0);
   const derivedAddress = useAddressAt(testWallet, addressIndex);
@@ -72,8 +75,9 @@ export function useNanoStageWallet(addressIndex: number) {
 
   return {
     testWallet,
-    // The test wallet's network; without one, the network picked in the shell.
-    network: testWallet?.metadata.network ?? activeNetwork,
+    // The network the RPC requests act on (the session's chain), not the
+    // test wallet's: it decides QA blueprints and explorer links.
+    network: rpcNetwork,
     derivedAddress: derivedAddress ?? '',
     requirements,
   };

@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { blueprintIdFor, snapNetworkKey } from '../src/utils/blueprints';
+import { blueprintIdFor, rpcNetworkKey, snapNetworkKey } from '../src/utils/blueprints';
 
 describe('blueprintIdFor', () => {
   test('testnet has the bet and fee blueprints', () => {
@@ -33,5 +33,24 @@ describe('snapNetworkKey', () => {
 
   test('an unknown snap network has no network key', () => {
     expect(snapNetworkKey('dev-testnet')).toBeNull();
+  });
+});
+
+describe('rpcNetworkKey', () => {
+  test('without a session, RPC requests target testnet', () => {
+    expect(rpcNetworkKey([])).toBe('TESTNET');
+  });
+
+  test('a testnet session targets testnet', () => {
+    expect(rpcNetworkKey(['hathor:testnet'])).toBe('TESTNET');
+  });
+
+  test('a session that approved mainnet targets mainnet', () => {
+    expect(rpcNetworkKey(['hathor:mainnet'])).toBe('MAINNET');
+    expect(rpcNetworkKey(['hathor:testnet', 'hathor:mainnet'])).toBe('MAINNET');
+  });
+
+  test('ignores chains QA Helper does not know', () => {
+    expect(rpcNetworkKey(['hathor:privatenet'])).toBe('TESTNET');
   });
 });

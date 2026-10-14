@@ -18,6 +18,7 @@ interface SessionStruct {
 }
 import { HATHOR_TESTNET_CHAIN } from '../constants/walletConnect';
 import { getOracleBuffer } from '../utils/betHelpers';
+import type { NetworkKey } from '../constants/network';
 import { timelockToUnix } from '../utils/timelockUtils';
 import { generateHathorWalletRequestDeepLink } from './walletConnectClient';
 
@@ -570,14 +571,16 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       oracleAddress: string,
       token: string,
       deadline: Date,
-      pushTx: boolean
+      pushTx: boolean,
+      // The RPC session's network; the card's oracle-script preview uses the same one
+      oracleNetwork?: NetworkKey
     ) => {
       if (!session || !client) {
         throw new Error('WalletConnect session not available');
       }
 
       // Convert oracle address to buffer hex string
-      const oracleBuffer = getOracleBuffer(oracleAddress);
+      const oracleBuffer = getOracleBuffer(oracleAddress, oracleNetwork);
 
       // Convert Date to unix timestamp (seconds)
       const timestamp = Math.floor(deadline.getTime() / 1000);
