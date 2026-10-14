@@ -14,7 +14,8 @@ import {
 } from '../../store/slices/betInitializeSlice';
 import { setBetNanoContractId } from '../../store/slices/betNanoContractSlice';
 import { RpcBetInitializeCard } from '../rpc/RpcBetInitializeCard';
-import { BlueprintUnavailableCallout, type TokenOption } from '../rpc/NanoFields';
+import { type TokenOption } from '../rpc/NanoFields';
+import { BlueprintUnavailable } from '../common/BlueprintUnavailable';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { NETWORK_CONFIG } from '../../constants/network';
@@ -132,7 +133,7 @@ export const BetInitializeStage: React.FC = () => {
       />
       <PreconditionStrip requirements={requirements} />
       {defaultBlueprintId === null ? (
-        <BlueprintUnavailableCallout kind="Bet" networkLabel={NETWORK_CONFIG[network].label} />
+        <BlueprintUnavailable kind="Bet" networkLabel={NETWORK_CONFIG[network].label} switchWhat="test wallet" />
       ) : (
         <RpcBetInitializeCard
           onExecute={handleExecute}

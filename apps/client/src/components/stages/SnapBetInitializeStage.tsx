@@ -13,7 +13,7 @@ import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { AddressInput } from '../common/AddressInput';
 import { Field } from '../ui/Field';
-import { Callout } from '../ui/Callout';
+import { BlueprintUnavailable } from '../common/BlueprintUnavailable';
 import { firstUnmetReason } from '../../utils/requirements';
 import { selectSnapAddress, setSnapBetNc } from '../../store/slices/snapSlice';
 import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../utils/snapResponseHelpers';
@@ -112,11 +112,7 @@ export const SnapBetInitializeStage: React.FC = () => {
       />
       <PreconditionStrip requirements={[snapRequirement]} />
 
-      {defaultBlueprintId === null && (
-        <Callout tone="warning" title={`Bet blueprint not available on ${networkLabel}`} role="alert">
-          The QA blueprints are deployed on Testnet only. Switch the snap to Testnet to use this stage.
-        </Callout>
-      )}
+      {defaultBlueprintId === null && <BlueprintUnavailable kind="Bet" networkLabel={networkLabel} switchWhat="snap" />}
 
       {defaultBlueprintId !== null && (
         <SnapMethodCard

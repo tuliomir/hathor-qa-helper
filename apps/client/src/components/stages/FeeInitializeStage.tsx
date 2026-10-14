@@ -14,7 +14,7 @@ import {
 } from '../../store/slices/feeInitializeSlice';
 import { setFeeNanoContractId } from '../../store/slices/feeNanoContractSlice';
 import { RpcFeeInitializeCard } from '../rpc/RpcFeeInitializeCard';
-import { BlueprintUnavailableCallout } from '../rpc/NanoFields';
+import { BlueprintUnavailable } from '../common/BlueprintUnavailable';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { NETWORK_CONFIG } from '../../constants/network';
@@ -77,7 +77,7 @@ export const FeeInitializeStage: React.FC = () => {
       />
       <PreconditionStrip requirements={requirements} />
       {defaultBlueprintId === null ? (
-        <BlueprintUnavailableCallout kind="Fee" networkLabel={NETWORK_CONFIG[network].label} />
+        <BlueprintUnavailable kind="Fee" networkLabel={NETWORK_CONFIG[network].label} switchWhat="test wallet" />
       ) : (
         <RpcFeeInitializeCard
           onExecute={handleExecute}
