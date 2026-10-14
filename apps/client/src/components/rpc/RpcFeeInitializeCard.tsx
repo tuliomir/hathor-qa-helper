@@ -12,7 +12,8 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import { safeStringify } from '../../utils/betHelpers';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { DEFAULT_NETWORK, type NetworkKey } from '../../constants/network';
+import { resolveExplorerUrl } from '../../utils/networkHelpers';
 import TxStatus from '../common/TxStatus.tsx';
 import { useAppSelector } from '../../store/hooks.ts';
 import { LoadingOverlay } from '../common/LoadingOverlay';
@@ -22,6 +23,8 @@ export interface RpcFeeInitializeCardProps {
   onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
+  /** Network of the test wallet; picks the explorer for the blueprint link. */
+  network?: NetworkKey;
   blueprintId: string;
   setBlueprintId: (value: string) => void;
   amount: string;
@@ -40,6 +43,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
   onExecute,
   disabled = false,
   isDryRun = false,
+  network = DEFAULT_NETWORK,
   blueprintId,
   setBlueprintId,
   amount,
@@ -227,7 +231,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
               />
               {blueprintId && (
                 <a
-                  href={`${NETWORK_CONFIG.TESTNET.explorerUrl}blueprint/detail/${blueprintId}`}
+                  href={`${resolveExplorerUrl(network)}blueprint/detail/${blueprintId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-primary transition-colors"

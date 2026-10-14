@@ -17,7 +17,9 @@ import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from 
 import { RpcBetInitializeCard } from '../rpc/RpcBetInitializeCard';
 import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
 import { createRpcHandlers } from '../../services/rpcHandlers';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { DEFAULT_NETWORK, NETWORK_CONFIG } from '../../constants/network';
+import { blueprintIdFor } from '../../utils/blueprints';
+import BlueprintUnavailable from '../common/BlueprintUnavailable';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { extractErrorMessage } from '../../utils/errorUtils';
@@ -41,7 +43,13 @@ export const BetInitializeStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.blueprints?.bet ?? '');
+  // QA blueprints exist only on some networks; the test wallet's network decides.
+  const network = testWallet?.metadata.network ?? DEFAULT_NETWORK;
+  const defaultBlueprintId = blueprintIdFor(network, 'bet');
+  const [blueprintId, setBlueprintId] = useState<string>(defaultBlueprintId ?? '');
+  useEffect(() => {
+    if (defaultBlueprintId) setBlueprintId(defaultBlueprintId);
+  }, [defaultBlueprintId]);
   const [oracleAddress, setOracleAddress] = useState<string>('');
   const [token, setToken] = useState<string>(NATIVE_TOKEN_UID);
   const [deadline, setDeadline] = useState<string>(() => {
@@ -264,6 +272,8 @@ export const BetInitializeStage: React.FC = () => {
 
       {!isConnected && <RpcNotConnectedBanner />}
 
+      {defaultBlueprintId === null && <BlueprintUnavailable kind="Bet" networkLabel={NETWORK_CONFIG[network].label} />}
+
       {/* Address Mismatch Warning */}
       {addressMismatch && (
         <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
@@ -294,8 +304,9 @@ export const BetInitializeStage: React.FC = () => {
       )}
 
       {/* BetInitialize Card */}
-      {isConnected && !addressMismatch && rpcHandlers && (
+      {isConnected && !addressMismatch && rpcHandlers && defaultBlueprintId !== null && (
         <RpcBetInitializeCard
+          network={network}
           onExecute={handleExecuteBetInitialize}
           disabled={false}
           tokens={walletTokens}

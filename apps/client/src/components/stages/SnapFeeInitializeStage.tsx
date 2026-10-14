@@ -4,7 +4,7 @@
  * Tests htr_sendNanoContractTx (initialize) for the Fee nano contract via MetaMask Snap
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
@@ -13,7 +13,9 @@ import { AddressInput } from '../common/AddressInput';
 import { selectSnapAddress, setSnapFeeNc } from '../../store/slices/snapSlice';
 import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../utils/snapResponseHelpers';
 import { NETWORK_CONFIG } from '../../constants/network';
-import type { AppDispatch } from '../../store';
+import { blueprintIdFor, snapNetworkKey } from '../../utils/blueprints';
+import BlueprintUnavailable from '../common/BlueprintUnavailable';
+import type { AppDispatch, RootState } from '../../store';
 
 export const SnapFeeInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -21,7 +23,14 @@ export const SnapFeeInitializeStage: React.FC = () => {
 
   const snapAddress = useSelector(selectSnapAddress);
 
-  const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.blueprints?.fee ?? '');
+  // QA blueprints exist only on some networks; the snap's network decides.
+  const snapNetwork = useSelector((state: RootState) => state.snap.network);
+  const networkKey = snapNetworkKey(snapNetwork);
+  const defaultBlueprintId = blueprintIdFor(networkKey, 'fee');
+  const [blueprintId, setBlueprintId] = useState(defaultBlueprintId ?? '');
+  useEffect(() => {
+    if (defaultBlueprintId) setBlueprintId(defaultBlueprintId);
+  }, [defaultBlueprintId]);
   const [htrAmount, setHtrAmount] = useState('2');
   const [changeAddress, setChangeAddress] = useState(snapAddress ?? '');
 
@@ -58,7 +67,14 @@ export const SnapFeeInitializeStage: React.FC = () => {
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
-      {isSnapConnected && (
+      {defaultBlueprintId === null && (
+        <BlueprintUnavailable
+          kind="Fee"
+          networkLabel={networkKey ? NETWORK_CONFIG[networkKey].label : (snapNetwork ?? 'this network')}
+        />
+      )}
+
+      {isSnapConnected && defaultBlueprintId !== null && (
         <SnapMethodCard
           title="Initialize Fee"
           description="Create a new Fee nano contract instance with an HTR deposit"

@@ -4,7 +4,7 @@
  * Tests htr_sendNanoContractTx (initialize) for the Bet nano contract via MetaMask Snap
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
@@ -13,9 +13,11 @@ import { AddressInput } from '../common/AddressInput';
 import { selectSnapAddress, setSnapBetNc } from '../../store/slices/snapSlice';
 import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../utils/snapResponseHelpers';
 import { NETWORK_CONFIG } from '../../constants/network';
+import { blueprintIdFor, snapNetworkKey } from '../../utils/blueprints';
+import BlueprintUnavailable from '../common/BlueprintUnavailable';
 import { getOracleBuffer } from '../../utils/betHelpers';
 import CopyButton from '../common/CopyButton';
-import type { AppDispatch } from '../../store';
+import type { AppDispatch, RootState } from '../../store';
 
 export const SnapBetInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -24,7 +26,14 @@ export const SnapBetInitializeStage: React.FC = () => {
   const snapAddress = useSelector(selectSnapAddress);
 
   // Form state
-  const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.blueprints?.bet ?? '');
+  // QA blueprints exist only on some networks; the snap's network decides.
+  const snapNetwork = useSelector((state: RootState) => state.snap.network);
+  const networkKey = snapNetworkKey(snapNetwork);
+  const defaultBlueprintId = blueprintIdFor(networkKey, 'bet');
+  const [blueprintId, setBlueprintId] = useState(defaultBlueprintId ?? '');
+  useEffect(() => {
+    if (defaultBlueprintId) setBlueprintId(defaultBlueprintId);
+  }, [defaultBlueprintId]);
   const [oracleAddress, setOracleAddress] = useState(snapAddress ?? '');
   const [token, setToken] = useState('00');
   const [deadline, setDeadline] = useState<string>(() => {
@@ -42,7 +51,7 @@ export const SnapBetInitializeStage: React.FC = () => {
 
     if (oracleAddress.trim()) {
       try {
-        oracleBuffer = getOracleBuffer(oracleAddress);
+        oracleBuffer = getOracleBuffer(oracleAddress, networkKey ?? undefined);
       } catch (err) {
         oracleBufferError = err instanceof Error ? err.message : 'Invalid oracle address';
       }
@@ -57,7 +66,7 @@ export const SnapBetInitializeStage: React.FC = () => {
     }
 
     return { oracleBuffer, oracleBufferError, timestamp };
-  }, [oracleAddress, deadline]);
+  }, [oracleAddress, deadline, networkKey]);
 
   // Build params using intermediates
   const params = useMemo(
@@ -95,7 +104,14 @@ export const SnapBetInitializeStage: React.FC = () => {
 
       {!isSnapConnected && <SnapNotConnectedBanner />}
 
-      {isSnapConnected && (
+      {defaultBlueprintId === null && (
+        <BlueprintUnavailable
+          kind="Bet"
+          networkLabel={networkKey ? NETWORK_CONFIG[networkKey].label : (snapNetwork ?? 'this network')}
+        />
+      )}
+
+      {isSnapConnected && defaultBlueprintId !== null && (
         <>
           <SnapMethodCard
             title="Initialize Bet"

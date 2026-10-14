@@ -13,7 +13,8 @@ import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import { getOracleBuffer, safeStringify } from '../../utils/betHelpers';
 import { DateTimePicker } from '../ui/datetime-picker';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { DEFAULT_NETWORK, type NetworkKey } from '../../constants/network';
+import { resolveExplorerUrl } from '../../utils/networkHelpers';
 import { formatTimeUntil } from '../../utils/valuesUtils.ts';
 import TxStatus from '../common/TxStatus.tsx';
 import { useAppSelector } from '../../store/hooks.ts';
@@ -24,6 +25,8 @@ export interface RpcBetInitializeCardProps {
   onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
+  /** Network of the test wallet; picks the explorer for the blueprint link. */
+  network?: NetworkKey;
   blueprintId: string;
   setBlueprintId: (value: string) => void;
   oracleAddress: string;
@@ -46,6 +49,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   onExecute,
   disabled = false,
   isDryRun = false,
+  network = DEFAULT_NETWORK,
   blueprintId,
   setBlueprintId,
   oracleAddress,
@@ -108,7 +112,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
     // Calculate oracle buffer if address is provided
     if (oracleAddress.trim()) {
       try {
-        oracleBuffer = getOracleBuffer(oracleAddress);
+        oracleBuffer = getOracleBuffer(oracleAddress, network);
       } catch (error) {
         oracleBufferError = error instanceof Error ? error.message : 'Invalid oracle address';
       }
@@ -272,7 +276,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
               />
               {blueprintId && (
                 <a
-                  href={`${NETWORK_CONFIG.TESTNET.explorerUrl}blueprint/detail/${blueprintId}`}
+                  href={`${resolveExplorerUrl(network)}blueprint/detail/${blueprintId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-primary transition-colors"
