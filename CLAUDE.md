@@ -86,6 +86,7 @@ In-depth guides live in `knowledge/`:
 | Doc | Topic |
 |---|---|
 | `monorepo.md` | Workspace layout, shared package rules, deployment (incl. planned server hosting) |
+| `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
 | `architecture.md` | System structure, Redux patterns, two integration paths (RPC vs Snap) |
 | `creating-stages.md` | Step-by-step guide for adding new stages (RPC and Snap paths) |
 | `wallet-state-management.md` | Redux + external map pattern, wallet lifecycle, thunks |
