@@ -6,7 +6,7 @@
  * gets HTR onto the server.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MdRefresh, MdStop } from 'react-icons/md';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
@@ -43,7 +43,8 @@ import { useSendTransaction } from '../../hooks/useSendTransaction';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { toErrorInfo, type QaServerErrorInfo } from '../../services/qaServerClient';
 import { WALLET_CONFIG, NETWORK_CONFIG } from '../../constants/network';
-import { firstUnmetReason, type Requirement } from '../../utils/requirements';
+import { firstUnmetReason } from '../../utils/requirements';
+import { fundRequirements } from '../../utils/shieldedFunding';
 
 const SERVER_WORD: Record<string, string> = {
   idle: 'Checking',
@@ -310,39 +311,27 @@ function FundPanel({
   const session = sessions.find((s) => s.id === sessionId) ?? null;
   const from = fromId ? wallets[fromId] : undefined;
 
-  const requirements = useMemo<Requirement[]>(() => {
-    const list: Requirement[] = [];
-    if (!online)
-      list.push({
-        id: 'server',
-        short: 'QA server',
-        met: false,
-        label: 'QA server not running',
-        action: 'Start the QA server first',
-      });
-    if (!session)
-      list.push({
-        id: 'session',
-        short: 'Session',
-        met: false,
-        label: 'No session',
-        action: 'Choose a ready server wallet',
-      });
-    if (!from)
-      list.push({
-        id: 'from',
-        short: 'Client wallet',
-        met: false,
-        label: 'No client wallet',
-        action: 'Choose a started client wallet',
-      });
-    if (!/^\d+$/.test(amount) || BigInt(amount || '0') === 0n)
-      list.push({ id: 'amount', short: 'Amount', met: false, label: 'No amount', action: 'Enter an amount' });
-    return list;
-  }, [online, session, from, amount]);
+  const sessionNetwork = session?.network ?? null;
+  const fromNetwork = from?.metadata.network ?? null;
+  const requirements = useMemo(
+    () =>
+      fundRequirements({
+        online,
+        session: sessionNetwork ? { network: sessionNetwork } : null,
+        from: fromNetwork ? { network: fromNetwork } : null,
+        amount,
+      }),
+    [online, sessionNetwork, fromNetwork, amount]
+  );
+
+  // The picker only lists wallets on the session's network; drop a choice
+  // made for another network so it can't linger unseen.
+  useEffect(() => {
+    if (sessionNetwork && fromNetwork && sessionNetwork !== fromNetwork) setFromId(null);
+  }, [sessionNetwork, fromNetwork]);
 
   const send = async () => {
-    if (!session || !from || !fromId) return;
+    if (!session || !from || !fromId || firstUnmetReason(requirements)) return;
     const fromWallet = getWallet(fromId);
     const instance = fromWallet?.instance;
     if (!fromWallet || !instance) {
