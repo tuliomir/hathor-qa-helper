@@ -13,7 +13,13 @@ import {
 } from '../../store/slices/desktopQAProgressSlice';
 import { getSections } from '../../config/desktopQA';
 import type { SectionConfig, StepConfig } from '../../types/desktopQA';
-import { MdCheckCircle, MdExpandLess, MdExpandMore, MdRadioButtonUnchecked } from 'react-icons/md';
+import { FiChevronDown } from 'react-icons/fi';
+import { MdCheckCircle, MdRadioButtonUnchecked } from 'react-icons/md';
+
+const STEP_ROW =
+  'relative flex w-full items-center gap-2 min-h-8 py-1 pl-[26px] pr-2 rounded-field text-left text-body text-base-content hover:bg-base-300';
+const STEP_ROW_ACTIVE =
+  "bg-[color-mix(in_oklab,var(--color-primary)_8%,transparent)] !text-primary font-semibold hover:bg-[color-mix(in_oklab,var(--color-primary)_12%,transparent)] before:content-[''] before:absolute before:left-2.5 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded before:bg-primary";
 
 function StepItem({
   step,
@@ -28,23 +34,23 @@ function StepItem({
 }) {
   const status = useAppSelector((state) => selectStepStatus(state, sectionId, step.id));
   const isCompleted = status === 'completed';
-
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-4 py-2 flex items-center gap-2 transition-colors ${
-        isActive
-          ? 'bg-blue-100 border-l-4 border-blue-600 text-blue-900'
-          : 'hover:bg-gray-100 border-l-4 border-transparent'
-      }`}
-    >
-      {isCompleted ? (
-        <MdCheckCircle className="text-success flex-shrink-0" size={18} />
-      ) : (
-        <MdRadioButtonUnchecked className="text-muted flex-shrink-0" size={18} />
-      )}
-      <span className={`text-sm ${isCompleted ? 'text-success' : ''}`}>{step.title}</span>
-    </button>
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={isActive ? 'step' : undefined}
+        className={`${STEP_ROW} ${isActive ? STEP_ROW_ACTIVE : ''}`}
+      >
+        {isCompleted ? (
+          <MdCheckCircle aria-hidden="true" className="flex-none text-success" size={16} />
+        ) : (
+          <MdRadioButtonUnchecked aria-hidden="true" className="flex-none text-ink-muted" size={16} />
+        )}
+        <span className="min-w-0 flex-1">{step.title}</span>
+        {isCompleted && <span className="sr-only">(completed)</span>}
+      </button>
+    </li>
   );
 }
 
@@ -62,35 +68,42 @@ function SectionItem({
   const completedCount = useAppSelector((state) => selectCompletedStepsCount(state, section.id));
   const totalSteps = section.steps.length;
   const isCurrentSection = currentLocation.sectionId === section.id;
+  const isSectionDone = completedCount === totalSteps && totalSteps > 0;
+  const listId = `desktop-qa-section-${section.id}`;
 
   const handleStepClick = (stepId: string) => {
     dispatch(setCurrentLocation({ sectionId: section.id, stepId }));
   };
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0">
-      {/* Section Header */}
-      <button
-        onClick={onToggle}
-        className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors ${
-          isCurrentSection ? 'bg-blue-50' : 'hover:bg-gray-50'
-        }`}
-      >
-        <div className="flex-1">
-          <h3 className="text-base font-bold m-0">{section.title}</h3>
-          <p className="text-xs text-muted m-0 mt-0.5">
-            {completedCount} / {totalSteps} completed
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {completedCount === totalSteps && totalSteps > 0 && <MdCheckCircle className="text-success" size={20} />}
-          {isExpanded ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
-        </div>
-      </button>
+    <li>
+      <h3 className="m-0">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isExpanded}
+          aria-controls={listId}
+          className={`flex w-full items-center gap-1.5 h-8 px-2 rounded-field text-left text-body font-semibold hover:bg-base-300 ${
+            isCurrentSection ? 'text-primary' : 'text-base-content'
+          }`}
+        >
+          <FiChevronDown
+            aria-hidden="true"
+            size={14}
+            className={`flex-none text-ink-muted transition-transform duration-[180ms] ${isExpanded ? '' : '-rotate-90'}`}
+          />
+          <span className="truncate">{section.title}</span>
+          <span className="ml-auto flex flex-none items-center gap-1 font-mono text-data-sm font-normal text-ink-muted">
+            {isSectionDone && <MdCheckCircle aria-hidden="true" className="text-success" size={14} />}
+            <span aria-label={`${completedCount} of ${totalSteps} steps completed`}>
+              {completedCount}/{totalSteps}
+            </span>
+          </span>
+        </button>
+      </h3>
 
-      {/* Steps List */}
       {isExpanded && (
-        <div className="border-t border-gray-100">
+        <ul id={listId} className="m-0 mt-0.5 flex list-none flex-col gap-0.5 p-0">
           {section.steps.map((step) => (
             <StepItem
               key={step.id}
@@ -100,9 +113,9 @@ function SectionItem({
               onClick={() => handleStepClick(step.id)}
             />
           ))}
-        </div>
+        </ul>
       )}
-    </div>
+    </li>
   );
 }
 
@@ -173,30 +186,48 @@ export default function DesktopQASidebar() {
     });
   };
 
+  // Keep the active step row visible. Scroll the list itself rather than
+  // calling scrollIntoView, which would also scroll the page around it.
+  const navRef = useRef<HTMLElement>(null);
+  const activeSectionOpen = expandedSections.has(currentLocation.sectionId);
+  useEffect(() => {
+    const list = navRef.current;
+    const row = list?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!list || !row) return;
+    const rowTop = row.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+    if (rowTop < list.scrollTop) list.scrollTop = rowTop;
+    else if (rowTop + row.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = rowTop + row.offsetHeight - list.clientHeight;
+    }
+  }, [currentLocation.sectionId, currentLocation.stepId, activeSectionOpen]);
+
   // Calculate current section index (1-based)
   const currentSectionIndex = sections.findIndex((s) => s.id === currentLocation.sectionId) + 1;
   const totalSections = sections.length;
 
   return (
-    <aside className="w-72 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
-      <div className="py-4">
-        <div className="px-4 mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-muted uppercase tracking-wide m-0">Sections</h2>
-          <span className="text-sm font-medium text-blue-600">
-            {currentSectionIndex}/{totalSections}
-          </span>
-        </div>
-        <div>
-          {sections.map((section) => (
-            <SectionItem
-              key={section.id}
-              section={section}
-              isExpanded={expandedSections.has(section.id)}
-              onToggle={() => toggleSection(section.id)}
-            />
-          ))}
-        </div>
+    <nav
+      ref={navRef}
+      aria-label="Walkthrough steps"
+      className="flex w-full min-h-0 flex-col overflow-y-auto bg-base-200 border-r border-base-300"
+    >
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <h2 className="m-0 text-caption font-semibold text-ink-muted">Sections</h2>
+        <span className="text-caption text-ink-muted">
+          Section <span className="font-mono">{currentSectionIndex}</span> of{' '}
+          <span className="font-mono">{totalSections}</span>
+        </span>
       </div>
-    </aside>
+      <ul className="m-0 flex list-none flex-col gap-0.5 px-2 pb-4">
+        {sections.map((section) => (
+          <SectionItem
+            key={section.id}
+            section={section}
+            isExpanded={expandedSections.has(section.id)}
+            onToggle={() => toggleSection(section.id)}
+          />
+        ))}
+      </ul>
+    </nav>
   );
 }
