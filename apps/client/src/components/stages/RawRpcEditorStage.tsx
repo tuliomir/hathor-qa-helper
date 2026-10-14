@@ -8,13 +8,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../store';
-import { selectIsWalletConnectConnected } from '../../store/slices/walletConnectSlice';
 import { setCurrentRequest, addHistoryEntry, clearHistory, removeHistoryEntry } from '../../store/slices/rawRpcSlice';
 import { clearRawRpcEditorNavigation } from '../../store/slices/navigationSlice';
 import { HATHOR_TESTNET_CHAIN } from '../../constants/walletConnect';
-import CopyButton from '../common/CopyButton';
+import { MdChevronRight, MdExpandMore } from 'react-icons/md';
 import { useToast } from '../../hooks/useToast';
-import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
+import { useRequireRpcSession } from '../../hooks/useRequirements';
+import { firstUnmetReason } from '../../utils/requirements';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { ExecuteBar } from '../common/ExecuteBar';
+import { JsonPanel } from '../common/JsonPanel';
+import { Panel } from '../ui/Panel';
+import { Field } from '../ui/Field';
+import { Callout } from '../ui/Callout';
+import { EmptyState } from '../ui/EmptyState';
+import { StatusChip } from '../ui/StatusChip';
 
 /**
  * Helper function to safely stringify objects containing BigInt values
@@ -42,7 +51,7 @@ export const RawRpcEditorStage: React.FC = () => {
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
-  const isConnected = useSelector(selectIsWalletConnectConnected);
+  const rpcSession = useRequireRpcSession();
   const currentRequest = useSelector((state: RootState) => state.rawRpc.currentRequest);
   const history = useSelector((state: RootState) => state.rawRpc.history);
   const navigationData = useSelector((state: RootState) => state.navigation.rawRpcEditor);
@@ -52,8 +61,7 @@ export const RawRpcEditorStage: React.FC = () => {
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
-  const [responseExpanded, setResponseExpanded] = useState(false);
-  const [historyExpanded, setHistoryExpanded] = useState(true);
+  const [lastDuration, setLastDuration] = useState<number | null>(null);
   const [expandedHistoryItems, setExpandedHistoryItems] = useState<Set<string>>(new Set());
 
   // Handle navigation data (when sent from another stage)
@@ -140,7 +148,7 @@ export const RawRpcEditorStage: React.FC = () => {
       const responseStr = safeStringify(result, 2);
 
       setLastResponse(responseStr);
-      setResponseExpanded(true);
+      setLastDuration(duration);
 
       // Add to history
       dispatch(
@@ -152,13 +160,13 @@ export const RawRpcEditorStage: React.FC = () => {
         })
       );
 
-      showToast('RPC request successful', 'success');
+      showToast('Request sent', 'success');
     } catch (err) {
       const duration = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
 
       setLastError(errorMessage);
-      setResponseExpanded(true);
+      setLastDuration(duration);
 
       // Add to history
       dispatch(
@@ -198,253 +206,165 @@ export const RawRpcEditorStage: React.FC = () => {
     });
   }, []);
 
+  const methodOf = (json: string) => {
+    try {
+      return JSON.parse(json).method || 'Unknown';
+    } catch {
+      return 'Invalid JSON';
+    }
+  };
+
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Raw RPC Editor</h1>
-      <p className="text-muted mb-7.5">Send raw JSON RPC requests directly to the wallet</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader stageId="rpc-raw-editor" description="Send a raw JSON request to the connected wallet." />
+      <PreconditionStrip requirements={[rpcSession]} />
 
-      {!isConnected && <RpcNotConnectedBanner />}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <Panel
+          title="Request"
+          footer={
+            <ExecuteBar
+              label="Send request"
+              onExecute={handleExecute}
+              showDryRun={false}
+              running={loading}
+              runningLabel="Waiting for the wallet…"
+              disabledReason={firstUnmetReason([rpcSession])}
+              secondary={
+                <>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={handleValidate}>
+                    Validate
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={handleFormat}>
+                    Format
+                  </button>
+                </>
+              }
+            />
+          }
+        >
+          <Field
+            label="Request JSON"
+            hint='Needs a "method". Sent as-is; dry run does not apply here.'
+            error={jsonError}
+          >
+            <textarea
+              value={currentRequest}
+              onChange={(e) => {
+                dispatch(setCurrentRequest(e.target.value));
+                setJsonError(null);
+              }}
+              className={`textarea h-64 w-full resize-y font-mono text-data ${jsonError ? 'textarea-error' : ''}`}
+              placeholder='{"method": "htr_getWalletInformation", "params": {"network": "testnet"}}'
+              spellCheck={false}
+            />
+          </Field>
+        </Panel>
 
-      {/* Editor Section */}
-      <div className="card-primary mb-7.5">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-bold m-0">Request JSON</h3>
-          <div className="flex items-center gap-2">
-            <button onClick={handleValidate} className="btn-secondary text-sm px-3 py-1">
-              Validate
-            </button>
-            <button onClick={handleFormat} className="btn-secondary text-sm px-3 py-1">
-              Format
-            </button>
-            <CopyButton text={currentRequest} label="Copy" />
-          </div>
-        </div>
-
-        <textarea
-          value={currentRequest}
-          onChange={(e) => {
-            dispatch(setCurrentRequest(e.target.value));
-            setJsonError(null);
-          }}
-          className={`w-full h-64 font-mono text-sm p-3 border rounded resize-y ${
-            jsonError ? 'border-danger bg-red-50' : 'border-gray-300 bg-gray-50'
-          }`}
-          placeholder='{"method": "htr_getWalletInformation", "params": {"network": "testnet"}}'
-          spellCheck={false}
-        />
-
-        {jsonError && (
-          <div className="mt-2 text-sm text-danger flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {jsonError}
-          </div>
-        )}
-
-        <div className="mt-4 flex justify-end">
-          <button onClick={handleExecute} disabled={loading || !isConnected} className="btn-primary">
-            {loading ? 'Executing...' : 'Execute'}
-          </button>
-        </div>
-      </div>
-
-      {/* Response Section */}
-      {(lastResponse !== null || lastError !== null) && (
-        <div className="card-primary mb-7.5">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setResponseExpanded(!responseExpanded)}
-              className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
-            >
-              <span>{responseExpanded ? '▼' : '▶'}</span>
-              {lastError ? 'Error' : 'Response'}
-            </button>
-            <CopyButton text={lastResponse || lastError || ''} label="Copy" />
-          </div>
-
-          {responseExpanded && (
-            <div className="relative">
-              {lastError ? (
-                <div className="flex items-start gap-2 p-4 bg-red-50 border border-danger rounded">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-danger flex-shrink-0 mt-0.5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <p className="text-sm text-red-900 break-words m-0">{lastError}</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-success">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-sm font-medium">Success</span>
-                  </div>
-                  <div className="border border-gray-300 rounded p-3 overflow-auto max-h-96 bg-gray-50">
-                    <pre className="text-sm font-mono text-left whitespace-pre-wrap break-words m-0">
-                      {lastResponse}
-                    </pre>
-                  </div>
-                </div>
-              )}
+        <Panel title="Response" bodyClassName="gap-4">
+          {lastError !== null && (
+            <div data-result="error">
+              <Callout tone="error" title="The request failed" role="alert">
+                <pre className="m-0 whitespace-pre-wrap break-words font-mono text-data-sm">{lastError}</pre>
+              </Callout>
             </div>
           )}
-        </div>
-      )}
+          {lastResponse !== null && (
+            <div data-result="success" className="flex flex-col gap-3">
+              <p className="m-0 text-caption text-ink-muted">
+                <span className="font-semibold text-success">Response received</span>
+                {lastDuration !== null && ` in ${lastDuration} ms`}
+              </p>
+              <JsonPanel title="Response" value={lastResponse} collapsible={false} />
+            </div>
+          )}
+          {lastError === null && lastResponse === null && (
+            <EmptyState>The wallet's response appears here after you send a request.</EmptyState>
+          )}
+        </Panel>
+      </div>
 
-      {/* History Section */}
-      <div className="card-primary">
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setHistoryExpanded(!historyExpanded)}
-            className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
-          >
-            <span>{historyExpanded ? '▼' : '▶'}</span>
-            History ({history.length})
-          </button>
-          {history.length > 0 && (
+      <Panel
+        title={`History (${history.length})`}
+        actions={
+          history.length === 0 ? undefined : (
             <button
+              type="button"
+              className="btn btn-ghost btn-xs text-error"
               onClick={() => {
                 dispatch(clearHistory());
                 showToast('History cleared', 'success');
               }}
-              className="text-sm text-danger hover:text-red-700"
             >
-              Clear All
+              Clear all
             </button>
-          )}
-        </div>
-
-        {historyExpanded && (
-          <div className="space-y-3">
-            {history.length === 0 ? (
-              <p className="text-sm text-muted italic">No requests yet</p>
-            ) : (
-              history.map((entry) => (
-                <div
-                  key={entry.id}
-                  className={`border rounded overflow-hidden ${entry.error ? 'border-danger' : 'border-gray-300'}`}
-                >
-                  {/* Header */}
-                  <div
-                    className={`px-3 py-2 flex items-center justify-between cursor-pointer ${
-                      entry.error ? 'bg-red-50' : 'bg-gray-100'
-                    }`}
-                    onClick={() => toggleHistoryItem(entry.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted">{formatTimestamp(entry.timestamp)}</span>
-                      <span className="text-sm font-mono font-medium">
-                        {(() => {
-                          try {
-                            const parsed = JSON.parse(entry.request);
-                            return parsed.method || 'Unknown';
-                          } catch {
-                            return 'Invalid JSON';
-                          }
-                        })()}
-                      </span>
-                      {entry.duration !== null && <span className="text-xs text-muted">{entry.duration}ms</span>}
-                      {entry.error ? (
-                        <span className="text-xs px-2 py-0.5 bg-red-100 text-danger rounded">Error</span>
-                      ) : (
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-success rounded">Success</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
+          )
+        }
+      >
+        {history.length === 0 ? (
+          <EmptyState>Sent requests and their responses appear here.</EmptyState>
+        ) : (
+          <ul className="m-0 flex list-none flex-col divide-y divide-base-300 p-0">
+            {history.map((entry) => {
+              const open = expandedHistoryItems.has(entry.id);
+              return (
+                <li key={entry.id} className="flex flex-col gap-3 py-2">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <button
+                      type="button"
+                      className="inline-flex min-w-0 items-center gap-1.5 rounded-field text-left hover:text-primary"
+                      aria-expanded={open}
+                      onClick={() => toggleHistoryItem(entry.id)}
+                    >
+                      {open ? <MdExpandMore aria-hidden="true" /> : <MdChevronRight aria-hidden="true" />}
+                      <span className="font-mono text-data">{methodOf(entry.request)}</span>
+                    </button>
+                    <span className="text-caption text-ink-muted">{formatTimestamp(entry.timestamp)}</span>
+                    {entry.duration !== null && (
+                      <span className="text-caption text-ink-muted">{entry.duration} ms</span>
+                    )}
+                    <StatusChip
+                      status={entry.error ? 'error' : 'ready'}
+                      label={entry.error ? 'Error' : 'Success'}
+                      tone={entry.error ? 'error' : 'success'}
+                    />
+                    <span className="ml-auto flex items-center gap-1">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleLoadFromHistory(entry.request);
-                        }}
-                        className="text-xs text-primary hover:text-primary-dark"
-                        title="Load this request into editor"
+                        type="button"
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => handleLoadFromHistory(entry.request)}
                       >
                         Load
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          dispatch(removeHistoryEntry(entry.id));
-                        }}
-                        className="text-xs text-danger hover:text-red-700"
-                        title="Remove from history"
+                        type="button"
+                        className="btn btn-ghost btn-xs text-error"
+                        onClick={() => dispatch(removeHistoryEntry(entry.id))}
                       >
                         Remove
                       </button>
-                      <span className="text-muted">{expandedHistoryItems.has(entry.id) ? '▼' : '▶'}</span>
-                    </div>
+                    </span>
                   </div>
-
-                  {/* Expanded content */}
-                  {expandedHistoryItems.has(entry.id) && (
-                    <div className="p-3 space-y-3 bg-white">
-                      {/* Request */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-semibold text-blue-800">Request</span>
-                          <CopyButton text={entry.request} label="Copy" />
-                        </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded p-2 overflow-auto max-h-40">
-                          <pre className="text-xs font-mono text-blue-900 m-0 whitespace-pre-wrap break-words">
-                            {(() => {
-                              try {
-                                return JSON.stringify(JSON.parse(entry.request), null, 2);
-                              } catch {
-                                return entry.request;
-                              }
-                            })()}
+                  {open && (
+                    <div className="flex flex-col gap-3 pl-5">
+                      <JsonPanel title="Request" value={entry.request} collapsible={false} />
+                      {entry.error ? (
+                        <Callout tone="error" title="Error">
+                          <pre className="m-0 whitespace-pre-wrap break-words font-mono text-data-sm">
+                            {entry.error}
                           </pre>
-                        </div>
-                      </div>
-
-                      {/* Response or Error */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className={`text-xs font-semibold ${entry.error ? 'text-red-800' : 'text-green-800'}`}>
-                            {entry.error ? 'Error' : 'Response'}
-                          </span>
-                          <CopyButton text={entry.response || entry.error || ''} label="Copy" />
-                        </div>
-                        <div
-                          className={`border rounded p-2 overflow-auto max-h-40 ${
-                            entry.error ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
-                          }`}
-                        >
-                          <pre
-                            className={`text-xs font-mono m-0 whitespace-pre-wrap break-words ${
-                              entry.error ? 'text-red-900' : 'text-green-900'
-                            }`}
-                          >
-                            {entry.error || entry.response}
-                          </pre>
-                        </div>
-                      </div>
+                        </Callout>
+                      ) : (
+                        <JsonPanel title="Response" value={entry.response} collapsible={false} />
+                      )}
                     </div>
                   )}
-                </div>
-              ))
-            )}
-          </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </div>
+      </Panel>
     </div>
   );
 };
