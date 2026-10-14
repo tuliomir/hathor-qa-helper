@@ -2,13 +2,22 @@
  * Shown by blueprint stages when the active network has no QA blueprints.
  */
 
-export default function BlueprintUnavailable({ kind, networkLabel }: { kind: string; networkLabel: string }) {
+import { Callout } from '../ui/Callout';
+
+export interface BlueprintUnavailableProps {
+  /** Blueprint name, e.g. "Bet". */
+  kind: string;
+  networkLabel: string;
+  /** What the tester switches to Testnet, e.g. "test wallet" or "snap". */
+  switchWhat: string;
+}
+
+export function BlueprintUnavailable({ kind, networkLabel, switchWhat }: BlueprintUnavailableProps) {
   return (
-    <div role="alert" className="alert alert-warning mb-7.5">
-      <span>
-        The {kind} blueprint is not available on <strong>{networkLabel}</strong>. The QA blueprints are deployed on
-        Testnet only; switch to Testnet to use this stage.
-      </span>
-    </div>
+    <Callout tone="warning" title={`${kind} blueprint not available on ${networkLabel}`} role="status">
+      The QA blueprints are deployed on Testnet only. Switch the {switchWhat} to Testnet to use this stage.
+    </Callout>
   );
 }
+
+export default BlueprintUnavailable;

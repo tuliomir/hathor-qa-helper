@@ -30,6 +30,18 @@ test.describe('App shell', () => {
     await expect(page).toHaveURL(/\/tools\/snaps\/get-xpub$/);
   });
 
+  // `page.goto` resolves on `load`, so shortcuts must be live by then.
+  // Pressing at the `load` event itself makes this deterministic.
+  test('shortcuts work as soon as the page loads', async ({ page }) => {
+    await page.addInitScript(() => {
+      addEventListener('load', () => {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true }));
+      });
+    });
+    await page.goto('/tools/rpc/get-balance');
+    await expect(page.getByRole('searchbox', { name: 'Filter stages' })).toBeFocused();
+  });
+
   test('walkthroughs are reachable from the workspace switcher', async ({ page }) => {
     await page.goto('/tools/main/wallet-initialization');
     await page.getByRole('button', { name: /^Workspace:/ }).click();

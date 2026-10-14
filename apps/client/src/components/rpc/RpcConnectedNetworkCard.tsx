@@ -3,7 +3,8 @@
  */
 
 import React from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import { ResponseFields } from './ResponseFields';
 import { CONNECTED_NETWORK_REQUEST, unwrapResponse } from '../../utils/rpcCoreRequests';
@@ -21,7 +22,7 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
   isDryRun,
   disabledReason = null,
 }) => (
-  <MethodCard
+  <RpcMethodCard
     title="Get connected network"
     description="The network the wallet is connected to, with its genesis hash."
     liveRequest={CONNECTED_NETWORK_REQUEST}
@@ -50,5 +51,5 @@ export const RpcConnectedNetworkCard: React.FC<RpcConnectedNetworkCardProps> = (
     }}
   >
     <p className="m-0 text-body text-ink-muted">No parameters besides the network.</p>
-  </MethodCard>
+  </RpcMethodCard>
 );

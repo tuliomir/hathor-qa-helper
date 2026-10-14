@@ -188,60 +188,12 @@
   }
 }
 
-/* LEGACY: delete in T10.
-   Thin aliases so pre-redesign class names render with daisyUI 5 and the
-   bench theme. daisyUI's own .btn, .card and .input are left unmodified.
-   The stage sweep (T9) replaces every call site. */
+/* Form controls get the 3:1 field border (docs/design/tokens.md). Focus and
+   error states keep daisyUI's own border colour. */
 @layer components {
-  /* Legacy call sites use btn-* without the daisyUI .btn base. :where()
-     keeps the copied base at zero specificity so daisyUI's colour and size
-     modifiers still win, and the attribute selector stands in for
-     :not(.btn), which Tailwind 3 rejects as a circular @apply. */
-  :where(.btn-primary, .btn-secondary, .btn-success, .btn-warning, .btn-info, .btn-danger):where(:not([class~='btn'])) {
-    @apply btn;
-  }
-  .btn-danger {
-    @apply btn-error;
-  }
-
-  .card-primary {
-    @apply bg-base-100 border border-base-300 rounded-box p-4;
-  }
-
-  /* Legacy inputs expect full width, a 3:1 border and growing textareas.
-     Focus and error states keep daisyUI's own border colour. */
-  :where(.input-error:not([class~='input'])) {
-    @apply input;
-  }
-  :where(.input, .input-error) {
-    @apply w-full;
-  }
-  .input:not(.input-error, :focus, :focus-within) {
+  .input:not(.input-error, :focus, :focus-within),
+  .select:not(.select-error, :focus, :focus-within),
+  .textarea:not(.textarea-error, :focus, :focus-within) {
     --input-color: var(--qa-field-border);
-  }
-  :where(textarea).input,
-  :where(textarea).input-error {
-    @apply h-auto py-2;
-  }
-
-  .table-header {
-    @apply bg-base-200 border-b border-base-300;
-  }
-  .table-row {
-    @apply border-b border-base-300;
-  }
-
-  .status-idle {
-    @apply text-ink-muted font-bold text-sm;
-  }
-  .status-connecting,
-  .status-syncing {
-    @apply text-warning-ink font-bold text-sm;
-  }
-  .status-ready {
-    @apply text-success font-bold text-sm;
-  }
-  .status-error {
-    @apply text-error font-bold text-sm;
   }
 }

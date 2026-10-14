@@ -7,8 +7,9 @@
  * For utility functions (defaultTimelockValue, timelockToUnix), see utils/timelockUtils.ts.
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import { defaultTimelockValue } from '../../utils/timelockUtils';
+import { Field } from '../ui/Field';
 
 interface TimelockPickerProps {
   value: string;
@@ -21,32 +22,30 @@ interface TimelockPickerProps {
 const TimelockPicker: React.FC<TimelockPickerProps> = ({
   value,
   onChange,
-  label = 'Timelock (optional)',
-  hint = 'Output will be unspendable until this time',
+  label = 'Timelock',
+  hint = 'Optional. The output cannot be spent before this time.',
   className = '',
 }) => {
+  const id = useId();
   return (
-    <div className={className}>
-      <label className="block mb-1 text-xs font-medium text-muted">{label}</label>
-      <input type="datetime-local" value={value} onChange={(e) => onChange(e.target.value)} className="input w-full" />
-      <div className="flex items-center gap-2 mt-1.5">
-        <button
-          type="button"
-          onClick={() => onChange(defaultTimelockValue(1))}
-          className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
-        >
+    <Field label={label} hint={hint} className={className} htmlFor={id} wireControl={false}>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          id={id}
+          aria-describedby={hint ? `${id}-hint` : undefined}
+          type="datetime-local"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="input min-w-0 flex-1"
+        />
+        <button type="button" onClick={() => onChange(defaultTimelockValue(1))} className="btn btn-secondary btn-sm">
           +1 min
         </button>
-        <button
-          type="button"
-          onClick={() => onChange(defaultTimelockValue(5))}
-          className="btn-secondary py-1 px-2.5 text-xs whitespace-nowrap"
-        >
+        <button type="button" onClick={() => onChange(defaultTimelockValue(5))} className="btn btn-secondary btn-sm">
           +5 min
         </button>
-        <span className="text-xs text-muted">{hint}</span>
       </div>
-    </div>
+    </Field>
   );
 };
 

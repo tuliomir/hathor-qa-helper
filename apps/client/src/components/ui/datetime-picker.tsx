@@ -287,14 +287,14 @@ function Calendar({
           month_caption: 'hidden', // We use custom selects above
           month_grid: 'w-full border-collapse',
           weekdays: 'flex',
-          weekday: 'text-muted text-xs font-medium w-9 text-center',
+          weekday: 'text-ink-muted text-xs font-medium w-9 text-center',
           week: 'flex w-full mt-1',
-          day: 'h-9 w-9 p-0 font-normal text-center text-sm hover:bg-primary hover:text-white rounded cursor-pointer',
+          day: 'h-9 w-9 p-0 font-normal text-center text-sm hover:bg-primary hover:text-primary-content rounded cursor-pointer',
           day_button: 'h-9 w-9',
-          selected: 'bg-primary text-white hover:bg-primary-dark',
-          today: 'bg-warning text-black font-bold',
-          outside: 'text-muted opacity-50',
-          disabled: 'text-muted opacity-30 cursor-not-allowed',
+          selected: 'bg-primary text-primary-content hover:bg-primary',
+          today: 'bg-tint-warning text-warning-ink font-bold',
+          outside: 'text-ink-muted opacity-50',
+          disabled: 'text-ink-muted opacity-30 cursor-not-allowed',
           ...classNames,
         }}
         {...props}
@@ -714,7 +714,7 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
       <div className="relative w-full">
         <button
           type="button"
-          className={`input flex items-center justify-start text-left font-normal ${!displayDate ? 'text-gray-500' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className || ''}`}
+          className={`input w-full flex items-center justify-start text-left font-normal ${!displayDate ? 'text-ink-muted' : ''} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className || ''}`}
           ref={buttonRef}
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
@@ -746,7 +746,7 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
         {isOpen && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 mt-2 bg-white border-2 border-primary rounded-lg shadow-lg"
+            className="absolute z-50 mt-2 rounded-box border border-base-300 bg-base-100 shadow-float"
             style={{ minWidth: '300px' }}
           >
             <Calendar
@@ -765,7 +765,7 @@ const DateTimePicker = React.forwardRef<Partial<DateTimePickerRef>, DateTimePick
               {...props}
             />
             {granularity !== 'day' && (
-              <div className="border-t-2 border-gray-200 p-3">
+              <div className="border-t border-base-300 p-3">
                 <TimePicker
                   onChange={(value) => {
                     onChange?.(value);

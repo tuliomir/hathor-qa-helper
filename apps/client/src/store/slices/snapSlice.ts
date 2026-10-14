@@ -110,8 +110,16 @@ const snapSlice = createSlice({
   },
 });
 
-export const { setSnapConnected, setSnapOrigin, setSnapWalletInfo, setSnapError, resetSnap, setSnapUtxos, setSnapBetNc, setSnapFeeNc } =
-  snapSlice.actions;
+export const {
+  setSnapConnected,
+  setSnapOrigin,
+  setSnapWalletInfo,
+  setSnapError,
+  resetSnap,
+  setSnapUtxos,
+  setSnapBetNc,
+  setSnapFeeNc,
+} = snapSlice.actions;
 
 export const selectIsSnapConnected = (state: RootState) => state.snap.isConnected;
 export const selectSnapOrigin = (state: RootState) => state.snap.snapOrigin;

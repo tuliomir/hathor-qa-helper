@@ -17,6 +17,7 @@ import { TxIdDisplay } from './TxIdDisplay';
 import { useToast } from '../../hooks/useToast';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { safeStringify } from '../../utils/betHelpers';
+import type { ExplorerPage } from '../../utils/networkHelpers';
 
 /** Request/response record, as stored by the method slices. */
 export interface MethodData {
@@ -52,6 +53,10 @@ export interface MethodCardProps {
   renderError?: (error: unknown, message: string) => React.ReactNode;
   getTxHash?: (response: unknown) => string | null;
   explorerNetwork?: string;
+  /** Explorer page for the tx hash; `nc_detail` when the response creates a nano contract. */
+  txExplorerPage?: ExplorerPage;
+  /** Wallet that sent the transaction, so TxStatus only checks that wallet. */
+  txWalletId?: string;
   requestCaption?: React.ReactNode;
   /** Extra Compose footer actions next to the primary button. */
   secondaryActions?: React.ReactNode;
@@ -82,6 +87,8 @@ export function MethodCard({
   renderError,
   getTxHash,
   explorerNetwork,
+  txExplorerPage,
+  txWalletId,
   requestCaption,
   secondaryActions,
   inspectExtra,
@@ -212,7 +219,14 @@ export function MethodCard({
               <span className="font-semibold text-success">Response received</span>
               {methodData?.duration !== null && methodData?.duration !== undefined && ` in ${methodData.duration} ms`}
             </p>
-            {txHash && <TxIdDisplay hash={txHash} network={explorerNetwork} />}
+            {txHash && (
+              <TxIdDisplay
+                hash={txHash}
+                network={explorerNetwork}
+                walletId={txWalletId}
+                specificPage={txExplorerPage}
+              />
+            )}
             <JsonPanel
               title="Response"
               value={response}

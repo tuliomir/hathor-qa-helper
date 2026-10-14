@@ -10,7 +10,7 @@ import { useDispatch } from 'react-redux';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import type { AppDispatch } from '../store';
 import type { MethodData } from '../components/common/MethodCard';
-import { RpcRunError, useRpcMethod, type RpcHandlers } from './useRpcMethod';
+import { RpcRunError, useRpcMethod, type RpcHandlers, type RpcMethodOptions } from './useRpcMethod';
 import { extractErrorMessage } from '../utils/errorUtils';
 
 type RpcRequest = { method: string; params: unknown };
@@ -42,9 +42,9 @@ export function toMethodData(state: MethodSliceState): MethodData {
   };
 }
 
-export function useRpcStageCall(actions: MethodSliceActions) {
+export function useRpcStageCall(actions: MethodSliceActions, options?: RpcMethodOptions) {
   const dispatch = useDispatch<AppDispatch>();
-  const rpc = useRpcMethod();
+  const rpc = useRpcMethod(options);
   const { isDryRun, run } = rpc;
 
   /**

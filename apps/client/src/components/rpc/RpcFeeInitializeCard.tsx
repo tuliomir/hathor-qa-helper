@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { AmountInput } from '../common/AmountInput';
 import { nanoTxHash } from '../../utils/nanoRpcRequests';
 import type { NetworkKey } from '../../constants/network';
@@ -48,7 +49,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
   pushTx,
   setPushTx,
 }) => (
-  <MethodCard
+  <RpcMethodCard
     title="Initialize fee"
     description="Create a fee nano contract funded with an HTR deposit."
     liveRequest={liveRequest}
@@ -56,8 +57,8 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
     isDryRun={isDryRun}
     onExecute={onExecute}
     disabledReason={disabledReason}
-    isMainnet={false}
     getTxHash={nanoTxHash}
+    txExplorerPage="nc_detail"
     explorerNetwork={network}
     renderResponse={(r) => <NanoResponse response={r} network={network} creates />}
     successToast={pushTx ? 'Fee contract initialized' : 'Fee transaction built'}
@@ -94,5 +95,5 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
         },
       ]}
     />
-  </MethodCard>
+  </RpcMethodCard>
 );

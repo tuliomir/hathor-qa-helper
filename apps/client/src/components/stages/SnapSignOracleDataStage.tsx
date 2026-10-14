@@ -104,6 +104,22 @@ export const SnapSignOracleDataStage: React.FC = () => {
         isDryRun={isDryRun}
         onExecute={handleExecute}
         disabledReason={firstUnmetReason([snapRequirement])}
+        inspectExtra={
+          signedResult && (
+            <Callout
+              tone="success"
+              title="Oracle signature ready"
+              action={
+                <button type="button" onClick={handleSendToSetBetResult} className="btn btn-primary btn-sm">
+                  Send to Set bet result
+                  <MdArrowForward aria-hidden="true" />
+                </button>
+              }
+            >
+              Use it to resolve the bet in Set bet result.
+            </Callout>
+          )
+        }
       >
         <Field label="Nano contract ID">
           <input
@@ -132,21 +148,6 @@ export const SnapSignOracleDataStage: React.FC = () => {
           sources={['snap']}
         />
       </SnapMethodCard>
-
-      {signedResult && (
-        <Callout
-          tone="success"
-          title="Oracle signature ready"
-          action={
-            <button type="button" onClick={handleSendToSetBetResult} className="btn btn-primary btn-sm">
-              Send to Set bet result
-              <MdArrowForward aria-hidden="true" />
-            </button>
-          }
-        >
-          Use it to resolve the bet in Set bet result.
-        </Callout>
-      )}
     </div>
   );
 };

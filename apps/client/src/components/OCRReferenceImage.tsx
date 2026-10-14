@@ -133,7 +133,7 @@ export default function OCRReferenceImage({ imageDataUrl, onExpand, onDismiss }:
       </div>
 
       {/* Instructions */}
-      <div className="text-center text-xs text-muted mt-2">
+      <div className="text-center text-xs text-ink-muted mt-2">
         {zoom === 1 ? <>Click to expand • Scroll to zoom</> : <>Drag to pan • Scroll to zoom • Click to expand</>}
       </div>
     </div>

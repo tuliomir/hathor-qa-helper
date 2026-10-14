@@ -6,7 +6,8 @@
 import React from 'react';
 import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
 import type { GetUtxosResponse, UtxoData } from '../../store/slices/getUtxosSlice';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { AmountInput } from '../common/AmountInput';
@@ -116,7 +117,7 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
   const amountToken = { uid: filters.tokenUid, symbol: token?.symbol ?? 'HTR' };
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Get UTXOs"
       liveRequest={buildGetUtxosRequest(filters)}
       methodData={methodData}
@@ -180,6 +181,6 @@ export const RpcGetUtxosCard: React.FC<RpcGetUtxosCardProps> = ({
           hint="Optional; empty means no filter."
         />
       </div>
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

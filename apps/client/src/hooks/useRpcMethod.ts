@@ -34,16 +34,32 @@ export class RpcRunError extends Error {
   }
 }
 
-export function useRpcMethod() {
+export interface RpcMethodOptions {
+  /** Token UIDs htr_getBalance asks for (the handlers default to HTR only). */
+  balanceTokens?: string[];
+}
+
+export function useRpcMethod({ balanceTokens }: RpcMethodOptions = {}) {
   const client = useSelector((state: RootState) => state.walletConnect.client);
   const session = useSelector((state: RootState) => state.walletConnect.session);
   const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
   const isConnected = useSelector(selectIsWalletConnectConnected);
   const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
 
+  // Keyed by content, so a new array with the same tokens keeps the handlers.
+  const balanceTokensKey = balanceTokens?.join(',');
   const handlers = useMemo<RpcHandlers | null>(
-    () => (client && session ? createRpcHandlers({ client, session, dryRun: isDryRun, onDeepLinkAvailable }) : null),
-    [client, session, isDryRun, onDeepLinkAvailable]
+    () =>
+      client && session
+        ? createRpcHandlers({
+            client,
+            session,
+            dryRun: isDryRun,
+            onDeepLinkAvailable,
+            balanceTokens: balanceTokensKey ? balanceTokensKey.split(',') : undefined,
+          })
+        : null,
+    [client, session, isDryRun, onDeepLinkAvailable, balanceTokensKey]
   );
 
   const run = useCallback(

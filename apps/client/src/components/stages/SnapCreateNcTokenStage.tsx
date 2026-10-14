@@ -202,13 +202,15 @@ export const SnapCreateNcTokenStage: React.FC = () => {
             </Field>
           </div>
           <AddressInput
-            label="Destination address (optional)"
+            label="Destination address"
+            hint="Optional. The wallet picks one when empty."
             value={tokenAddress}
             onChange={setTokenAddress}
             sources={ADDR_SOURCES}
           />
           <AddressInput
-            label="Change address (optional)"
+            label="Change address"
+            hint="Optional. The wallet picks one when empty."
             value={changeAddress}
             onChange={setChangeAddress}
             sources={ADDR_SOURCES}
@@ -241,7 +243,7 @@ export const SnapCreateNcTokenStage: React.FC = () => {
           <h3 id="snap-nctoken-tx" className="m-0 text-body font-semibold">
             Transaction options
           </h3>
-          <Field label="Max fee (optional)" className="max-w-60">
+          <Field label="Max fee" hint="Optional." className="max-w-60">
             <input type="text" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} className={MONO_INPUT} />
           </Field>
           <Check checked={contractPaysFees} onChange={setContractPaysFees}>

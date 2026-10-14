@@ -26,19 +26,24 @@ test suite is not the same as passing — always run the checks.
 
 ### Tier 1 — Review-Ready (before presenting work to user)
 
-Run these four commands **in sequence** after finishing implementation and before
-asking the user for feedback:
+Run these commands from the repo root, **in sequence**, after finishing
+implementation and before asking the user for feedback:
 
 ```bash
 bun run format       # Auto-format all source files
-bun run lint:fix     # Auto-fix lint violations
-bun run typecheck    # Verify TypeScript types compile
+bun run lint:fix     # Auto-fix ESLint violations
+bun run lint         # ESLint + design lint (must report 0 errors)
+bun run typecheck    # Verify TypeScript types compile in every workspace
 bun run build        # Full production build (includes tsc -b + vite)
 ```
 
 **Sequence matters.** `format` and `lint:fix` may modify files, so run them
-first. `typecheck` catches type errors without building. `build` is the final
-gate — it runs the TypeScript project builder plus Vite bundling.
+first. `lint` also runs `lint:design` (`apps/client/scripts/design-lint.ts`),
+which fails on retired classes (`bg-blue-50`-style palette classes,
+`card-primary`, `mb-7.5`, `text-2xs`, `break-all`, `window.confirm`); fix those
+by hand with the tokens in `knowledge/design-system.md`. `typecheck` catches
+type errors without building. `build` is the final gate — it runs the
+TypeScript project builder plus Vite bundling.
 
 If any command fails:
 
@@ -46,16 +51,19 @@ If any command fails:
 2. Re-run the failing command to confirm the fix.
 3. Re-run all subsequent commands in the sequence (a format fix may surface a
    new lint issue, etc.).
-4. Do not present work to the user until all four pass cleanly.
+4. Do not present work to the user until all of them pass cleanly.
 
 ### Tier 2 — Commit-Ready (before creating any git commit)
 
 After Tier 1 passes, additionally run:
 
 ```bash
-bun run test         # Unit/integration tests (bun test)
-bun run test:e2e     # Playwright end-to-end tests
+bun run test         # Unit tests in every workspace (each runs `bun test tests/`)
+bun run test:e2e     # Playwright end-to-end tests (apps/client/e2e)
 ```
+
+Run `bun run test`, not a bare `bun test` inside `apps/client`: the bare form
+also picks up the Playwright specs and reports them as failures.
 
 If any test fails:
 

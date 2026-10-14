@@ -5,7 +5,6 @@
  */
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppSelector } from '../../store/hooks';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
@@ -13,7 +12,11 @@ import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network';
 import { formatBalance } from '../../utils/balanceUtils';
-import Loading from './Loading';
+import { Identifier } from './Identifier';
+import { PreconditionStrip } from './PreconditionStrip';
+import { Field } from '../ui/Field';
+import { Callout } from '../ui/Callout';
+import { useRequireFundingWallet } from '../../hooks/useRequirements';
 
 interface SendFromFundWalletProps {
   /** Target address to send to */
@@ -37,6 +40,7 @@ export default function SendFromFundWallet({
 }: SendFromFundWalletProps) {
   const { getAllWallets } = useWalletStore();
   const fundingWalletId = useAppSelector((s) => s.walletSelection.fundingWalletId);
+  const fundingRequirement = useRequireFundingWallet();
   const { sendTransaction, isSending, error: transactionError } = useSendTransaction();
 
   const [amount, setAmount] = useState(fixedAmount ?? initialAmount);
@@ -110,55 +114,27 @@ export default function SendFromFundWallet({
   const effectiveAmount = fixedAmount ?? amount;
   const canSend = targetAddress && fundingWallet?.instance && effectiveAmount > 0;
 
-  if (!fundingWalletId) {
-    return (
-      <div className="p-4 bg-yellow-50 border border-warning rounded-lg">
-        <p className="text-yellow-800 m-0 text-sm mb-2">No funding wallet selected.</p>
-        <Link to="/" className="text-blue-600 hover:text-blue-800 underline text-sm">
-          Go to Wallet Initialization to select a funding wallet
-        </Link>
-      </div>
-    );
-  }
-
-  if (!fundingWallet) {
-    return (
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-blue-800 m-0 text-sm">
-          <span className="inline-block animate-pulse mr-2">⏳</span>
-          Funding wallet is connecting... Please wait.
-        </p>
-      </div>
-    );
+  if (fundingRequirement.met !== true || !fundingWallet) {
+    return <PreconditionStrip requirements={[fundingRequirement]} />;
   }
 
   return (
-    <div className="space-y-4">
-      {/* Loading overlay */}
-      {isSending && <Loading overlay message="Sending transaction..." />}
-
-      {/* Funding Wallet Info */}
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-xs text-blue-600 font-medium">Funding Wallet</span>
-            <p className="m-0 font-medium text-blue-900">{fundingWallet.metadata.friendlyName}</p>
-          </div>
-          <div className="text-right">
-            <span className="text-xs text-blue-600 font-medium">Balance</span>
-            <p className="m-0 font-bold text-success">
-              {fundingWallet.balance ? `${formatBalance(fundingWallet.balance)} HTR` : 'N/A'}
-            </p>
-          </div>
+    <div className="flex flex-col gap-4">
+      <dl className="m-0 flex items-start justify-between gap-4 rounded-box bg-base-200 p-3">
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-caption text-ink-muted">Funding wallet</dt>
+          <dd className="m-0 font-medium">{fundingWallet.metadata.friendlyName}</dd>
         </div>
-      </div>
+        <div className="flex flex-col items-end gap-0.5">
+          <dt className="text-caption text-ink-muted">Balance</dt>
+          <dd className="m-0 font-mono text-data tabular-nums">
+            {fundingWallet.balance ? `${formatBalance(fundingWallet.balance)} HTR` : 'Unknown'}
+          </dd>
+        </div>
+      </dl>
 
-      {/* Amount Input */}
       {showAmountInput && !fixedAmount && (
-        <div>
-          <label htmlFor="send-amount-input" className="block mb-1.5 font-bold text-sm">
-            Amount ({selectedToken.symbol})
-          </label>
+        <Field label={`Amount (${selectedToken.symbol})`} htmlFor="send-amount-input">
           <input
             id="send-amount-input"
             type="number"
@@ -166,49 +142,39 @@ export default function SendFromFundWallet({
             step="1"
             value={amount}
             onChange={handleAmountChange}
-            className="input w-full"
+            className="input w-full font-mono text-data"
             placeholder="Enter amount"
           />
-        </div>
+        </Field>
       )}
 
-      {/* Fixed amount display */}
       {fixedAmount && (
-        <div className="text-sm">
-          Amount:{' '}
-          <span className="font-bold">
+        <p className="m-0 text-body">
+          Amount{' '}
+          <span className="font-mono text-data font-semibold">
             {fixedAmount} {selectedToken.symbol}
           </span>
-        </div>
+        </p>
       )}
 
-      {/* Target address display */}
       {targetAddress ? (
-        <div className="text-sm">
-          <span className="text-muted">Sending to:</span>
-          <p className="font-mono text-xs break-all m-0 mt-1 p-2 bg-gray-100 rounded">{targetAddress}</p>
+        <div className="flex flex-col gap-1">
+          <span className="text-caption text-ink-muted">Sending to</span>
+          <Identifier value={targetAddress} kind="address" />
         </div>
       ) : (
-        <div className="text-sm text-muted">Select an address above to send to.</div>
+        <p className="m-0 text-body text-ink-muted">Select an address above to send to.</p>
       )}
 
-      {/* Error */}
       {transactionError && (
-        <div className="p-3 bg-red-50 border border-danger rounded">
-          <p className="m-0 text-red-900 text-sm">{transactionError}</p>
-        </div>
+        <Callout tone="error" title="The transaction failed" role="alert">
+          {transactionError}
+        </Callout>
       )}
 
-      {/* Send Button */}
-      <button
-        type="button"
-        onClick={handleSend}
-        disabled={!canSend || isSending}
-        className={`w-full btn flex items-center justify-center gap-2 ${
-          canSend && !isSending ? 'btn-success' : 'btn-secondary opacity-50 cursor-not-allowed'
-        }`}
-      >
-        {isSending ? 'Sending...' : `Send ${effectiveAmount} ${selectedToken.symbol} from Fund Wallet`}
+      <button type="button" onClick={handleSend} disabled={!canSend || isSending} className="btn btn-primary w-full">
+        {isSending && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}
+        {isSending ? 'Sending…' : `Send ${effectiveAmount} ${selectedToken.symbol} from the funding wallet`}
       </button>
     </div>
   );

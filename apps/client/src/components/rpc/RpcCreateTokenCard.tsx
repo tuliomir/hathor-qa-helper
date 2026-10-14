@@ -6,7 +6,8 @@
 import React, { useEffect, useState } from 'react';
 import { MdAdd, MdClose } from 'react-icons/md';
 import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { AddressInput } from '../common/AddressInput';
@@ -99,7 +100,8 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           Create a {kind} authority
         </label>
         <AddressInput
-          label={`${Kind} authority address (optional)`}
+          label={`${Kind} authority address`}
+          hint="Optional. The wallet picks one when empty."
           value={params[address]}
           onChange={(v) => set({ [address]: v })}
           sources={['test', 'fund']}
@@ -118,7 +120,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Create token"
       liveRequest={buildCreateTokenRequest(params)}
       methodData={methodData}
@@ -174,7 +176,8 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
         </Field>
       </div>
       <AddressInput
-        label="Change address (optional)"
+        label="Change address"
+        hint="Optional. The wallet picks one when empty."
         value={params.change_address}
         onChange={(change_address) => set({ change_address })}
         sources={['test', 'fund']}
@@ -210,6 +213,6 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           </div>
         ))}
       </div>
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

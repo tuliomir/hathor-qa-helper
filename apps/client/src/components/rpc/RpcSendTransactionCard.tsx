@@ -9,7 +9,8 @@ import React, { useMemo, useState } from 'react';
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
 import type { NetworkKey } from '../../constants/network';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { OutputEditor, type OutputTokenOption } from '../common/OutputEditor';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { newOutputRow, outputRowErrors, type OutputRow } from '../../utils/outputRows';
@@ -91,7 +92,7 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
     : undefined;
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Send transaction"
       description="Send a transaction with one or more outputs."
       liveRequest={liveRequest}
@@ -99,8 +100,6 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
       isDryRun={isDryRun}
       onExecute={handleExecute}
       disabledReason={disabledReason}
-      // The RPC request always targets hathor:testnet (rpcHandlers), so it never arms for mainnet.
-      isMainnet={false}
       getTxHash={rpcTxHash}
       explorerNetwork={network}
       renderResponse={(response) => <TransactionResponseDisplay response={response} network={network} />}
@@ -130,6 +129,6 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
         network={network}
         getMax={getMax}
       />
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

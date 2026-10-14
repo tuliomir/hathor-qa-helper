@@ -13,7 +13,7 @@ The four stages in the **Shielded** family (`/tools/shielded/…`) and how QA us
 
 1. Run the client and the server: `bun run dev:all` from the repo root (or `bun dev` and `bun run dev:server`). The server pill in the top bar turns green.
 2. In Wallet initialization, add a wallet on **Shielded testnet**. Any wallet works for the server; to see the browser side, start it in the browser too.
-3. The server only accepts the dev client on `localhost:5173` (or `127.0.0.1:5173`, preview `4173`). On another port it answers `FORBIDDEN`.
+3. The server accepts the client from `localhost` or `127.0.0.1` on any port. Pages served from any other host get `FORBIDDEN`.
 
 ## End to end: fund → shield → inspect → unshield
 

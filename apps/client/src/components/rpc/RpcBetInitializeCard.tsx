@@ -5,7 +5,8 @@
  */
 
 import React, { useMemo } from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Field } from '../ui/Field';
 import { DateTimePicker } from '../ui/datetime-picker';
 import { getOracleBuffer } from '../../utils/betHelpers';
@@ -95,7 +96,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
   const timeUntil = formatTimeUntil(deadline);
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Initialize bet"
       description="Create a bet nano contract with an oracle, a token and a deadline."
       liveRequest={liveRequest}
@@ -103,8 +104,8 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       isDryRun={isDryRun}
       onExecute={onExecute}
       disabledReason={disabledReason}
-      isMainnet={false}
       getTxHash={nanoTxHash}
+      txExplorerPage="nc_detail"
       explorerNetwork={network}
       renderResponse={(r) => <NanoResponse response={r} network={network} creates />}
       successToast={pushTx ? 'Bet initialized' : 'Bet transaction built'}
@@ -166,6 +167,6 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
           { label: 'Deadline (unix)', value: timestamp, kind: 'text', pending: 'Pick a deadline.' },
         ]}
       />
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

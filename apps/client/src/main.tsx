@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
@@ -136,14 +137,20 @@ console.log(
   'color: #9ca3af; font-family: monospace; font-size: 11px;'
 );
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Provider store={store}>
-      <MetaMaskProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </MetaMaskProvider>
-    </Provider>
-  </StrictMode>
+// Render the first frame synchronously. createRoot().render() alone defers
+// it to a task that runs after `load`, so keys pressed right after load hit
+// an empty page and the shell's shortcuts (`/`, Ctrl K) never see them.
+const root = createRoot(document.getElementById('root')!);
+flushSync(() =>
+  root.render(
+    <StrictMode>
+      <Provider store={store}>
+        <MetaMaskProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </MetaMaskProvider>
+      </Provider>
+    </StrictMode>
+  )
 );

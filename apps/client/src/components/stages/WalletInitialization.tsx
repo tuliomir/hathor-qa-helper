@@ -16,7 +16,6 @@ import {
   MdStar,
   MdStarBorder,
   MdStop,
-  MdSwapVert,
   MdViewList,
 } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -41,8 +40,10 @@ import { didYouMean, treatSeedWords } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
-import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
+import { CapabilityBadge } from '../common/CapabilityBadge';
+import { canCreateShieldedOutputs } from '../../services/shieldedCapability';
 import NetworkChip from '../common/NetworkChip';
+import NetworkSwapButton from '../common/NetworkSwapButton';
 import { Identifier } from '../common/Identifier';
 import { StageHeader } from '../common/StageHeader';
 import { Panel } from '../ui/Panel';
@@ -501,22 +502,23 @@ export default function WalletInitialization() {
       key: 'network',
       header: 'Network',
       render: (wallet) => {
-        const target = NETWORK_CONFIG[nextNetwork(wallet.metadata.network)].label;
-        const isSwapping = wallet.status === 'connecting' || wallet.status === 'syncing';
         return (
           <span className="inline-flex flex-wrap items-center gap-1">
             <NetworkChip network={wallet.metadata.network} size="sm" />
-            <button
-              type="button"
-              onClick={() => handleSwapNetwork(wallet.metadata.id, wallet.metadata.network, wallet.status)}
-              title={`Switch to ${target}`}
-              aria-label={`Switch ${wallet.metadata.friendlyName} to ${target}`}
-              className="btn btn-ghost btn-xs btn-square"
-              disabled={isSwapping}
-            >
-              <MdSwapVert aria-hidden="true" />
-            </button>
-            <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />
+            <NetworkSwapButton
+              walletId={wallet.metadata.id}
+              walletName={wallet.metadata.friendlyName}
+              currentNetwork={wallet.metadata.network}
+              walletStatus={wallet.status}
+              onSwap={handleSwapNetwork}
+            />
+            {NETWORK_CONFIG[wallet.metadata.network].supportsShielded && wallet.shieldedCapability && (
+              <CapabilityBadge
+                level={wallet.shieldedCapability.level}
+                reason={wallet.shieldedCapability.reason}
+                canCreateShieldedOutputs={canCreateShieldedOutputs(wallet.shieldedCapability)}
+              />
+            )}
           </span>
         );
       },
@@ -876,14 +878,6 @@ export default function WalletInitialization() {
       {showOcrReferenceModal && ocrSourceImageUrl && (
         <OCRReferenceModal imageDataUrl={ocrSourceImageUrl} onClose={() => setShowOcrReferenceModal(false)} />
       )}
-      {seedModalWalletId && (
-        <SeedPhraseModal
-          isOpen={!!seedModalWalletId}
-          onClose={() => setSeedModalWalletId(null)}
-          seedPhrase={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.seedWords || ''}
-          walletName={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
-        />
-      )}
       <WalletBrowserModal
         isOpen={showWalletBrowser}
         onClose={() => setShowWalletBrowser(false)}
@@ -905,6 +899,15 @@ export default function WalletInitialization() {
         onToggleFilterHasBalance={() => dispatch(toggleFilterHasBalance())}
         onToggleSortByBalance={() => dispatch(toggleSortByBalance())}
       />
+      {/* After the wallet browser, so it opens on top of it. */}
+      {seedModalWalletId && (
+        <SeedPhraseModal
+          isOpen={!!seedModalWalletId}
+          onClose={() => setSeedModalWalletId(null)}
+          seedPhrase={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.seedWords || ''}
+          walletName={wallets.find((w) => w.metadata.id === seedModalWalletId)?.metadata.friendlyName || ''}
+        />
+      )}
     </div>
   );
 }

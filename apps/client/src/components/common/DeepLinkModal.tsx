@@ -13,6 +13,7 @@ import {
   selectDeepLinkUrl,
 } from '../../store/slices/deepLinkSlice';
 import { removeToast } from '../../store/slices/toastSlice';
+import { MdClose } from 'react-icons/md';
 import CopyButton from './CopyButton';
 
 export default function DeepLinkModal() {
@@ -33,61 +34,43 @@ export default function DeepLinkModal() {
     dispatch(clearDeepLink());
   };
 
+  // A side panel, not a blocking modal: it sits next to the WalletConnect modal.
   return (
-    <>
-      {/* Modal - positioned on the right side to coexist with WalletConnect modal */}
-      <div
-        className="fixed top-1/2 right-4 -translate-y-1/2 z-[60] max-w-sm w-full"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="deep-link-modal-title"
-      >
-        <div className="bg-white rounded-lg shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary text-white rounded-t-lg">
-            <h2 id="deep-link-modal-title" className="text-lg font-bold m-0">
-              {title}
-            </h2>
-            <button
-              onClick={handleClose}
-              className="text-white hover:text-gray-200 text-xl font-bold"
-              aria-label="Close"
-            >
-              ×
-            </button>
+    <div
+      className="fixed right-4 top-1/2 z-[60] w-full max-w-sm -translate-y-1/2"
+      role="dialog"
+      aria-labelledby="deep-link-modal-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') handleClose();
+      }}
+    >
+      <div className="flex max-h-[90vh] flex-col overflow-y-auto rounded-box border border-base-300 bg-base-100 text-left shadow-float">
+        <header className="flex items-center gap-2 border-b border-base-300 px-4 py-3">
+          <h2 id="deep-link-modal-title" className="m-0 text-title-sm">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="btn btn-ghost btn-sm btn-square ml-auto"
+            aria-label="Close"
+          >
+            <MdClose aria-hidden="true" />
+          </button>
+        </header>
+        <div className="flex flex-col items-center gap-3 p-4">
+          <p className="m-0 text-caption text-ink-muted">Scan with your mobile device to open Hathor Wallet.</p>
+          <div className="rounded-box border border-base-300 bg-base-100 p-3">
+            <QRCode value={deepLinkUrl} size={180} />
           </div>
-
-          {/* Content */}
-          <div className="p-4">
-            {/* Instructions */}
-            <p className="text-xs text-muted mb-4 text-center">Scan with your mobile device to open Hathor Wallet</p>
-
-            {/* QR Code */}
-            <div className="flex flex-col items-center mb-4">
-              <div className="p-3 bg-white border-2 border-gray-300 rounded">
-                <QRCode value={deepLinkUrl} size={180} />
-              </div>
-            </div>
-
-            {/* Deep Link URL */}
-            <div>
-              <div className="flex items-start gap-2">
-                <div className="flex-1 p-2 bg-gray-100 rounded font-mono text-xs break-all max-h-16 overflow-y-auto">
-                  {deepLinkUrl}
-                </div>
-                <CopyButton text={deepLinkUrl} label="Copy" className="flex-shrink-0" />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end p-4 border-t border-gray-200">
-            <button onClick={handleClose} className="btn btn-ghost btn-sm px-4 py-1">
-              Close
-            </button>
+          <div className="flex w-full items-start gap-2">
+            <code className="block max-h-16 flex-1 overflow-y-auto rounded-field bg-base-200 px-2 py-1.5 font-mono text-data-sm [overflow-wrap:anywhere]">
+              {deepLinkUrl}
+            </code>
+            <CopyButton text={deepLinkUrl} label="Copy deep link" className="flex-none" />
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

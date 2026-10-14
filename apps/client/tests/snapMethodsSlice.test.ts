@@ -28,7 +28,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_getAddress',
         params: { type: 'index', index: 0 },
         isDryRun: false,
-      }),
+      })
     );
 
     const entry = state.methods['getAddress'];
@@ -51,7 +51,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_getBalance',
         params: { tokens: ['00'] },
         isDryRun: false,
-      }),
+      })
     );
 
     state = snapMethodsReducer(
@@ -60,7 +60,7 @@ describe('snapMethodsSlice', () => {
         methodKey: 'getBalance',
         response: { balances: [{ token: '00', available: 1000 }] },
         duration: 150,
-      }),
+      })
     );
 
     const entry = state.methods['getBalance'];
@@ -78,7 +78,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_sendTransaction',
         params: { outputs: [] },
         isDryRun: false,
-      }),
+      })
     );
 
     state = snapMethodsReducer(
@@ -87,7 +87,7 @@ describe('snapMethodsSlice', () => {
         methodKey: 'sendTx',
         error: 'Insufficient funds',
         duration: 200,
-      }),
+      })
     );
 
     const entry = state.methods['sendTx'];
@@ -104,7 +104,7 @@ describe('snapMethodsSlice', () => {
         methodKey: 'nonexistent',
         response: {},
         duration: 100,
-      }),
+      })
     );
     expect(state.methods['nonexistent']).toBeUndefined();
   });
@@ -117,7 +117,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_getConnectedNetwork',
         params: null,
         isDryRun: false,
-      }),
+      })
     );
 
     state = snapMethodsReducer(state, clearSnapMethodData({ methodKey: 'getNetwork' }));
@@ -132,7 +132,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_getAddress',
         params: { type: 'index', index: 0 },
         isDryRun: false,
-      }),
+      })
     );
 
     state = snapMethodsReducer(
@@ -142,7 +142,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_getBalance',
         params: { tokens: ['00'] },
         isDryRun: true,
-      }),
+      })
     );
 
     expect(Object.keys(state.methods)).toHaveLength(2);
@@ -159,7 +159,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_getAddress',
         params: { type: 'index', index: 0 },
         isDryRun: false,
-      }),
+      })
     );
 
     state = snapMethodsReducer(
@@ -168,7 +168,7 @@ describe('snapMethodsSlice', () => {
         methodKey: 'getAddress',
         response: { address: 'W123' },
         duration: 100,
-      }),
+      })
     );
 
     // New request should clear previous response
@@ -179,7 +179,7 @@ describe('snapMethodsSlice', () => {
         method: 'htr_getAddress',
         params: { type: 'index', index: 1 },
         isDryRun: false,
-      }),
+      })
     );
 
     expect(state.methods['getAddress'].response).toBeNull();

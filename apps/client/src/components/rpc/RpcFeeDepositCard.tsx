@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { AmountInput } from '../common/AmountInput';
 import { nanoTxHash } from '../../utils/nanoRpcRequests';
 import type { NetworkKey } from '../../constants/network';
@@ -79,7 +80,7 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
 }) => {
   const tokenInfo = feeTokens.find((t) => t.uid === feeToken);
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Deposit fee token"
       description="Deposit a fee-based token into a fee nano contract."
       liveRequest={liveRequest}
@@ -87,7 +88,6 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
       isDryRun={isDryRun}
       onExecute={onExecute}
       disabledReason={disabledReason}
-      isMainnet={false}
       getTxHash={nanoTxHash}
       explorerNetwork={network}
       renderResponse={(r) => <NanoResponse response={r} network={network} />}
@@ -140,6 +140,6 @@ export const RpcFeeDepositCard: React.FC<RpcFeeDepositCardProps> = ({
           },
         ]}
       />
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

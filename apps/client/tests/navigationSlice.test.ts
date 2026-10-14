@@ -159,10 +159,7 @@ describe('navigationSlice', () => {
         },
       });
 
-      const state = navigationReducer(
-        initialState,
-        navigateToRawRpcEditor({ requestJson: complexJson })
-      );
+      const state = navigationReducer(initialState, navigateToRawRpcEditor({ requestJson: complexJson }));
 
       expect(state.rawRpcEditor.requestJson).toBe(complexJson);
       expect(JSON.parse(state.rawRpcEditor.requestJson!)).toHaveProperty('method');

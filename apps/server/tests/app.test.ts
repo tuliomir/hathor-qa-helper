@@ -88,6 +88,35 @@ describe('CORS', () => {
     expect(factory.wallets).toHaveLength(0);
   });
 
+  // The Vite dev proxy forwards the browser's Origin, so a dev client on any
+  // loopback port must pass.
+  test.each(['http://localhost:5184', 'http://127.0.0.1:61234', 'http://localhost'])(
+    'accepts the loopback origin %s',
+    async (origin) => {
+      const res = await call('GET', '/health', undefined, { origin });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('access-control-allow-origin')).toBe(origin);
+    }
+  );
+
+  test.each([
+    'http://localhost.evil.example:5173',
+    'http://evil.example/http://localhost:5173',
+    'http://192.168.1.10:5173',
+    'https://localhost:5173',
+    'http://localhost:5173@evil.example',
+    'null',
+  ])('rejects the non-loopback origin %s', async (origin) => {
+    const res = await call('GET', '/health', undefined, { origin });
+    expect(res.status).toBe(403);
+    expect(res.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  test('a loopback origin does not bypass the Host check', async () => {
+    const res = await app(new Request('http://evil.example:5180/health', { headers: { origin: ORIGIN } }));
+    expect(res.status).toBe(403);
+  });
+
   test('rejects a foreign Host header (DNS rebinding)', async () => {
     const res = await app(new Request('http://evil.example:5180/health'));
     expect(res.status).toBe(403);

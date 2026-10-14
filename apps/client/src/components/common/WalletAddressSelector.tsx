@@ -8,7 +8,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppSelector } from '../../store/hooks';
-import CopyButton from './CopyButton';
+import { Identifier } from './Identifier';
+import { Field } from '../ui/Field';
+import { Callout } from '../ui/Callout';
+import { getStageUrl } from '../../config/stageRoutes';
 
 interface WalletAddressSelectorProps {
   /** Wallet ID to select address from. If not provided, uses test wallet from Redux */
@@ -27,7 +30,7 @@ export default function WalletAddressSelector({
   walletId: walletIdProp,
   initialIndex = 0,
   onAddressChange,
-  label = 'Select Address',
+  label = 'Address index',
   showCopyButton = true,
 }: WalletAddressSelectorProps) {
   const { getAllWallets } = useWalletStore();
@@ -109,91 +112,78 @@ export default function WalletAddressSelector({
 
   if (!walletId) {
     return (
-      <div className="p-4 bg-yellow-50 border border-warning rounded-lg">
-        <p className="text-yellow-800 m-0 text-sm mb-2">No test wallet selected.</p>
-        <Link to="/" className="text-blue-600 hover:text-blue-800 underline text-sm">
-          Go to Wallet Initialization to select a test wallet
-        </Link>
-      </div>
+      <Callout
+        tone="warning"
+        title="No test wallet selected"
+        action={
+          <Link to={getStageUrl('wallet-initialization')} className="btn btn-secondary btn-sm">
+            Select a wallet
+          </Link>
+        }
+      >
+        Select a test wallet in Wallet initialization.
+      </Callout>
     );
   }
 
   if (!wallet) {
     return (
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-blue-800 m-0 text-sm">
-          <span className="inline-block animate-pulse mr-2">⏳</span>
-          Wallet is connecting... Please wait.
-        </p>
-      </div>
+      <Callout tone="info" role="status">
+        Waiting for the wallet to be ready.
+      </Callout>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Wallet Info */}
-      <div className="text-sm text-muted">
-        Wallet: <span className="font-medium text-gray-900">{wallet.metadata.friendlyName}</span>
-      </div>
+    <div className="flex flex-col gap-4">
+      <p className="m-0 text-body text-ink-muted">
+        Wallet <span className="font-medium text-base-content">{wallet.metadata.friendlyName}</span>
+      </p>
 
-      {/* Address Index Control */}
-      <div>
-        <label htmlFor="address-index-selector" className="block mb-1.5 font-bold text-sm">
-          {label}
-        </label>
-        <div className="flex gap-2 items-start">
+      <Field
+        label={label}
+        htmlFor="address-index-selector"
+        hint="Index used to derive the address (default 0)."
+        wireControl={false}
+      >
+        <div className="flex flex-wrap items-start gap-2">
           <input
             id="address-index-selector"
+            aria-describedby="address-index-selector-hint"
             type="number"
             min={0}
             step={1}
             value={addressIndex}
             onChange={handleIndexChange}
-            className="input flex-1"
+            className="input min-w-24 flex-1 font-mono text-data"
             placeholder="Address index"
           />
-          <button
-            type="button"
-            onClick={handleGetAddr0}
-            disabled={!wallet.instance}
-            className="btn btn-secondary px-3 py-2 whitespace-nowrap"
-          >
-            Addr0
+          <button type="button" onClick={handleGetAddr0} disabled={!wallet.instance} className="btn btn-secondary">
+            Index 0
           </button>
           <button
             type="button"
             onClick={handleGetFirstEmpty}
             disabled={isFetchingFirstEmpty || !wallet.instance}
-            className="btn btn-primary px-3 py-2 whitespace-nowrap"
+            className="btn btn-secondary"
           >
-            {isFetchingFirstEmpty ? 'Loading...' : 'Get First Empty'}
+            {isFetchingFirstEmpty ? 'Looking up…' : 'First empty'}
           </button>
         </div>
-        <p className="text-muted text-xs mt-1.5 mb-0">Index used to derive the address (default 0)</p>
-      </div>
+      </Field>
 
-      {/* Error */}
       {error && (
-        <div className="p-3 bg-red-50 border border-danger rounded">
-          <p className="m-0 text-red-900 text-sm">{error}</p>
-        </div>
+        <Callout tone="error" role="alert">
+          {error}
+        </Callout>
       )}
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="p-3 bg-gray-50 border border-gray-200 rounded text-center">
-          <p className="m-0 text-sm">Loading address...</p>
-        </div>
-      )}
+      {isLoading && <span className="skeleton block h-9 w-full" aria-label="Loading address" />}
 
-      {/* Derived Address Display */}
       {derivedAddress && !isLoading && (
-        <div className="p-3 bg-green-50 border border-success rounded">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium text-green-800">Address (Index {addressIndex})</span>
-            {showCopyButton && <CopyButton text={derivedAddress} label="Copy" />}
-          </div>
-          <p className="font-mono text-xs break-all m-0 text-green-900">{derivedAddress}</p>
+        <div className="flex flex-col gap-1">
+          <span className="text-caption text-ink-muted">Address at index {addressIndex}</span>
+          <Identifier value={derivedAddress} kind="address" truncate="none" copy={showCopyButton} />
         </div>
       )}
     </div>

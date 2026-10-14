@@ -34,4 +34,12 @@ describe('capabilityDisplay', () => {
     expect(capabilityDisplay('view', false).title).toBe('Can decrypt shielded amounts');
     expect(capabilityDisplay('full', false).title).toContain("can't create shielded outputs here");
   });
+
+  test("the tooltip carries wallet-lib's reason when there is one", () => {
+    expect(capabilityDisplay('none', false, 'no-provider').title).toBe('No shielded support (no-provider)');
+    expect(capabilityDisplay('watch', false, 'scan-key-locked').title).toBe(
+      'Sees that shielded outputs exist (scan-key-locked)'
+    );
+    expect(capabilityDisplay('none', false, null).title).toBe('No shielded support');
+  });
 });

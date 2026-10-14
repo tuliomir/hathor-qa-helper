@@ -5,7 +5,6 @@
 import React from 'react';
 import { MdOpenInNew } from 'react-icons/md';
 import { Field } from '../ui/Field';
-import { Callout } from '../ui/Callout';
 import { AmountInput } from '../common/AmountInput';
 import { Identifier, type IdentifierKind } from '../common/Identifier';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
@@ -305,15 +304,6 @@ export function TokenUidField({
         spellCheck={false}
       />
     </Field>
-  );
-}
-
-/** Replaces the card when the active network has no QA blueprint. */
-export function BlueprintUnavailableCallout({ kind, networkLabel }: { kind: string; networkLabel: string }) {
-  return (
-    <Callout tone="warning" title={`Not available on ${networkLabel}`} role="status">
-      The {kind} blueprint is deployed on Testnet only. Switch the test wallet to Testnet to use this stage.
-    </Callout>
   );
 }
 

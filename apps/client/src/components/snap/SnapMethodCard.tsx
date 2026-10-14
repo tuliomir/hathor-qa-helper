@@ -1,6 +1,5 @@
 /**
- * Snap adapter for MethodCard (kept until the stage sweep moves every snap
- * stage to MethodCard directly). Adds the snap specifics: MetaMask
+ * Snap adapter for MethodCard. Adds the snap specifics: MetaMask
  * rejection detection, the formatted snap response view, tx-hash
  * extraction and mainnet arming from the snap's reported network.
  */
@@ -13,6 +12,7 @@ import { parseSnapResponse, isSnapEnvelope, isTransactionLike } from '../../util
 import { isSnapUserRejection } from '../../utils/snapErrors';
 import { selectSnapNetwork } from '../../store/slices/snapSlice';
 import type { SnapMethodData } from '../../store/slices/snapMethodsSlice';
+import type { ExplorerPage } from '../../utils/networkHelpers';
 
 interface SnapMethodCardProps {
   title: string;
@@ -25,6 +25,12 @@ interface SnapMethodCardProps {
   onExecute: () => Promise<unknown>;
   disabled?: boolean;
   disabledReason?: string | null;
+  /** Extra Compose footer actions next to the primary button. */
+  secondaryActions?: React.ReactNode;
+  /** Extra content at the bottom of the Inspect panel. */
+  inspectExtra?: React.ReactNode;
+  /** `nc_detail` when the response creates a nano contract. */
+  txExplorerPage?: ExplorerPage;
   children: React.ReactNode;
 }
 
