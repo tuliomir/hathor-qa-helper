@@ -10,6 +10,7 @@ const SHAPE: Record<StatusTone, string> = {
   progress:
     'border-2 border-warning border-t-transparent animate-spin motion-reduce:animate-none motion-reduce:border-t-warning motion-reduce:border-r-transparent',
   success: 'bg-success',
+  warning: 'bg-warning',
   error: 'bg-error',
   'dry-run': 'border-[1.5px] border-dashed border-ink-muted',
   info: 'bg-info',

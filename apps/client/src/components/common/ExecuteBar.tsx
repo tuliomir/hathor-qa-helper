@@ -6,13 +6,15 @@
  * - A disabled button always shows its reason next to it. Dry run stays
  *   available when only preconditions block the real send.
  * - On mainnet (not dry run) the button turns into a red outline ("Send on
- *   mainnet") and needs a second click within 4s. No modal.
+ *   mainnet") and needs a second click within 4s. No modal. Without an
+ *   explicit `isMainnet`, the active network decides.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../../store';
 import { setDryRunMode } from '../../store/slices/rpcSlice';
+import { selectActiveNetworkKind } from '../../store/slices/networkSlice';
 import {
   ARM_TIMEOUT_MS,
   executeButtonLabel,
@@ -24,6 +26,7 @@ import {
 export interface ExecuteBarProps {
   label: string;
   onExecute: () => void | Promise<unknown>;
+  /** Defaults to whether the active network is mainnet. */
   isMainnet?: boolean;
   /** Show the dry-run toggle (bound to the global dry-run mode). */
   showDryRun?: boolean;
@@ -39,7 +42,7 @@ export interface ExecuteBarProps {
 export function ExecuteBar({
   label,
   onExecute,
-  isMainnet = false,
+  isMainnet: isMainnetProp,
   showDryRun = true,
   running = false,
   runningLabel,
@@ -49,8 +52,11 @@ export function ExecuteBar({
 }: ExecuteBarProps) {
   const dispatch = useDispatch();
   const globalDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
+  const activeIsMainnet = useSelector(selectActiveNetworkKind) === 'main';
+  const isMainnet = isMainnetProp ?? activeIsMainnet;
   const isDryRun = showDryRun && globalDryRun;
   const ctx = { isMainnet, isDryRun };
+  const reasonId = useId();
   const [arm, setArm] = useState<ArmingState>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -91,7 +97,7 @@ export function ExecuteBar({
       )}
       <span className="ml-auto" />
       {blockedReason && (
-        <span className="text-caption text-ink-muted" id="execute-bar-reason">
+        <span className="text-caption text-ink-muted" id={reasonId}>
           {blockedReason}
         </span>
       )}
@@ -100,7 +106,7 @@ export function ExecuteBar({
         type="button"
         onClick={handleClick}
         disabled={disabled}
-        aria-describedby={blockedReason ? 'execute-bar-reason' : undefined}
+        aria-describedby={blockedReason ? reasonId : undefined}
         className={`btn ${mainnet ? 'border-2 border-error bg-base-100 text-error hover:bg-tint-error' : 'btn-primary'}`}
       >
         {running && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}

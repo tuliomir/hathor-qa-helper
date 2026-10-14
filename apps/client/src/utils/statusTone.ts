@@ -4,7 +4,8 @@
  * StatusChip render the tone; the word itself is always shown next to it.
  */
 
-export type StatusTone = 'idle' | 'progress' | 'success' | 'error' | 'dry-run' | 'info';
+/** `warning` is a steady caution (e.g. a network mismatch), unlike the animated `progress`. */
+export type StatusTone = 'idle' | 'progress' | 'success' | 'warning' | 'error' | 'dry-run' | 'info';
 
 const TONES: Record<string, StatusTone> = {
   // idle, not started
@@ -34,6 +35,9 @@ const TONES: Record<string, StatusTone> = {
   on: 'success',
   sent: 'success',
   success: 'success',
+  // caution
+  warning: 'warning',
+  mismatch: 'warning',
   // failure
   error: 'error',
   failed: 'error',

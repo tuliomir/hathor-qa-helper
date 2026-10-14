@@ -7,7 +7,7 @@
 
 import { MdAdd, MdClose, MdOutlineCopyAll } from 'react-icons/md';
 import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
-import { AddressInput, type AddressSource } from './AddressInput';
+import { AddressInput, type AddressSource, type CustomAddressSource } from './AddressInput';
 import { AmountInput } from './AmountInput';
 import { ShieldModeSelector } from './ShieldModeSelector';
 import TimelockPicker from './TimelockPicker';
@@ -32,8 +32,10 @@ export interface OutputEditorProps {
   /** Token choices; without them the token is a free-text UID field. */
   tokens?: OutputTokenOption[];
   addressSources?: AddressSource[];
-  /** Network for address validation. */
-  network?: NetworkKey;
+  /** Stage-specific quick-fill entries for every recipient. */
+  customAddressSources?: CustomAddressSource[];
+  /** Network for address validation; defaults to the active network, `null` accepts any. */
+  network?: NetworkKey | null;
   allowData?: boolean;
   allowTimelock?: boolean;
   /**
@@ -56,6 +58,7 @@ export function OutputEditor({
   onChange,
   tokens,
   addressSources = [],
+  customAddressSources,
   network,
   allowData = true,
   allowTimelock = true,
@@ -146,6 +149,7 @@ export function OutputEditor({
                   onChange={(address) => update(i, { address })}
                   placeholder="Recipient address"
                   sources={addressSources}
+                  customSources={customAddressSources}
                   accept={shielded ? 'shielded' : 'transparent'}
                   network={network}
                 />

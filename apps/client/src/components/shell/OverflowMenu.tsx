@@ -9,7 +9,13 @@ import { FiExternalLink, FiGithub, FiMoon, FiMoreHorizontal, FiSun } from 'react
 import { desktopQAConfig } from '../../config/desktopQA';
 import { useTheme } from './useTheme';
 import { useWorkspace } from './useWorkspace';
-import { focusFirstMenuItem, handleMenuKeyDown, MENU_ITEM_CLASS, POPOVER_PANEL_CLASS, usePopover } from './usePopover';
+import {
+  focusFirstMenuItem,
+  handleMenuKeyDown,
+  MENU_ITEM_CLASS,
+  POPOVER_PANEL_CLASS,
+  usePopover,
+} from '../ui/usePopover';
 
 export default function OverflowMenu() {
   const { theme, toggleTheme } = useTheme();

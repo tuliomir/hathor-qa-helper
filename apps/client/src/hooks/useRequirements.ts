@@ -3,14 +3,13 @@
  * them. Each hook returns one Requirement.
  */
 
-import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
 import { selectIsWalletConnectConnected } from '../store/slices/walletConnectSlice';
 import { selectIsSnapConnected } from '../store/slices/snapSlice';
 import { getStageUrl } from '../config/stageRoutes';
 import { NETWORKS, type NetworkKey } from '@qa-helper/shared/networks';
-import { QA_SERVER_PROXY_PREFIX, QA_SERVER_ROUTES, type ShieldedCapabilityLevel } from '@qa-helper/shared/serverApi';
+import type { ShieldedCapabilityLevel, WalletSession } from '@qa-helper/shared/serverApi';
 import type { Requirement } from '../utils/requirements';
 
 const WALLETS_URL = getStageUrl('wallet-initialization');
@@ -81,41 +80,54 @@ export function useRequireSnap(): Requirement {
       };
 }
 
-/**
- * Pings the QA server's /health through the dev proxy every 10s. Local
- * state on purpose; the shell's helper-server pill owns the global status.
- */
-export function useRequireHelperServer(pollMs = 10_000): Requirement {
-  const [state, setState] = useState<boolean | 'pending'>('pending');
-
-  useEffect(() => {
-    let cancelled = false;
-    const check = async () => {
-      try {
-        const res = await fetch(`${QA_SERVER_PROXY_PREFIX}${QA_SERVER_ROUTES.health}`);
-        if (!cancelled) setState(res.ok);
-      } catch {
-        if (!cancelled) setState(false);
-      }
-    };
-    check();
-    const timer = setInterval(check, pollMs);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [pollMs]);
-
-  const base = { id: 'helper-server', short: 'Helper server' };
-  if (state === 'pending') return { ...base, met: 'pending', label: 'Checking the helper server' };
-  return state
-    ? { ...base, met: true, label: 'Helper server running' }
-    : {
+/** Helper (QA) server status from helperServerSlice; the shell's server pill does the polling. */
+export function useRequireHelperServer(): Requirement {
+  const { status, error } = useSelector((state: RootState) => state.helperServer);
+  const base = { id: 'helper-server', short: 'QA server' };
+  switch (status) {
+    case 'online':
+      return { ...base, met: true, label: 'QA server running' };
+    case 'idle':
+    case 'connecting':
+      return { ...base, met: 'pending', label: 'Checking the QA server' };
+    case 'local-only':
+      return {
         ...base,
         met: false,
-        label: 'Helper server not running',
-        action: 'Start the helper server (bun run dev:server)',
+        label: 'QA server only runs next to the dev client',
+        action: 'Run the dev client (bun run dev:all)',
       };
+    case 'error':
+      return {
+        ...base,
+        met: false,
+        label: `QA server error${error ? `: ${error}` : ''}`,
+        action: 'Check the QA server',
+        fix: { label: 'Open QA server', to: getStageUrl('shielded-qa-server') },
+      };
+    default:
+      return {
+        ...base,
+        met: false,
+        label: 'QA server not running',
+        action: 'Start the QA server (bun run dev:server)',
+        fix: { label: 'How to start it', to: getStageUrl('shielded-qa-server') },
+      };
+  }
+}
+
+/** A QA server session must be chosen and ready. */
+export function useRequireServerSession(session: WalletSession | null | undefined): Requirement {
+  const base = { id: 'server-session', short: 'Server session' };
+  const fix = { label: 'Start one', to: getStageUrl('shielded-qa-server') };
+  if (!session) {
+    return { ...base, met: false, label: 'No server session selected', action: 'Choose a ready server session', fix };
+  }
+  if (session.state === 'starting') return { ...base, met: 'pending', label: 'Server session starting' };
+  if (session.state === 'error') {
+    return { ...base, met: false, label: 'Server session failed', action: 'Restart the server session', fix };
+  }
+  return { ...base, met: true, label: 'Server session ready' };
 }
 
 /** The test wallet's network (or `actual`) must be `expected`. */

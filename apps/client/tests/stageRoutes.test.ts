@@ -4,12 +4,12 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-	DEFAULT_STAGE_URL,
-	getGroupIdFromSlug,
-	getStageIdFromSlugs,
-	getStageUrl,
-	GROUP_SLUG_MAP,
-	STAGE_SLUG_MAP,
+  DEFAULT_STAGE_URL,
+  getGroupIdFromSlug,
+  getStageIdFromSlugs,
+  getStageUrl,
+  GROUP_SLUG_MAP,
+  STAGE_SLUG_MAP,
 } from '../src/config/stageRoutes';
 import { STAGE_GROUPS } from '../src/types/stage';
 
@@ -30,12 +30,9 @@ describe('stageRoutes', () => {
     });
 
     test('all stages are covered', () => {
-      const totalStages = STAGE_GROUPS.reduce(
-        (sum, group) => sum + group.stages.length,
-        0,
-      );
-      expect(totalStages).toBe(46);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(46);
+      const totalStages = STAGE_GROUPS.reduce((sum, group) => sum + group.stages.length, 0);
+      expect(totalStages).toBe(50);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(50);
     });
   });
 
@@ -50,6 +47,14 @@ describe('stageRoutes', () => {
       expect(getStageUrl('rpc-connection')).toBe('/tools/rpc/connection');
       expect(getStageUrl('rpc-get-balance')).toBe('/tools/rpc/get-balance');
       expect(getStageUrl('rpc-raw-editor')).toBe('/tools/rpc/raw-editor');
+    });
+
+    test('builds correct URL for shielded stages', () => {
+      expect(getStageUrl('shielded-qa-server')).toBe('/tools/shielded/qa-server');
+      expect(getStageUrl('shielded-send')).toBe('/tools/shielded/send');
+      expect(getStageUrl('shielded-balances')).toBe('/tools/shielded/balances');
+      expect(getStageUrl('shielded-inspector')).toBe('/tools/shielded/inspector');
+      expect(getStageIdFromSlugs('shielded', 'inspector')).toBe('shielded-inspector');
     });
 
     test('builds correct URL for bet-nano-contracts stages', () => {

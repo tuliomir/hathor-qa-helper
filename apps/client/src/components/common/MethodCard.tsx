@@ -41,12 +41,15 @@ export interface MethodCardProps {
   disabled?: boolean;
   /** Shown next to the disabled primary button (dry run stays enabled). */
   disabledReason?: string | null;
+  /** Defaults to the active network (see ExecuteBar). */
   isMainnet?: boolean;
   /** Who the user waits for while running. */
   wallet?: 'MetaMask' | 'wallet';
   isRejection?: (err: unknown) => boolean;
   /** Formatted response view (enables Formatted/Raw). */
   renderResponse?: (response: unknown) => React.ReactNode;
+  /** Custom error block for errors thrown in this session (the default is a generic error callout). */
+  renderError?: (error: unknown, message: string) => React.ReactNode;
   getTxHash?: (response: unknown) => string | null;
   explorerNetwork?: string;
   requestCaption?: React.ReactNode;
@@ -72,10 +75,11 @@ export function MethodCard({
   onExecute,
   disabled = false,
   disabledReason = null,
-  isMainnet = false,
+  isMainnet,
   wallet = 'wallet',
   isRejection,
   renderResponse,
+  renderError,
   getTxHash,
   explorerNetwork,
   requestCaption,
@@ -87,11 +91,13 @@ export function MethodCard({
   const { showToast } = useToast();
   const [running, setRunning] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [rawError, setRawError] = useState<unknown>(null);
   const [rejected, setRejected] = useState(false);
 
   const handleExecute = async () => {
     setRunning(true);
     setLocalError(null);
+    setRawError(null);
     setRejected(false);
     try {
       await onExecute();
@@ -104,6 +110,7 @@ export function MethodCard({
       } else {
         const msg = extractErrorMessage(err);
         setLocalError(msg);
+        setRawError(err);
         showToast(msg, 'error');
       }
     } finally {
@@ -176,7 +183,14 @@ export function MethodCard({
           </div>
         )}
 
-        {!rejected && error && (
+        {!rejected &&
+          error &&
+          renderError &&
+          rawError !== null &&
+          localError !== null &&
+          renderError(rawError, localError)}
+
+        {!rejected && error && !(renderError && rawError !== null && localError !== null) && (
           <div data-result="error">
             <Callout tone="error" title="The request failed" role="alert">
               <pre className="m-0 whitespace-pre-wrap break-words font-mono text-data-sm">{error}</pre>

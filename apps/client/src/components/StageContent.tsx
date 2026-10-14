@@ -53,6 +53,10 @@ import { SnapBetWithdrawStage } from './stages/SnapBetWithdrawStage';
 import { SnapFeeInitializeStage } from './stages/SnapFeeInitializeStage';
 import { SnapFeeDepositStage } from './stages/SnapFeeDepositStage';
 import { SnapFeeWithdrawStage } from './stages/SnapFeeWithdrawStage';
+import { ShieldedQaServerStage } from './stages/ShieldedQaServerStage';
+import { ShieldedSendStage } from './stages/ShieldedSendStage';
+import { ShieldedBalancesStage } from './stages/ShieldedBalancesStage';
+import { ShieldedInspectorStage } from './stages/ShieldedInspectorStage';
 
 const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'wallet-initialization': WalletInitialization,
@@ -103,6 +107,11 @@ const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'snap-fee-initialize': SnapFeeInitializeStage,
   'snap-fee-deposit': SnapFeeDepositStage,
   'snap-fee-withdraw': SnapFeeWithdrawStage,
+  // Shielded outputs
+  'shielded-qa-server': ShieldedQaServerStage,
+  'shielded-send': ShieldedSendStage,
+  'shielded-balances': ShieldedBalancesStage,
+  'shielded-inspector': ShieldedInspectorStage,
 };
 
 export default function StageContent() {

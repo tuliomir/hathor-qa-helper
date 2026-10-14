@@ -21,6 +21,7 @@ export const GROUP_SLUG_MAP: Record<GroupId, string> = {
   snaps: 'snaps',
   'snap-bet-nc': 'snap-bet-nc',
   'snap-fee-nc': 'snap-fee-nc',
+  shielded: 'shielded',
 };
 
 // ─── Stage slugs (group prefix stripped where redundant) ─────────────────────
@@ -82,6 +83,11 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   'snap-fee-initialize': 'initialize',
   'snap-fee-deposit': 'deposit',
   'snap-fee-withdraw': 'withdraw',
+  // Shielded outputs
+  'shielded-qa-server': 'qa-server',
+  'shielded-send': 'send',
+  'shielded-balances': 'balances',
+  'shielded-inspector': 'inspector',
 };
 
 // ─── Reverse lookup maps (built once at module load) ─────────────────────────

@@ -11,15 +11,16 @@ import { useAppSelector } from '../../store/hooks';
 import type { HelperServerStatus } from '../../store/slices/helperServerSlice';
 import { useHelperServerHealth } from '../../hooks/useHelperServerHealth';
 import CopyButton from '../common/CopyButton';
-import StatusDot, { type StatusTone } from './StatusDot';
-import { POPOVER_PANEL_CLASS, usePopover } from './usePopover';
+import { StatusDot } from '../ui/StatusDot';
+import type { StatusTone } from '../../utils/statusTone';
+import { POPOVER_PANEL_CLASS, usePopover } from '../ui/usePopover';
 
 const START_COMMAND = 'bun run dev:server';
 
 const PILL: Record<HelperServerStatus, { tone: StatusTone; label: string; name: string }> = {
   idle: { tone: 'progress', label: 'Helper', name: 'Helper server: connecting' },
   connecting: { tone: 'progress', label: 'Helper', name: 'Helper server: connecting' },
-  online: { tone: 'ok', label: 'Helper', name: 'Helper server: connected' },
+  online: { tone: 'success', label: 'Helper', name: 'Helper server: connected' },
   offline: { tone: 'idle', label: 'Helper offline', name: 'Helper server: not running' },
   error: { tone: 'error', label: 'Helper error', name: 'Helper server: error' },
   'local-only': { tone: 'idle', label: 'Helper: local only', name: 'Helper server: local only' },
