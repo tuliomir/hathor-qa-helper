@@ -9,14 +9,14 @@ Procedural knowledge for navigating the Hathor QA Helper app via Playwright MCP 
 
 ## Core Rule: Direct URL Navigation
 
-Never click sidebar buttons to navigate between stages. Sidebar items overlap during scroll/animation and cause click interception errors.
-
-Always use `browser_navigate` with the full URL:
+Prefer `browser_navigate` with the full URL over clicking through the navigation:
 ```
 http://localhost:5173/tools/{groupSlug}/{stageSlug}
 ```
 
-To find the correct URL for any stage, read the reference file at `references/stage-urls.md`.
+To find the correct URL for any stage, read the reference file at `references/stage-urls.md`. The walkthroughs live at `/mobile` and `/desktop`.
+
+If you do use the navigation, it is `navigation` named **Stages**: families are regions, groups are buttons (`aria-expanded`), stages are links with sentence-case names, and the current stage has `aria-current="page"`. Below 1024px it is a drawer opened by the **Open navigation** button.
 
 ## Wallet Lifecycle
 
@@ -41,36 +41,44 @@ After any `browser_navigate` call, the page fully reloads. Redux state rehydrate
 
 ### Starting an Idle Wallet
 
-If the header shows no wallet status, navigate to `/tools/main/wallet-initialization` first:
-1. Click "Start {wallet name}" button
-2. Wait for "ready" text (up to 60s)
+If the top bar's wallet context shows no running wallet, navigate to `/tools/main/wallet-initialization` first:
+1. Click the button named "Start {wallet name}"
+2. Wait for the wallet's status chip to read "ready" (up to 60s)
 3. Navigate to the target stage via URL
 
 ## Key Selectors
 
-### Header
-- Test wallet info: look for "Test:" label in header
-- Funding wallet info: look for "Funding:" label in header
-- Balance: displayed next to "Balance:" in header
+### Shell (every route)
+- Stage navigation: `navigation` named "Stages"; filter: searchbox "Filter stages" (`/` focuses it)
+- Command palette: button "Find stage", or `Control+K` / `Meta+K`; dialog "Command palette" with a combobox and `option`s
+- Workspace switcher: button "Workspace: Tools" (menu items "Tools", "Mobile walkthrough", "Desktop walkthrough")
+- Wallet context: `group` "Wallet context" with buttons "Test wallet: {name}" and "Funding wallet: {name}" (status and HTR balance inside), plus "RPC: …" and "Snap: …"
+- Helper server pill: button starting with "Helper server:"; network switcher: button "Network: {label}"
+
+### Stage layout
+- Title: the page's `h1` (sentence case); the breadcrumb is `navigation` "Breadcrumb"
+- Preconditions: the strip under the header lists unmet requirements with a fix link
+- Method stages: a compose panel (titled with the action, inputs and the primary button) next to an "Inspect" panel. The primary button is named after the action ("Send transaction", "Get xpub"); "Edit raw" opens the request in the Raw RPC editor
+- Outcome: the Inspect panel's result region has `data-result="success" | "error" | "rejected" | "dry-run"`
 
 ### Cleanup Page (`/tools/auditing/test-wallet-cleanup`)
-- Refresh button: `button` with text "Refresh"
-- Execute Cleanup button: `button` with text "Execute Cleanup"
-- Debug panel: shows real-time logs with timestamps
-- Completion: look for "Cleanup completed successfully!" text
+- Refresh button: `button` named "Refresh"
+- Execute button: `button` named "Execute cleanup" ("Execute cleanup on mainnet" on mainnet, which asks to type the wallet name)
+- Debug panel: a collapsed `details` at the bottom with timestamped logs
+- Completion: a success callout "Cleanup completed."
 
 ### Common Patterns
-- Buttons are identified by their visible text
-- Tables show token data with columns for Token, Balance, etc.
-- Status messages appear as colored badges or inline text
-- Error states show red text with error details
+- Buttons are identified by their accessible name (sentence case); icon-only buttons have an `aria-label`
+- Tables are `DataTable`s; below 768px rows render as stacked cards
+- Hashes and addresses are middle-truncated `Identifier`s: read the full value from the copy button or the popover, not the visible text
+- Errors are callouts with `role="alert"`
 
 ## Page Reload Caveats
 
 - `browser_navigate` causes full page reload — Redux rehydrates from localStorage
 - Wallet instances reconnect automatically (~10s simple, ~120s large)
 - Snap connection state persists in Redux but MetaMask provider is lost
-- Sidebar links provide SPA navigation without reload, but are unreliable due to click interception — always prefer `browser_navigate` with the full URL
+- Navigation links give SPA navigation without a reload; prefer `browser_navigate` when you want a clean state
 
 ## Dropdown Selection
 
@@ -87,4 +95,4 @@ To select a dropdown option, use the `browser_select_option` MCP tool. Pass the 
 1. Click action button (e.g., "Execute Cleanup")
 2. UI shows loading state with step descriptions
 3. Wait for completion text or check debug logs
-4. Verify balances in header after completion
+4. Verify balances in the top bar's wallet context after completion

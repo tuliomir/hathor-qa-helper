@@ -1,6 +1,5 @@
 /**
- * Snap adapter for MethodCard (kept until the stage sweep moves every snap
- * stage to MethodCard directly). Adds the snap specifics: MetaMask
+ * Snap adapter for MethodCard. Adds the snap specifics: MetaMask
  * rejection detection, the formatted snap response view, tx-hash
  * extraction and mainnet arming from the snap's reported network.
  */
