@@ -6,6 +6,8 @@
 import { useAppSelector } from '../../store/hooks';
 import { selectCurrentLocation } from '../../store/slices/mobileQAProgressSlice';
 import { getStep, getComponent } from '../../config/mobileQA';
+import { EmptyState } from '../ui/EmptyState';
+import { Callout } from '../ui/Callout';
 
 export default function MobileQAToolPanel() {
   const currentLocation = useAppSelector(selectCurrentLocation);
@@ -13,38 +15,29 @@ export default function MobileQAToolPanel() {
 
   const step = getStep(sectionId, stepId);
 
-  // If no tool configured for this step, show placeholder
   if (!step?.tool) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
-        <div className="text-center text-muted p-8">
-          <div className="text-4xl mb-4">📋</div>
-          <p className="text-lg font-medium m-0">No embedded tool for this step</p>
-          <p className="text-sm mt-2 m-0">Follow the instructions on the left to complete this step manually.</p>
-        </div>
+      <div className="p-4 md:p-6">
+        <EmptyState>No embedded tool for this step. Follow the instructions to complete it manually.</EmptyState>
       </div>
     );
   }
 
-  // Get the component from registry
   const Component = getComponent(step.tool.componentKey);
 
   if (!Component) {
     return (
-      <div className="h-full flex items-center justify-center bg-red-50">
-        <div className="text-center text-danger p-8">
-          <div className="text-4xl mb-4">⚠️</div>
-          <p className="text-lg font-medium m-0">Component not found</p>
-          <p className="text-sm mt-2 m-0">The tool "{step.tool.componentKey}" could not be loaded.</p>
-        </div>
+      <div className="p-4 md:p-6">
+        <Callout tone="error" title="Tool not available" role="alert">
+          The tool <code className="font-mono text-data-sm">{step.tool.componentKey}</code> could not be loaded.
+        </Callout>
       </div>
     );
   }
 
-  // Render the component
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 p-4">
+    <section aria-label="Step tool" className="flex flex-col gap-4 p-4 md:p-6">
       <Component />
-    </div>
+    </section>
   );
 }

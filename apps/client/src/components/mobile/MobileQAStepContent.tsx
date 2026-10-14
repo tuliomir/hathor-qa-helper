@@ -11,28 +11,11 @@ import {
   setCurrentLocation,
 } from '../../store/slices/mobileQAProgressSlice';
 import { getSection, getStep, getNextStep, getPreviousStep } from '../../config/mobileQA';
-import { MdCheckCircle, MdNavigateNext, MdNavigateBefore, MdRadioButtonUnchecked } from 'react-icons/md';
-
-/**
- * Simple markdown-like rendering for instructions
- * Supports **bold** formatting
- */
-function renderInstructions(text: string): React.ReactNode {
-  // Split by **bold** markers
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-
-  return parts.map((part, index) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      // Bold text
-      return (
-        <strong key={index} className="font-bold">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-    return part;
-  });
-}
+import MarkdownText from '../common/MarkdownText';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { StatusChip } from '../ui/StatusChip';
+import StepNavigation from '../desktop/StepNavigation';
 
 export default function MobileQAStepContent() {
   const dispatch = useAppDispatch();
@@ -87,10 +70,10 @@ export default function MobileQAStepContent() {
 
   if (!section || !step) {
     return (
-      <div className="p-6">
-        <div className="card-primary bg-red-50 border border-danger">
-          <p className="text-danger m-0">Step not found. Please select a step from the sidebar.</p>
-        </div>
+      <div className="p-4 md:p-6">
+        <Callout tone="error" role="alert">
+          Step not found. Select a step from the list of sections.
+        </Callout>
       </div>
     );
   }
@@ -100,79 +83,33 @@ export default function MobileQAStepContent() {
   const stepNumber = stepIndex + 1;
 
   return (
-    <div className="p-6">
-      {/* Section and Step Header */}
-      <div className="mb-6">
-        <div className="text-sm text-muted mb-1">{section.title}</div>
-        <h1 className="text-2xl font-bold m-0 flex items-center gap-3">
-          <span className="text-purple-600">Step {stepNumber}:</span>
-          <span>{step.title}</span>
-          {isCompleted && <MdCheckCircle className="text-success" size={28} />}
-        </h1>
-      </div>
-
-      {/* Instructions Card */}
-      <div className="card-primary mb-6">
-        <h2 className="text-lg font-bold mb-3">Instructions</h2>
-        <p className="text-base leading-relaxed m-0">{renderInstructions(step.instructions)}</p>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Previous Button */}
-          <button
-            onClick={handlePrevious}
-            disabled={!prevStep}
-            className={`btn flex items-center gap-1 ${
-              prevStep ? 'btn-secondary' : 'btn-secondary opacity-50 cursor-not-allowed'
-            }`}
-          >
-            <MdNavigateBefore size={20} />
-            Previous
-          </button>
-
-          {/* Toggle Complete Button */}
-          <button
-            onClick={handleToggleComplete}
-            className={`btn flex items-center gap-2 ${isCompleted ? 'btn-warning' : 'btn-success'}`}
-          >
-            {isCompleted ? (
-              <>
-                <MdRadioButtonUnchecked size={18} />
-                Mark Incomplete
-              </>
-            ) : (
-              <>
-                <MdCheckCircle size={18} />
-                Mark Complete
-              </>
-            )}
-          </button>
+    <div className="flex w-full max-w-stage flex-col gap-4 px-4 pt-4 md:px-6 md:pt-6">
+      <header className="flex flex-col gap-0.5 text-left">
+        <nav aria-label="Breadcrumb" className="text-caption text-ink-muted">
+          {section.title} / Step <span className="font-mono">{stepNumber}</span> of{' '}
+          <span className="font-mono">{section.steps.length}</span>
+        </nav>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="m-0 text-page">{step.title}</h1>
+          {isCompleted && <StatusChip status="completed" label="Completed" tone="success" />}
         </div>
+      </header>
 
-        <div className="flex items-center gap-3">
-          {/* Complete & Next Button */}
-          {!isCompleted && nextStep && (
-            <button onClick={handleCompleteAndNext} className="btn btn-primary flex items-center gap-1">
-              Complete & Next
-              <MdNavigateNext size={20} />
-            </button>
-          )}
-
-          {/* Next Button */}
-          <button
-            onClick={handleNext}
-            disabled={!nextStep}
-            className={`btn flex items-center gap-1 ${
-              nextStep ? 'btn-secondary' : 'btn-secondary opacity-50 cursor-not-allowed'
-            }`}
-          >
-            Next
-            <MdNavigateNext size={20} />
-          </button>
+      <Panel title="Instructions">
+        <div className="max-w-prose text-body-lg text-left">
+          <MarkdownText>{step.instructions}</MarkdownText>
         </div>
-      </div>
+      </Panel>
+
+      <StepNavigation
+        hasPrevious={!!prevStep}
+        hasNext={!!nextStep}
+        isCompleted={isCompleted}
+        onPrevious={handlePrevious}
+        onToggleComplete={handleToggleComplete}
+        onCompleteAndNext={handleCompleteAndNext}
+        onNext={handleNext}
+      />
     </div>
   );
 }
