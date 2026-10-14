@@ -34,6 +34,13 @@ export interface DataTableProps<T> {
   empty?: React.ReactNode;
   /** Extra classes per row, e.g. the shielded edge. */
   rowClassName?: (row: T) => string;
+  /**
+   * Makes rows clickable (and Enter/Space when focused). Clicks on links,
+   * buttons or inputs inside a row keep their own behaviour.
+   */
+  onRowClick?: (row: T) => void;
+  /** Accessible description of the row action, e.g. "Show details". */
+  rowActionLabel?: string;
   /** Max height before the body scrolls (header stays sticky). */
   maxHeight?: string;
   className?: string;
@@ -46,6 +53,34 @@ const CELL_TYPE: Record<ColumnType, string> = {
   status: 'whitespace-nowrap',
   actions: 'text-right whitespace-nowrap',
 };
+
+const INTERACTIVE = 'a, button, input, select, textarea, summary, [role="button"]';
+
+/** True when the event started on a control nested inside the row. */
+function fromNestedControl(event: React.SyntheticEvent): boolean {
+  const target = event.target as HTMLElement | null;
+  const control = target?.closest(INTERACTIVE);
+  return !!control && control !== event.currentTarget && event.currentTarget.contains(control);
+}
+
+function rowHandlers<T>(row: T, onRowClick: ((row: T) => void) | undefined, label: string | undefined) {
+  if (!onRowClick) return {};
+  return {
+    tabIndex: 0,
+    title: label,
+    onClick: (e: React.MouseEvent) => {
+      if (!fromNestedControl(e)) onRowClick(row);
+    },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) {
+        e.preventDefault();
+        onRowClick(row);
+      }
+    },
+  };
+}
+
+const CLICKABLE_ROW = 'cursor-pointer hover:bg-base-200 focus-visible:outline-2 focus-visible:outline-primary';
 
 function cellContent<T>(col: DataTableColumn<T>, row: T, index: number): React.ReactNode {
   if (col.render) return col.render(row, index);
@@ -64,6 +99,8 @@ export function DataTable<T>({
   error = null,
   empty = 'Nothing to show yet.',
   rowClassName,
+  onRowClick,
+  rowActionLabel,
   maxHeight,
   className = '',
 }: DataTableProps<T>) {
@@ -111,7 +148,8 @@ export function DataTable<T>({
               : rows.map((row, i) => (
                   <tr
                     key={getRowKey(row, i)}
-                    className={`h-9 border-b border-base-300 last:border-b-0 ${rowClassName?.(row) ?? ''}`}
+                    className={`h-9 border-b border-base-300 last:border-b-0 ${onRowClick ? CLICKABLE_ROW : ''} ${rowClassName?.(row) ?? ''}`}
+                    {...rowHandlers(row, onRowClick, rowActionLabel)}
                   >
                     {columns.map((col) => (
                       <td key={col.key} className={`${CELL_TYPE[col.type ?? 'text']} ${col.className ?? ''}`}>
@@ -131,7 +169,8 @@ export function DataTable<T>({
           : rows.map((row, i) => (
               <li
                 key={getRowKey(row, i)}
-                className={`flex flex-col gap-1 rounded-box border border-base-300 bg-base-100 p-3 ${rowClassName?.(row) ?? ''}`}
+                className={`flex flex-col gap-1 rounded-box border border-base-300 bg-base-100 p-3 ${onRowClick ? CLICKABLE_ROW : ''} ${rowClassName?.(row) ?? ''}`}
+                {...rowHandlers(row, onRowClick, rowActionLabel)}
               >
                 {columns.map((col) => {
                   const content = cellContent(col, row, i);
