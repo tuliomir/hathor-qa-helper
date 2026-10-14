@@ -113,8 +113,10 @@ export default function StageContent() {
 
   return (
     // Independently scrollable content area with scroll position preservation
-    <div ref={scrollContainerRef} className="flex-1 p-7.5 bg-white overflow-y-auto">
-      {StageComponent ? <StageComponent /> : <div className="text-center text-gray-500 mt-8">Stage not found</div>}
+    <div ref={scrollContainerRef} data-testid="stage-content" className="flex-1 min-h-0 overflow-y-auto bg-base-100">
+      <div className="max-w-stage p-4 md:p-6">
+        {StageComponent ? <StageComponent /> : <p className="text-ink-muted">Stage not found</p>}
+      </div>
     </div>
   );
 }

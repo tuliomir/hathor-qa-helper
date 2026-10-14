@@ -40,14 +40,8 @@ async function connectAndNavigateToGetNetwork(page: import('@playwright/test').P
   await page.getByRole('button', { name: /Connect Snap/i }).click();
   await expect(page.getByText('Disconnect')).toBeVisible({ timeout: 5000 });
 
-  // Navigate to "Get Network" via sidebar (SPA navigation preserves Redux state).
-  const snapsGroup = page.getByText('MetaMask Snaps');
-  if (await snapsGroup.isVisible()) {
-    await snapsGroup.click();
-  }
-  const getNetworkLink = page.getByRole('link', { name: /Get Network/i }).or(
-    page.locator('text=Get Network').first(),
-  );
+  // Navigate to "Get network" via the stage nav (SPA navigation preserves Redux state).
+  const getNetworkLink = page.getByRole('navigation', { name: 'Stages' }).getByRole('link', { name: 'Get network' });
   await expect(getNetworkLink).toBeVisible({ timeout: 3000 });
   await getNetworkLink.click();
 
