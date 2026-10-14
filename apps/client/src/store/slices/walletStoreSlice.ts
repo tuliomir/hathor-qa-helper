@@ -21,6 +21,7 @@ import {
 } from '../../services/addressDatabase';
 import type { AddressEntry } from '../../types/addressDatabase';
 import { fetchCloudWallets, storeCloudWallets } from '../../services/cloudWalletSync';
+import { applyNetworkServices } from '../../services/networkServices';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
@@ -141,6 +142,8 @@ export const startWallet = createAsyncThunk(
       if (!networkConfig) {
         throw new Error(`Invalid network: ${network}`);
       }
+
+      applyNetworkServices(network);
 
       // Create connection to Hathor network
       const connection = new Connection({

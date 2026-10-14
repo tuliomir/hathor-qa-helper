@@ -13,6 +13,7 @@ import { TokenVersion } from '@hathor/wallet-lib/lib/types';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { WALLET_CONFIG } from '../../constants/network';
+import { applyNetworkServices } from '../../services/networkServices';
 import { fetchSwapTokens } from '../../store/slices/swapTokensSlice';
 import Loading from '../common/Loading';
 import { trackTokenFlow } from '../../services/tokenFlowTracker';
@@ -311,6 +312,7 @@ export default function TestWalletCleanup() {
         })
         .build();
 
+      applyNetworkServices(fundingWallet.metadata.network);
       const tx = await fundingWallet.instance!.buildTxTemplate(template, {
         signTx: true,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
@@ -378,6 +380,7 @@ export default function TestWalletCleanup() {
     });
 
     try {
+      applyNetworkServices(testWallet.metadata.network);
       const tokensWithMeltAuthority = getMeltableTokens(tokensToMelt);
       const swapTokensToTransfer = getSwapTokens(tokensToMelt);
       const tokensToReturn = getReturnableTokens(tokensToMelt);

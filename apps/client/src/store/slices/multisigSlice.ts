@@ -14,6 +14,7 @@ import { MULTISIG_CONFIG, MULTISIG_TOTAL_PARTICIPANTS } from '../../constants/mu
 import { NETWORK_CONFIG, type NetworkKey, WALLET_CONFIG, WALLET_SCAN_POLICY } from '../../constants/network';
 import type { CollectedSignature, MultisigParticipant, MultisigTransactionState } from '../../types/multisig';
 import type { RootState } from '../index';
+import { applyNetworkServices } from '../../services/networkServices';
 
 /**
  * Map to store multisig wallet instances (outside Redux for non-serializable objects)
@@ -87,6 +88,8 @@ export const startMultisigParticipant = createAsyncThunk(
       if (!networkConfig) {
         throw new Error(`Invalid network: ${network}`);
       }
+
+      applyNetworkServices(network);
 
       // Create connection to Hathor network
       const connection = new Connection({
@@ -321,9 +324,10 @@ export const assembleAndSendTransaction = createAsyncThunk(
   'multisig/assembleAndSend',
   async (
     { participantId, txHex, signatures }: { participantId: string; txHex: string; signatures: string[] },
-    { dispatch }
+    { dispatch, getState }
   ) => {
     const instance = multisigWalletInstancesMap.get(participantId);
+    const { network } = (getState() as RootState).multisig;
 
     if (!instance) {
       throw new Error(`Wallet instance for ${participantId} not found`);
@@ -345,6 +349,7 @@ export const assembleAndSendTransaction = createAsyncThunk(
       });
 
       // Mine and broadcast
+      applyNetworkServices(network);
       const result = await finalTx.runFromMining();
 
       if (!result.hash) {

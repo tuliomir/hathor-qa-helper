@@ -5,6 +5,7 @@ import { addTransaction } from '../store/slices/transactionHistorySlice';
 import { useToast } from './useToast';
 import { NETWORK_CONFIG } from '../constants/network';
 import type { WalletInfo } from '../types/walletStore';
+import { applyNetworkServices } from '../services/networkServices';
 
 export interface TransactionMetadata {
   fromWallet: WalletInfo; // Only required: needed to create the actual tx
@@ -49,6 +50,7 @@ export function useSendTransaction() {
 
     try {
       const hWallet = fromWallet.instance;
+      applyNetworkServices(fromWallet.metadata.network);
 
       // Build and sign the transaction
       const tx = await hWallet.buildTxTemplate(template as Parameters<typeof hWallet.buildTxTemplate>[0], {

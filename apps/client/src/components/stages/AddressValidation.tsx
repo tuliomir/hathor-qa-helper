@@ -22,6 +22,7 @@ import TimelockPicker from '../common/TimelockPicker';
 import { defaultTimelockValue, timelockToUnix } from '../../utils/timelockUtils';
 import { getAddressRecord } from '../../services/addressDatabase';
 import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
+import { applyNetworkServices } from '../../services/networkServices';
 
 type TabType = 'funding' | 'test';
 
@@ -230,6 +231,7 @@ function WalletAddressDisplay({
 
       if (outputs.length === 0) return;
 
+      applyNetworkServices(fundingWallet.metadata.network);
       const sendTx = await fundingWallet.instance.sendManyOutputsSendTransaction(outputs, {
         changeAddress: fundAddr0,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,

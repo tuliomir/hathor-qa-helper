@@ -26,6 +26,7 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network';
 import { computeScatterOutputs } from '../../utils/scatterFunds';
 import Select from '../common/Select';
+import { applyNetworkServices } from '../../services/networkServices';
 
 interface Token {
   uid: string;
@@ -246,6 +247,7 @@ export const GetUtxosStage: React.FC = () => {
         token: NATIVE_TOKEN_UID,
       }));
 
+      applyNetworkServices(testWallet.metadata.network);
       const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(outputs, {
         changeAddress: addr0,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,

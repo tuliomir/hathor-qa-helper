@@ -22,6 +22,7 @@ import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 import { ExplorerLink } from '../common/ExplorerLink';
 import AllConfigStringsModal from '../common/AllConfigStringsModal';
+import { applyNetworkServices } from '../../services/networkServices';
 
 type TabType = 'fund' | 'test';
 
@@ -605,6 +606,7 @@ function WalletTokensDisplay({
       const address0 = await wallet.instance.getAddressAtIndex(0);
 
       // Execute melt transaction
+      applyNetworkServices(wallet.metadata.network);
       const sendTx = await wallet.instance.meltTokensSendTransaction(selectedToken.uid, BigInt(maxMeltable), {
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
         changeAddress: address0,
