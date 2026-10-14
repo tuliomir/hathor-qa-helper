@@ -85,6 +85,7 @@ export const SnapFeeInitializeStage: React.FC = () => {
       {defaultBlueprintId !== null && (
         <SnapMethodCard
           title="Initialize fee"
+          txExplorerPage="nc_detail"
           description="The new contract's ID is kept for the other Fee stages."
           liveRequest={liveRequest}
           methodData={methodData}

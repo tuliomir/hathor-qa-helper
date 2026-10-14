@@ -58,6 +58,7 @@ export const RpcFeeInitializeCard: React.FC<RpcFeeInitializeCardProps> = ({
     disabledReason={disabledReason}
     isMainnet={false}
     getTxHash={nanoTxHash}
+    txExplorerPage="nc_detail"
     explorerNetwork={network}
     renderResponse={(r) => <NanoResponse response={r} network={network} creates />}
     successToast={pushTx ? 'Fee contract initialized' : 'Fee transaction built'}

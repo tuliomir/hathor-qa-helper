@@ -121,6 +121,7 @@ export const SnapBetInitializeStage: React.FC = () => {
       {defaultBlueprintId !== null && (
         <SnapMethodCard
           title="Initialize bet"
+          txExplorerPage="nc_detail"
           description="The new contract's ID is kept for the other Bet stages."
           liveRequest={liveRequest}
           methodData={methodData}

@@ -105,6 +105,7 @@ export const RpcBetInitializeCard: React.FC<RpcBetInitializeCardProps> = ({
       disabledReason={disabledReason}
       isMainnet={false}
       getTxHash={nanoTxHash}
+      txExplorerPage="nc_detail"
       explorerNetwork={network}
       renderResponse={(r) => <NanoResponse response={r} network={network} creates />}
       successToast={pushTx ? 'Bet initialized' : 'Bet transaction built'}
