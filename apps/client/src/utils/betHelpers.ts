@@ -5,13 +5,14 @@
  */
 
 import { nanoUtils, Network } from '@hathor/wallet-lib';
+import { DEFAULT_NETWORK, NETWORK_CONFIG, type NetworkKey } from '../constants/network';
 
 /**
  * Converts an oracle address to a buffer hex string
  * Used in Initialize Bet RPC to convert oracle address parameter
  */
-export function getOracleBuffer(address: string): string {
-  const network = new Network('testnet');
+export function getOracleBuffer(address: string, networkKey: NetworkKey = DEFAULT_NETWORK): string {
+  const network = new Network(NETWORK_CONFIG[networkKey].name);
   return nanoUtils.getOracleBuffer(address, network).toString('hex');
 }
 

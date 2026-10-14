@@ -26,6 +26,8 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network';
 import { computeScatterOutputs } from '../../utils/scatterFunds';
 import Select from '../common/Select';
+import { applyNetworkServices } from '../../services/networkServices';
+import { shieldedSweepNotice, splitAvailableUtxos } from '../../services/shieldedUtxos';
 
 interface Token {
   uid: string;
@@ -226,16 +228,21 @@ export const GetUtxosStage: React.FC = () => {
     try {
       const addr0 = await testWallet.instance.getAddressAtIndex(0);
 
-      // Use the test wallet's own balance to scatter
-      const balance = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
-      const unlocked = balance?.[0]?.balance?.unlocked ?? 0n;
+      // Scatter the test wallet's own transparent HTR. getBalance() also
+      // counts shielded UTXOs, which the browser cannot spend.
+      const htrSplit = await splitAvailableUtxos(testWallet.instance, NATIVE_TOKEN_UID);
+      const unlocked = htrSplit.transparent.amount;
+      const shieldedNote = shieldedSweepNotice([htrSplit]);
 
       // Scatter the full unlocked balance. Hathor transfers are feeless and
       // computeScatterOutputs makes the outputs sum exactly to the input, so
       // no fee/change reserve is needed (matches TestWalletCleanup's HTR send).
       const amounts = computeScatterOutputs(unlocked);
       if (amounts.length === 0) {
-        setScatterError(`Not enough balance to scatter. Need at least 6 units, have ${unlocked} available.`);
+        setScatterError(
+          `Not enough balance to scatter. Need at least 6 units, have ${unlocked} available.` +
+            (shieldedNote ? ` (${shieldedNote}.)` : '')
+        );
         return;
       }
 
@@ -246,6 +253,7 @@ export const GetUtxosStage: React.FC = () => {
         token: NATIVE_TOKEN_UID,
       }));
 
+      applyNetworkServices(testWallet.metadata.network);
       const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(outputs, {
         changeAddress: addr0,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,

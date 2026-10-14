@@ -13,8 +13,9 @@
       "name": "@qa-helper/client",
       "version": "0.3.0",
       "dependencies": {
+        "@hathor/ct-crypto-wasm": "0.5.0",
         "@hathor/snap-utils": "^0.1.0",
-        "@hathor/wallet-lib": "^3.1.1",
+        "@hathor/wallet-lib": "4.2.0",
         "@qa-helper/shared": "workspace:*",
         "@reduxjs/toolkit": "^2.12.0",
         "@walletconnect/core": "^2.23.9",
@@ -45,7 +46,7 @@
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^5.2.0",
         "autoprefixer": "^10.5.0",
-        "daisyui": "^5.5.20",
+        "daisyui": "5.5.20",
         "eslint": "^9.39.4",
         "eslint-config-prettier": "^10.1.8",
         "eslint-plugin-react-hooks": "^5.2.0",
@@ -180,9 +181,11 @@
 
     "@hathor/ct-crypto-provider": ["@hathor/ct-crypto-provider@0.5.0", "", { "dependencies": { "@types/node": "20.14.2" } }, "sha512-me2LA6XWvIRhAoNslzZLtcZEITJFAXzmgVwhZ0ePenuUVK1JTztSGLOJtHgPVCDSDmmGxcbIsrxef/5UvLC+jw=="],
 
+    "@hathor/ct-crypto-wasm": ["@hathor/ct-crypto-wasm@0.5.0", "", { "dependencies": { "@hathor/ct-crypto-provider": "0.5.0", "buffer": "6.0.3" } }, "sha512-CRY4jbMc3wtYr+k9rqVZShlcglK9NCniRD/QyO7M01Olw30GG1bEgBgua/Xfu9CtmKfIypZZwqxuQAJOqLi/YA=="],
+
     "@hathor/snap-utils": ["@hathor/snap-utils@0.1.0", "", { "dependencies": { "@metamask/providers": "16.1.0" }, "peerDependencies": { "react": "^18.2.0" } }, "sha512-o0r1KXSGk5+I57ZGdhjxG18AOn5cxb3yZE4zXElARRoIuTZ+k4EL2nRysxA5N6tQrRu9FlUrS6CYEd21tKhArw=="],
 
-    "@hathor/wallet-lib": ["@hathor/wallet-lib@3.1.1", "", { "dependencies": { "axios": "1.7.7", "bitcore-lib": "8.25.10", "bitcore-mnemonic": "8.25.10", "buffer": "6.0.3", "crypto-js": "4.2.0", "isomorphic-ws": "5.0.0", "lodash": "4.17.21", "queue-microtask": "1.2.3", "ws": "8.17.1", "zod": "3.23.8" } }, "sha512-D1ZC7IxVd9DtycgqSnVNByGnQiTJLNoUlgk8sBlCKmVMO3AehNo3t6PVkyXEUA2DOjW/rACqPVbYBPiprbPR0g=="],
+    "@hathor/wallet-lib": ["@hathor/wallet-lib@4.2.0", "", { "dependencies": { "@hathor/ct-crypto-provider": "0.5.0", "axios": "1.7.7", "bitcore-lib": "8.25.10", "bitcore-mnemonic": "8.25.10", "buffer": "6.0.3", "crypto-js": "4.2.0", "isomorphic-ws": "5.0.0", "lodash": "4.17.21", "queue-microtask": "1.2.3", "ws": "8.17.1", "zod": "3.23.8" } }, "sha512-iEIS4pXWc1/lDJyAGw+wADUatgD9oZOJvxoyC2d14S0yZEaIBCHimFG39R+79Z3NCREwM9GnVtKjKqaVycoklA=="],
 
     "@humanfs/core": ["@humanfs/core@0.19.1", "", {}, "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA=="],
 
@@ -1292,8 +1295,6 @@
 
     "@motionone/vue/tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
-    "@qa-helper/server/@hathor/wallet-lib": ["@hathor/wallet-lib@4.2.0", "", { "dependencies": { "@hathor/ct-crypto-provider": "0.5.0", "axios": "1.7.7", "bitcore-lib": "8.25.10", "bitcore-mnemonic": "8.25.10", "buffer": "6.0.3", "crypto-js": "4.2.0", "isomorphic-ws": "5.0.0", "lodash": "4.17.21", "queue-microtask": "1.2.3", "ws": "8.17.1", "zod": "3.23.8" } }, "sha512-iEIS4pXWc1/lDJyAGw+wADUatgD9oZOJvxoyC2d14S0yZEaIBCHimFG39R+79Z3NCREwM9GnVtKjKqaVycoklA=="],
-
     "@tybys/wasm-util/tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
     "@types/babel__core/@babel/parser": ["@babel/parser@7.28.5", "", { "dependencies": { "@babel/types": "^7.28.5" }, "bin": "./bin/babel-parser.js" }, "sha512-KKBU1VGYR7ORr3At5HAtUQ+TV3SzRCXmA/8OdDZiLDBIZxVyzXuztPjfLd3BV1PRAQGCMWWSHYhL0F8d5uHBDQ=="],
@@ -1427,8 +1428,6 @@
     "@hathor/ct-crypto-provider/@types/node/undici-types": ["undici-types@5.26.5", "", {}, "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA=="],
 
     "@metamask/rpc-errors/@metamask/utils/semver": ["semver@7.7.3", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q=="],
-
-    "@qa-helper/server/@hathor/wallet-lib/zod": ["zod@3.23.8", "", {}, "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g=="],
 
     "@types/babel__core/@babel/types/@babel/helper-string-parser": ["@babel/helper-string-parser@7.27.1", "", {}, "sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA=="],
 

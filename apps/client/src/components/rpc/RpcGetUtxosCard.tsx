@@ -11,7 +11,7 @@ import { ExplorerLink } from '../common/ExplorerLink';
 import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import type { UtxoData } from '../../store/slices/getUtxosSlice';
-import { DEFAULT_NETWORK, type NetworkType } from '../../constants/network';
+import { DEFAULT_NETWORK, type NetworkKey } from '../../constants/network';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 
@@ -26,7 +26,7 @@ export interface RpcGetUtxosCardProps {
   onExecute: () => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
-  network?: NetworkType;
+  network?: NetworkKey;
   // Persisted data from Redux
   initialRequest?: { method: string; params: unknown } | null;
   initialResponse?: unknown | null;

@@ -10,6 +10,7 @@
 
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import type { RootState } from '../index';
+import type { NetworkKey } from '../../constants/network';
 
 // Proxied via Vite dev server to avoid CORS — see vite.config.ts /swap-tokens
 const SWAP_TOKENS_URL = '/swap-tokens';
@@ -35,6 +36,25 @@ const initialState: SwapTokensState = {
   status: 'idle',
   error: null,
 };
+
+/**
+ * Swap test token UIDs for a wallet's network. The registry only covers
+ * testnet and mainnet; the shielded testnet has its own genesis, so none of
+ * those tokens exist there.
+ */
+export function swapTokenUidsForNetwork(
+  registry: Pick<SwapTokensState, 'testnet' | 'mainnet'>,
+  network: NetworkKey
+): string[] {
+  switch (network) {
+    case 'TESTNET':
+      return registry.testnet;
+    case 'MAINNET':
+      return registry.mainnet;
+    default:
+      return [];
+  }
+}
 
 export const fetchSwapTokens = createAsyncThunk(
   'swapTokens/fetch',

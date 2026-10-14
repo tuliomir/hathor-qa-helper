@@ -32,6 +32,7 @@ import TimelockPicker from '../common/TimelockPicker';
 import { defaultTimelockValue, timelockToUnix } from '../../utils/timelockUtils';
 import { useToast } from '../../hooks/useToast';
 import { extractErrorMessage } from '../../utils/errorUtils';
+import { applyNetworkServices } from '../../services/networkServices';
 
 const STORAGE_KEY_SNAP_ORIGIN = 'hathor_qa_snap_origin';
 
@@ -91,6 +92,7 @@ export const SnapConnectionStage: React.FC = () => {
       }
       if (outputs.length === 0) return;
 
+      applyNetworkServices(fundingWallet.metadata.network);
       const sendTx = await fundingWallet.instance.sendManyOutputsSendTransaction(outputs, {
         changeAddress: fundAddr0,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,

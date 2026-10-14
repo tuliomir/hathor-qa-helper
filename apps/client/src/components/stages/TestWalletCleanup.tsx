@@ -13,7 +13,9 @@ import { TokenVersion } from '@hathor/wallet-lib/lib/types';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { WALLET_CONFIG } from '../../constants/network';
-import { fetchSwapTokens } from '../../store/slices/swapTokensSlice';
+import { applyNetworkServices } from '../../services/networkServices';
+import { shieldedSweepNotice, splitAvailableUtxos, type TokenUtxoSplit } from '../../services/shieldedUtxos';
+import { fetchSwapTokens, swapTokenUidsForNetwork } from '../../store/slices/swapTokensSlice';
 import Loading from '../common/Loading';
 import { trackTokenFlow } from '../../services/tokenFlowTracker';
 import type { TokenFlowResult } from '../../types/tokenFlowTracker';
@@ -71,7 +73,9 @@ export default function TestWalletCleanup() {
   const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : undefined;
 
   const [tokensToMelt, setTokensToMelt] = useState<TokenToMelt[]>([]);
+  // Transparent HTR only: shielded UTXOs cannot be spent from the browser.
   const [htrBalance, setHtrBalance] = useState<bigint>(0n);
+  const [shieldedNotice, setShieldedNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -124,6 +128,7 @@ export default function TestWalletCleanup() {
     if (!testWallet?.instance || !testReady) {
       setTokensToMelt([]);
       setHtrBalance(0n);
+      setShieldedNotice(null);
       return;
     }
 
@@ -132,10 +137,10 @@ export default function TestWalletCleanup() {
     setCompleted(false);
 
     try {
-      // Get HTR balance
-      const htrBalanceData = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
-      const htrBal = htrBalanceData[0]?.balance?.unlocked || 0n;
-      setHtrBalance(htrBal);
+      // Sweepable (transparent) HTR; shielded UTXOs are only reported
+      const htrSplit = await splitAvailableUtxos(testWallet.instance!, NATIVE_TOKEN_UID);
+      setHtrBalance(htrSplit.transparent.amount);
+      const splits: TokenUtxoSplit[] = [htrSplit];
 
       // Get custom tokens (exclude native HTR)
       const customTokenUids = testWallet.tokenUids?.filter((uid) => uid !== NATIVE_TOKEN_UID) || [];
@@ -146,9 +151,10 @@ export default function TestWalletCleanup() {
           if (!tokenInfo) return null;
 
           try {
-            // Get balance
-            const balanceData = await testWallet.instance!.getBalance(uid);
-            const balance = balanceData[0]?.balance?.unlocked || 0n;
+            // Sweepable (transparent) balance
+            const split = await splitAvailableUtxos(testWallet.instance!, uid);
+            splits.push(split);
+            const balance = split.transparent.amount;
 
             if (balance === 0n) return null;
 
@@ -170,8 +176,7 @@ export default function TestWalletCleanup() {
             }
 
             // Check if this is a swap test token (never melt, send to funding)
-            const swapTokenUids =
-              testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapTokenUids = swapTokenUidsForNetwork(swapTokensState, testWallet.metadata.network);
             const swapToken = swapTokenUids.includes(uid);
             if (swapToken) {
               return {
@@ -248,6 +253,7 @@ export default function TestWalletCleanup() {
       // Filter out nulls and set state
       const validTokens = tokensData.filter((t): t is TokenToMelt => t !== null);
       setTokensToMelt(validTokens);
+      setShieldedNotice(shieldedSweepNotice(splits));
     } catch (err) {
       console.error('Failed to load preview data:', err);
       setErrors(['Failed to load preview data']);
@@ -311,6 +317,7 @@ export default function TestWalletCleanup() {
         })
         .build();
 
+      applyNetworkServices(fundingWallet.metadata.network);
       const tx = await fundingWallet.instance!.buildTxTemplate(template, {
         signTx: true,
         pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
@@ -378,6 +385,7 @@ export default function TestWalletCleanup() {
     });
 
     try {
+      applyNetworkServices(testWallet.metadata.network);
       const tokensWithMeltAuthority = getMeltableTokens(tokensToMelt);
       const swapTokensToTransfer = getSwapTokens(tokensToMelt);
       const tokensToReturn = getReturnableTokens(tokensToMelt);
@@ -584,8 +592,7 @@ export default function TestWalletCleanup() {
             addDebugLog('info', 'Consolidating HTR into a single UTXO...');
 
             try {
-              const freshBalance = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
-              const freshHtr = freshBalance?.[0]?.balance?.unlocked ?? 0n;
+              const freshHtr = (await splitAvailableUtxos(testWallet.instance!, NATIVE_TOKEN_UID)).transparent.amount;
 
               if (freshHtr > 0n) {
                 // Send all HTR to self — wallet-lib selects UTXOs natively
@@ -611,8 +618,7 @@ export default function TestWalletCleanup() {
             addDebugLog('info', 'Sending consolidated HTR to funding wallet...');
 
             try {
-              const freshBalance = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
-              const freshHtr = freshBalance?.[0]?.balance?.unlocked ?? 0n;
+              const freshHtr = (await splitAvailableUtxos(testWallet.instance!, NATIVE_TOKEN_UID)).transparent.amount;
 
               if (freshHtr > 0n) {
                 const sendTx = await testWallet.instance!.sendManyOutputsSendTransaction(
@@ -650,8 +656,9 @@ export default function TestWalletCleanup() {
       setExecutionStep('');
 
       // Reload preview data
-      const htrBalanceData = await testWallet.instance!.getBalance(NATIVE_TOKEN_UID);
-      setHtrBalance(htrBalanceData[0]?.balance?.unlocked || 0n);
+      const htrSplitAfter = await splitAvailableUtxos(testWallet.instance!, NATIVE_TOKEN_UID);
+      setHtrBalance(htrSplitAfter.transparent.amount);
+      const splitsAfter: TokenUtxoSplit[] = [htrSplitAfter];
 
       // Reload tokens
       const customTokenUids = testWallet.tokenUids?.filter((uid) => uid !== NATIVE_TOKEN_UID) || [];
@@ -661,8 +668,9 @@ export default function TestWalletCleanup() {
           if (!tokenInfo) return null;
 
           try {
-            const balanceData = await testWallet.instance!.getBalance(uid);
-            const balance = balanceData[0]?.balance?.unlocked || 0n;
+            const split = await splitAvailableUtxos(testWallet.instance!, uid);
+            splitsAfter.push(split);
+            const balance = split.transparent.amount;
             if (balance === 0n) return null;
 
             // Check if this is a fee token
@@ -682,8 +690,7 @@ export default function TestWalletCleanup() {
               };
             }
 
-            const swapTokenUids =
-              testWallet.metadata.network === 'TESTNET' ? swapTokensState.testnet : swapTokensState.mainnet;
+            const swapTokenUids = swapTokenUidsForNetwork(swapTokensState, testWallet.metadata.network);
             const swapToken = swapTokenUids.includes(uid);
             if (swapToken) {
               return {
@@ -728,6 +735,7 @@ export default function TestWalletCleanup() {
         })
       );
       setTokensToMelt(tokensData.filter((t): t is TokenToMelt => t !== null));
+      setShieldedNotice(shieldedSweepNotice(splitsAfter));
       addDebugLog('info', 'Cleanup execution completed', { errors: newErrors });
     } catch (err) {
       console.error('Cleanup execution failed:', err);
@@ -1096,6 +1104,11 @@ export default function TestWalletCleanup() {
           <div className="card-primary mb-7.5 bg-blue-50 border-2 border-blue-400">
             <h2 className="text-xl font-bold mb-4 text-blue-900">Cleanup Summary</h2>
             <div className="space-y-3">
+              {shieldedNotice && (
+                <div role="alert" className="alert alert-info text-sm">
+                  {shieldedNotice}
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-blue-800">Current HTR Balance:</span>
                 <span className="font-mono font-bold">{formatBalance(htrBalance)} HTR</span>
@@ -1407,7 +1420,9 @@ export default function TestWalletCleanup() {
                 {!fundingReady
                   ? 'Funding Wallet required for cleanup.'
                   : !hasTokensToMelt && !hasSwapTokens && !hasTokensToReturn && !hasHtrToTransfer
-                    ? 'Nothing to clean up.'
+                    ? shieldedNotice
+                      ? `Nothing transparent to clean up. ${shieldedNotice}.`
+                      : 'Nothing to clean up.'
                     : 'Cannot execute cleanup.'}
               </p>
             )}

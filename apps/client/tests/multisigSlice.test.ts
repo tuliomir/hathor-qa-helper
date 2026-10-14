@@ -25,9 +25,10 @@ import { MULTISIG_CONFIG, MULTISIG_TOTAL_PARTICIPANTS } from '../src/constants/m
 import type { RootState } from '../src/store';
 
 // Helper to create a mock RootState with multisig state
-const createMockRootState = (multisigState: ReturnType<typeof multisigReducer>): RootState => ({
-  multisig: multisigState,
-} as RootState);
+const createMockRootState = (multisigState: ReturnType<typeof multisigReducer>): RootState =>
+  ({
+    multisig: multisigState,
+  }) as RootState;
 
 describe('multisigSlice', () => {
   // Get initial state by calling reducer with undefined
@@ -151,14 +152,8 @@ describe('multisigSlice', () => {
 
     test('can clear balance by setting undefined', () => {
       let state = getInitialState();
-      state = multisigReducer(
-        state,
-        updateParticipantBalance({ id: 'participant-0', balance: '1000000' })
-      );
-      state = multisigReducer(
-        state,
-        updateParticipantBalance({ id: 'participant-0', balance: undefined })
-      );
+      state = multisigReducer(state, updateParticipantBalance({ id: 'participant-0', balance: '1000000' }));
+      state = multisigReducer(state, updateParticipantBalance({ id: 'participant-0', balance: undefined }));
 
       expect(state.participants['participant-0'].balance).toBeUndefined();
     });
@@ -170,6 +165,12 @@ describe('multisigSlice', () => {
       const state = multisigReducer(initialState, setNetwork('MAINNET'));
 
       expect(state.network).toBe('MAINNET');
+    });
+
+    test('changes network to SHIELDED_TESTNET', () => {
+      const state = multisigReducer(getInitialState(), setNetwork('SHIELDED_TESTNET'));
+
+      expect(state.network).toBe('SHIELDED_TESTNET');
     });
 
     test('changes network back to TESTNET', () => {
@@ -240,14 +241,8 @@ describe('multisigSlice', () => {
 
     test('can collect multiple signatures', () => {
       let state = getInitialState();
-      state = multisigReducer(
-        state,
-        addCollectedSignature({ participantId: 'participant-0', signature: 'sig1' })
-      );
-      state = multisigReducer(
-        state,
-        addCollectedSignature({ participantId: 'participant-1', signature: 'sig2' })
-      );
+      state = multisigReducer(state, addCollectedSignature({ participantId: 'participant-0', signature: 'sig1' }));
+      state = multisigReducer(state, addCollectedSignature({ participantId: 'participant-1', signature: 'sig2' }));
 
       expect(state.transaction.collectedSignatures).toHaveLength(2);
     });
@@ -274,10 +269,7 @@ describe('multisigSlice', () => {
       state = multisigReducer(state, setTransactionHex('0001020304'));
       state = multisigReducer(state, toggleSigner('participant-0'));
       state = multisigReducer(state, toggleSigner('participant-1'));
-      state = multisigReducer(
-        state,
-        addCollectedSignature({ participantId: 'participant-0', signature: 'sig1' })
-      );
+      state = multisigReducer(state, addCollectedSignature({ participantId: 'participant-0', signature: 'sig1' }));
 
       state = multisigReducer(state, resetTransaction());
 
@@ -302,18 +294,9 @@ describe('multisigSlice', () => {
 
     test('selectReadyParticipants returns only ready participants', () => {
       let state = getInitialState();
-      state = multisigReducer(
-        state,
-        updateParticipantStatus({ id: 'participant-0', status: 'ready' })
-      );
-      state = multisigReducer(
-        state,
-        updateParticipantStatus({ id: 'participant-1', status: 'ready' })
-      );
-      state = multisigReducer(
-        state,
-        updateParticipantStatus({ id: 'participant-2', status: 'connecting' })
-      );
+      state = multisigReducer(state, updateParticipantStatus({ id: 'participant-0', status: 'ready' }));
+      state = multisigReducer(state, updateParticipantStatus({ id: 'participant-1', status: 'ready' }));
+      state = multisigReducer(state, updateParticipantStatus({ id: 'participant-2', status: 'connecting' }));
 
       const rootState = createMockRootState(state);
       const readyParticipants = selectReadyParticipants(rootState);
@@ -394,14 +377,8 @@ describe('multisigSlice', () => {
       let state = getInitialState();
 
       // Start with ready participants
-      state = multisigReducer(
-        state,
-        updateParticipantStatus({ id: 'participant-0', status: 'ready' })
-      );
-      state = multisigReducer(
-        state,
-        updateParticipantStatus({ id: 'participant-1', status: 'ready' })
-      );
+      state = multisigReducer(state, updateParticipantStatus({ id: 'participant-0', status: 'ready' }));
+      state = multisigReducer(state, updateParticipantStatus({ id: 'participant-1', status: 'ready' }));
 
       // Select signers
       state = multisigReducer(state, toggleSigner('participant-0'));
@@ -418,14 +395,8 @@ describe('multisigSlice', () => {
       expect(state.transaction.step).toBe('signing');
 
       // Collect signatures
-      state = multisigReducer(
-        state,
-        addCollectedSignature({ participantId: 'participant-0', signature: 'sig0' })
-      );
-      state = multisigReducer(
-        state,
-        addCollectedSignature({ participantId: 'participant-1', signature: 'sig1' })
-      );
+      state = multisigReducer(state, addCollectedSignature({ participantId: 'participant-0', signature: 'sig0' }));
+      state = multisigReducer(state, addCollectedSignature({ participantId: 'participant-1', signature: 'sig1' }));
       expect(state.transaction.collectedSignatures.length).toBe(2);
 
       // Assemble and send

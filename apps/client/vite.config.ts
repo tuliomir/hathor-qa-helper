@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -46,6 +46,17 @@ export default defineConfig({
         ws: true,
         rewrite: (path) => path.replace(/^\/hathor-node\/mainnet/, ''),
       },
+      '/hathor-node/shielded': {
+        target: 'https://node1.shielded-outputs.testnet.hathor.network',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/hathor-node\/shielded/, ''),
+      },
+      // Local QA server (apps/server). It strips the /qa-server prefix itself.
+      '/qa-server': {
+        target: 'http://127.0.0.1:5180',
+        changeOrigin: true,
+      },
       '/swap-tokens': {
         target: 'https://wallet.swap.allowed-tokens.hathor.network',
         changeOrigin: true,
@@ -59,10 +70,19 @@ export default defineConfig({
     // exports like toMiliseconds, isReactNative, pino). The SES issue is now
     // handled by dynamically importing @walletconnect/sign-client in
     // walletConnectClient.ts, so pre-bundling is safe.
+    //
+    // ct-crypto-wasm loads its .wasm via `new URL(..., import.meta.url)`.
+    // Pre-bundling moves the JS into .vite/deps and breaks that relative
+    // URL, so it must be served as-is. Its CommonJS dependency
+    // ct-crypto-provider then has to be pre-bundled explicitly, or the
+    // browser gets raw CJS and the named import AbstractShieldedProvider
+    // fails at runtime.
+    exclude: ['@hathor/ct-crypto-wasm'],
+    include: ['@hathor/ct-crypto-wasm > @hathor/ct-crypto-provider'],
   },
   build: {
     // Disable modulepreload to prevent WalletConnect from loading before dynamic import
     // This is crucial to avoid SES lockdown conflicts with polyfills
     modulePreload: false,
   },
-})
+});

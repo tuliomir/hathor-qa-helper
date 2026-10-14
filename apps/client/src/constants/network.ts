@@ -4,31 +4,59 @@
 
 import { SCANNING_POLICY, type IGapLimitAddressScanPolicy } from '@hathor/wallet-lib/lib/types';
 import { GAP_LIMIT } from '@hathor/wallet-lib/lib/constants';
+import {
+  NETWORKS,
+  NETWORK_KEYS,
+  type LibNetworkName,
+  type NetworkDefinition,
+  type NetworkKey,
+} from '@qa-helper/shared/networks';
 
-export const NETWORK_CONFIG = {
-  TESTNET: {
-    name: 'testnet',
-    fullNodeUrl: import.meta.env.DEV
-      ? 'http://localhost:5173/hathor-node/testnet/v1a/'
-      : 'https://node1.testnet.hathor.network/v1a/',
-    explorerUrl: 'https://explorer.testnet.hathor.network/',
-    betBlueprintId: '0000019865eda743812c566ce6ad3ac49c5f90796b73aa2792a09b7655ac5a5e',
-    feeBlueprintId: '00000000f9f4b9c025cfd757e1cbd662b3eefdc44e0a16cc54906ccf07f8ba8c',
-    authorityBlueprintId: '00000478ac24158fb576d7eb77cdce19cb7facf43838b71f7e0bf6421bc12977',
-  },
-  MAINNET: {
-    name: 'mainnet',
-    fullNodeUrl: import.meta.env.DEV
-      ? 'http://localhost:5173/hathor-node/mainnet/v1a/'
-      : 'https://node1.mainnet.hathor.network/v1a/',
-    explorerUrl: 'https://explorer.hathor.network/',
-  },
+export { NETWORK_KEYS };
+export type { NetworkKey };
+
+export interface ClientNetworkConfig extends NetworkDefinition {
+  /** wallet-lib network name (alias of `libName`). */
+  name: LibNetworkName;
+}
+
+/** Path segment of each network's Vite dev proxy (see vite.config.ts). */
+const DEV_PROXY_SLUG: Record<NetworkKey, string> = {
+  TESTNET: 'testnet',
+  MAINNET: 'mainnet',
+  SHIELDED_TESTNET: 'shielded',
 };
 
-export type NetworkType = keyof typeof NETWORK_CONFIG;
+/**
+ * Client view of the shared network registry. In dev, fullnode traffic goes
+ * through the Vite proxy on the page's own origin.
+ */
+export function buildNetworkConfig({ dev, origin }: { dev: boolean; origin?: string }) {
+  const config = {} as Record<NetworkKey, ClientNetworkConfig>;
+  for (const key of NETWORK_KEYS) {
+    const network = NETWORKS[key];
+    config[key] = {
+      ...network,
+      name: network.libName,
+      fullNodeUrl: dev ? `${origin}/hathor-node/${DEV_PROXY_SLUG[key]}/v1a/` : network.fullNodeUrl,
+    };
+  }
+  return config;
+}
+
+export const NETWORK_CONFIG = buildNetworkConfig({
+  dev: Boolean(import.meta.env?.DEV),
+  origin: globalThis.location?.origin ?? 'http://localhost:5173',
+});
 
 // Default network for the application
-export const DEFAULT_NETWORK: NetworkType = 'TESTNET';
+export const DEFAULT_NETWORK: NetworkKey = 'TESTNET';
+
+/** The network after `current` in NETWORK_KEYS order, wrapping around. */
+export function nextNetwork(current: NetworkKey): NetworkKey {
+  const index = NETWORK_KEYS.indexOf(current);
+  return NETWORK_KEYS[(index + 1) % NETWORK_KEYS.length];
+}
 
 // Wallet configuration constants
 export const WALLET_CONFIG = {

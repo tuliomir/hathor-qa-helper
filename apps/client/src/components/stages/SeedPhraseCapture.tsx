@@ -18,7 +18,7 @@ import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch } from '../../store/hooks';
 import { setTestWallet } from '../../store/slices/walletSelectionSlice';
 import { startWallet } from '../../store/slices/walletStoreSlice';
-import type { NetworkType } from '../../constants/network';
+import { NETWORK_CONFIG, NETWORK_KEYS, type NetworkKey } from '../../constants/network';
 
 export default function SeedPhraseCapture() {
   const dispatch = useAppDispatch();
@@ -26,7 +26,7 @@ export default function SeedPhraseCapture() {
 
   const [seedInput, setSeedInput] = useState('');
   const [walletName, setWalletName] = useState('');
-  const [network, setNetwork] = useState<NetworkType>('TESTNET');
+  const [network, setNetwork] = useState<NetworkKey>('TESTNET');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [invalidWords, setInvalidWords] = useState<string[]>([]);
   const [pastedImageUrl, setPastedImageUrl] = useState<string | null>(null);
@@ -303,11 +303,14 @@ export default function SeedPhraseCapture() {
                     <Select
                       id="network-select"
                       value={network}
-                      onChange={(e) => setNetwork(e.target.value as NetworkType)}
+                      onChange={(e) => setNetwork(e.target.value as NetworkKey)}
                       className="w-full text-sm"
                     >
-                      <option value="TESTNET">Testnet</option>
-                      <option value="MAINNET">Mainnet</option>
+                      {NETWORK_KEYS.map((key) => (
+                        <option key={key} value={key}>
+                          {NETWORK_CONFIG[key].label}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 </div>

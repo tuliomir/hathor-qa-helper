@@ -1,16 +1,16 @@
 /**
  * Network Swap Button Component
- * Reusable button to swap wallet network between TESTNET and MAINNET
+ * Reusable button that cycles a wallet to the next network (see nextNetwork)
  */
 
 import { MdSwapVert } from 'react-icons/md';
-import type { NetworkType } from '../../constants/network';
+import { NETWORK_CONFIG, nextNetwork, type NetworkKey } from '../../constants/network';
 
 interface NetworkSwapButtonProps {
   walletId: string;
-  currentNetwork: NetworkType;
+  currentNetwork: NetworkKey;
   walletStatus: string;
-  onSwap: (walletId: string, currentNetwork: NetworkType, status: string) => void | Promise<void>;
+  onSwap: (walletId: string, currentNetwork: NetworkKey, status: string) => void | Promise<void>;
   className?: string;
   disabled?: boolean;
 }
@@ -23,7 +23,7 @@ export default function NetworkSwapButton({
   className = '',
   disabled = false,
 }: NetworkSwapButtonProps) {
-  const targetNetwork = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
+  const targetNetwork = NETWORK_CONFIG[nextNetwork(currentNetwork)].label;
   const isSwapping = walletStatus === 'connecting' || walletStatus === 'syncing';
 
   return (

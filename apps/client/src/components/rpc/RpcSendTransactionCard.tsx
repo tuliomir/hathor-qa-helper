@@ -11,7 +11,7 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import type { SendTransactionOutput, SendTransactionOutputType } from '../../store/slices/sendTransactionSlice';
-import type { NetworkType } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 import Select from '../common/Select';
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import { LoadingOverlay } from '../common/LoadingOverlay';
@@ -29,7 +29,7 @@ export interface RpcSendTransactionCardProps {
   onExecute: (outputs: SendTransactionOutput[], pushTx: boolean) => Promise<{ request: unknown; response: unknown }>;
   disabled?: boolean;
   isDryRun?: boolean;
-  network: NetworkType;
+  network: NetworkKey;
   testWallet?: HathorWallet | null;
   fundingWallet?: HathorWallet | null;
   availableTokens: Token[];

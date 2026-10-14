@@ -19,6 +19,7 @@ interface StoredWalletInfo {
   balance?: string; // Stored as string in Redux
   tokenUids?: string[]; // Array of token UIDs for this wallet
   error?: string;
+  shieldedCapability?: WalletInfo['shieldedCapability'];
   instance: null;
 }
 

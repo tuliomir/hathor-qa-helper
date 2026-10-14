@@ -20,7 +20,7 @@ import {
 import { useAppDispatch } from '../../store/hooks';
 import { exportWalletsToCloud, importWalletsFromCloud } from '../../store/slices/walletStoreSlice';
 import type { WalletInfo } from '../../types/walletStore';
-import type { NetworkType } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 import type { WalletScanResult } from '../../store/slices/walletScanSlice';
 import { calculateTotalValue } from '../../store/slices/walletScanSlice';
 import { formatBalance } from '../../utils/balanceUtils';
@@ -48,7 +48,7 @@ interface WalletBrowserModalProps {
   onRemoveWallet: (walletId: string) => void;
   onEditWallet: (walletId: string, currentName: string) => void;
   onShowSeedModal: (walletId: string) => void;
-  onSwapNetwork: (walletId: string, currentNetwork: NetworkType, status: string) => Promise<void>;
+  onSwapNetwork: (walletId: string, currentNetwork: NetworkKey, status: string) => Promise<void>;
   // Stored addresses from database (walletId -> address at index 0)
   storedFirstAddresses?: Record<string, string>;
   // Scan props

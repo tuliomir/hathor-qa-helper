@@ -17,7 +17,9 @@ import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from 
 import { RpcFeeInitializeCard } from '../rpc/RpcFeeInitializeCard';
 import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
 import { createRpcHandlers } from '../../services/rpcHandlers';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { DEFAULT_NETWORK, NETWORK_CONFIG } from '../../constants/network';
+import { blueprintIdFor } from '../../utils/blueprints';
+import BlueprintUnavailable from '../common/BlueprintUnavailable';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
 import { extractErrorMessage } from '../../utils/errorUtils';
@@ -40,7 +42,13 @@ export const FeeInitializeStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.feeBlueprintId);
+  // QA blueprints exist only on some networks; the test wallet's network decides.
+  const network = testWallet?.metadata.network ?? DEFAULT_NETWORK;
+  const defaultBlueprintId = blueprintIdFor(network, 'fee');
+  const [blueprintId, setBlueprintId] = useState<string>(defaultBlueprintId ?? '');
+  useEffect(() => {
+    if (defaultBlueprintId) setBlueprintId(defaultBlueprintId);
+  }, [defaultBlueprintId]);
   const [amount, setAmount] = useState<string>('2');
   const [changeAddress, setChangeAddress] = useState<string>('');
   const [addressIndex, setAddressIndex] = useState<number>(0);
@@ -191,6 +199,8 @@ export const FeeInitializeStage: React.FC = () => {
 
       {!isConnected && <RpcNotConnectedBanner />}
 
+      {defaultBlueprintId === null && <BlueprintUnavailable kind="Fee" networkLabel={NETWORK_CONFIG[network].label} />}
+
       {/* Address Mismatch Warning */}
       {addressMismatch && (
         <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
@@ -221,8 +231,9 @@ export const FeeInitializeStage: React.FC = () => {
       )}
 
       {/* FeeInitialize Card */}
-      {isConnected && !addressMismatch && rpcHandlers && (
+      {isConnected && !addressMismatch && rpcHandlers && defaultBlueprintId !== null && (
         <RpcFeeInitializeCard
+          network={network}
           onExecute={handleExecuteFeeInitialize}
           disabled={false}
           blueprintId={blueprintId}

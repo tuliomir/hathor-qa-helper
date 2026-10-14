@@ -29,7 +29,7 @@ import {
 import { MULTISIG_CONFIG, MULTISIG_MIN_SIGNATURES } from '../../constants/multisig';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
-import { NETWORK_CONFIG } from '../../constants/network';
+import { NETWORK_CONFIG, nextNetwork } from '../../constants/network';
 import { useWalletStore } from '../../hooks/useWalletStore';
 
 export default function MultisigWalletManagement() {
@@ -200,7 +200,7 @@ export default function MultisigWalletManagement() {
   };
 
   const handleNetworkSwitch = async () => {
-    const newNetwork = network === 'TESTNET' ? 'MAINNET' : 'TESTNET';
+    const newNetwork = nextNetwork(network);
 
     // Stop all running wallets first
     const runningParticipants = participants.filter(
@@ -319,7 +319,7 @@ export default function MultisigWalletManagement() {
           <div className="flex flex-col items-end gap-1">
             <span
               className={`text-xs font-bold px-2 py-1 rounded ${
-                network === 'TESTNET' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
+                network === 'MAINNET' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
               }`}
             >
               {network}
@@ -327,9 +327,9 @@ export default function MultisigWalletManagement() {
             <button
               onClick={handleNetworkSwitch}
               className="text-xs text-info hover:underline"
-              title={`Switch to ${network === 'TESTNET' ? 'Mainnet' : 'Testnet'}`}
+              title={`Switch to ${NETWORK_CONFIG[nextNetwork(network)].label}`}
             >
-              Switch to {network === 'TESTNET' ? 'Mainnet' : 'Testnet'}
+              Switch to {NETWORK_CONFIG[nextNetwork(network)].label}
             </button>
           </div>
         </div>

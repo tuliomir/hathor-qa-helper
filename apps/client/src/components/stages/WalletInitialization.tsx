@@ -37,11 +37,12 @@ import { didYouMean, treatSeedWords } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
+import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
 import NetworkSwapButton from '../common/NetworkSwapButton';
 import Select from '../common/Select';
 import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
-import type { NetworkType } from '../../constants/network';
+import { NETWORK_CONFIG, NETWORK_KEYS, nextNetwork, type NetworkKey } from '../../constants/network';
 import { getAddressesForWallet } from '../../services/addressDatabase';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
@@ -53,7 +54,7 @@ export default function WalletInitialization() {
 
   const [seedInput, setSeedInput] = useState('');
   const [walletName, setWalletName] = useState('');
-  const [network, setNetwork] = useState<NetworkType>('TESTNET');
+  const [network, setNetwork] = useState<NetworkKey>('TESTNET');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [invalidWords, setInvalidWords] = useState<string[]>([]);
   const [pastedImageUrl, setPastedImageUrl] = useState<string | null>(null);
@@ -231,7 +232,7 @@ export default function WalletInitialization() {
   };
 
   const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setNetwork(e.target.value as NetworkType);
+    setNetwork(e.target.value as NetworkKey);
   };
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -335,8 +336,8 @@ export default function WalletInitialization() {
     localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(defaults));
   };
 
-  const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkType, status: string) => {
-    const newNetwork: NetworkType = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
+  const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkKey, status: string) => {
+    const newNetwork: NetworkKey = nextNetwork(currentNetwork);
 
     // Stop the wallet if it's running in any state
     if (status === 'ready' || status === 'connecting' || status === 'syncing') {
@@ -531,6 +532,7 @@ export default function WalletInitialization() {
                     <td className="p-3">
                       <div className="flex flex-col items-start gap-1">
                         <span>{wallet.metadata.network}</span>
+                        <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />
                         <NetworkSwapButton
                           walletId={wallet.metadata.id}
                           currentNetwork={wallet.metadata.network}
@@ -854,8 +856,11 @@ export default function WalletInitialization() {
             Network:
           </label>
           <Select id="network-select" value={network} onChange={handleNetworkChange}>
-            <option value="TESTNET">Testnet</option>
-            <option value="MAINNET">Mainnet</option>
+            {NETWORK_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {NETWORK_CONFIG[key].label}
+              </option>
+            ))}
           </Select>
         </div>
 

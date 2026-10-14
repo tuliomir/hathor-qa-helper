@@ -31,6 +31,7 @@ interface StoredWalletInfo {
   tokenUids?: string[];
   events: WalletEvent[];
   error?: string;
+  shieldedCapability?: ShieldedCapabilitySummary; // shielded networks only
 }
 ```
 
@@ -53,11 +54,14 @@ const allWallets = useMemo(() => Array.from(walletsMap.values()), [walletsMap]);
 ## Wallet Lifecycle
 
 The `startWallet` thunk:
-1. Creates `HathorWallet` instance
-2. Stores in `walletInstancesMap`
-3. Calls `wallet.start()`
-4. Sets up event listeners for `new-tx`, `update-tx`, `state`, `more-addresses-loaded`
-5. All events auto-stored in Redux `events[]` for global access
+1. Calls `applyNetworkServices(network)` (tx-mining URL, a global singleton)
+2. Creates `HathorWallet` instance
+3. On networks with `supportsShielded`, registers the WASM shielded provider and a `shielded-capability` listener (see `shielded-outputs.md`)
+4. Stores in `walletInstancesMap`
+5. Calls `wallet.start()`
+6. Stores the shielded capability summary, when enabled
+7. Sets up event listeners for `new-tx`, `update-tx`, `state`, `more-addresses-loaded`
+8. All events auto-stored in Redux `events[]` for global access
 
 Event handlers stored in `walletEventHandlers` map for cleanup when wallet stops.
 

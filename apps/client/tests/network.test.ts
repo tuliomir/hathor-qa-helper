@@ -1,6 +1,5 @@
 /**
- * Smoke tests for network configuration
- * Tests that network constants are properly defined and accessible
+ * Tests for the client network configuration
  */
 
 import { describe, test, expect } from 'bun:test';
@@ -9,60 +8,89 @@ import {
   DEFAULT_NETWORK,
   WALLET_CONFIG,
   WALLET_SCAN_POLICY,
-  type NetworkType,
+  buildNetworkConfig,
+  nextNetwork,
+  type NetworkKey,
 } from '../src/constants/network';
+import { NETWORK_KEYS } from '@qa-helper/shared/networks';
 import { SCANNING_POLICY } from '@hathor/wallet-lib/lib/types';
 
 describe('network constants', () => {
   describe('NETWORK_CONFIG', () => {
-    test('has TESTNET configuration', () => {
-      expect(NETWORK_CONFIG.TESTNET).toBeDefined();
+    test('has exactly the three shared networks', () => {
+      expect(Object.keys(NETWORK_CONFIG).sort()).toEqual(['MAINNET', 'SHIELDED_TESTNET', 'TESTNET']);
+    });
+
+    test('maps each network to its wallet-lib name', () => {
       expect(NETWORK_CONFIG.TESTNET.name).toBe('testnet');
-    });
-
-    test('has MAINNET configuration', () => {
-      expect(NETWORK_CONFIG.MAINNET).toBeDefined();
       expect(NETWORK_CONFIG.MAINNET.name).toBe('mainnet');
+      // The shielded node reports `testnet-shielded-outputs`; wallet-lib accepts it as `testnet`.
+      expect(NETWORK_CONFIG.SHIELDED_TESTNET.name).toBe('testnet');
     });
 
-    test('TESTNET has required properties', () => {
-      const testnet = NETWORK_CONFIG.TESTNET;
-
-      expect(testnet.name).toBeDefined();
-      expect(testnet.fullNodeUrl).toBeDefined();
-      expect(testnet.explorerUrl).toBeDefined();
-      expect(testnet.betBlueprintId).toBeDefined();
-      expect(testnet.authorityBlueprintId).toBeDefined();
+    test('uses the raw fullnode URLs outside dev', () => {
+      expect(NETWORK_CONFIG.TESTNET.fullNodeUrl).toBe('https://node1.testnet.hathor.network/v1a/');
+      expect(NETWORK_CONFIG.SHIELDED_TESTNET.fullNodeUrl).toBe(
+        'https://node1.shielded-outputs.testnet.hathor.network/v1a/'
+      );
     });
 
-    test('MAINNET has required properties', () => {
-      const mainnet = NETWORK_CONFIG.MAINNET;
-
-      expect(mainnet.name).toBeDefined();
-      expect(mainnet.fullNodeUrl).toBeDefined();
-      expect(mainnet.explorerUrl).toBeDefined();
+    test('carries per-network explorer and tx-mining URLs', () => {
+      expect(NETWORK_CONFIG.MAINNET.explorerUrl).toBe('https://explorer.hathor.network/');
+      expect(NETWORK_CONFIG.SHIELDED_TESTNET.explorerUrl).toBe(
+        'https://explorer.shielded-outputs.testnet.hathor.network/'
+      );
+      expect(NETWORK_CONFIG.SHIELDED_TESTNET.txMiningUrl).toBe(
+        'https://txmining.shielded-outputs.testnet.hathor.network/'
+      );
     });
 
-    test('TESTNET URLs are valid', () => {
-      const testnet = NETWORK_CONFIG.TESTNET;
-
-      expect(testnet.fullNodeUrl).toMatch(/^https?:\/\//);
-      expect(testnet.explorerUrl).toMatch(/^https?:\/\//);
+    test('only the shielded testnet supports shielded outputs', () => {
+      expect(NETWORK_CONFIG.SHIELDED_TESTNET.supportsShielded).toBe(true);
+      expect(NETWORK_CONFIG.TESTNET.supportsShielded).toBe(false);
+      expect(NETWORK_CONFIG.MAINNET.supportsShielded).toBe(false);
     });
 
-    test('MAINNET URLs are valid', () => {
-      const mainnet = NETWORK_CONFIG.MAINNET;
+    test('only testnet has the QA blueprints', () => {
+      expect(NETWORK_CONFIG.TESTNET.blueprints?.bet).toMatch(/^[0-9a-f]{64}$/);
+      expect(NETWORK_CONFIG.TESTNET.blueprints?.fee).toMatch(/^[0-9a-f]{64}$/);
+      expect(NETWORK_CONFIG.TESTNET.blueprints?.authority).toMatch(/^[0-9a-f]{64}$/);
+      expect(NETWORK_CONFIG.SHIELDED_TESTNET.blueprints).toBeUndefined();
+      expect(NETWORK_CONFIG.MAINNET.blueprints).toBeUndefined();
+    });
+  });
 
-      expect(mainnet.fullNodeUrl).toMatch(/^https?:\/\//);
-      expect(mainnet.explorerUrl).toMatch(/^https?:\/\//);
+  describe('buildNetworkConfig', () => {
+    test('routes fullnodes through the dev proxy of the current origin in dev', () => {
+      const config = buildNetworkConfig({ dev: true, origin: 'http://localhost:5176' });
+      expect(config.TESTNET.fullNodeUrl).toBe('http://localhost:5176/hathor-node/testnet/v1a/');
+      expect(config.MAINNET.fullNodeUrl).toBe('http://localhost:5176/hathor-node/mainnet/v1a/');
+      expect(config.SHIELDED_TESTNET.fullNodeUrl).toBe('http://localhost:5176/hathor-node/shielded/v1a/');
     });
 
-    test('blueprint IDs have correct format', () => {
-      const testnet = NETWORK_CONFIG.TESTNET;
+    test('dev proxy does not touch tx-mining or explorer URLs', () => {
+      const config = buildNetworkConfig({ dev: true, origin: 'http://localhost:5176' });
+      expect(config.SHIELDED_TESTNET.txMiningUrl).toBe('https://txmining.shielded-outputs.testnet.hathor.network/');
+      expect(config.TESTNET.explorerUrl).toBe('https://explorer.testnet.hathor.network/');
+    });
+  });
 
-      // Blueprint IDs should be hex strings
-      expect(testnet.betBlueprintId).toMatch(/^[0-9a-f]+$/);
-      expect(testnet.authorityBlueprintId).toMatch(/^[0-9a-f]+$/);
+  describe('nextNetwork', () => {
+    test('cycles through every network and wraps around', () => {
+      expect(nextNetwork('TESTNET')).toBe('MAINNET');
+      expect(nextNetwork('MAINNET')).toBe('SHIELDED_TESTNET');
+      expect(nextNetwork('SHIELDED_TESTNET')).toBe('TESTNET');
+    });
+
+    test('visits all NETWORK_KEYS once per cycle', () => {
+      const seen: NetworkKey[] = [];
+      let current: NetworkKey = 'TESTNET';
+      for (let i = 0; i < NETWORK_KEYS.length; i++) {
+        seen.push(current);
+        current = nextNetwork(current);
+      }
+      expect(seen.sort()).toEqual([...NETWORK_KEYS].sort());
+      expect(current).toBe('TESTNET');
     });
   });
 
@@ -71,8 +99,8 @@ describe('network constants', () => {
       expect(DEFAULT_NETWORK).toBeDefined();
     });
 
-    test('is either TESTNET or MAINNET', () => {
-      expect(['TESTNET', 'MAINNET']).toContain(DEFAULT_NETWORK);
+    test('is TESTNET', () => {
+      expect(DEFAULT_NETWORK).toBe('TESTNET');
     });
 
     test('points to a valid network config', () => {
@@ -130,17 +158,6 @@ describe('network constants', () => {
     test('uses a positive gap limit so multiple addresses are scanned', () => {
       expect(typeof WALLET_SCAN_POLICY.gapLimit).toBe('number');
       expect(WALLET_SCAN_POLICY.gapLimit).toBeGreaterThan(0);
-    });
-  });
-
-  describe('NetworkType', () => {
-    test('network types can be used to access config', () => {
-      const networks: NetworkType[] = ['TESTNET', 'MAINNET'];
-
-      networks.forEach((network) => {
-        expect(NETWORK_CONFIG[network]).toBeDefined();
-        expect(NETWORK_CONFIG[network].name).toBeDefined();
-      });
     });
   });
 });

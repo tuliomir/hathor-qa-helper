@@ -9,7 +9,7 @@ import type { WalletStatus } from '../../types/wallet';
 import type { RootState } from '../index';
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
-import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG, WALLET_SCAN_POLICY } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkKey, WALLET_CONFIG, WALLET_SCAN_POLICY } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
@@ -21,6 +21,10 @@ import {
 } from '../../services/addressDatabase';
 import type { AddressEntry } from '../../types/addressDatabase';
 import { fetchCloudWallets, storeCloudWallets } from '../../services/cloudWalletSync';
+import { applyNetworkServices } from '../../services/networkServices';
+import { enableShieldedProvider } from '../../services/shieldedProvider';
+import { summarizeShieldedCapability, type ShieldedCapabilitySummary } from '../../services/shieldedCapability';
+import type { IShieldedCapability } from '@hathor/wallet-lib';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
@@ -48,6 +52,8 @@ interface StoredWalletInfo {
   tokenUids?: string[]; // Array of token UIDs for this wallet
   events: WalletEvent[]; // Event history for this wallet
   error?: string;
+  /** Set only for wallets started on a network that supports shielded outputs. */
+  shieldedCapability?: ShieldedCapabilitySummary;
 }
 
 /**
@@ -142,6 +148,8 @@ export const startWallet = createAsyncThunk(
         throw new Error(`Invalid network: ${network}`);
       }
 
+      applyNetworkServices(network);
+
       // Create connection to Hathor network
       const connection = new Connection({
         network: networkConfig.name,
@@ -160,6 +168,26 @@ export const startWallet = createAsyncThunk(
         // SINGLE_ADDRESS). See WALLET_SCAN_POLICY for rationale.
         scanPolicy: WALLET_SCAN_POLICY,
       });
+
+      // Shielded outputs: register the verifier-only WASM provider before
+      // start(), so the wallet derives shielded keys and decodes what it
+      // receives. The browser still cannot create shielded outputs.
+      const shieldedEnabled = await enableShieldedProvider(walletInstance, network);
+      if (shieldedEnabled) {
+        const handleShieldedCapability = (capability: unknown) => {
+          dispatch(
+            updateShieldedCapability({
+              id: walletId,
+              capability: summarizeShieldedCapability(capability as IShieldedCapability),
+            })
+          );
+        };
+        walletInstance.on('shielded-capability', handleShieldedCapability);
+        walletEventHandlers.set(walletId, {
+          ...walletEventHandlers.get(walletId),
+          'shielded-capability': handleShieldedCapability,
+        });
+      }
 
       // Store instance in the external map
       walletInstancesMap.set(walletId, walletInstance);
@@ -185,6 +213,11 @@ export const startWallet = createAsyncThunk(
 
       // Get the first address
       const firstAddress = await walletInstance.getAddressAtIndex(0);
+
+      if (shieldedEnabled) {
+        const capability = await walletInstance.getShieldedCapability();
+        dispatch(updateShieldedCapability({ id: walletId, capability: summarizeShieldedCapability(capability) }));
+      }
 
       // Populate address database with all known addresses (fire-and-forget)
       // Note: getAllAddresses() is an async generator, not a Promise
@@ -360,6 +393,7 @@ export const startWallet = createAsyncThunk(
       return { walletId, firstAddress, balance: balanceString };
     } catch (error) {
       // Cleanup on error
+      walletEventHandlers.delete(walletId);
       const instance = walletInstancesMap.get(walletId);
       if (instance) {
         await instance.stop().catch((err: unknown) => console.error('Error stopping wallet after failed start:', err));
@@ -394,6 +428,7 @@ export const stopWallet = createAsyncThunk('walletStore/stopWallet', async (wall
       await instance.stop();
       walletInstancesMap.delete(walletId);
       dispatch(updateWalletInstance({ id: walletId, instance: null }));
+      dispatch(updateShieldedCapability({ id: walletId, capability: undefined }));
       dispatch(updateWalletStatus({ id: walletId, status: 'idle' }));
     } catch (error) {
       console.error(`Failed to stop wallet ${walletId}:`, error);
@@ -637,7 +672,7 @@ const walletStoreSlice = createSlice({
       }
     },
 
-    updateNetwork: (state, action: PayloadAction<{ id: string; network: NetworkType }>) => {
+    updateNetwork: (state, action: PayloadAction<{ id: string; network: NetworkKey }>) => {
       const { id, network } = action.payload;
       const walletInfo = state.wallets[id];
 
@@ -713,6 +748,16 @@ const walletStoreSlice = createSlice({
 
       if (walletInfo) {
         walletInfo.tokenUids = tokenUids;
+      }
+    },
+
+    updateShieldedCapability: (
+      state,
+      action: PayloadAction<{ id: string; capability: ShieldedCapabilitySummary | undefined }>
+    ) => {
+      const walletInfo = state.wallets[action.payload.id];
+      if (walletInfo) {
+        walletInfo.shieldedCapability = action.payload.capability;
       }
     },
 
@@ -803,6 +848,7 @@ export const {
   updateWalletStatus,
   updateWalletBalance,
   updateWalletTokens,
+  updateShieldedCapability,
   updateLastUsedAt,
   addWalletEvent,
   updateWalletInitDuration,
