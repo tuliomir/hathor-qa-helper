@@ -117,19 +117,6 @@ export interface StageGroup {
 }
 
 /**
- * Section separator for organizing stages (deprecated - kept for backward compatibility)
- */
-export interface StageSection {
-  type: 'separator';
-  title: string;
-}
-
-/**
- * Union type for stage items (stage or separator)
- */
-export type StageItem = Stage | StageSection;
-
-/**
  * All available stage groups with their stages
  */
 export const STAGE_GROUPS: StageGroup[] = [
@@ -514,11 +501,3 @@ export function getGroupForStage(stageId: StageId): GroupId | null {
   }
   return null;
 }
-
-/**
- * All available stages with section separators (deprecated - kept for backward compatibility)
- */
-export const STAGES: StageItem[] = STAGE_GROUPS.flatMap((group) => [
-  { type: 'separator', title: group.title } as StageSection,
-  ...group.stages,
-]);

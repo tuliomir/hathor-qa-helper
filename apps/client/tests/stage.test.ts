@@ -11,7 +11,6 @@ import {
   STAGE_GROUPS,
   type StageGroup,
   type StageId,
-  STAGES,
 } from '../src/types/stage';
 
 describe('stage types', () => {
@@ -85,27 +84,6 @@ describe('stage types', () => {
           expect(typeof stage.description).toBe('string');
         });
       });
-    });
-  });
-
-  describe('STAGES', () => {
-    test('is defined and non-empty', () => {
-      expect(STAGES).toBeDefined();
-      expect(Array.isArray(STAGES)).toBe(true);
-      expect(STAGES.length).toBeGreaterThan(0);
-    });
-
-    test('contains stages and separators', () => {
-      const separators = STAGES.filter((item) => 'type' in item && item.type === 'separator');
-      const stages = STAGES.filter((item) => 'id' in item && !('type' in item));
-
-      expect(separators.length).toBeGreaterThan(0);
-      expect(stages.length).toBeGreaterThan(0);
-    });
-
-    test('has separator for each group', () => {
-      const separators = STAGES.filter((item) => 'type' in item && item.type === 'separator');
-      expect(separators.length).toBe(STAGE_GROUPS.length);
     });
   });
 
