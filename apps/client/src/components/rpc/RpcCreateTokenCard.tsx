@@ -99,7 +99,8 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           Create a {kind} authority
         </label>
         <AddressInput
-          label={`${Kind} authority address (optional)`}
+          label={`${Kind} authority address`}
+          hint="Optional. The wallet picks one when empty."
           value={params[address]}
           onChange={(v) => set({ [address]: v })}
           sources={['test', 'fund']}
@@ -174,7 +175,8 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
         </Field>
       </div>
       <AddressInput
-        label="Change address (optional)"
+        label="Change address"
+        hint="Optional. The wallet picks one when empty."
         value={params.change_address}
         onChange={(change_address) => set({ change_address })}
         sources={['test', 'fund']}

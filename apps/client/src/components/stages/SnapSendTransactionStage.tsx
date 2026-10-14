@@ -102,11 +102,10 @@ export const SnapSendTransactionStage: React.FC = () => {
           network={network}
         />
 
-        <section className="flex flex-col gap-3 border-t border-base-300 pt-4" aria-labelledby="snap-send-change">
-          <h3 id="snap-send-change" className="m-0 text-body font-semibold">
-            Change address <span className="font-normal text-ink-muted">(optional)</span>
-          </h3>
+        <section className="flex flex-col gap-3 border-t border-base-300 pt-4">
           <AddressInput
+            label="Change address"
+            hint="Optional. Prefilled with the snap's address 0."
             value={changeAddress}
             onChange={setChangeAddress}
             placeholder="Address to receive change"

@@ -214,7 +214,7 @@ export const SnapSendNanoContractTxStage: React.FC = () => {
               rows={3}
             />
           </Field>
-          <Field label="Max fee (optional)" hint="Highest fee to pay, as a string." className="max-w-60">
+          <Field label="Max fee" hint="Optional. Highest fee to pay, as a string." className="max-w-60">
             <input
               type="text"
               value={maxFee}

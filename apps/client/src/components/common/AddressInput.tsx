@@ -50,6 +50,8 @@ interface AddressInputProps {
   /** Validate against this network. Defaults to the active network; `null` accepts any. */
   network?: NetworkKey | null;
   id?: string;
+  /** Muted line under the field (e.g. "Optional. Defaults to …"); an error replaces it. */
+  hint?: React.ReactNode;
 }
 
 interface FillSource {
@@ -72,6 +74,7 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   accept = 'transparent',
   network: networkProp,
   id,
+  hint,
 }) => {
   const activeNetwork = useSelector(selectActiveNetwork);
   const network = networkProp === undefined ? activeNetwork : (networkProp ?? undefined);
@@ -254,6 +257,7 @@ export const AddressInput: React.FC<AddressInputProps> = ({
 
       <div id={hintId} className="flex flex-col gap-1">
         {error && <span className="text-caption text-error">{error}</span>}
+        {!error && hint && <span className="text-caption text-ink-muted">{hint}</span>}
         {!error && detection.kind === 'shielded' && (
           <>
             <span
