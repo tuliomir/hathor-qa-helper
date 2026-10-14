@@ -45,27 +45,26 @@ async function connectAndNavigateToGetNetwork(page: import('@playwright/test').P
   if (await snapsGroup.isVisible()) {
     await snapsGroup.click();
   }
-  const getNetworkLink = page.getByRole('link', { name: /Get Network/i }).or(
-    page.locator('text=Get Network').first(),
-  );
+  const getNetworkLink = page.getByRole('link', { name: /Get Network/i }).or(page.locator('text=Get Network').first());
   await expect(getNetworkLink).toBeVisible({ timeout: 3000 });
   await getNetworkLink.click();
 
-  await expect(page.getByRole('button', { name: /Execute Get Network/i })).toBeVisible({ timeout: 5000 });
+  await expect(executeButton(page)).toBeVisible({ timeout: 5000 });
 }
 
-// Locator helpers to avoid strict-mode violations from multiple matching elements
-const successIndicator = (page: import('@playwright/test').Page) =>
-  page.locator('.text-success:has-text("Success")');
+// Locator helpers: MethodCard marks its outcome region with data-result.
+const executeButton = (page: import('@playwright/test').Page) =>
+  page.getByRole('button', { name: 'Get Network', exact: true });
+
+const successIndicator = (page: import('@playwright/test').Page) => page.locator('[data-result="success"]');
 
 const rejectionBanner = (page: import('@playwright/test').Page) =>
-  page.locator('.bg-amber-50 p.font-semibold', { hasText: 'Request Rejected' });
+  page.locator('[data-result="rejected"]', { hasText: 'Rejected in MetaMask' });
 
 const rejectionMessage = (page: import('@playwright/test').Page) =>
-  page.locator('.bg-amber-50', { hasText: 'declined the prompt' });
+  page.locator('[data-result="rejected"]', { hasText: 'prompt was declined' });
 
-const errorSection = (page: import('@playwright/test').Page) =>
-  page.locator('.bg-red-50');
+const errorSection = (page: import('@playwright/test').Page) => page.locator('[data-result="error"]');
 
 test.describe('Snap rejection detection', () => {
   test('snap connection succeeds with mock provider', async ({ page }) => {
@@ -82,12 +81,10 @@ test.describe('Snap rejection detection', () => {
     await connectAndNavigateToGetNetwork(page);
 
     await page.evaluate(() => {
-      window.__mockMetaMask.setNextResponse(
-        JSON.stringify({ success: true, response: { network: 'testnet' } }),
-      );
+      window.__mockMetaMask.setNextResponse(JSON.stringify({ success: true, response: { network: 'testnet' } }));
     });
 
-    await page.getByRole('button', { name: /Execute Get Network/i }).click();
+    await executeButton(page).click();
 
     await expect(successIndicator(page)).toBeVisible({ timeout: 5000 });
   });
@@ -101,7 +98,7 @@ test.describe('Snap rejection detection', () => {
       window.__mockMetaMask.setNextError(err);
     });
 
-    await page.getByRole('button', { name: /Execute Get Network/i }).click();
+    await executeButton(page).click();
 
     await expect(rejectionBanner(page)).toBeVisible({ timeout: 5000 });
     await expect(rejectionMessage(page)).toBeVisible();
@@ -122,7 +119,7 @@ test.describe('Snap rejection detection', () => {
       window.__mockMetaMask.setNextError(err);
     });
 
-    await page.getByRole('button', { name: /Execute Get Network/i }).click();
+    await executeButton(page).click();
 
     await expect(rejectionBanner(page)).toBeVisible({ timeout: 5000 });
     await expect(rejectionMessage(page)).toBeVisible();
@@ -137,7 +134,7 @@ test.describe('Snap rejection detection', () => {
       window.__mockMetaMask.setNextError(err);
     });
 
-    await page.getByRole('button', { name: /Execute Get Network/i }).click();
+    await executeButton(page).click();
 
     await expect(errorSection(page)).toBeVisible({ timeout: 5000 });
     await expect(errorSection(page).getByText(/Insufficient funds/i)).toBeVisible();
@@ -151,12 +148,11 @@ test.describe('Snap rejection detection', () => {
       window.__mockMetaMask.setNextResponse(null);
     });
 
-    await page.getByRole('button', { name: /Execute Get Network/i }).click();
+    await executeButton(page).click();
 
     // null is a legitimate response — the success toast fires, no error/rejection shown.
-    // Since response is null and there's no error, the response section isn't rendered
-    // (hasResult = false), but the toast confirms success.
-    await expect(page.getByText(/executed successfully/i)).toBeVisible({ timeout: 5000 });
+    // With a null response MethodCard renders no outcome region; the toast confirms success.
+    await expect(page.getByText(/Get Network succeeded/i)).toBeVisible({ timeout: 5000 });
     await expect(rejectionBanner(page)).not.toBeVisible();
     await expect(errorSection(page)).not.toBeVisible();
   });
@@ -170,7 +166,7 @@ test.describe('Snap rejection detection', () => {
       window.__mockMetaMask.setNextError(err);
     });
 
-    await page.getByRole('button', { name: /Execute Get Network/i }).click();
+    await executeButton(page).click();
 
     await expect(rejectionBanner(page)).toBeVisible({ timeout: 5000 });
   });

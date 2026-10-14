@@ -37,6 +37,13 @@ Specs in `docs/design/components.md`. New stage code builds from these instead o
 - `AmountInput`: shows decimals, reports base units as a decimal string (`src/utils/amount.ts`, BigInt-safe)
 - `AddressInput`: `accept: 'transparent' | 'shielded' | 'any'`, optional `network`; kind comes from `detectAddressKind()` (`src/utils/addressKind.ts`), which decodes base58 and reads the version byte. Errors are advisory; the value always reaches `onChange`.
 
+Method stages and shielded pieces (reference implementations: `SendTransactionStage` + `rpc/RpcSendTransactionCard`, `SnapSendTransactionStage`):
+
+- `MethodCard`: Compose panel (inputs + `ExecuteBar`) and Inspect panel (request `JsonPanel`, outcome). The outcome region carries `data-result="success|error|rejected|dry-run"` for e2e. `snap/SnapMethodCard` is now a thin adapter over it; `useRpcMethod` is the RPC counterpart of `useSnapMethod`.
+- `ExecuteBar`: action-named primary button, global dry-run toggle, visible disabled reason (dry run stays available), mainnet arming (`src/utils/executeArming.ts`).
+- `OutputEditor`: value is `OutputRow[]` (`src/utils/outputRows.ts`); `toSendOutputs(rows)` maps it 1:1 onto the QA server's `SendOutput[]`. `privacy` shows the per-row `ShieldModeSelector`.
+- `ShieldedBadge`, `CapabilityBadge`. CapabilityBadge needs an explicit `canCreateShieldedOutputs`; never pass `canSpend`.
+
 Toasts sit bottom-right, max three visible. Success and info dismiss after 4s, warnings after 8s, errors stay until dismissed. `CopyButton` confirms inline and never toasts.
 
 ## Colors (theme `bench` in src/index.css)

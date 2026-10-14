@@ -1,510 +1,135 @@
 /**
  * RPC Send Transaction Card
  *
- * Card component for testing htr_sendTransaction RPC method
+ * Compose/Inspect card for htr_sendTransaction (the RPC reference
+ * implementation of MethodCard + OutputEditor).
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
-import CopyButton from '../common/CopyButton';
-import { useToast } from '../../hooks/useToast';
-import DryRunCheckbox from '../common/DryRunCheckbox';
-import { RpcRequestPreview } from './RpcRequestPreview';
-import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
-import type { SendTransactionOutput, SendTransactionOutputType } from '../../store/slices/sendTransactionSlice';
-import type { NetworkKey } from '../../constants/network';
-import Select from '../common/Select';
+import React, { useMemo, useState } from 'react';
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
-import { LoadingOverlay } from '../common/LoadingOverlay';
-import TimelockPicker from '../common/TimelockPicker';
-import { timelockToUnix } from '../../utils/timelockUtils';
-import { extractErrorMessage } from '../../utils/errorUtils';
-
-interface Token {
-  uid: string;
-  name: string;
-  symbol: string;
-}
+import type { SendTransactionOutput } from '../../store/slices/sendTransactionSlice';
+import type { NetworkKey } from '../../constants/network';
+import { MethodCard, type MethodData } from '../common/MethodCard';
+import { OutputEditor, type OutputTokenOption } from '../common/OutputEditor';
+import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
+import { newOutputRow, outputRowErrors, type OutputRow } from '../../utils/outputRows';
+import { buildSendTransactionRequest } from '../../utils/rpcSendTransaction';
 
 export interface RpcSendTransactionCardProps {
-  onExecute: (outputs: SendTransactionOutput[], pushTx: boolean) => Promise<{ request: unknown; response: unknown }>;
-  disabled?: boolean;
-  isDryRun?: boolean;
+  onExecute: (outputs: SendTransactionOutput[], pushTx: boolean) => Promise<unknown>;
+  /** Built from the request the handler would send; used for the live preview. */
+  methodData: MethodData | null;
+  isDryRun: boolean;
+  /** Network of the test wallet (explorer links, address validation). */
   network: NetworkKey;
   testWallet?: HathorWallet | null;
-  fundingWallet?: HathorWallet | null;
-  availableTokens: Token[];
-  isLoadingTokens: boolean;
-  initialRequest?: { method: string; params: unknown } | null;
-  initialResponse?: unknown | null;
-  initialError?: string | null;
-  initialFormData?: {
-    pushTx: boolean;
-    outputs: SendTransactionOutput[];
-  };
+  availableTokens: OutputTokenOption[];
+  disabledReason?: string | null;
+  initialFormData?: { pushTx: boolean; outputs: SendTransactionOutput[] };
+}
+
+const RPC_ROW_RULES = { allowData: true, allowTimelock: true, allowZero: true };
+
+function toRows(outputs: SendTransactionOutput[] | undefined): OutputRow[] {
+  if (!outputs || outputs.length === 0) return [newOutputRow()];
+  return outputs.map((o) =>
+    newOutputRow({
+      type: o.type ?? 'token',
+      address: o.address ?? '',
+      value: o.value ?? '',
+      token: o.token || '00',
+      timelock: o.timelock ?? '',
+      data: o.data ?? '',
+    })
+  );
+}
+
+function toRpcOutputs(rows: OutputRow[]): SendTransactionOutput[] {
+  return rows.map((r) =>
+    r.type === 'data'
+      ? { type: 'data', data: r.data }
+      : { type: 'token', address: r.address.trim(), value: r.value, token: r.token, timelock: r.timelock }
+  );
+}
+
+function rpcTxHash(response: unknown): string | null {
+  if (!response || typeof response !== 'object') return null;
+  const r = response as { hash?: unknown; response?: { hash?: unknown } };
+  if (typeof r.hash === 'string') return r.hash;
+  if (r.response && typeof r.response.hash === 'string') return r.response.hash;
+  return null;
 }
 
 export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
   onExecute,
-  disabled = false,
-  isDryRun = false,
+  methodData,
+  isDryRun,
   network,
   testWallet = null,
-  fundingWallet = null,
   availableTokens,
-  isLoadingTokens,
-  initialRequest = null,
-  initialResponse = null,
-  initialError = null,
+  disabledReason = null,
   initialFormData,
 }) => {
-  const { showToast } = useToast();
-
-  // Component state
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<unknown>(initialResponse);
-  const [error, setError] = useState<string | null>(initialError);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(initialRequest);
-  const [expanded, setExpanded] = useState(false);
-
-  // Form state
   const [pushTx, setPushTx] = useState(initialFormData?.pushTx ?? false);
-  const [outputs, setOutputs] = useState<SendTransactionOutput[]>(
-    initialFormData?.outputs?.map((o) => ({
-      type: o.type || 'token',
-      address: o.address || '',
-      value: o.value || '',
-      token: o.token || '00',
-      timelock: o.timelock || '',
-      data: o.data || '',
-    })) ?? [{ type: 'token', address: '', value: '', token: '00', timelock: '', data: '' }]
-  );
+  const [rows, setRows] = useState<OutputRow[]>(() => toRows(initialFormData?.outputs));
 
-  const liveRequest = useMemo(() => {
-    const builtOutputs = outputs.map((o) => {
-      if (o.type === 'data') return { data: o.data };
-      const tokenOutput: { address?: string; value?: string; token?: string; timelock?: number } = {
-        address: o.address,
-        value: o.value,
-        token: o.token,
-      };
-      const ts = timelockToUnix(o.timelock || '');
-      if (ts !== undefined) tokenOutput.timelock = ts;
-      return tokenOutput;
-    });
-    return {
-      method: 'htr_sendTransaction',
-      params: {
-        network: 'testnet',
-        push_tx: pushTx,
-        outputs: builtOutputs,
-      },
-    };
-  }, [outputs, pushTx]);
-
-  // Sync with initial values from Redux
-  useEffect(() => {
-    if (initialRequest) {
-      setRequestInfo(initialRequest);
-    }
-    if (initialResponse) {
-      setResult(initialResponse);
-      setExpanded(true);
-    }
-    if (initialError) {
-      setError(initialError);
-      setExpanded(true);
-    }
-  }, [initialRequest, initialResponse, initialError]);
-
-  // Add output
-  const handleAddOutput = () => {
-    if (outputs.length >= 255) {
-      showToast('Maximum 255 outputs allowed', 'error');
-      return;
-    }
-    setOutputs([...outputs, { type: 'token', address: '', value: '', token: '00', timelock: '', data: '' }]);
-  };
-
-  // Remove output
-  const handleRemoveOutput = (index: number) => {
-    if (outputs.length === 1) {
-      showToast('At least one output is required', 'error');
-      return;
-    }
-    setOutputs(outputs.filter((_, i) => i !== index));
-  };
-
-  // Update output
-  const handleOutputChange = (
-    index: number,
-    field: 'address' | 'value' | 'token' | 'timelock' | 'data',
-    value: string
-  ) => {
-    const newOutputs = [...outputs];
-    newOutputs[index] = { ...newOutputs[index], [field]: value };
-    setOutputs(newOutputs);
-  };
-
-  // Update output type
-  const handleOutputTypeChange = (index: number, type: SendTransactionOutputType) => {
-    const newOutputs = [...outputs];
-    newOutputs[index] = { ...newOutputs[index], type };
-    setOutputs(newOutputs);
-  };
-
-  // Populate address from test wallet
-  const handleSelectAddress0 = async (index: number) => {
-    if (!testWallet) {
-      showToast('Test wallet not available', 'error');
-      return;
-    }
-
-    try {
-      const address = await testWallet.getAddressAtIndex(0);
-      const newOutputs = [...outputs];
-      newOutputs[index] = { ...newOutputs[index], address };
-      setOutputs(newOutputs);
-      showToast('Address populated', 'success');
-    } catch (error) {
-      console.error('Failed to get address:', error);
-      showToast('Failed to get address from wallet', 'error');
-    }
-  };
-
-  // Populate address from funding wallet
-  const handleSelectExternalAddr = async (index: number) => {
-    if (!fundingWallet) {
-      showToast('Funding wallet not available', 'error');
-      return;
-    }
-
-    try {
-      const address = await fundingWallet.getAddressAtIndex(0);
-      const newOutputs = [...outputs];
-      newOutputs[index] = { ...newOutputs[index], address };
-      setOutputs(newOutputs);
-      showToast('External address populated', 'success');
-    } catch (error) {
-      console.error('Failed to get external address:', error);
-      showToast('Failed to get address from funding wallet', 'error');
-    }
-  };
+  const liveRequest = useMemo(() => buildSendTransactionRequest(toRpcOutputs(rows), pushTx), [rows, pushTx]);
 
   const handleExecute = async () => {
-    // Validation
-    for (const output of outputs) {
-      if (output.type === 'token') {
-        if (!output.address || !output.value) {
-          showToast('Token outputs must have an address and value', 'error');
-          return;
-        }
-      } else if (output.type === 'data') {
-        if (!output.data || output.data.trim() === '') {
-          showToast('Data outputs must have data content', 'error');
-          return;
-        }
-        if (output.data.length > 255) {
-          showToast('Data output exceeds maximum length of 255 characters', 'error');
-          return;
-        }
-      }
-    }
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setRequestInfo(null);
-
-    try {
-      const { request, response } = await onExecute(outputs, pushTx);
-
-      // Store request and response separately
-      setRequestInfo(request as { method: string; params: unknown });
-      setResult(response);
-      setExpanded(true);
-
-      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Transaction sent successfully', 'success');
-    } catch (err: unknown) {
-      const errorMessage = extractErrorMessage(err);
-      setError(errorMessage);
-      setExpanded(true);
-
-      // Capture request params from error if available
-      if (err && typeof err === 'object' && 'requestParams' in err) {
-        setRequestInfo(err.requestParams as { method: string; params: unknown });
-      }
-
-      showToast(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
+    const problems = outputRowErrors(rows, RPC_ROW_RULES)
+      .map((e, i) => (e ? `Output ${i + 1}: ${e}` : null))
+      .filter(Boolean);
+    if (problems.length > 0) throw new Error(problems.join('; '));
+    return onExecute(toRpcOutputs(rows), pushTx);
   };
 
-  const hasResult = result !== null || error !== null;
-
-  // Safe stringify helper for BigInt
-  const safeStringify = (obj: unknown, spaces = 0): string => {
-    return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), spaces);
-  };
+  const getMax = testWallet
+    ? async (token: string) => {
+        const bal = await testWallet.getBalance(token || '00');
+        return bal?.[0]?.balance?.unlocked ?? 0n;
+      }
+    : undefined;
 
   return (
-    <>
-      <div className="card-primary mb-7.5 relative">
-        {loading && <LoadingOverlay />}
-        <div className="flex flex-col space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-semibold m-0">Send Transaction</h3>
-                {isDryRun && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 border border-purple-300">
-                    DRY RUN
-                  </span>
-                )}
-              </div>
-              <p className="text-sm text-muted m-0">Send a transaction with one or more outputs</p>
-            </div>
-          </div>
-
-          {/* Form Fields */}
-          <div className="space-y-4 pt-2">
-            {/* Push Transaction Toggle */}
-            <div className="space-y-2 bg-gray-50 rounded p-3 border border-gray-200">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={pushTx}
-                  onChange={(e) => setPushTx(e.target.checked)}
-                  className="checkbox"
-                  id="push-tx-checkbox"
-                />
-                <label htmlFor="push-tx-checkbox" className="text-sm cursor-pointer">
-                  Push transaction to network
-                </label>
-              </div>
-              <p className="text-xs text-muted m-0">
-                {pushTx
-                  ? 'Transaction will be broadcast to the network and fully processed'
-                  : 'Returns only the transaction hex without broadcasting'}
-              </p>
-            </div>
-
-            {/* Outputs */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium">Outputs ({outputs.length}/255)</label>
-                <button
-                  onClick={handleAddOutput}
-                  disabled={outputs.length >= 255}
-                  className="btn-secondary py-1.5 px-3 text-sm"
-                >
-                  + Add Output
-                </button>
-              </div>
-              <div className="space-y-3">
-                {outputs.map((output, index) => (
-                  <div key={index} className="bg-gray-50 rounded p-3 border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Output {index + 1}</span>
-                      {outputs.length > 1 && (
-                        <button
-                          onClick={() => handleRemoveOutput(index)}
-                          className="text-sm text-red-600 hover:text-red-700"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      {/* Output Type Selector */}
-                      <div>
-                        <label className="block mb-1 text-xs font-medium text-muted">Output Type:</label>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleOutputTypeChange(index, 'token')}
-                            className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
-                              output.type === 'token'
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            Token
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOutputTypeChange(index, 'data')}
-                            className={`flex-1 py-2 px-3 text-sm font-medium rounded border transition-colors ${
-                              output.type === 'data'
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            Data
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Token Output Fields */}
-                      {output.type === 'token' && (
-                        <>
-                          <div>
-                            <input
-                              value={output.address || ''}
-                              onChange={(e) => handleOutputChange(index, 'address', e.target.value)}
-                              placeholder="Address (base58)"
-                              className="input w-full"
-                            />
-                            <div className="flex gap-2 mt-2">
-                              <button
-                                type="button"
-                                onClick={() => handleSelectAddress0(index)}
-                                disabled={!testWallet}
-                                className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                                title="Populate with address 0 from test wallet"
-                              >
-                                Use Addr0
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleSelectExternalAddr(index)}
-                                disabled={!fundingWallet}
-                                className="btn-secondary py-1.5 px-3 text-xs whitespace-nowrap flex-1"
-                                title="Populate with address 0 from funding wallet"
-                              >
-                                Use external addr
-                              </button>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <input
-                              value={output.value || ''}
-                              onChange={(e) => handleOutputChange(index, 'value', e.target.value)}
-                              placeholder="Amount (in tokens)"
-                              className="input flex-1"
-                              type="number"
-                            />
-                            {testWallet && output.token && (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  try {
-                                    const bal = await testWallet.getBalance(output.token || '00');
-                                    const unlocked = bal?.[0]?.balance?.unlocked ?? 0n;
-                                    handleOutputChange(index, 'value', unlocked.toString());
-                                  } catch (err) {
-                                    console.error('Failed to get token balance:', err);
-                                  }
-                                }}
-                                className="btn-secondary px-3 whitespace-nowrap text-sm"
-                                title="Fill with full token balance"
-                              >
-                                Max
-                              </button>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block mb-1 text-xs font-medium text-muted">Token:</label>
-                            <Select
-                              value={output.token || '00'}
-                              onChange={(e) => handleOutputChange(index, 'token', e.target.value)}
-                              disabled={isLoadingTokens || availableTokens.length === 0}
-                            >
-                              {isLoadingTokens ? (
-                                <option>Loading tokens...</option>
-                              ) : availableTokens.length === 0 ? (
-                                <option>No tokens available</option>
-                              ) : (
-                                availableTokens.map((token) => (
-                                  <option key={token.uid} value={token.uid}>
-                                    {token.symbol} - {token.name}
-                                  </option>
-                                ))
-                              )}
-                            </Select>
-                          </div>
-                          <TimelockPicker
-                            value={output.timelock || ''}
-                            onChange={(v) => handleOutputChange(index, 'timelock', v)}
-                          />
-                        </>
-                      )}
-
-                      {/* Data Output Fields */}
-                      {output.type === 'data' && (
-                        <div>
-                          <label className="block mb-1 text-xs font-medium text-muted">
-                            Data String ({output.data?.length || 0}/255):
-                          </label>
-                          <textarea
-                            value={output.data || ''}
-                            onChange={(e) => {
-                              if (e.target.value.length <= 255) {
-                                handleOutputChange(index, 'data', e.target.value);
-                              }
-                            }}
-                            placeholder="Enter data string (max 255 characters)"
-                            className="input w-full min-h-[80px] resize-y"
-                            maxLength={255}
-                          />
-                          <p className="text-xs text-muted mt-1">
-                            Data outputs store arbitrary string data on the blockchain
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Execute Button */}
-          <div className="flex items-center gap-4 justify-end">
-            <DryRunCheckbox />
-            <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
-              {loading ? 'Sending...' : 'Send Transaction'}
-            </button>
-          </div>
-        </div>
+    <MethodCard
+      title="Send transaction"
+      description="Send a transaction with one or more outputs."
+      liveRequest={liveRequest}
+      methodData={methodData}
+      isDryRun={isDryRun}
+      onExecute={handleExecute}
+      disabledReason={disabledReason}
+      // The RPC request always targets hathor:testnet (rpcHandlers), so it never arms for mainnet.
+      isMainnet={false}
+      getTxHash={rpcTxHash}
+      explorerNetwork={network}
+      renderResponse={(response) => <TransactionResponseDisplay response={response} network={network} />}
+      successToast={pushTx ? 'Transaction sent' : 'Transaction built'}
+    >
+      <div className="flex flex-col gap-1">
+        <label className="flex cursor-pointer items-center gap-2 text-body font-medium">
+          <input
+            type="checkbox"
+            className="toggle toggle-sm"
+            checked={pushTx}
+            onChange={(e) => setPushTx(e.target.checked)}
+          />
+          Push transaction to the network
+        </label>
+        <span className="text-caption text-ink-muted">
+          {pushTx
+            ? 'The wallet broadcasts the transaction.'
+            : 'The wallet returns the transaction hex without broadcasting it.'}
+        </span>
       </div>
-
-      {/* Request Section */}
-      <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
-
-      {/* Response Section */}
-      {hasResult && (
-        <div className="mt-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className={`text-sm font-medium flex items-center ${
-                error ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'
-              }`}
-            >
-              {expanded ? '▼' : '▶'} {error ? 'Error Details' : 'Response'}
-            </button>
-            {!error && result ? <CopyButton text={safeStringify(result, 2)} label="Copy response" /> : null}
-          </div>
-
-          {expanded && (
-            <div
-              className={
-                error
-                  ? 'bg-red-50 border border-red-300 rounded p-4'
-                  : 'bg-green-50 border border-green-300 rounded p-4'
-              }
-            >
-              {error ? (
-                <div className="text-sm text-red-900 break-words">{error}</div>
-              ) : result ? (
-                <TransactionResponseDisplay response={result} network={network} />
-              ) : null}
-            </div>
-          )}
-        </div>
-      )}
-    </>
+      <OutputEditor
+        value={rows}
+        onChange={setRows}
+        tokens={availableTokens}
+        addressSources={['test', 'fund']}
+        network={network}
+        getMax={getMax}
+      />
+    </MethodCard>
   );
 };
