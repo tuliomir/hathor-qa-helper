@@ -245,6 +245,7 @@ export default function PushNotifications() {
             <dd className="m-0">
               <WalletNetworkControl
                 walletId={wallet.metadata.id}
+                walletName={wallet.metadata.friendlyName}
                 network={wallet.metadata.network}
                 status={wallet.status}
                 error={wallet.error}

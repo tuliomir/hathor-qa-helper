@@ -26,6 +26,7 @@ import { calculateTotalValue } from '../../store/slices/walletScanSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from './CopyButton';
 import NetworkSwapButton from './NetworkSwapButton';
+import NetworkChip from './NetworkChip';
 
 /**
  * Scan progress state passed from parent
@@ -476,10 +477,11 @@ export default function WalletBrowserModal({
                         </div>
                       </td>
                       <td className="p-3">
-                        <div className="flex flex-col items-start gap-1">
-                          <span>{wallet.metadata.network}</span>
+                        <div className="flex items-center gap-1">
+                          <NetworkChip network={wallet.metadata.network} size="sm" />
                           <NetworkSwapButton
                             walletId={wallet.metadata.id}
+                            walletName={wallet.metadata.friendlyName}
                             currentNetwork={wallet.metadata.network}
                             walletStatus={wallet.status}
                             onSwap={onSwapNetwork}

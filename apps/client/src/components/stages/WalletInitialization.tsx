@@ -16,7 +16,6 @@ import {
   MdStar,
   MdStarBorder,
   MdStop,
-  MdSwapVert,
   MdViewList,
 } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -43,6 +42,7 @@ import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
 import ShieldedCapabilityBadge from '../common/ShieldedCapabilityBadge';
 import NetworkChip from '../common/NetworkChip';
+import NetworkSwapButton from '../common/NetworkSwapButton';
 import { Identifier } from '../common/Identifier';
 import { StageHeader } from '../common/StageHeader';
 import { Panel } from '../ui/Panel';
@@ -501,21 +501,16 @@ export default function WalletInitialization() {
       key: 'network',
       header: 'Network',
       render: (wallet) => {
-        const target = NETWORK_CONFIG[nextNetwork(wallet.metadata.network)].label;
-        const isSwapping = wallet.status === 'connecting' || wallet.status === 'syncing';
         return (
           <span className="inline-flex flex-wrap items-center gap-1">
             <NetworkChip network={wallet.metadata.network} size="sm" />
-            <button
-              type="button"
-              onClick={() => handleSwapNetwork(wallet.metadata.id, wallet.metadata.network, wallet.status)}
-              title={`Switch to ${target}`}
-              aria-label={`Switch ${wallet.metadata.friendlyName} to ${target}`}
-              className="btn btn-ghost btn-xs btn-square"
-              disabled={isSwapping}
-            >
-              <MdSwapVert aria-hidden="true" />
-            </button>
+            <NetworkSwapButton
+              walletId={wallet.metadata.id}
+              walletName={wallet.metadata.friendlyName}
+              currentNetwork={wallet.metadata.network}
+              walletStatus={wallet.status}
+              onSwap={handleSwapNetwork}
+            />
             <ShieldedCapabilityBadge capability={wallet.shieldedCapability} />
           </span>
         );

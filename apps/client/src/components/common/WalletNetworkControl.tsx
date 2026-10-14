@@ -1,17 +1,18 @@
 /**
  * Wallet Network Control Component
  *
- * Shared component for displaying wallet status, error messages, and
- * handling network swaps. Used by both Wallet Initialization and
- * Push Notifications stages.
+ * A wallet's network chip with a swap button, its error message, and a
+ * force stop for wallets stuck connecting or syncing.
  */
 
 import type { NetworkKey } from '../../constants/network';
+import NetworkChip from './NetworkChip';
 import NetworkSwapButton from './NetworkSwapButton';
 import { useConfirm } from '../../hooks/useConfirm';
 
 interface WalletNetworkControlProps {
   walletId: string;
+  walletName?: string;
   network: NetworkKey;
   status: string;
   error?: string | null;
@@ -21,6 +22,7 @@ interface WalletNetworkControlProps {
 
 export default function WalletNetworkControl({
   walletId,
+  walletName,
   network,
   status,
   error,
@@ -30,40 +32,39 @@ export default function WalletNetworkControl({
   const isStuck = status === 'connecting' || status === 'syncing';
   const { confirm, confirmDialog } = useConfirm();
 
+  const forceStop = async () => {
+    const ok = await confirm({
+      title: 'Force stop this wallet?',
+      body: `It appears stuck in the ${status} state.`,
+      confirmLabel: 'Force stop',
+      tone: 'danger',
+    });
+    if (ok) onForceStop?.(walletId);
+  };
+
   return (
-    <div>
+    <div className="flex flex-col items-start gap-1.5">
       {confirmDialog}
-      <div className="flex items-center gap-2">
-        <span className="badge badge-lg">{network}</span>
-        <NetworkSwapButton walletId={walletId} currentNetwork={network} walletStatus={status} onSwap={onSwapNetwork} />
+      <div className="flex items-center gap-1">
+        <NetworkChip network={network} size="sm" />
+        <NetworkSwapButton
+          walletId={walletId}
+          walletName={walletName}
+          currentNetwork={network}
+          walletStatus={status}
+          onSwap={onSwapNetwork}
+        />
       </div>
 
-      {/* Error message */}
       {error && (
-        <div className="mt-2 p-2 bg-red-50 border border-danger rounded">
-          <p className="text-xs text-red-900 m-0">{error}</p>
-        </div>
+        <p className="m-0 text-caption text-error" role="alert">
+          {error}
+        </p>
       )}
 
-      {/* Force stop for stuck wallets */}
       {isStuck && onForceStop && (
-        <button
-          onClick={async () => {
-            if (
-              await confirm({
-                title: 'Force stop this wallet?',
-                body: `It appears stuck in the ${status} state.`,
-                confirmLabel: 'Force stop',
-                tone: 'danger',
-              })
-            ) {
-              onForceStop(walletId);
-            }
-          }}
-          className="mt-2 btn-danger py-1 px-2 text-xs"
-          title="Force stop the stuck wallet"
-        >
-          Force Stop
+        <button type="button" onClick={forceStop} className="btn btn-error btn-outline btn-xs">
+          Force stop
         </button>
       )}
     </div>
