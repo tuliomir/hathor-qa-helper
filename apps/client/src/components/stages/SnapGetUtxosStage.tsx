@@ -73,9 +73,7 @@ export const SnapGetUtxosStage: React.FC = () => {
     const result = await execute((h) => h.getUtxos(params));
     const utxos = extractUtxos(result.response);
     // If a token filter was used, tag UTXOs with it (response doesn't include token per-utxo)
-    const tagged = tokenUid.trim()
-      ? utxos.map((u) => ({ ...u, token: tokenUid.trim() }))
-      : utxos;
+    const tagged = tokenUid.trim() ? utxos.map((u) => ({ ...u, token: tokenUid.trim() })) : utxos;
     dispatch(setSnapUtxos(tagged));
     return result;
   };

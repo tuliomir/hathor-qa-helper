@@ -6,59 +6,66 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
-import Select from '../common/Select';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { Callout } from '../ui/Callout';
+import { firstUnmetReason } from '../../utils/requirements';
+
+const NETWORK_OPTIONS = [
+  { value: 'testnet', label: 'Testnet' },
+  { value: 'mainnet', label: 'Mainnet' },
+] as const;
 
 export const SnapGetXpubStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getXpub');
+  const { isDryRun, methodData, execute } = useSnapMethod('getXpub');
+  const snapRequirement = useRequireSnap();
 
-  const [network, setNetwork] = useState('testnet');
+  const [network, setNetwork] = useState<string>('testnet');
 
   const liveRequest = useMemo(() => ({ method: 'htr_getXpub', params: { network } }), [network]);
 
   const handleExecute = () => execute((h) => h.getXpub(network));
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Get Xpub (Snap)</h1>
-      <p className="text-muted mb-7.5">Retrieve the wallet&apos;s extended public key via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-get-xpub"
+        description="Get the snap wallet's extended public key. Needs approval in MetaMask."
+        method="htr_getXpub"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
+      <Callout tone="warning" title="Restricted to allowed origins">
+        <p className="m-0">
+          The snap only answers <code className="font-mono text-data-sm">htr_getXpub</code> from allowed origins. A
+          &quot;not authorized for origin&quot; error means this origin is missing from the snap&apos;s{' '}
+          <code className="font-mono text-data-sm">RPC_RESTRICTIONS</code>.
+        </p>
+        <p className="m-0 mt-1">
+          In <code className="font-mono text-data-sm">hathor-rpc-lib/packages/snap/src/constants.ts</code>, add{' '}
+          <code className="font-mono text-data-sm">&apos;http://localhost:5173&apos;</code> to{' '}
+          <code className="font-mono text-data-sm">RPC_RESTRICTIONS[GetXpub]</code>, then rebuild the snap.
+        </p>
+      </Callout>
 
-      {isSnapConnected && (
-        <>
-          <div className="bg-yellow-50 border border-yellow-300 rounded p-4 mb-5 space-y-2">
-            <p className="text-sm text-yellow-800 m-0">
-              <strong>Origin restricted:</strong> The snap only allows <code>htr_getXpub</code> from whitelisted
-              origins. If you get an &quot;not authorized for origin&quot; error, add your origin to the snap&apos;s{' '}
-              <code>RPC_RESTRICTIONS</code>.
-            </p>
-            <p className="text-xs text-yellow-700 m-0">
-              In <code>hathor-rpc-lib/packages/snap/src/constants.ts</code>, add{' '}
-              <code>&apos;http://localhost:5173&apos;</code> to the <code>RPC_RESTRICTIONS[GetXpub]</code> array, then
-              rebuild the snap.
-            </p>
-          </div>
-          <SnapMethodCard
-            title="Get Xpub"
-            description="Get the wallet's extended public key (requires user approval)"
-            liveRequest={liveRequest}
-            methodData={methodData}
-            isDryRun={isDryRun}
-            onExecute={handleExecute}
-          >
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Network</label>
-              <Select value={network} onChange={(e) => setNetwork(e.target.value)}>
-                <option value="testnet">Testnet</option>
-                <option value="mainnet">Mainnet</option>
-              </Select>
-              <p className="text-xs text-muted mt-1">The xpub is network-specific — select the target network</p>
-            </div>
-          </SnapMethodCard>
-        </>
-      )}
+      <SnapMethodCard
+        title="Get xpub"
+        description="The xpub depends on the network."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <div className="flex flex-col gap-1.5">
+          <span className="text-body font-medium">Network</span>
+          <SegmentedControl aria-label="Network" options={NETWORK_OPTIONS} value={network} onChange={setNetwork} />
+          <span className="text-caption text-ink-muted">The network whose xpub the snap returns.</span>
+        </div>
+      </SnapMethodCard>
     </div>
   );
 };

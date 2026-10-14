@@ -6,37 +6,42 @@
 
 import React, { useMemo } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { firstUnmetReason } from '../../utils/requirements';
 
 export const SnapGetNetworkStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getConnectedNetwork');
+  const { isDryRun, methodData, execute } = useSnapMethod('getConnectedNetwork');
+  const snapRequirement = useRequireSnap();
 
   const liveRequest = useMemo(() => ({ method: 'htr_getConnectedNetwork' }), []);
 
   const handleExecute = () => execute((h) => h.getConnectedNetwork());
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Get Network (Snap)</h1>
-      <p className="text-muted mb-7.5">Get the connected network information via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-get-connected-network"
+        description="Get the network the MetaMask Snap is connected to."
+        method="htr_getConnectedNetwork"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Get Network"
-          description="No parameters required"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <p className="text-sm text-muted">
-            This method takes no parameters. Click Execute to retrieve the current network.
-          </p>
-        </SnapMethodCard>
-      )}
+      <SnapMethodCard
+        title="Get network"
+        description="No parameters."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <p className="m-0 text-body text-ink-muted">
+          This method takes no parameters and returns the snap&apos;s network.
+        </p>
+      </SnapMethodCard>
     </div>
   );
 };

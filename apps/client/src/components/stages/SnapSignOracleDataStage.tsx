@@ -13,10 +13,7 @@ import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { AddressInput } from '../common/AddressInput';
 import { selectSnapAddress, selectSnapBetNc } from '../../store/slices/snapSlice';
-import {
-  navigateToSnapSetBetResult,
-  clearSnapSignOracleDataNavigation,
-} from '../../store/slices/navigationSlice';
+import { navigateToSnapSetBetResult, clearSnapSignOracleDataNavigation } from '../../store/slices/navigationSlice';
 import { parseSnapResponse, isSnapEnvelope } from '../../utils/snapResponseHelpers';
 import type { RootState, AppDispatch } from '../../store';
 
@@ -134,11 +131,7 @@ export const SnapSignOracleDataStage: React.FC = () => {
           {signedResult && (
             <div className="card-primary mb-7.5 bg-green-50 border border-success">
               <p className="text-sm text-green-800 mb-2">Oracle signature ready.</p>
-              <button
-                type="button"
-                onClick={handleSendToSetBetResult}
-                className="btn-primary py-1.5 px-3 text-sm"
-              >
+              <button type="button" onClick={handleSendToSetBetResult} className="btn-primary py-1.5 px-3 text-sm">
                 ← Send to Set Bet Result
               </button>
             </div>

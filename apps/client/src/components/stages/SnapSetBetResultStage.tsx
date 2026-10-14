@@ -12,10 +12,7 @@ import { useStage } from '../../hooks/useStage';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
 import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
 import { selectSnapBetNc } from '../../store/slices/snapSlice';
-import {
-  navigateToSnapSignOracleData,
-  clearSnapSetBetResultNavigation,
-} from '../../store/slices/navigationSlice';
+import { navigateToSnapSignOracleData, clearSnapSetBetResultNavigation } from '../../store/slices/navigationSlice';
 import type { RootState, AppDispatch } from '../../store';
 
 export const SnapSetBetResultStage: React.FC = () => {

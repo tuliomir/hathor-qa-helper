@@ -6,37 +6,42 @@
 
 import React, { useMemo } from 'react';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { firstUnmetReason } from '../../utils/requirements';
 
 export const SnapGetWalletInfoStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getWalletInformation');
+  const { isDryRun, methodData, execute } = useSnapMethod('getWalletInformation');
+  const snapRequirement = useRequireSnap();
 
   const liveRequest = useMemo(() => ({ method: 'htr_getWalletInformation' }), []);
 
   const handleExecute = () => execute((h) => h.getWalletInformation());
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Wallet Information (Snap)</h1>
-      <p className="text-muted mb-7.5">Get the wallet network and first address via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-get-wallet-info"
+        description="Get the snap wallet's network and its address at index 0."
+        method="htr_getWalletInformation"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Wallet Information"
-          description="Returns the connected network and the address at index 0"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <p className="text-sm text-muted">
-            No parameters required — this method returns the wallet&apos;s current network and primary address.
-          </p>
-        </SnapMethodCard>
-      )}
+      <SnapMethodCard
+        title="Get wallet information"
+        description="No parameters."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <p className="m-0 text-body text-ink-muted">
+          This method takes no parameters and returns the wallet&apos;s network and address 0.
+        </p>
+      </SnapMethodCard>
     </div>
   );
 };

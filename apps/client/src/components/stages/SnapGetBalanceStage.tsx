@@ -5,12 +5,17 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { MdAdd, MdClose } from 'react-icons/md';
 import { useSnapMethod } from '../../hooks/useSnapMethod';
+import { useRequireSnap } from '../../hooks/useRequirements';
 import { SnapMethodCard } from '../snap/SnapMethodCard';
-import { SnapNotConnectedBanner } from '../snap/SnapNotConnectedBanner';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { firstUnmetReason } from '../../utils/requirements';
 
 export const SnapGetBalanceStage: React.FC = () => {
-  const { isSnapConnected, isDryRun, methodData, execute } = useSnapMethod('getBalance');
+  const { isDryRun, methodData, execute } = useSnapMethod('getBalance');
+  const snapRequirement = useRequireSnap();
 
   const [tokens, setTokens] = useState<string[]>(['00']);
 
@@ -29,45 +34,53 @@ export const SnapGetBalanceStage: React.FC = () => {
   const updateToken = (i: number, value: string) => setTokens(tokens.map((t, idx) => (idx === i ? value : t)));
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Get Balance (Snap)</h1>
-      <p className="text-muted mb-7.5">Query token balances via MetaMask Snap</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="snap-get-balance"
+        description="Get the snap wallet's balance for one or more tokens."
+        method="htr_getBalance"
+      />
+      <PreconditionStrip requirements={[snapRequirement]} />
 
-      {!isSnapConnected && <SnapNotConnectedBanner />}
-
-      {isSnapConnected && (
-        <SnapMethodCard
-          title="Get Balance"
-          description="Retrieve balances for specified tokens"
-          liveRequest={liveRequest}
-          methodData={methodData}
-          isDryRun={isDryRun}
-          onExecute={handleExecute}
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1.5">Token UIDs</label>
-            {tokens.map((token, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={token}
-                  onChange={(e) => updateToken(i, e.target.value)}
-                  placeholder="Token UID (00 for HTR)"
-                  className="input flex-1"
-                />
-                {tokens.length > 1 && (
-                  <button onClick={() => removeToken(i)} className="btn-secondary py-1.5 px-3 text-sm">
-                    Remove
-                  </button>
-                )}
-              </div>
-            ))}
-            <button onClick={addToken} className="btn-secondary py-1.5 px-3 text-sm mt-1">
-              + Add Token
-            </button>
-          </div>
-        </SnapMethodCard>
-      )}
+      <SnapMethodCard
+        title="Get balance"
+        description="Empty rows are left out of the request."
+        liveRequest={liveRequest}
+        methodData={methodData}
+        isDryRun={isDryRun}
+        onExecute={handleExecute}
+        disabledReason={firstUnmetReason([snapRequirement])}
+      >
+        <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+          <legend className="mb-1.5 p-0 text-body font-medium">Token UIDs</legend>
+          {tokens.map((token, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={token}
+                onChange={(e) => updateToken(i, e.target.value)}
+                placeholder="Token UID (00 for HTR)"
+                aria-label={`Token UID ${i + 1}`}
+                className="input w-full flex-1 font-mono text-data"
+              />
+              {tokens.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeToken(i)}
+                  className="btn btn-ghost btn-sm btn-square"
+                  aria-label={`Remove token ${i + 1}`}
+                >
+                  <MdClose aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          ))}
+          <button type="button" onClick={addToken} className="btn btn-secondary btn-sm self-start">
+            <MdAdd aria-hidden="true" />
+            Add token
+          </button>
+        </fieldset>
+      </SnapMethodCard>
     </div>
   );
 };
