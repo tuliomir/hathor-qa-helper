@@ -11,8 +11,7 @@ import { useEffect } from 'react';
 import { useAppSelector } from '../../store/hooks';
 import { selectActiveNetworkKind } from '../../store/slices/networkSlice';
 import { NETWORK_FILL_CLASS, VEIL_ON_SOLID } from '../../utils/networkVisuals';
-
-const MAINNET_TITLE_PREFIX = '[Mainnet] ';
+import { documentTitle } from '../../utils/documentTitle';
 
 const HEIGHT_CLASS = {
   test: 'h-[3px]',
@@ -23,10 +22,7 @@ const HEIGHT_CLASS = {
 export default function NetworkRail() {
   const kind = useAppSelector(selectActiveNetworkKind);
 
-  useEffect(() => {
-    const base = document.title.replace(MAINNET_TITLE_PREFIX, '');
-    document.title = kind === 'main' ? MAINNET_TITLE_PREFIX + base : base;
-  }, [kind]);
+  useEffect(() => documentTitle.setMainnet(kind === 'main'), [kind]);
 
   return (
     <div
