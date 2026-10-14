@@ -1,5 +1,5 @@
 /**
- * useConfirm — promise-based ConfirmDialog, a drop-in for `window.confirm`:
+ * useConfirm — promise-based ConfirmDialog, a drop-in for the browser's confirm():
  *
  *   const { confirm, confirmDialog } = useConfirm();
  *   if (await confirm({ title, confirmLabel: 'Remove wallet', tone: 'danger' })) { … }

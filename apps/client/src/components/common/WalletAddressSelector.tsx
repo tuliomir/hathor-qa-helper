@@ -140,10 +140,16 @@ export default function WalletAddressSelector({
         Wallet <span className="font-medium text-base-content">{wallet.metadata.friendlyName}</span>
       </p>
 
-      <Field label={label} htmlFor="address-index-selector" hint="Index used to derive the address (default 0).">
+      <Field
+        label={label}
+        htmlFor="address-index-selector"
+        hint="Index used to derive the address (default 0)."
+        wireControl={false}
+      >
         <div className="flex flex-wrap items-start gap-2">
           <input
             id="address-index-selector"
+            aria-describedby="address-index-selector-hint"
             type="number"
             min={0}
             step={1}

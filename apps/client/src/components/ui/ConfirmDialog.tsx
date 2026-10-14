@@ -1,5 +1,5 @@
 /**
- * ConfirmDialog — replaces `window.confirm`. A native <dialog> opened with
+ * ConfirmDialog — replaces the browser's confirm(). A native <dialog> opened with
  * showModal(), which traps focus and closes on Esc; focus returns to the
  * element that opened it.
  */

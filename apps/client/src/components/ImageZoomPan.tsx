@@ -266,7 +266,7 @@ export default function ImageZoomPan({
     <div className={`flex flex-col gap-4 h-full ${className}`}>
       {/* Image info */}
       {image && (
-        <div className="flex justify-between items-center text-sm text-muted">
+        <div className="flex justify-between items-center text-sm text-ink-muted">
           <span>
             {image.width} × {image.height}
           </span>
@@ -312,7 +312,7 @@ export default function ImageZoomPan({
       </div>
 
       {/* Instructions */}
-      <div className="text-xs text-center text-muted">
+      <div className="text-xs text-center text-ink-muted">
         Drag to pan • Scroll to zoom
         {showCropControls && ' • Hold Shift and drag to crop'}
       </div>
