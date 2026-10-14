@@ -7,6 +7,9 @@
 import { useState } from 'react';
 import WalletAddressSelector from '../common/WalletAddressSelector';
 import SendFromFundWallet from '../common/SendFromFundWallet';
+import { TxIdDisplay } from '../common/TxIdDisplay';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
 
 export default function FundTestAddress() {
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
@@ -26,42 +29,29 @@ export default function FundTestAddress() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="card-primary">
-        <h2 className="text-xl font-bold mb-2">Fund Test Wallet Address</h2>
-        <p className="text-muted text-sm mb-4">
-          Select an address from the test wallet and send HTR from the funding wallet.
-        </p>
+    <Panel
+      title="Fund test wallet address"
+      description="Select an address from the test wallet and send HTR from the funding wallet."
+    >
+      <section className="flex flex-col gap-3">
+        <h3 className="m-0 text-body font-semibold">1. Select receiving address</h3>
+        <WalletAddressSelector label="Address index" onAddressChange={handleAddressChange} />
+      </section>
 
-        {/* Address Selection */}
-        <div className="mb-6">
-          <h3 className="text-sm font-bold mb-3 text-gray-700">1. Select Receiving Address</h3>
-          <WalletAddressSelector label="Address Index" onAddressChange={handleAddressChange} />
-        </div>
+      <section className="flex flex-col gap-3 border-t border-base-300 pt-3">
+        <h3 className="m-0 text-body font-semibold">2. Send from funding wallet</h3>
+        <SendFromFundWallet
+          targetAddress={selectedAddress}
+          initialAmount={10}
+          onTransactionSent={handleTransactionSent}
+        />
+      </section>
 
-        {/* Divider */}
-        <hr className="my-6 border-gray-200" />
-
-        {/* Send Section */}
-        <div>
-          <h3 className="text-sm font-bold mb-3 text-gray-700">2. Send from Funding Wallet</h3>
-          <SendFromFundWallet
-            targetAddress={selectedAddress}
-            initialAmount={10}
-            onTransactionSent={handleTransactionSent}
-          />
-        </div>
-
-        {/* Success Message */}
-        {transactionSent && lastTxId && (
-          <div className="mt-6 p-4 bg-green-50 border border-success rounded-lg">
-            <p className="text-success font-medium m-0 mb-2">Transaction sent successfully!</p>
-            <p className="text-xs text-green-800 m-0">
-              Transaction ID: <code className="bg-green-100 px-1 py-0.5 rounded">{lastTxId}</code>
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
+      {transactionSent && lastTxId && (
+        <Callout tone="success" title="Transaction sent">
+          <TxIdDisplay hash={lastTxId} />
+        </Callout>
+      )}
+    </Panel>
   );
 }

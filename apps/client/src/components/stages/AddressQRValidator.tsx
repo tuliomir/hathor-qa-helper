@@ -7,13 +7,18 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { BrowserQRCodeReader } from '@zxing/browser';
 import { useAppSelector } from '../../store/hooks';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
-import CopyButton from '../common/CopyButton';
-import Loading from '../common/Loading';
+import { MdUploadFile } from 'react-icons/md';
+import { Identifier } from '../common/Identifier';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { EmptyState } from '../ui/EmptyState';
+import { useRequireTestWallet } from '../../hooks/useRequirements';
 
 interface ValidationResult {
   address: string;
@@ -32,6 +37,7 @@ export default function AddressQRValidator() {
 
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
   const wallets = getAllWallets();
+  const testWalletRequirement = useRequireTestWallet();
 
   const [addressInput, setAddressInput] = useState('');
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -229,189 +235,153 @@ export default function AddressQRValidator() {
     setPastedImageUrl(null);
   };
 
-  if (!testWalletId) {
-    return (
-      <div className="p-4 bg-yellow-50 border border-warning rounded-lg">
-        <p className="text-yellow-800 m-0 text-sm mb-2">No test wallet selected.</p>
-        <Link to="/" className="text-blue-600 hover:text-blue-800 underline text-sm">
-          Go to Wallet Initialization to select a test wallet
-        </Link>
-      </div>
-    );
-  }
-
-  if (!testWallet) {
-    return (
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-blue-800 m-0 text-sm">
-          <span className="inline-block animate-pulse mr-2">⏳</span>
-          Wallet is connecting... Please wait.
-        </p>
-      </div>
-    );
-  }
+  const sourceLabel: Record<ValidationResult['source'], string> = {
+    text: 'Text input',
+    'qr-paste': 'Pasted QR image',
+    'qr-file': 'Uploaded file',
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Loading overlay */}
-      {isProcessingQR && <Loading overlay message="Reading QR code..." />}
-
-      <div className="card-primary">
-        <h2 className="text-xl font-bold mb-2">Address & QR Code Validator</h2>
-        <p className="text-muted text-sm mb-4">
-          Validate addresses by pasting text, pasting a QR code image, or uploading a QR code file.
-        </p>
-
-        {/* Text Input Section */}
-        <div className="mb-6">
-          <h3 className="text-sm font-bold mb-2 text-gray-700">1. Paste Address</h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={addressInput}
-              onChange={(e) => setAddressInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleValidateText()}
-              placeholder="Paste a Hathor address..."
-              className="input flex-1 font-mono text-sm"
-              disabled={isValidating}
-            />
-            <button
-              onClick={handleValidateText}
-              disabled={isValidating || !addressInput.trim()}
-              className="btn btn-primary px-4 py-2 whitespace-nowrap"
-            >
-              {isValidating ? 'Validating...' : 'Validate'}
-            </button>
-          </div>
-        </div>
-
-        {/* Image Paste Section */}
-        <div className="mb-6">
-          <h3 className="text-sm font-bold mb-2 text-gray-700">2. Paste QR Code Image</h3>
-          <div
-            ref={pasteAreaRef}
-            className="p-8 border-2 border-dashed border-gray-300 rounded-lg text-center bg-gray-50 hover:bg-gray-100 transition-colors"
-          >
-            <p className="text-muted text-sm m-0">
-              Take a screenshot of the QR code and press{' '}
-              <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+V</kbd> /{' '}
-              <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Cmd+V</kbd> anywhere on this page
-            </p>
-            {pastedImageUrl && (
-              <div className="mt-4">
-                <img src={pastedImageUrl} alt="Pasted QR" className="max-h-32 mx-auto rounded border" />
-                <p className="text-xs text-muted mt-2">Processing...</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* File Upload Section */}
-        <div className="mb-6">
-          <h3 className="text-sm font-bold mb-2 text-gray-700">3. Upload QR Code File</h3>
-          <p className="text-xs text-muted mb-2">
-            Upload a QR code image file. The filename will be compared with the address content.
+    <div className="flex flex-col gap-4">
+      <PreconditionStrip requirements={[testWalletRequirement]} />
+      <Panel
+        title="Address and QR code validator"
+        description="Validate addresses by pasting text, pasting a QR code image, or uploading a QR code file."
+      >
+        {!testWalletId ? (
+          <EmptyState>Select a test wallet to validate addresses against it.</EmptyState>
+        ) : !testWallet ? (
+          <p className="m-0 flex items-center gap-2 text-body text-ink-muted">
+            <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+            Wallet is connecting…
           </p>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary px-4 py-2">
-            Choose File...
-          </button>
-        </div>
-
-        {/* Validation Result */}
-        {validationResult && (
-          <div className="border-t border-gray-200 pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold m-0">Validation Result</h3>
-              <button onClick={handleClear} className="btn btn-ghost text-sm">
-                Clear
-              </button>
-            </div>
-
-            {/* Source indicator */}
-            <div className="mb-3">
-              <span className="text-xs text-muted">Source: </span>
-              <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded">
-                {validationResult.source === 'text' && 'Text Input'}
-                {validationResult.source === 'qr-paste' && 'Pasted QR Image'}
-                {validationResult.source === 'qr-file' && 'Uploaded File'}
-              </span>
-            </div>
-
-            {/* Address display */}
-            {validationResult.address && (
-              <div className="mb-4">
-                <p className="text-xs text-muted mb-1">Address:</p>
-                <div className="flex items-center gap-2">
-                  <code className="text-xs p-2 bg-gray-100 rounded break-all flex-1">{validationResult.address}</code>
-                  <CopyButton text={validationResult.address} label="" />
-                </div>
-              </div>
-            )}
-
-            {/* Result status */}
-            {validationResult.isValid ? (
-              <div className="p-4 bg-green-50 border border-success rounded-lg">
-                <div className="flex items-start gap-3">
-                  <span className="text-success text-xl">✓</span>
-                  <div>
-                    <p className="font-bold text-green-900 m-0">Valid Address</p>
-                    <p className="text-sm text-green-800 mt-1 mb-0">
-                      Belongs to <strong>{validationResult.walletName}</strong>
-                      {validationResult.addressIndex !== undefined && (
-                        <>
-                          {' '}
-                          at index <strong>{validationResult.addressIndex}</strong>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 bg-red-50 border border-danger rounded-lg">
-                <div className="flex items-start gap-3">
-                  <span className="text-danger text-xl">✗</span>
-                  <div>
-                    <p className="font-bold text-red-900 m-0">Invalid or Unknown</p>
-                    {validationResult.error && (
-                      <p className="text-sm text-red-800 mt-1 mb-0">{validationResult.error}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Filename validation (for file uploads) */}
-            {validationResult.filename && (
-              <div className="mt-4">
-                <p className="text-xs text-muted mb-1">Filename:</p>
-                <code className="text-xs p-2 bg-gray-100 rounded block mb-2">{validationResult.filename}</code>
-
-                {validationResult.filenameMatch !== undefined && (
-                  <div
-                    className={`p-3 rounded ${
-                      validationResult.filenameMatch
-                        ? 'bg-green-50 border border-success'
-                        : 'bg-red-50 border border-danger'
-                    }`}
+        ) : (
+          <>
+            <section className="flex flex-col gap-2">
+              <h3 className="m-0 text-body font-semibold">1. Paste address</h3>
+              <Field label="Address" htmlFor="qr-validator-address" wireControl={false}>
+                <div className="flex gap-2">
+                  <input
+                    id="qr-validator-address"
+                    type="text"
+                    value={addressInput}
+                    onChange={(e) => setAddressInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleValidateText()}
+                    placeholder="Paste a Hathor address"
+                    className="input min-w-0 flex-1 font-mono text-data"
+                    disabled={isValidating}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleValidateText}
+                    disabled={isValidating || !addressInput.trim()}
+                    className="btn btn-primary whitespace-nowrap"
                   >
-                    {validationResult.filenameMatch ? (
-                      <p className="text-sm text-green-800 m-0">
-                        <span className="font-bold">✓ Filename matches address</span>
-                      </p>
-                    ) : (
-                      <p className="text-sm text-red-800 m-0">
-                        <span className="font-bold">✗ Filename does NOT match address</span>
-                      </p>
-                    )}
-                  </div>
+                    {isValidating && <span className="loading loading-spinner loading-sm" aria-hidden="true" />}
+                    Validate
+                  </button>
+                </div>
+              </Field>
+            </section>
+
+            <section className="flex flex-col gap-2 border-t border-base-300 pt-3">
+              <h3 className="m-0 text-body font-semibold">2. Paste QR code image</h3>
+              <div ref={pasteAreaRef} className="flex flex-col items-start gap-3 rounded-box bg-base-200 p-3">
+                <p className="m-0 text-body text-ink-muted">
+                  Take a screenshot of the QR code and press <kbd className="kbd kbd-sm">Ctrl+V</kbd> /{' '}
+                  <kbd className="kbd kbd-sm">Cmd+V</kbd> anywhere on this page.
+                </p>
+                {pastedImageUrl && (
+                  <img
+                    src={pastedImageUrl}
+                    alt="Pasted QR code"
+                    className="max-h-32 rounded-field border border-base-300"
+                  />
+                )}
+                {isProcessingQR && (
+                  <p className="m-0 flex items-center gap-2 text-body text-ink-muted" role="status">
+                    <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+                    Reading QR code…
+                  </p>
                 )}
               </div>
+            </section>
+
+            <section className="flex flex-col items-start gap-2 border-t border-base-300 pt-3">
+              <h3 className="m-0 text-body font-semibold">3. Upload QR code file</h3>
+              <p className="m-0 text-body text-ink-muted">
+                Upload a QR code image file. The filename is compared with the address it contains.
+              </p>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="btn btn-secondary btn-sm"
+                disabled={isProcessingQR}
+              >
+                <MdUploadFile aria-hidden="true" />
+                Choose file
+              </button>
+            </section>
+
+            {validationResult && (
+              <section className="flex flex-col gap-3 border-t border-base-300 pt-3" aria-label="Validation result">
+                <div className="flex items-center gap-2">
+                  <h3 className="m-0 text-body font-semibold">Validation result</h3>
+                  <span className="rounded-selector bg-base-200 px-1.5 text-caption text-ink-muted">
+                    {sourceLabel[validationResult.source]}
+                  </span>
+                  <button type="button" onClick={handleClear} className="btn btn-ghost btn-sm ml-auto">
+                    Clear
+                  </button>
+                </div>
+
+                {validationResult.address && (
+                  <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1">
+                    <dt className="text-caption text-ink-muted">Address</dt>
+                    <dd className="m-0 min-w-0">
+                      <Identifier value={validationResult.address} kind="address" walletTag={false} />
+                    </dd>
+                  </dl>
+                )}
+
+                {validationResult.isValid ? (
+                  <Callout tone="success" title="Valid address">
+                    Belongs to <strong>{validationResult.walletName}</strong>
+                    {validationResult.addressIndex !== undefined && (
+                      <>
+                        {' '}
+                        at index <strong>{validationResult.addressIndex}</strong>
+                      </>
+                    )}
+                  </Callout>
+                ) : (
+                  <Callout tone="error" title="Invalid or unknown">
+                    {validationResult.error}
+                  </Callout>
+                )}
+
+                {validationResult.filename && (
+                  <div className="flex flex-col gap-2">
+                    <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1">
+                      <dt className="text-caption text-ink-muted">Filename</dt>
+                      <dd className="m-0 min-w-0 truncate font-mono text-data" title={validationResult.filename}>
+                        {validationResult.filename}
+                      </dd>
+                    </dl>
+                    {validationResult.filenameMatch !== undefined &&
+                      (validationResult.filenameMatch ? (
+                        <Callout tone="success">Filename matches the address.</Callout>
+                      ) : (
+                        <Callout tone="error">Filename does not match the address.</Callout>
+                      ))}
+                  </div>
+                )}
+              </section>
             )}
-          </div>
+          </>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

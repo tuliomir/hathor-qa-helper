@@ -69,7 +69,7 @@ export default function OCRReferenceImage({ imageDataUrl, onExpand, onDismiss }:
     <div className="relative group">
       {/* Image container */}
       <div
-        className="border-2 border-primary rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-gray-100 relative"
+        className="border-2 border-primary rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-base-200 relative"
         style={{ maxHeight: '300px' }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -109,7 +109,7 @@ export default function OCRReferenceImage({ imageDataUrl, onExpand, onDismiss }:
         <div className="absolute top-2 right-2 flex gap-2">
           {/* Expand icon - shown on hover when at default zoom */}
           {isHovered && zoom === 1 && (
-            <div className="bg-primary text-white p-2 rounded-full shadow-lg transition-opacity">
+            <div className="bg-primary text-primary-content p-2 rounded-full shadow-lg transition-opacity">
               <MdZoomIn size={20} />
             </div>
           )}
@@ -117,7 +117,7 @@ export default function OCRReferenceImage({ imageDataUrl, onExpand, onDismiss }:
           {/* Close button - always visible */}
           <button
             onClick={handleDismissClick}
-            className="bg-danger text-white p-2 rounded-full shadow-lg hover:bg-red-700 transition-colors"
+            className="bg-error text-error-content p-2 rounded-full shadow-lg hover:opacity-90 transition-colors"
             aria-label="Dismiss OCR reference image"
           >
             <MdClose size={20} />
@@ -126,7 +126,7 @@ export default function OCRReferenceImage({ imageDataUrl, onExpand, onDismiss }:
 
         {/* Zoom level indicator */}
         {zoom !== 1 && (
-          <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+          <div className="absolute bottom-2 left-2 bg-neutral text-neutral-content text-caption px-2 py-1 rounded">
             {Math.round(zoom * 100)}%
           </div>
         )}

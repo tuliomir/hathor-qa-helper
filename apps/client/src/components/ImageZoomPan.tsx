@@ -293,7 +293,10 @@ export default function ImageZoomPan({
       </div>
 
       {/* Canvas container */}
-      <div ref={containerRef} className="flex-1 border-2 border-gray-300 rounded overflow-hidden relative bg-gray-100">
+      <div
+        ref={containerRef}
+        className="flex-1 border border-base-300 rounded-field overflow-hidden relative bg-base-200"
+      >
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}

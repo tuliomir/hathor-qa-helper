@@ -12,11 +12,21 @@ import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { TokenVersion } from '@hathor/wallet-lib/lib/types';
 import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
-import { WALLET_CONFIG } from '../../constants/network';
+import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
 import { applyNetworkServices } from '../../services/networkServices';
 import { shieldedSweepNotice, splitAvailableUtxos, type TokenUtxoSplit } from '../../services/shieldedUtxos';
 import { fetchSwapTokens, swapTokenUidsForNetwork } from '../../store/slices/swapTokensSlice';
-import Loading from '../common/Loading';
+import { MdCleaningServices, MdRefresh } from 'react-icons/md';
+import { Identifier } from '../common/Identifier';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { EmptyState } from '../ui/EmptyState';
+import { StatusChip } from '../ui/StatusChip';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { useRequireFundingWallet, useRequireTestWallet } from '../../hooks/useRequirements';
+import { useConfirm } from '../../hooks/useConfirm';
 import { trackTokenFlow } from '../../services/tokenFlowTracker';
 import type { TokenFlowResult } from '../../types/tokenFlowTracker';
 import { waitForTxSettlement } from '../../utils/waitForTxSettlement';
@@ -70,6 +80,9 @@ export default function TestWalletCleanup() {
   const swapTokensState = useAppSelector((s) => s.swapTokens);
 
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
+  const testWalletRequirement = useRequireTestWallet();
+  const fundingWalletRequirement = useRequireFundingWallet();
+  const { confirm, confirmDialog } = useConfirm();
   const fundingWallet = fundingWalletId ? getWallet(fundingWalletId) : undefined;
 
   const [tokensToMelt, setTokensToMelt] = useState<TokenToMelt[]>([]);
@@ -91,7 +104,7 @@ export default function TestWalletCleanup() {
     data?: unknown;
   }
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
-  const [showDebug, setShowDebug] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
 
   const addDebugLog = (type: DebugLogEntry['type'], message: string, data?: unknown) => {
     // Safely serialize data that may contain BigInt
@@ -776,659 +789,549 @@ export default function TestWalletCleanup() {
   const estimatedHtrFromMelting = Math.floor(totalMeltableTokens / 100);
   const totalEstimatedHtr = Number(htrBalance) + estimatedHtrFromMelting;
 
+  const isMainnet = testWallet ? NETWORK_CONFIG[testWallet.metadata.network]?.kind === 'main' : false;
+  const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
+
+  // Mainnet cleanup sends real funds: require typing the wallet name first.
+  const handleExecuteClick = async () => {
+    if (isMainnet && testWallet) {
+      const ok = await confirm({
+        title: 'Clean up the test wallet on Mainnet?',
+        body: 'Tokens are melted or returned and all HTR is sent to the funding wallet. This uses real funds.',
+        confirmLabel: 'Execute cleanup',
+        tone: 'danger',
+        typeToConfirm: testWallet.metadata.friendlyName,
+      });
+      if (!ok) return;
+    }
+    handleExecuteCleanup();
+  };
+
+  const executeReason = isLoading
+    ? null
+    : !fundingReady
+      ? 'Funding wallet required for cleanup'
+      : !hasTokensToMelt && !hasSwapTokens && !hasTokensToReturn && !hasHtrToTransfer
+        ? shieldedNotice
+          ? `Nothing transparent to clean up. ${shieldedNotice}.`
+          : 'Nothing to clean up'
+        : !canExecute
+          ? 'Cannot execute cleanup'
+          : null;
+
+  const tokenNameCell = (token: { symbol: string; name: string }) => (
+    <span className="whitespace-nowrap">
+      <span className="font-semibold">{token.symbol}</span>{' '}
+      <span className="text-caption text-ink-muted">({token.name})</span>
+    </span>
+  );
+
+  type PreviewToken = (typeof tokensToMelt)[number];
+
+  const previewColumns: DataTableColumn<PreviewToken>[] = [
+    { key: 'token', header: 'Token', render: tokenNameCell },
+    { key: 'balance', header: 'Balance', type: 'amount', value: (t) => formatBalance(t.balance) },
+    {
+      key: 'melt',
+      header: 'Will melt',
+      type: 'amount',
+      render: (t) => (t.hasMeltAuthority ? t.meltableAmount : <span className="text-ink-muted">-</span>),
+    },
+    {
+      key: 'remainder',
+      header: 'Remainder',
+      type: 'amount',
+      render: (t) =>
+        t.hasMeltAuthority ? (
+          t.remainder > 0 ? (
+            <span className="text-warning-ink">{t.remainder}</span>
+          ) : (
+            0
+          )
+        ) : (
+          <span className="text-ink-muted">-</span>
+        ),
+    },
+    {
+      key: 'authority',
+      header: 'Melt authority',
+      type: 'status',
+      render: (t) =>
+        t.hasMeltAuthority ? (
+          <StatusChip status="yes" tone="success" label="Yes" />
+        ) : (
+          <StatusChip status="no" tone="idle" label="No" />
+        ),
+    },
+    {
+      key: 'return',
+      header: 'Return to sender',
+      render: (t) => {
+        const returnAmount = t.canReturnToSender ? (!t.hasMeltAuthority ? Number(t.balance) : t.remainder) : 0;
+        if (!(t.canReturnToSender && returnAmount > 0)) return <span className="text-ink-muted">-</span>;
+        return (
+          <span className="inline-flex items-center gap-2">
+            <span className="font-mono text-data">{returnAmount}</span>
+            {t.originalSender && <Identifier value={t.originalSender} kind="address" copy={false} />}
+          </span>
+        );
+      },
+    },
+  ];
+
+  const simpleTokenColumns = (statusLabel: string, tone: 'info' | 'progress'): DataTableColumn<PreviewToken>[] => [
+    { key: 'token', header: 'Token', render: tokenNameCell },
+    { key: 'balance', header: 'Balance', type: 'amount', value: (t) => formatBalance(t.balance) },
+    {
+      key: 'action',
+      header: 'Action',
+      type: 'status',
+      render: () => <StatusChip status={statusLabel} tone={tone} label={statusLabel} />,
+    },
+  ];
+
+  const returnColumns: DataTableColumn<PreviewToken>[] = [
+    { key: 'token', header: 'Token', className: 'font-semibold', value: (t) => t.symbol },
+    {
+      key: 'amount',
+      header: 'Amount',
+      type: 'amount',
+      value: (t) => (!t.hasMeltAuthority ? Number(t.balance) : t.remainder),
+    },
+    {
+      key: 'to',
+      header: 'Return to',
+      type: 'identifier',
+      render: (t) => (t.originalSender ? <Identifier value={t.originalSender} kind="address" /> : null),
+    },
+    {
+      key: 'wallet',
+      header: 'Wallet',
+      value: (t) => getWalletFriendlyName(t.tokenFlow?.addressFlows[0]?.walletId) || '-',
+    },
+  ];
+
+  const retrievableTokens = tokensToMelt.filter(
+    (t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0
+  );
+  const manualTokens = tokensRemaining.filter((t) => !t.canReturnToSender && !t.hasMeltAuthority);
+
+  const phaseChip = {
+    idle: { label: 'Idle', tone: 'idle' as const },
+    melting: { label: 'Processing', tone: 'progress' as const },
+    transferring: { label: 'Transferring HTR', tone: 'progress' as const },
+    done: { label: 'Completed', tone: 'success' as const },
+  }[cleanupPhase];
+
+  const logTone: Record<DebugLogEntry['type'], string> = {
+    error: 'text-error',
+    template: 'text-info',
+    tx: 'text-success',
+    info: 'text-base-content',
+  };
+
   return (
-    <div className="max-w-300 mx-auto">
-      {(isExecuting || isRetrieving) && (
-        <Loading
-          overlay
-          message={isRetrieving ? 'Retrieving tokens from Funding Wallet...' : executionStep || 'Processing...'}
-        />
-      )}
+    <div className="flex max-w-stage flex-col gap-4">
+      {confirmDialog}
+      <StageHeader
+        stageId="test-wallet-cleanup"
+        description="Melt all custom tokens and return HTR to the funding wallet."
+      />
+      <PreconditionStrip requirements={[testWalletRequirement, fundingWalletRequirement]} />
 
-      <h1 className="mt-0 text-3xl font-bold">Test Wallet Cleanup</h1>
-      <p className="text-muted mb-7.5">Melt all custom tokens and return HTR to the funding wallet.</p>
+      <Callout tone="warning" title="Scope: only the test wallet">
+        This operation only affects the <strong>test wallet</strong>. It will:
+        <ul>
+          <li>Melt all custom tokens (in multiples of 100)</li>
+          <li>Transfer swap test tokens to the funding wallet (never melted)</li>
+          <li>Return unmeltable tokens to their original sender (in the same transaction)</li>
+          <li>Leave fee tokens in the wallet (they cost HTR to transfer)</li>
+          <li>Transfer all resulting HTR to the funding wallet (address 0)</li>
+        </ul>
+      </Callout>
 
-      {/* Warning Banner */}
-      <div className="card-primary mb-7.5 bg-yellow-50 border-2 border-yellow-400">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">&#9888;</span>
-          <div>
-            <h3 className="font-bold text-lg mt-0 mb-2 text-yellow-900">Warning</h3>
-            <p className="m-0 text-yellow-800">
-              This operation only affects the <strong>Test Wallet</strong>. It will:
-            </p>
-            <ul className="mt-2 mb-0 text-yellow-800">
-              <li>Melt all custom tokens (in multiples of 100)</li>
-              <li>Transfer swap test tokens to the Funding Wallet (never melted)</li>
-              <li>Return unmeltable tokens to their original sender (in the same transaction)</li>
-              <li>Leave fee tokens in the wallet (cost HTR to transfer)</li>
-              <li>Transfer all resulting HTR to the Funding Wallet (address 0)</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Debug Panel */}
-      <div className="card-primary mb-7.5 bg-gray-900 text-gray-100 border-2 border-gray-700">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-bold text-lg m-0 text-gray-100">Debug Panel</h3>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setDebugLogs([])}
-              className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
-            >
-              Clear
-            </button>
-            <button
-              onClick={() => setShowDebug(!showDebug)}
-              className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded"
-            >
-              {showDebug ? 'Hide' : 'Show'}
-            </button>
-          </div>
-        </div>
-
-        {showDebug && (
-          <>
-            {/* Current State Summary */}
-            <div className="mb-3 p-2 bg-gray-800 rounded text-xs font-mono">
-              <div className="text-gray-400 mb-1">Current State:</div>
-              <div>tokensToMelt: {tokensToMelt.length} tokens</div>
-              <div>htrBalance: {htrBalance.toString()}</div>
-              <div>hasTokensToMelt: {hasTokensToMelt.toString()}</div>
-              <div>cleanupPhase: {cleanupPhase}</div>
-              <div className="mt-2 text-gray-400">Tokens with melt authority:</div>
-              {meltableTokensList.map((t, i) => (
-                <div key={i} className="ml-2 text-green-400">
-                  {t.symbol}: {t.meltableAmount} meltable (balance: {t.balance.toString()})
-                </div>
-              ))}
-              {meltableTokensList.length === 0 && <div className="ml-2 text-yellow-400">None found!</div>}
-              <div className="mt-2 text-gray-400">Swap test tokens:</div>
-              {swapTokensList.map((t, i) => (
-                <div key={i} className="ml-2 text-indigo-400">
-                  {t.symbol}: {t.balance.toString()} → funding wallet
-                </div>
-              ))}
-              {swapTokensList.length === 0 && <div className="ml-2 text-yellow-400">None found</div>}
-              <div className="mt-2 text-gray-400">Fee tokens (left in wallet):</div>
-              {feeTokensList.map((t, i) => (
-                <div key={i} className="ml-2 text-rose-400">
-                  {t.symbol}: {t.balance.toString()} (skipped)
-                </div>
-              ))}
-              {feeTokensList.length === 0 && <div className="ml-2 text-yellow-400">None found</div>}
-            </div>
-
-            {/* Log Entries */}
-            <div className="max-h-80 overflow-y-auto text-xs font-mono space-y-1">
-              {debugLogs.length === 0 ? (
-                <div className="text-gray-500 italic">No logs yet. Execute cleanup to see debug output.</div>
-              ) : (
-                debugLogs.map((log, i) => (
-                  <div
-                    key={i}
-                    className={`p-1.5 rounded ${
-                      log.type === 'error'
-                        ? 'bg-red-900/50 text-red-300'
-                        : log.type === 'template'
-                          ? 'bg-blue-900/50 text-blue-300'
-                          : log.type === 'tx'
-                            ? 'bg-green-900/50 text-green-300'
-                            : 'bg-gray-800 text-gray-300'
-                    }`}
-                  >
-                    <span className="text-gray-500">[{log.timestamp}]</span>{' '}
-                    <span className="font-semibold">[{log.type.toUpperCase()}]</span> {log.message}
-                    {log.data !== undefined && log.data !== null && (
-                      <pre className="mt-1 text-2xs overflow-x-auto whitespace-pre-wrap">
-                        {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Swap Tokens Fetch Error */}
       {swapTokensState.status === 'failed' && (
-        <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
-          <p className="m-0 text-orange-900">
-            Failed to load swap token registry: {swapTokensState.error}. Swap tokens may be incorrectly melted instead
-            of transferred.
+        <Callout tone="warning" title="Swap token registry unavailable">
+          Failed to load the swap token registry: {swapTokensState.error}. Swap tokens may be melted instead of
+          transferred.
+        </Callout>
+      )}
+
+      {!testReady && (
+        <Panel title="Cleanup preview">
+          <EmptyState>
+            {testWallet
+              ? 'The preview appears once the test wallet finishes syncing.'
+              : 'Select a test wallet to preview what the cleanup will do.'}
+          </EmptyState>
+        </Panel>
+      )}
+
+      {testReady && isLoading && (
+        <Panel title="Cleanup preview">
+          <p className="m-0 flex items-center gap-2 text-body text-ink-muted">
+            <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+            Loading preview data…
           </p>
-        </div>
+        </Panel>
       )}
 
-      {/* No Test Wallet Selected */}
-      {!testWallet && (
-        <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
-          <p className="m-0 text-red-900">
-            No Test Wallet selected. Please select a Test Wallet in the Wallet Initialization stage.
-          </p>
-        </div>
-      )}
-
-      {/* Test Wallet Not Ready */}
-      {testWallet && !testReady && (
-        <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
-          <p className="m-0 text-red-900">Test Wallet is not ready. Please wait for it to finish syncing.</p>
-        </div>
-      )}
-
-      {/* No Funding Wallet Error */}
-      {!fundingWallet && testReady && (
-        <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
-          <p className="m-0 text-red-900">
-            No Funding Wallet selected. A Funding Wallet is required for cleanup — all tokens and HTR must be sent
-            there.
-          </p>
-        </div>
-      )}
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="card-primary mb-7.5">
-          <p className="m-0 text-center text-muted">Loading preview data...</p>
-        </div>
-      )}
-
-      {/* Preview Section */}
       {testReady && !isLoading && (
         <>
-          {/* Tokens Preview */}
-          <div className="card-primary mb-7.5">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold m-0">Tokens to Melt</h2>
-              <button onClick={handleRefresh} disabled={isRefreshing} className="btn-primary py-1.5 px-4 text-sm">
-                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          <Panel
+            title="Tokens to melt"
+            actions={
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="btn btn-secondary btn-sm"
+              >
+                {isRefreshing ? spinner : <MdRefresh aria-hidden="true" />}
+                Refresh
               </button>
-            </div>
+            }
+          >
+            <DataTable
+              caption="Tokens to melt"
+              columns={previewColumns}
+              rows={getDisplayableTokens(tokensToMelt)}
+              getRowKey={(t) => t.uid}
+              empty="No custom tokens found in the test wallet."
+            />
+          </Panel>
 
-            {getDisplayableTokens(tokensToMelt).length === 0 ? (
-              <p className="m-0 text-muted text-center">No custom tokens found in Test Wallet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-gray-300">
-                    <tr>
-                      <th className="text-left py-2 px-3 font-bold">Token</th>
-                      <th className="text-right py-2 px-3 font-bold">Balance</th>
-                      <th className="text-right py-2 px-3 font-bold">Will Melt</th>
-                      <th className="text-right py-2 px-3 font-bold">Remainder</th>
-                      <th className="text-center py-2 px-3 font-bold">Has Authority</th>
-                      <th className="text-center py-2 px-3 font-bold">Return to Sender</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getDisplayableTokens(tokensToMelt).map((token) => {
-                      // Calculate amount that will be returned to sender
-                      const returnAmount = token.canReturnToSender
-                        ? !token.hasMeltAuthority
-                          ? Number(token.balance)
-                          : token.remainder
-                        : 0;
-
-                      return (
-                        <tr key={token.uid} className="border-b border-gray-200">
-                          <td className="py-2 px-3">
-                            <span className="font-semibold">{token.symbol}</span>
-                            <span className="text-muted text-xs ml-2">({token.name})</span>
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono">{formatBalance(token.balance)}</td>
-                          <td className="py-2 px-3 text-right font-mono">
-                            {token.hasMeltAuthority ? (
-                              token.meltableAmount > 0 ? (
-                                <span className="text-green-700">{token.meltableAmount}</span>
-                              ) : (
-                                <span className="text-muted">0</span>
-                              )
-                            ) : (
-                              <span className="text-muted">-</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono">
-                            {token.hasMeltAuthority ? (
-                              token.remainder > 0 ? (
-                                <span className="text-orange-600">{token.remainder}</span>
-                              ) : (
-                                <span className="text-muted">0</span>
-                              )
-                            ) : (
-                              <span className="text-muted">-</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-3 text-center">
-                            {token.hasMeltAuthority ? (
-                              <span className="badge badge-success badge-sm">Yes</span>
-                            ) : (
-                              <span className="badge badge-error badge-sm">No</span>
-                            )}
-                          </td>
-                          <td className="py-2 px-3 text-center">
-                            {token.canReturnToSender && returnAmount > 0 ? (
-                              <div className="flex flex-col items-center">
-                                <span className="badge badge-info badge-sm mb-1">{returnAmount}</span>
-                                <span className="text-2xs text-muted" title={token.originalSender}>
-                                  {token.originalSender?.slice(0, 8)}...
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-muted">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Swap Test Tokens */}
           {swapTokensList.length > 0 && (
-            <div className="card-primary mb-7.5 bg-indigo-50 border-2 border-indigo-400">
-              <h2 className="text-xl font-bold mb-2 text-indigo-900">Swap Test Tokens</h2>
-              <p className="text-sm text-indigo-800 mb-4">
-                These tokens are side-effects from swap tests. They will be sent to the Funding Wallet (never melted):
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-indigo-300">
-                    <tr>
-                      <th className="text-left py-2 px-3 font-bold text-indigo-900">Token</th>
-                      <th className="text-right py-2 px-3 font-bold text-indigo-900">Balance</th>
-                      <th className="text-center py-2 px-3 font-bold text-indigo-900">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {swapTokensList.map((token) => (
-                      <tr key={token.uid} className="border-b border-indigo-200">
-                        <td className="py-2 px-3">
-                          <span className="font-semibold">{token.symbol}</span>
-                          <span className="text-muted text-xs ml-2">({token.name})</span>
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">{formatBalance(token.balance)}</td>
-                        <td className="py-2 px-3 text-center">
-                          <span className="badge badge-primary badge-sm">Send to Funding</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <Panel
+              title="Swap test tokens"
+              description="Side effects of swap tests. They are sent to the funding wallet, never melted."
+            >
+              <DataTable
+                caption="Swap test tokens"
+                columns={simpleTokenColumns('Send to funding', 'info')}
+                rows={swapTokensList}
+                getRowKey={(t) => t.uid}
+              />
+            </Panel>
           )}
 
-          {/* Fee Tokens — left in wallet */}
           {feeTokensList.length > 0 && (
-            <div className="card-primary mb-7.5 bg-rose-50 border-2 border-rose-400">
-              <h2 className="text-xl font-bold mb-2 text-rose-900">Fee Tokens</h2>
-              <p className="text-sm text-rose-800 mb-4">
-                These tokens were created with version &quot;fee&quot; and cost HTR to transfer. They will be left in
-                the wallet:
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-rose-300">
-                    <tr>
-                      <th className="text-left py-2 px-3 font-bold text-rose-900">Token</th>
-                      <th className="text-right py-2 px-3 font-bold text-rose-900">Balance</th>
-                      <th className="text-center py-2 px-3 font-bold text-rose-900">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {feeTokensList.map((token) => (
-                      <tr key={token.uid} className="border-b border-rose-200">
-                        <td className="py-2 px-3">
-                          <span className="font-semibold">{token.symbol}</span>
-                          <span className="text-muted text-xs ml-2">({token.name})</span>
-                        </td>
-                        <td className="py-2 px-3 text-right font-mono">{formatBalance(token.balance)}</td>
-                        <td className="py-2 px-3 text-center">
-                          <span className="badge badge-warning badge-sm">Left in wallet</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <Panel
+              title="Fee tokens"
+              description="Created with version “fee”; they cost HTR to transfer, so they stay in the wallet."
+            >
+              <DataTable
+                caption="Fee tokens"
+                columns={simpleTokenColumns('Left in wallet', 'progress')}
+                rows={feeTokensList}
+                getRowKey={(t) => t.uid}
+              />
+            </Panel>
           )}
 
-          {/* Cleanup Summary */}
-          <div className="card-primary mb-7.5 bg-blue-50 border-2 border-blue-400">
-            <h2 className="text-xl font-bold mb-4 text-blue-900">Cleanup Summary</h2>
-            <div className="space-y-3">
-              {shieldedNotice && (
-                <div role="alert" className="alert alert-info text-sm">
-                  {shieldedNotice}
-                </div>
-              )}
-              <div className="flex justify-between items-center">
-                <span className="text-blue-800">Current HTR Balance:</span>
-                <span className="font-mono font-bold">{formatBalance(htrBalance)} HTR</span>
+          <Panel title="Cleanup summary">
+            {shieldedNotice && (
+              <Callout tone="shielded" role="alert">
+                {shieldedNotice}
+              </Callout>
+            )}
+            <dl className="m-0 flex flex-col gap-2">
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-ink-muted">Current HTR balance</dt>
+                <dd className="m-0 font-mono text-data">{formatBalance(htrBalance)} HTR</dd>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-blue-800">HTR from Melting ({totalMeltableTokens} tokens):</span>
-                <span className="font-mono font-bold">+{estimatedHtrFromMelting} HTR</span>
+              <div className="flex items-baseline justify-between gap-4">
+                <dt className="text-ink-muted">HTR from melting ({totalMeltableTokens} tokens)</dt>
+                <dd className="m-0 font-mono text-data">+{estimatedHtrFromMelting} HTR</dd>
               </div>
               {swapTokensList.length > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-800">Swap Tokens to Transfer:</span>
-                  <span className="font-mono font-bold">
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-ink-muted">Swap tokens to transfer</dt>
+                  <dd className="m-0 text-right font-mono text-data">
                     {swapTokensList.map((t) => `${formatBalance(t.balance)} ${t.symbol}`).join(', ')}
-                  </span>
+                  </dd>
                 </div>
               )}
               {feeTokensList.length > 0 && (
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-800">Fee Tokens (left in wallet):</span>
-                  <span className="font-mono font-bold text-rose-700">
+                <div className="flex items-baseline justify-between gap-4">
+                  <dt className="text-ink-muted">Fee tokens (left in wallet)</dt>
+                  <dd className="m-0 text-right font-mono text-data text-warning-ink">
                     {feeTokensList.map((t) => `${formatBalance(t.balance)} ${t.symbol}`).join(', ')}
-                  </span>
+                  </dd>
                 </div>
               )}
-              <div className="border-t border-blue-300 pt-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-900 font-bold text-lg">Total HTR to Send:</span>
-                  <span className="font-mono font-bold text-xl text-blue-900">{totalEstimatedHtr} HTR</span>
-                </div>
+              <div className="flex items-baseline justify-between gap-4 border-t border-base-300 pt-2">
+                <dt className="font-semibold">Total HTR to send</dt>
+                <dd className="m-0 font-mono text-body-lg font-semibold">{totalEstimatedHtr} HTR</dd>
               </div>
-              {fundingReady ? (
-                <p className="text-sm text-blue-700 mt-2 mb-0">Will be sent to Funding Wallet address 0.</p>
-              ) : (
-                <p className="text-sm text-red-600 mt-2 mb-0">No funding wallet available. Cleanup cannot proceed.</p>
-              )}
-            </div>
-          </div>
+            </dl>
+            {fundingReady ? (
+              <p className="m-0 text-caption text-ink-muted">Sent to funding wallet address 0.</p>
+            ) : (
+              <p className="m-0 text-caption text-error">No funding wallet available. Cleanup cannot proceed.</p>
+            )}
+          </Panel>
 
-          {/* Tokens to Return to Sender */}
           {returnableTokensList.length > 0 && (
-            <div className="card-primary mb-7.5 bg-cyan-50 border-2 border-cyan-400">
-              <h2 className="text-xl font-bold mb-2 text-cyan-900">Tokens to Return to Sender</h2>
-              <p className="text-sm text-cyan-800 mb-4">
-                The following tokens will be returned to the address that originally sent them:
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-cyan-300">
-                    <tr>
-                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Token</th>
-                      <th className="text-right py-2 px-3 font-bold text-cyan-900">Amount</th>
-                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Return To</th>
-                      <th className="text-left py-2 px-3 font-bold text-cyan-900">Wallet</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tokensToMelt
-                      .filter((t) => t.canReturnToSender && t.originalSender)
-                      .map((token) => {
-                        const returnAmount = !token.hasMeltAuthority ? Number(token.balance) : token.remainder;
-                        const primaryFlow = token.tokenFlow?.addressFlows[0];
-
-                        return (
-                          <tr key={token.uid} className="border-b border-cyan-200">
-                            <td className="py-2 px-3">
-                              <span className="font-semibold">{token.symbol}</span>
-                            </td>
-                            <td className="py-2 px-3 text-right font-mono text-cyan-700">{returnAmount}</td>
-                            <td className="py-2 px-3 font-mono text-xs text-cyan-700" title={token.originalSender}>
-                              {token.originalSender?.slice(0, 12)}...{token.originalSender?.slice(-6)}
-                            </td>
-                            <td className="py-2 px-3 text-xs text-cyan-600">
-                              {getWalletFriendlyName(primaryFlow?.walletId) || '-'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <Panel title="Tokens to return to sender" description="Returned to the address that originally sent them.">
+              <DataTable
+                caption="Tokens to return to sender"
+                columns={returnColumns}
+                rows={tokensToMelt.filter((t) => t.canReturnToSender && t.originalSender)}
+                getRowKey={(t) => t.uid}
+              />
+            </Panel>
           )}
 
-          {/* Tokens to Retrieve for Melting - has melt authority but tokens are held externally */}
-          {tokensToMelt.filter((t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0)
-            .length > 0 && (
-            <div className="card-primary mb-7.5 bg-amber-50 border-2 border-amber-400">
-              <h2 className="text-xl font-bold mb-2 text-amber-900">Tokens to Retrieve for Melting</h2>
-              <p className="text-sm text-amber-800 mb-4">
-                You have melt authority for these tokens, but some are held at external addresses. Retrieve them to
-                complete the cleanup:
-              </p>
-              {tokensToMelt
-                .filter((t) => t.hasMeltAuthority && t.tokenFlow && t.tokenFlow.totalExternalBalance > 0)
-                .map((token) => {
-                  const externalAmount = token.tokenFlow!.totalExternalBalance;
-
-                  return (
-                    <div key={token.uid} className="mb-4 last:mb-0 bg-white rounded p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-semibold text-amber-900">{token.symbol}</span>
-                        <span className="font-mono text-amber-700">{externalAmount} tokens to retrieve</span>
-                      </div>
-
-                      <div className="border-t border-amber-200 pt-2 mt-2">
-                        <div className="text-xs text-amber-800 font-semibold mb-2">External Addresses:</div>
-                        <div className="space-y-2">
-                          {token.tokenFlow!.addressFlows.map((flow, idx) => {
-                            const isFundingWallet = flow.walletId === fundingWalletId;
-                            const canRetrieve = isFundingWallet && fundingReady && !isRetrieving;
-
-                            return (
-                              <div key={idx} className="bg-amber-50 rounded px-2 py-1.5 text-xs">
-                                <div className="flex justify-between items-start">
-                                  <div className="font-mono" title={flow.address}>
-                                    {flow.address.slice(0, 14)}...{flow.address.slice(-8)}
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="font-semibold text-amber-800">Net: {flow.netBalance}</span>
-                                    <span className="text-amber-600 ml-2">
-                                      (sent {flow.totalSent}, recv {flow.totalReceived})
-                                    </span>
-                                  </div>
-                                </div>
-                                {flow.walletId && (
-                                  <div className="flex justify-between items-center mt-1">
-                                    <div className="text-amber-600">
-                                      <span className="font-semibold">Wallet:</span>{' '}
-                                      {getWalletFriendlyName(flow.walletId)}
-                                    </div>
-                                    {isFundingWallet && (
-                                      <button
-                                        onClick={() =>
-                                          handleRetrieveFromFunding(token.uid, token.symbol, flow.netBalance)
-                                        }
-                                        disabled={!canRetrieve}
-                                        className="ml-2 px-2 py-0.5 text-xs font-semibold rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                      >
-                                        {isRetrieving === token.uid ? 'Retrieving...' : 'Retrieve'}
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                                {flow.unspentOutputs.length > 0 && (
-                                  <div className="text-amber-500 mt-1">
-                                    <span className="font-semibold">Unspent:</span>{' '}
-                                    {flow.unspentOutputs.map((utxo, i) => (
-                                      <span key={i} className="font-mono" title={utxo.txId}>
-                                        {i > 0 && ', '}
-                                        {utxo.txId.slice(0, 8)}:{utxo.outputIndex} ({utxo.amount})
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-
-          {/* Tokens Requiring Manual Action - no melt authority, can't return automatically */}
-          {tokensRemaining.filter((t) => !t.canReturnToSender && !t.hasMeltAuthority).length > 0 && (
-            <div className="card-primary mb-7.5 bg-orange-50 border-2 border-orange-400">
-              <h2 className="text-xl font-bold mb-2 text-orange-900">Tokens Requiring Manual Action</h2>
-              <p className="text-sm text-orange-800 mb-4">
-                You don't have melt authority for these tokens. Contact the token owner or return them manually:
-              </p>
-              {tokensRemaining
-                .filter((t) => !t.canReturnToSender && !t.hasMeltAuthority)
-                .map((token) => {
-                  const remainingAmount = Number(token.balance);
-                  const fullToken = tokensToMelt.find((t) => t.uid === token.uid);
-                  const hasFlowData = fullToken?.tokenFlow && fullToken.tokenFlow.addressFlows.length > 0;
-
-                  return (
-                    <div key={token.uid} className="mb-4 last:mb-0 bg-white rounded p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <div>
-                          <span className="font-semibold text-orange-900">{token.symbol}</span>
-                          <span className="text-orange-700 text-xs ml-2">(No melt authority)</span>
-                        </div>
-                        <span className="font-mono text-orange-700">{remainingAmount} remaining</span>
-                      </div>
-
-                      {hasFlowData ? (
-                        <div className="border-t border-orange-200 pt-2 mt-2">
-                          <div className="text-xs text-orange-800 font-semibold mb-2">Token Origin:</div>
-                          <div className="space-y-2">
-                            {fullToken!.tokenFlow!.addressFlows.map((flow, idx) => (
-                              <div key={idx} className="bg-orange-50 rounded px-2 py-1.5 text-xs">
-                                <div className="flex justify-between items-start">
-                                  <div className="font-mono" title={flow.address}>
-                                    {flow.address.slice(0, 14)}...{flow.address.slice(-8)}
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="font-semibold text-orange-800">Net: {flow.netBalance}</span>
-                                  </div>
-                                </div>
-                                {flow.walletId && (
-                                  <div className="text-orange-600 mt-1">
-                                    <span className="font-semibold">Wallet:</span>{' '}
-                                    {getWalletFriendlyName(flow.walletId)}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+          {retrievableTokens.length > 0 && (
+            <Panel
+              title="Tokens to retrieve for melting"
+              description="You have melt authority for these tokens, but some are held at external addresses. Retrieve them to complete the cleanup."
+            >
+              {retrievableTokens.map((token) => (
+                <Panel
+                  key={token.uid}
+                  variant="inset"
+                  title={token.symbol}
+                  actions={
+                    <span className="font-mono text-data">{token.tokenFlow!.totalExternalBalance} to retrieve</span>
+                  }
+                >
+                  <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                    {token.tokenFlow!.addressFlows.map((flow, idx) => {
+                      const isFundingWallet = flow.walletId === fundingWalletId;
+                      const canRetrieve = isFundingWallet && fundingReady && !isRetrieving;
+                      return (
+                        <li
+                          key={idx}
+                          className="flex flex-col gap-1 rounded-field border border-base-300 bg-base-100 p-2 text-body"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <Identifier value={flow.address} kind="address" />
+                            <span className="font-mono text-data">
+                              Net {flow.netBalance}{' '}
+                              <span className="font-sans text-caption text-ink-muted">
+                                (sent {flow.totalSent}, received {flow.totalReceived})
+                              </span>
+                            </span>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="text-orange-500 italic text-xs mt-2">Could not trace token origin</div>
-                      )}
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-
-          {/* Cleanup Status - shown during execution */}
-          {(isExecuting || (cleanupPhase !== 'idle' && meltTxStatuses.length > 0)) && (
-            <div className="card-primary mb-7.5 bg-purple-50 border-2 border-purple-400">
-              <h2 className="text-xl font-bold mb-4 text-purple-900">Cleanup Status</h2>
-
-              {/* Current Phase */}
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-purple-800 font-semibold">Phase:</span>
-                  <span
-                    className={`badge ${
-                      cleanupPhase === 'melting'
-                        ? 'badge-warning'
-                        : cleanupPhase === 'transferring'
-                          ? 'badge-primary'
-                          : cleanupPhase === 'done'
-                            ? 'badge-success'
-                            : 'badge-ghost'
-                    }`}
-                  >
-                    {cleanupPhase === 'melting' && 'Processing'}
-                    {cleanupPhase === 'transferring' && 'Transferring HTR'}
-                    {cleanupPhase === 'done' && 'Completed'}
-                    {cleanupPhase === 'idle' && 'Idle'}
-                  </span>
-                </div>
-                {executionStep && <p className="text-sm text-purple-700 m-0">{executionStep}</p>}
-              </div>
-
-              {/* Transaction Status */}
-              {meltTxStatuses.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-bold text-purple-800 mb-2">Transaction Status:</h3>
-                  <div className="space-y-1">
-                    {meltTxStatuses.map((tx, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2">
-                        <span className="font-semibold">{tx.tokenSymbol}</span>
-                        <div className="flex items-center gap-2">
-                          {tx.txHash && (
-                            <span className="font-mono text-xs text-gray-500">{tx.txHash.slice(0, 8)}...</span>
+                          {flow.walletId && (
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-caption text-ink-muted">
+                                Wallet: {getWalletFriendlyName(flow.walletId)}
+                              </span>
+                              {isFundingWallet && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRetrieveFromFunding(token.uid, token.symbol, flow.netBalance)}
+                                  disabled={!canRetrieve}
+                                  className="btn btn-secondary btn-xs"
+                                >
+                                  {isRetrieving === token.uid && (
+                                    <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+                                  )}
+                                  {isRetrieving === token.uid ? 'Retrieving' : 'Retrieve'}
+                                </button>
+                              )}
+                            </div>
                           )}
-                          <span
-                            className={`badge badge-sm ${tx.status === 'confirmed' ? 'badge-success' : 'badge-error'}`}
-                          >
-                            {tx.status === 'confirmed' ? 'Sent' : 'Failed'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+                          {flow.unspentOutputs.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-ink-muted">
+                              Unspent:
+                              {flow.unspentOutputs.map((utxo, i) => (
+                                <span key={i} className="inline-flex items-center gap-1">
+                                  <Identifier value={utxo.txId} kind="tx" head={8} tail={0} copy={false} />
+                                  <span className="font-mono text-data-sm">
+                                    :{utxo.outputIndex} ({utxo.amount})
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Panel>
+              ))}
+            </Panel>
           )}
 
-          {/* Errors Display */}
+          {manualTokens.length > 0 && (
+            <Panel
+              title="Tokens requiring manual action"
+              description="You don't have melt authority for these tokens. Contact the token owner or return them manually."
+            >
+              {manualTokens.map((token) => {
+                const fullToken = tokensToMelt.find((t) => t.uid === token.uid);
+                const hasFlowData = fullToken?.tokenFlow && fullToken.tokenFlow.addressFlows.length > 0;
+                return (
+                  <Panel
+                    key={token.uid}
+                    variant="inset"
+                    title={
+                      <>
+                        {token.symbol}{' '}
+                        <span className="text-caption font-normal text-ink-muted">(no melt authority)</span>
+                      </>
+                    }
+                    actions={<span className="font-mono text-data">{Number(token.balance)} remaining</span>}
+                  >
+                    {hasFlowData ? (
+                      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                        {fullToken!.tokenFlow!.addressFlows.map((flow, idx) => (
+                          <li
+                            key={idx}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-field border border-base-300 bg-base-100 p-2"
+                          >
+                            <Identifier value={flow.address} kind="address" />
+                            <span className="text-caption text-ink-muted">
+                              {flow.walletId && <>Wallet: {getWalletFriendlyName(flow.walletId)} · </>}
+                              <span className="font-mono text-data">Net {flow.netBalance}</span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="m-0 text-caption text-ink-muted">Could not trace the token origin.</p>
+                    )}
+                  </Panel>
+                );
+              })}
+            </Panel>
+          )}
+
+          {(isExecuting || (cleanupPhase !== 'idle' && meltTxStatuses.length > 0)) && (
+            <Panel
+              title="Cleanup status"
+              actions={<StatusChip status={phaseChip.label} tone={phaseChip.tone} label={phaseChip.label} />}
+            >
+              {executionStep && (
+                <p className="m-0 flex items-center gap-2 text-body" role="status">
+                  {isExecuting && <span className="loading loading-spinner loading-xs" aria-hidden="true" />}
+                  {executionStep}
+                </p>
+              )}
+              {meltTxStatuses.length > 0 && (
+                <DataTable
+                  caption="Cleanup transactions"
+                  columns={[
+                    { key: 'token', header: 'Step', className: 'font-semibold', value: (tx) => tx.tokenSymbol },
+                    {
+                      key: 'hash',
+                      header: 'Transaction',
+                      type: 'identifier',
+                      render: (tx) => (tx.txHash ? <Identifier value={tx.txHash} kind="tx" /> : null),
+                    },
+                    {
+                      key: 'status',
+                      header: 'Status',
+                      type: 'status',
+                      render: (tx) => (
+                        <StatusChip
+                          status={tx.status}
+                          tone={tx.status === 'confirmed' ? 'success' : 'error'}
+                          label={tx.status === 'confirmed' ? 'Sent' : 'Failed'}
+                        />
+                      ),
+                    },
+                  ]}
+                  rows={meltTxStatuses}
+                  getRowKey={(tx, idx) => `${tx.txHash}-${idx}`}
+                />
+              )}
+            </Panel>
+          )}
+
           {errors.length > 0 && (
-            <div className="card-primary mb-7.5 bg-red-50 border-2 border-red-400">
-              <h3 className="font-bold text-lg mt-0 mb-2 text-red-900">Errors</h3>
-              <ul className="m-0 pl-4 text-red-800">
+            <Callout tone="error" title="Errors">
+              <ul>
                 {errors.map((error, idx) => (
                   <li key={idx}>{error}</li>
                 ))}
               </ul>
-            </div>
+            </Callout>
           )}
 
-          {/* Success Message */}
-          {completed && errors.length === 0 && (
-            <div className="card-primary mb-7.5 bg-green-50 border-2 border-green-400">
-              <p className="m-0 text-green-900 font-semibold text-center">Cleanup completed successfully!</p>
-            </div>
-          )}
+          {completed && errors.length === 0 && <Callout tone="success">Cleanup completed.</Callout>}
 
-          {/* Execute Button */}
-          <div className="card-primary mb-7.5">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {!isExecuting && executeReason && <span className="text-caption text-ink-muted">{executeReason}</span>}
             <button
-              onClick={handleExecuteCleanup}
+              type="button"
+              onClick={handleExecuteClick}
               disabled={!canExecute}
-              className="w-full py-3 px-6 font-bold text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: canExecute ? '#dc2626' : '#9ca3af' }}
+              className={`btn ${isMainnet ? 'btn-error btn-outline' : 'btn-error'}`}
             >
-              {isExecuting ? 'Executing Cleanup...' : 'Execute Cleanup'}
+              {isExecuting ? spinner : <MdCleaningServices aria-hidden="true" />}
+              {isExecuting ? 'Executing cleanup' : isMainnet ? 'Execute cleanup on mainnet' : 'Execute cleanup'}
             </button>
-            {!canExecute && !isExecuting && !isLoading && (
-              <p className="text-sm text-muted text-center mt-2 mb-0">
-                {!fundingReady
-                  ? 'Funding Wallet required for cleanup.'
-                  : !hasTokensToMelt && !hasSwapTokens && !hasTokensToReturn && !hasHtrToTransfer
-                    ? shieldedNotice
-                      ? `Nothing transparent to clean up. ${shieldedNotice}.`
-                      : 'Nothing to clean up.'
-                    : 'Cannot execute cleanup.'}
-              </p>
-            )}
           </div>
         </>
       )}
+
+      <details
+        className="rounded-box border border-base-300 bg-base-100"
+        open={showDebug}
+        onToggle={(e) => setShowDebug((e.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary className="cursor-pointer px-4 py-2.5 text-title-sm">Debug panel</summary>
+        <div className="flex flex-col gap-3 border-t border-base-300 p-4">
+          <div className="flex justify-end">
+            <button type="button" onClick={() => setDebugLogs([])} className="btn btn-ghost btn-xs">
+              Clear logs
+            </button>
+          </div>
+          <div className="rounded-field bg-base-200 p-2 font-mono text-data-sm">
+            <div className="text-ink-muted">Current state</div>
+            <div>tokensToMelt: {tokensToMelt.length} tokens</div>
+            <div>htrBalance: {htrBalance.toString()}</div>
+            <div>hasTokensToMelt: {hasTokensToMelt.toString()}</div>
+            <div>cleanupPhase: {cleanupPhase}</div>
+            <div className="mt-2 text-ink-muted">Tokens with melt authority</div>
+            {meltableTokensList.map((t, i) => (
+              <div key={i} className="ml-2 text-success">
+                {t.symbol}: {t.meltableAmount} meltable (balance: {t.balance.toString()})
+              </div>
+            ))}
+            {meltableTokensList.length === 0 && <div className="ml-2 text-warning-ink">None found</div>}
+            <div className="mt-2 text-ink-muted">Swap test tokens</div>
+            {swapTokensList.map((t, i) => (
+              <div key={i} className="ml-2 text-info">
+                {t.symbol}: {t.balance.toString()} → funding wallet
+              </div>
+            ))}
+            {swapTokensList.length === 0 && <div className="ml-2 text-warning-ink">None found</div>}
+            <div className="mt-2 text-ink-muted">Fee tokens (left in wallet)</div>
+            {feeTokensList.map((t, i) => (
+              <div key={i} className="ml-2 text-error">
+                {t.symbol}: {t.balance.toString()} (skipped)
+              </div>
+            ))}
+            {feeTokensList.length === 0 && <div className="ml-2 text-warning-ink">None found</div>}
+          </div>
+
+          <div className="flex max-h-80 flex-col gap-1 overflow-y-auto font-mono text-data-sm">
+            {debugLogs.length === 0 ? (
+              <div className="font-sans text-body text-ink-muted">
+                No logs yet. Execute cleanup to see debug output.
+              </div>
+            ) : (
+              debugLogs.map((log, i) => (
+                <div key={i} className={`rounded-field bg-base-200 p-1.5 ${logTone[log.type]}`}>
+                  <span className="text-ink-muted">[{log.timestamp}]</span>{' '}
+                  <span className="font-semibold">[{log.type.toUpperCase()}]</span> {log.message}
+                  {log.data !== undefined && log.data !== null && (
+                    <pre className="m-0 mt-1 overflow-x-auto whitespace-pre-wrap text-data-sm">
+                      {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

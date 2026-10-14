@@ -8,7 +8,11 @@ import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { selectAllWalletEvents, type WalletEvent } from '../../store/slices/walletStoreSlice';
 import { setFilterWalletId, setCurrentPage } from '../../store/slices/txUpdateEventsSlice';
 import { useToast } from '../../hooks/useToast';
-import CopyButton from '../common/CopyButton';
+import { MdTerminal } from 'react-icons/md';
+import { Identifier } from '../common/Identifier';
+import { StageHeader } from '../common/StageHeader';
+import { Panel } from '../ui/Panel';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import TxStatus from '../common/TxStatus';
 import dateFormatter from '@hathor/wallet-lib/lib/utils/date';
 
@@ -34,13 +38,6 @@ export default function TxUpdateEvents() {
   const paginatedEvents = filteredEvents.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const totalPages = Math.ceil(filteredEvents.length / pageSize);
 
-  // Truncate hash for display
-  function truncateHash(hash: string | undefined): string {
-    if (!hash) return 'N/A';
-    if (hash.length <= 12) return hash;
-    return `${hash.slice(0, 6)}...${hash.slice(-6)}`;
-  }
-
   // Extract transaction hash from event data
   // Handles both tx_id and txId naming conventions
   function getTxHash(event: WalletEvent & { walletId: string }): string | undefined {
@@ -63,148 +60,130 @@ export default function TxUpdateEvents() {
     info('Raw event data exported to console');
   }
 
-  // Get event type badge color
-  function getEventTypeColor(eventType: WalletEvent['eventType']): string {
-    switch (eventType) {
-      case 'new-tx':
-        return 'bg-blue-100 text-blue-800';
-      case 'update-tx':
-        return 'bg-purple-100 text-purple-800';
-      case 'state':
-        return 'bg-green-100 text-green-800';
-      case 'more-addresses-loaded':
-        return 'bg-orange-100 text-orange-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  }
+  type EventRow = WalletEvent & { walletId: string };
+
+  const columns: DataTableColumn<EventRow>[] = [
+    {
+      key: 'type',
+      header: 'Event type',
+      render: (event) => (
+        <span className="whitespace-nowrap rounded-selector bg-base-200 px-1.5 py-0.5 font-mono text-data-sm">
+          {event.eventType}
+        </span>
+      ),
+    },
+    {
+      key: 'timestamp',
+      header: 'Timestamp',
+      className: 'whitespace-nowrap',
+      value: (event) => dateFormatter.parseTimestamp(event.timestamp / 1000),
+    },
+    {
+      key: 'wallet',
+      header: 'Wallet',
+      render: (event) => (
+        <span className="block max-w-40 truncate" title={event.walletId}>
+          {getWalletName(event.walletId)}
+        </span>
+      ),
+    },
+    {
+      key: 'hash',
+      header: 'Tx hash',
+      type: 'identifier',
+      render: (event) => {
+        const txHash = getTxHash(event);
+        return txHash ? <Identifier value={txHash} kind="tx" head={6} tail={6} /> : null;
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      type: 'status',
+      render: (event) => {
+        const txHash = getTxHash(event);
+        return txHash ? <TxStatus hash={txHash} walletId={event.walletId} /> : null;
+      },
+    },
+    {
+      key: 'actions',
+      header: <span className="sr-only">Actions</span>,
+      type: 'actions',
+      hideLabelWhenStacked: true,
+      render: (event) => (
+        <button type="button" className="btn btn-ghost btn-xs" onClick={() => handleEventClick(event)}>
+          <MdTerminal aria-hidden="true" />
+          Log raw data
+        </button>
+      ),
+    },
+  ];
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Tx Update Events</h1>
-      <p className="text-muted mb-7.5">Monitor real-time wallet events from all active wallets</p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader stageId="tx-update-events" />
 
-      {/* Filter Controls */}
-      <div className="card-primary mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold m-0">Filter Events</h2>
-          <div className="flex items-center gap-4">
+      <Panel
+        title="Wallet events"
+        description={
+          <>
+            Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+            {filterWalletId !== 'all' && ` from ${getWalletName(filterWalletId)}`}
+          </>
+        }
+        actions={
+          <label className="flex items-center gap-2 text-body">
+            <span className="text-ink-muted">Wallet</span>
             <select
               value={filterWalletId}
               onChange={(e) => {
                 dispatch(setFilterWalletId(e.target.value));
               }}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="select select-sm w-auto"
             >
-              <option value="all">All Wallets</option>
+              <option value="all">All wallets</option>
               {Object.entries(allWallets).map(([id, wallet]) => (
                 <option key={id} value={id}>
                   {wallet.metadata.friendlyName}
                 </option>
               ))}
             </select>
-          </div>
-        </div>
-
-        <p className="text-sm text-muted m-0">
-          Showing {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
-          {filterWalletId !== 'all' && ` from ${getWalletName(filterWalletId)}`}
-        </p>
-      </div>
-
-      {/* Events Table */}
-      <div className="card-primary">
-        <h2 className="text-xl font-bold mb-4">Wallet Events</h2>
-
-        {filteredEvents.length === 0 ? (
-          <p className="text-muted text-sm">
-            No events yet. Events will appear here when wallets emit new-tx, update-tx, state, or more-addresses-loaded
-            events.
-          </p>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-gray-300">
-                  <tr>
-                    <th className="text-left py-2 px-3 font-bold">Event Type</th>
-                    <th className="text-left py-2 px-3 font-bold">Timestamp</th>
-                    <th className="text-left py-2 px-3 font-bold">Wallet</th>
-                    <th className="text-left py-2 px-3 font-bold">Tx Hash</th>
-                    <th className="text-center py-2 px-3 font-bold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedEvents.map((event) => {
-                    const txHash = getTxHash(event);
-                    return (
-                      <tr
-                        key={event.id}
-                        className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleEventClick(event)}
-                      >
-                        <td className="py-2 px-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${getEventTypeColor(event.eventType)}`}
-                          >
-                            {event.eventType}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-xs">{dateFormatter.parseTimestamp(event.timestamp / 1000)}</td>
-                        <td className="py-2 px-3 text-xs" title={event.walletId}>
-                          {truncateHash(getWalletName(event.walletId))}
-                        </td>
-                        <td className="py-2 px-3 font-mono text-xs">
-                          {txHash ? (
-                            <div className="flex items-center gap-2">
-                              {truncateHash(txHash)}
-                              <CopyButton text={txHash} label="" />
-                            </div>
-                          ) : (
-                            <span className="text-muted">—</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-center">
-                          {txHash ? (
-                            <TxStatus hash={txHash} walletId={event.walletId} />
-                          ) : (
-                            <span className="text-muted text-xs">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => dispatch(setCurrentPage(Math.max(0, currentPage - 1)))}
-                  disabled={currentPage === 0}
-                  className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-
-                <span className="text-sm text-muted">
-                  Page {currentPage + 1} of {totalPages} ({filteredEvents.length} total)
-                </span>
-
-                <button
-                  onClick={() => dispatch(setCurrentPage(Math.min(totalPages - 1, currentPage + 1)))}
-                  disabled={currentPage === totalPages - 1}
-                  className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+          </label>
+        }
+        footer={
+          totalPages > 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => dispatch(setCurrentPage(Math.max(0, currentPage - 1)))}
+                disabled={currentPage === 0}
+                className="btn btn-secondary btn-sm"
+              >
+                Previous
+              </button>
+              <span className="text-body text-ink-muted">
+                Page {currentPage + 1} of {totalPages} ({filteredEvents.length} total)
+              </span>
+              <button
+                type="button"
+                onClick={() => dispatch(setCurrentPage(Math.min(totalPages - 1, currentPage + 1)))}
+                disabled={currentPage === totalPages - 1}
+                className="btn btn-secondary btn-sm ml-auto"
+              >
+                Next
+              </button>
+            </>
+          ) : undefined
+        }
+      >
+        <DataTable
+          caption="Wallet events"
+          columns={columns}
+          rows={paginatedEvents}
+          getRowKey={(event) => event.id}
+          empty="Events from running wallets appear here. Start a wallet to see new-tx, update-tx, state and more-addresses-loaded events."
+        />
+      </Panel>
     </div>
   );
 }

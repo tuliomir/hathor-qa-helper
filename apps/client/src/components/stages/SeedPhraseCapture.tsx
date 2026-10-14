@@ -11,7 +11,9 @@ import ImagePreview from '../ImagePreview';
 import CameraCapture from '../CameraCapture';
 import OCRReferenceImage from '../OCRReferenceImage';
 import OCRReferenceModal from '../OCRReferenceModal';
-import Select from '../common/Select';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
 import { didYouMean, treatSeedWords } from '../../utils/walletUtils';
 import { extractSeedWordsFromImage } from '../../utils/ocrService';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -155,209 +157,164 @@ export default function SeedPhraseCapture() {
   const isValid = seedInput.trim() && !validationError;
   const canAddWallet = isValid && walletName.trim() && !walletAdded;
 
-  return (
-    <div className="space-y-4">
-      <div className="card-primary">
-        <h2 className="text-xl font-bold mb-2">Seed Phrase Capture</h2>
-        <p className="text-muted text-sm mb-4">
-          Paste a screenshot of the seed words screen or use the camera to capture it. The OCR will extract the seed
-          words automatically.
-        </p>
+  const applySuggestion = (w: string, suggestion: string) => {
+    const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('\\b' + escapeRegExp(w) + '\\b', 'gi');
+    const newSeed = seedInput.replace(re, suggestion);
+    setSeedInput(newSeed);
+    const { valid: v, invalidWords: newInvalid } = treatSeedWords(newSeed);
+    if (v) {
+      setValidationError(null);
+      setInvalidWords([]);
+    } else {
+      setValidationError('Invalid seed phrase');
+      setInvalidWords(newInvalid || []);
+    }
+    textareaRef.current?.focus();
+  };
 
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <label htmlFor="seed-capture-input" className="font-bold text-sm">
-              Extracted Seed Phrase:
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowCamera(true)}
-                className="btn bg-info text-white hover:bg-cyan-600 text-xs flex items-center gap-1"
-              >
-                <MdCamera size={16} />
+  return (
+    <div className="flex flex-col gap-4">
+      <Panel
+        title="Seed phrase capture"
+        description="Paste a screenshot of the seed words screen or capture it with the camera. OCR extracts the words."
+      >
+        <Field
+          label="Extracted seed phrase"
+          htmlFor="seed-capture-input"
+          hint="Paste an image (Ctrl+V / Cmd+V) or use the camera to capture the seed words screen."
+          trailing={
+            <>
+              <button type="button" onClick={() => setShowCamera(true)} className="btn btn-secondary btn-sm">
+                <MdCamera aria-hidden="true" />
                 Camera
               </button>
               {seedInput && (
-                <button onClick={handleCopy} className="btn btn-secondary text-xs flex items-center gap-1">
-                  {copied ? <MdCheck size={16} /> : <MdContentCopy size={16} />}
-                  {copied ? 'Copied!' : 'Copy'}
+                <button type="button" onClick={handleCopy} className="btn btn-ghost btn-sm">
+                  {copied ? <MdCheck aria-hidden="true" /> : <MdContentCopy aria-hidden="true" />}
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
               )}
-            </div>
-          </div>
-
+            </>
+          }
+        >
           <textarea
             ref={textareaRef}
-            id="seed-capture-input"
             value={seedInput}
             onChange={handleSeedChange}
             onPaste={handlePaste}
-            placeholder="Paste an image of the seed words here, or type/paste the seed phrase directly..."
+            placeholder="Paste an image of the seed words here, or type or paste the seed phrase"
             rows={3}
-            className={`w-full font-mono text-sm resize-y ${
-              validationError ? 'input-error' : isValid ? 'input border-success' : 'input'
+            className={`textarea min-h-[4.5rem] w-full resize-y border-field-border font-mono text-data ${
+              validationError ? 'textarea-error' : isValid ? 'textarea-success' : ''
             }`}
-            style={{ minHeight: '4.5rem' }}
           />
+        </Field>
 
-          <p className="text-muted text-xs mt-2 mb-0">
-            Paste an image (Ctrl+V / Cmd+V) or use the camera button to capture the seed words screen.
-          </p>
-        </div>
+        {seedInput &&
+          (isValid ? (
+            <Callout tone="success">Valid seed phrase ({seedInput.trim().split(/\s+/).length} words)</Callout>
+          ) : (
+            <Callout tone="error" title={validationError}>
+              {invalidWords.length > 0 && (
+                <ul>
+                  {invalidWords.map((w, idx) => {
+                    const suggestion = didYouMean(w);
+                    return (
+                      <li key={`${w}-${idx}`}>
+                        <span className="mr-2 font-mono text-data">{w}</span>
+                        {suggestion ? (
+                          <button
+                            type="button"
+                            onClick={() => applySuggestion(w, suggestion)}
+                            className="link link-primary"
+                          >
+                            Did you mean <strong>{suggestion}</strong>?
+                          </button>
+                        ) : (
+                          <span className="text-ink-muted">(no suggestion)</span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Callout>
+          ))}
 
-        {/* Validation Status */}
-        {seedInput && (
-          <div
-            className={`p-3 rounded-lg ${isValid ? 'bg-green-50 border border-success' : 'bg-red-50 border border-danger'}`}
-          >
-            {isValid ? (
-              <p className="text-success text-sm m-0 font-medium">
-                Valid seed phrase ({seedInput.trim().split(/\s+/).length} words)
-              </p>
-            ) : (
-              <>
-                <p className="text-danger text-sm m-0 mb-2">{validationError}</p>
-                {invalidWords.length > 0 && (
-                  <div className="text-danger text-xs">
-                    <div className="font-bold mb-1">Invalid words:</div>
-                    {invalidWords.map((w, idx) => {
-                      const suggestion = didYouMean(w);
-                      return (
-                        <div key={`${w}-${idx}`} className="mb-1">
-                          <span className="mr-2 font-mono">{w}</span>
-                          {suggestion ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                                const re = new RegExp('\\b' + escapeRegExp(w) + '\\b', 'gi');
-                                const newSeed = seedInput.replace(re, suggestion);
-                                setSeedInput(newSeed);
-                                const { valid: v, invalidWords: newInvalid } = treatSeedWords(newSeed);
-                                if (v) {
-                                  setValidationError(null);
-                                  setInvalidWords([]);
-                                } else {
-                                  setValidationError('Invalid seed phrase');
-                                  setInvalidWords(newInvalid || []);
-                                }
-                                textareaRef.current?.focus();
-                              }}
-                              className="text-info underline cursor-pointer text-xs bg-transparent border-0 p-0"
-                            >
-                              Did you mean: <strong>{suggestion}</strong>?
-                            </button>
-                          ) : (
-                            <span className="text-muted">(no suggestion)</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Add Wallet Section - shown when seed is valid */}
         {isValid && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-sm font-bold mb-3">Register as Test Wallet</h3>
+          <section className="flex flex-col gap-3 border-t border-base-300 pt-3">
+            <h3 className="m-0 text-body font-semibold">Register as test wallet</h3>
 
             {walletAdded ? (
-              <div className="flex items-center gap-2 text-success">
-                <MdCheck size={20} />
-                <span className="font-medium">Wallet added and set as Test Wallet!</span>
-              </div>
+              <Callout tone="success">Wallet added and set as the test wallet.</Callout>
             ) : (
               <>
-                {/* Warning about adding the wallet */}
                 {!walletName.trim() && (
-                  <div className="mb-3 p-2 bg-yellow-50 border border-yellow-300 rounded text-yellow-800 text-xs">
-                    Add this seed phrase as a test wallet to continue testing with it.
-                  </div>
+                  <Callout tone="info">Add this seed phrase as a test wallet to keep testing with it.</Callout>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                  <div className="md:col-span-2">
-                    <label htmlFor="wallet-name-input" className="block text-xs font-medium mb-1">
-                      Wallet Name
-                    </label>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <Field label="Wallet name" htmlFor="wallet-name-input" className="md:col-span-2">
                     <input
-                      id="wallet-name-input"
                       type="text"
                       value={walletName}
                       onChange={(e) => {
                         setWalletName(e.target.value);
                         setAddWalletError(null);
                       }}
-                      placeholder="e.g., Desktop QA Wallet"
-                      className="input w-full text-sm"
+                      placeholder="e.g. Desktop QA wallet"
+                      className="input w-full"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="network-select" className="block text-xs font-medium mb-1">
-                      Network
-                    </label>
-                    <Select
-                      id="network-select"
+                  </Field>
+                  <Field label="Network" htmlFor="network-select">
+                    <select
                       value={network}
                       onChange={(e) => setNetwork(e.target.value as NetworkKey)}
-                      className="w-full text-sm"
+                      className="select w-full"
                     >
                       {NETWORK_KEYS.map((key) => (
                         <option key={key} value={key}>
                           {NETWORK_CONFIG[key].label}
                         </option>
                       ))}
-                    </Select>
-                  </div>
+                    </select>
+                  </Field>
                 </div>
 
-                {/* Error message */}
-                {addWalletError && (
-                  <div className="mb-3 p-2 bg-red-50 border border-danger rounded text-danger text-xs">
-                    {addWalletError}
-                  </div>
-                )}
+                {addWalletError && <Callout tone="error">{addWalletError}</Callout>}
 
-                <button
-                  onClick={handleAddWallet}
-                  disabled={!canAddWallet || isAddingWallet}
-                  className={`w-full btn flex items-center justify-center gap-2 ${
-                    canAddWallet && !isAddingWallet ? 'btn-success' : 'btn-secondary opacity-50 cursor-not-allowed'
-                  }`}
-                >
-                  {isAddingWallet ? (
-                    <>
-                      <span className="animate-spin">⏳</span>
-                      Adding Wallet...
-                    </>
-                  ) : (
-                    <>
-                      <MdAdd size={18} />
-                      Add as Test Wallet
-                    </>
-                  )}
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAddWallet}
+                    disabled={!canAddWallet || isAddingWallet}
+                    className="btn btn-primary"
+                  >
+                    {isAddingWallet ? (
+                      <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+                    ) : (
+                      <MdAdd aria-hidden="true" />
+                    )}
+                    {isAddingWallet ? 'Adding wallet' : 'Add as test wallet'}
+                  </button>
+                </div>
               </>
             )}
-          </div>
+          </section>
         )}
 
-        {/* OCR Reference Section */}
         {ocrSourceImageUrl && (
-          <div className="mt-4">
-            <h3 className="text-sm font-bold mb-2 text-muted">OCR Source Image</h3>
+          <section className="flex flex-col gap-2 border-t border-base-300 pt-3">
+            <h3 className="m-0 text-body font-semibold">OCR source image</h3>
             <OCRReferenceImage
               imageDataUrl={ocrSourceImageUrl}
               onExpand={() => setShowOcrReferenceModal(true)}
               onDismiss={() => setOcrSourceImageUrl(null)}
             />
-          </div>
+          </section>
         )}
-      </div>
+      </Panel>
 
       {/* Modals */}
       {showCamera && (
