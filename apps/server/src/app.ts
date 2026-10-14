@@ -20,8 +20,16 @@ import type { WalletFactory } from './walletPort.ts';
 // `localhost.evil.example` or a userinfo trick cannot slip through.
 const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
 
-export function isAllowedOrigin(origin: string): boolean {
-  return LOOPBACK_ORIGIN.test(origin);
+export function isAllowedOrigin(origin: string, extraOrigins: ReadonlySet<string> = new Set()): boolean {
+  return LOOPBACK_ORIGIN.test(origin) || extraOrigins.has(origin);
+}
+
+/** `QA_SERVER_EXTRA_ORIGINS`: comma-separated origins allowed besides loopback, matched exactly. */
+export function parseExtraOrigins(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
 }
 const ALLOWED_HOSTNAMES = new Set(['127.0.0.1', 'localhost']);
 
@@ -30,6 +38,8 @@ export interface AppDeps {
   version: string;
   readyPollMs?: number;
   readyTimeoutMs?: number;
+  /** Origins allowed besides loopback, e.g. a tailnet URL fronting the dev client. */
+  extraOrigins?: readonly string[];
 }
 
 export interface App {
@@ -87,8 +97,8 @@ async function readJson(req: Request): Promise<unknown> {
 
 const query = (url: URL) => Object.fromEntries(url.searchParams);
 
-function corsHeaders(origin: string | null): Record<string, string> {
-  if (!origin || !isAllowedOrigin(origin)) return { vary: 'Origin' };
+function corsHeaders(origin: string | null, extraOrigins: ReadonlySet<string>): Record<string, string> {
+  if (!origin || !isAllowedOrigin(origin, extraOrigins)) return { vary: 'Origin' };
   return {
     'access-control-allow-origin': origin,
     'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
@@ -235,14 +245,15 @@ export function createApp(deps: AppDeps): App {
     throw notFound(`No route for ${req.method} ${url.pathname}`);
   };
 
+  const extraOrigins = new Set(deps.extraOrigins ?? []);
   const app = async (req: Request): Promise<Response> => {
     const origin = req.headers.get('origin');
-    const cors = corsHeaders(origin);
+    const cors = corsHeaders(origin, extraOrigins);
     const url = new URL(req.url);
     // Browsers on other sites can still send "simple" requests (a text/plain
     // POST skips preflight), and DNS rebinding can point a foreign name at
     // 127.0.0.1: refuse both before any wallet is touched.
-    if ((origin && !isAllowedOrigin(origin)) || !ALLOWED_HOSTNAMES.has(url.hostname)) {
+    if ((origin && !isAllowedOrigin(origin, extraOrigins)) || !ALLOWED_HOSTNAMES.has(url.hostname)) {
       return errorResponse(new ApiError(403, 'FORBIDDEN', 'Origin or host not allowed'), cors);
     }
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });

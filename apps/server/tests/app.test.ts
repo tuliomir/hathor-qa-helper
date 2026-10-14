@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { createApp, type App } from '../src/app.ts';
+import { createApp, parseExtraOrigins, type App } from '../src/app.ts';
 import { FakeFactory } from './fakes.ts';
 import type { ApiErrorBody } from '@qa-helper/shared/serverApi';
 
@@ -31,6 +31,35 @@ function call(
     })
   );
 }
+
+describe('extra origins', () => {
+  const TAILNET = 'https://box.tailnet.ts.net';
+
+  test('are refused unless configured', async () => {
+    const res = await call('GET', '/health', undefined, { origin: TAILNET });
+    expect(res.status).toBe(403);
+  });
+
+  test('are allowed by exact match when configured', async () => {
+    app = createApp({ factory, version: '9.9.9', extraOrigins: [TAILNET] });
+    const ok = await call('GET', '/health', undefined, { origin: TAILNET });
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get('access-control-allow-origin')).toBe(TAILNET);
+
+    const lookalike = await call('GET', '/health', undefined, { origin: `${TAILNET}.evil.example` });
+    expect(lookalike.status).toBe(403);
+  });
+});
+
+describe('parseExtraOrigins', () => {
+  test('splits, trims and drops empties and trailing slashes', () => {
+    expect(parseExtraOrigins(' https://a.ts.net/ ,,https://b.ts.net ')).toEqual([
+      'https://a.ts.net',
+      'https://b.ts.net',
+    ]);
+    expect(parseExtraOrigins(undefined)).toEqual([]);
+  });
+});
 
 describe('health', () => {
   test('reports version, networks and session count', async () => {

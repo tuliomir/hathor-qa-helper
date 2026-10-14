@@ -70,6 +70,11 @@ Behaviour worth knowing:
 - **It holds seeds.** The client sends testnet seeds, and wallets keep them in memory until they are deleted or the server stops. Seeds are never logged or returned. Use test wallets only.
 - **Browser guards.** Only loopback origins pass: `http://localhost:<port>` and `http://127.0.0.1:<port>`, any port (`isAllowedOrigin` in `src/app.ts`). Any other `Origin` is refused with 403 before routing, because a "simple" cross-site POST skips preflight. Requests whose `Host` is not `localhost`/`127.0.0.1` are refused too, whatever their `Origin`, which blocks DNS rebinding. Requests without an `Origin` (curl) are allowed.
 - **The Vite proxy forwards `Origin`.** `/qa-server` requests from the dev client reach the server with the browser's `Origin` (e.g. `http://localhost:5184`); `changeOrigin` only rewrites `Host`. That is why every loopback port is accepted: a dev client on a port other than 5173 used to get `FORBIDDEN`.
+- **Sharing the dev client over a tailnet.** When the client is opened through another origin, e.g. `tailscale serve` in front of Vite, set `QA_SERVER_EXTRA_ORIGINS` to that origin (comma-separated, matched exactly, no wildcards). Vite also needs to accept the host: `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=<name>.ts.net`. Anyone who can reach that URL can drive the server's wallets, so keep it to your own tailnet and test wallets.
+
+  ```bash
+  QA_SERVER_EXTRA_ORIGINS=https://<machine>.<tailnet>.ts.net bun run dev:server
+  ```
 
 ## The tx-mining global
 
