@@ -73,8 +73,12 @@ export default defineConfig({
     //
     // ct-crypto-wasm loads its .wasm via `new URL(..., import.meta.url)`.
     // Pre-bundling moves the JS into .vite/deps and breaks that relative
-    // URL, so it must be served as-is.
+    // URL, so it must be served as-is. Its CommonJS dependency
+    // ct-crypto-provider then has to be pre-bundled explicitly, or the
+    // browser gets raw CJS and the named import AbstractShieldedProvider
+    // fails at runtime.
     exclude: ['@hathor/ct-crypto-wasm'],
+    include: ['@hathor/ct-crypto-wasm > @hathor/ct-crypto-provider'],
   },
   build: {
     // Disable modulepreload to prevent WalletConnect from loading before dynamic import
