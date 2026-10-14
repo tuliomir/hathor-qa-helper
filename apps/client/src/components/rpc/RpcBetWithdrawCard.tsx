@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { AmountInput } from '../common/AmountInput';
 import { nanoTxHash } from '../../utils/nanoRpcRequests';
 import type { NetworkKey } from '../../constants/network';
@@ -53,7 +54,7 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
   pushTx,
   setPushTx,
 }) => (
-  <MethodCard
+  <RpcMethodCard
     title="Withdraw prize"
     description="Withdraw the prize from a bet contract once its result is set."
     liveRequest={liveRequest}
@@ -61,7 +62,6 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
     isDryRun={isDryRun}
     onExecute={onExecute}
     disabledReason={disabledReason}
-    isMainnet={false}
     getTxHash={nanoTxHash}
     explorerNetwork={network}
     renderResponse={(r) => <NanoResponse response={r} network={network} />}
@@ -100,5 +100,5 @@ export const RpcBetWithdrawCard: React.FC<RpcBetWithdrawCardProps> = ({
         },
       ]}
     />
-  </MethodCard>
+  </RpcMethodCard>
 );

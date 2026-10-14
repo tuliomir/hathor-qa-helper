@@ -26,7 +26,7 @@ interface SessionStruct {
 }
 import { clearDeepLink, setDeepLink, showDeepLinkModal } from './deepLinkSlice';
 import { addToast } from './toastSlice';
-import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
+import { DEFAULT_PROJECT_ID, HATHOR_MAINNET_CHAIN } from '../../constants/walletConnect';
 import type { RootState } from '../index';
 
 interface WalletConnectState {
@@ -350,6 +350,14 @@ export const selectWalletConnectSession = (state: { walletConnect: WalletConnect
 
 export const selectIsWalletConnectConnected = (state: { walletConnect: WalletConnectState }) =>
   !!state.walletConnect.session;
+
+/**
+ * Whether the RPC session can act on mainnet: the wallet approved the
+ * mainnet chain. QA Helper requests `hathor:testnet` only, so RPC actions
+ * never arm for mainnet whatever the active network is.
+ */
+export const selectRpcSessionIsMainnet = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
+  state.walletConnect.chains.includes(HATHOR_MAINNET_CHAIN);
 
 export const selectWalletConnectFirstAddress = (state: { walletConnect: WalletConnectState }) => {
   const session = state.walletConnect.session;

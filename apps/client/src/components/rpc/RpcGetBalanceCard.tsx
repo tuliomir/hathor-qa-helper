@@ -5,7 +5,8 @@
 import React from 'react';
 import { MdRefresh } from 'react-icons/md';
 import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import { DataTable } from '../ui/DataTable';
 import { formatAmount } from '../../utils/amount';
@@ -83,7 +84,7 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   onRefresh,
   isRefreshing = false,
 }) => (
-  <MethodCard
+  <RpcMethodCard
     title="Get balance"
     liveRequest={buildGetBalanceRequest(tokens.map((t) => t.uid))}
     methodData={methodData}
@@ -122,5 +123,5 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
         ]}
       />
     </div>
-  </MethodCard>
+  </RpcMethodCard>
 );

@@ -4,7 +4,8 @@
 
 import React from 'react';
 import { MdArrowForward } from 'react-icons/md';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import CopyButton from '../common/CopyButton';
 import { Field } from '../ui/Field';
@@ -52,7 +53,7 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
   const signature = methodData?.response ? oracleSignatureOf(methodData.response) : null;
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Sign oracle data"
       actionLabel="Sign data"
       liveRequest={buildSignOracleDataRequest(ncId, oracleAddress, data)}
@@ -147,6 +148,6 @@ export const RpcSignOracleDataCard: React.FC<RpcSignOracleDataCardProps> = ({
           placeholder="Result_1"
         />
       </Field>
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

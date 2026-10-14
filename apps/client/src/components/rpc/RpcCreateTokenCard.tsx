@@ -6,7 +6,8 @@
 import React, { useEffect, useState } from 'react';
 import { MdAdd, MdClose } from 'react-icons/md';
 import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { AddressInput } from '../common/AddressInput';
@@ -119,7 +120,7 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
   };
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Create token"
       liveRequest={buildCreateTokenRequest(params)}
       methodData={methodData}
@@ -212,6 +213,6 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
           </div>
         ))}
       </div>
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

@@ -3,7 +3,8 @@
  */
 
 import React, { useState } from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import CopyButton from '../common/CopyButton';
 import { Field } from '../ui/Field';
@@ -41,7 +42,7 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   };
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Sign message"
       liveRequest={buildSignWithAddressRequest(message, isNaN(index) ? 0 : index)}
       methodData={methodData}
@@ -99,6 +100,6 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
           onChange={(e) => setAddressIndex(e.target.value)}
         />
       </Field>
-    </MethodCard>
+    </RpcMethodCard>
   );
 };

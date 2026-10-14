@@ -4,7 +4,8 @@
 
 import React from 'react';
 import type { AddressRequestType } from '../../store/slices/getAddressSlice';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import { Field } from '../ui/Field';
 import { SegmentedControl } from '../ui/SegmentedControl';
@@ -47,7 +48,7 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
   onIndexValueChange,
   inspectExtra,
 }) => (
-  <MethodCard
+  <RpcMethodCard
     title="Get address"
     liveRequest={buildGetAddressRequest(requestType, indexValue)}
     methodData={methodData}
@@ -94,5 +95,5 @@ export const RpcGetAddressCard: React.FC<RpcGetAddressCardProps> = ({
         />
       </Field>
     )}
-  </MethodCard>
+  </RpcMethodCard>
 );

@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Field } from '../ui/Field';
 import { nanoTxHash } from '../../utils/nanoRpcRequests';
 import type { NetworkKey } from '../../constants/network';
@@ -57,7 +58,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
   setPushTx,
   onNavigateToSignOracleData,
 }) => (
-  <MethodCard
+  <RpcMethodCard
     title="Set bet result"
     description="Set the result of a bet contract, signed by its oracle."
     liveRequest={liveRequest}
@@ -65,7 +66,6 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
     isDryRun={isDryRun}
     onExecute={onExecute}
     disabledReason={disabledReason}
-    isMainnet={false}
     getTxHash={nanoTxHash}
     explorerNetwork={network}
     renderResponse={(r) => <NanoResponse response={r} network={network} />}
@@ -132,5 +132,5 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
         },
       ]}
     />
-  </MethodCard>
+  </RpcMethodCard>
 );

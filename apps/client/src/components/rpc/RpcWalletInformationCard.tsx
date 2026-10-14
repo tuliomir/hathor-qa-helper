@@ -3,7 +3,8 @@
  */
 
 import React from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
 import { ResponseFields } from './ResponseFields';
 import { unwrapResponse, WALLET_INFORMATION_REQUEST } from '../../utils/rpcCoreRequests';
@@ -21,7 +22,7 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
   isDryRun,
   disabledReason = null,
 }) => (
-  <MethodCard
+  <RpcMethodCard
     title="Get wallet information"
     description="The wallet's network and first address (address0)."
     liveRequest={WALLET_INFORMATION_REQUEST}
@@ -43,5 +44,5 @@ export const RpcWalletInformationCard: React.FC<RpcWalletInformationCardProps> =
     }}
   >
     <p className="m-0 text-body text-ink-muted">No parameters besides the network.</p>
-  </MethodCard>
+  </RpcMethodCard>
 );

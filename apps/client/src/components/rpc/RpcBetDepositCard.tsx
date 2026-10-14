@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { MethodCard, type MethodData } from '../common/MethodCard';
+import type { MethodData } from '../common/MethodCard';
+import { RpcMethodCard } from './RpcMethodCard';
 import { AmountInput } from '../common/AmountInput';
 import { Field } from '../ui/Field';
 import { nanoTxHash } from '../../utils/nanoRpcRequests';
@@ -76,7 +77,7 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
   const tokenInfo = tokens.find((t) => t.uid === token);
 
   return (
-    <MethodCard
+    <RpcMethodCard
       title="Place bet"
       description="Deposit tokens on a result of an existing bet contract."
       liveRequest={liveRequest}
@@ -84,7 +85,6 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
       isDryRun={isDryRun}
       onExecute={onExecute}
       disabledReason={disabledReason}
-      isMainnet={false}
       getTxHash={nanoTxHash}
       explorerNetwork={network}
       renderResponse={(r) => <NanoResponse response={r} network={network} />}
@@ -141,6 +141,6 @@ export const RpcBetDepositCard: React.FC<RpcBetDepositCardProps> = ({
           },
         ]}
       />
-    </MethodCard>
+    </RpcMethodCard>
   );
 };
