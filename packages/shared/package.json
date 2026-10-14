@@ -1,0 +1,17 @@
+{
+  "name": "@qa-helper/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./networks": "./src/networks.ts",
+    "./serverApi": "./src/serverApi.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test tests/"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

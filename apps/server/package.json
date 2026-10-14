@@ -1,0 +1,19 @@
+{
+  "name": "@qa-helper/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test --pass-with-no-tests tests/"
+  },
+  "dependencies": {
+    "@qa-helper/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "~5.9.3"
+  }
+}

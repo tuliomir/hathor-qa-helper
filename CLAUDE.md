@@ -1,20 +1,30 @@
 # QA Helper — Hathor Wallet Testing Tool
 
-React + TypeScript + Redux Toolkit + Vite app for testing Hathor wallet-lib, WalletConnect RPC, and MetaMask Snap integration.
+Bun-workspaces monorepo for testing Hathor wallet-lib, WalletConnect RPC, MetaMask Snap integration and Shielded Outputs.
+
+| Workspace | What |
+|---|---|
+| `apps/client` | React + TypeScript + Redux Toolkit + Vite app (the QA Helper UI) |
+| `apps/server` | Local Bun server for what browsers can't do — shielded sends (see `knowledge/server.md`) |
+| `packages/shared` | Network registry and client↔server API contract (`@qa-helper/shared`) |
+
+Unless stated otherwise, `src/`, `tests/` and `e2e/` paths in this file and in `knowledge/` are relative to `apps/client/`. Layout details: `knowledge/monorepo.md`.
 
 ## Commands
 
-Only use `bun` — `npx` and `yarn` are forbidden.
+Only use `bun` — `npx` and `yarn` are forbidden. Run these from the repo root; they delegate to workspaces with `bun --filter`.
 
 | Command | Purpose |
 |---|---|
-| `bun dev` | Dev server on localhost:5173 |
-| `bun run build` | Production build (`tsc -b && vite build`) |
-| `bun run typecheck` | TypeScript check (`tsc --noEmit`) |
-| `bun lint` / `bun lint:fix` | ESLint |
-| `bun format` / `bun format:check` | Prettier |
-| `bun test` | Unit tests (bun test runner, `tests/` dir) |
-| `bun run test:e2e` | Playwright e2e (`e2e/` dir) |
+| `bun dev` | Client dev server on localhost:5173 |
+| `bun run dev:server` | QA server on 127.0.0.1:5180 |
+| `bun run dev:all` | Client and server together |
+| `bun run build` | Client production build (`tsc -b && vite build`) |
+| `bun run typecheck` | TypeScript check in every workspace |
+| `bun lint` / `bun lint:fix` | ESLint (client) |
+| `bun format` / `bun format:check` | Prettier (all workspaces) |
+| `bun run test` | Unit tests in every workspace (each has a `tests/` dir) |
+| `bun run test:e2e` | Playwright e2e (`apps/client/e2e/`) |
 
 ## Domain Glossary
 
@@ -75,6 +85,7 @@ In-depth guides live in `knowledge/`:
 
 | Doc | Topic |
 |---|---|
+| `monorepo.md` | Workspace layout, shared package rules, deployment (incl. planned server hosting) |
 | `architecture.md` | System structure, Redux patterns, two integration paths (RPC vs Snap) |
 | `creating-stages.md` | Step-by-step guide for adding new stages (RPC and Snap paths) |
 | `wallet-state-management.md` | Redux + external map pattern, wallet lifecycle, thunks |
