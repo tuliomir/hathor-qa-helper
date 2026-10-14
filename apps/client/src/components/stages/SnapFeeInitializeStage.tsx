@@ -21,7 +21,7 @@ export const SnapFeeInitializeStage: React.FC = () => {
 
   const snapAddress = useSelector(selectSnapAddress);
 
-  const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.feeBlueprintId);
+  const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.blueprints?.fee ?? '');
   const [htrAmount, setHtrAmount] = useState('2');
   const [changeAddress, setChangeAddress] = useState(snapAddress ?? '');
 

@@ -17,7 +17,7 @@ import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/wa
 import type { Token } from '../../store/slices/tokensSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
-import type { NetworkType } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
 import Loading from '../common/Loading';
 import { ExplorerLink } from '../common/ExplorerLink';
@@ -109,7 +109,7 @@ function TokenRow({
           <ExplorerLink
             hash={token.uid}
             specificPage="token_detail"
-            network={network as NetworkType}
+            network={network as NetworkKey}
             className="!px-1 !py-0.5"
           />
         </div>

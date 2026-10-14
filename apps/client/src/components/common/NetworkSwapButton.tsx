@@ -4,13 +4,13 @@
  */
 
 import { MdSwapVert } from 'react-icons/md';
-import type { NetworkType } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 
 interface NetworkSwapButtonProps {
   walletId: string;
-  currentNetwork: NetworkType;
+  currentNetwork: NetworkKey;
   walletStatus: string;
-  onSwap: (walletId: string, currentNetwork: NetworkType, status: string) => void | Promise<void>;
+  onSwap: (walletId: string, currentNetwork: NetworkKey, status: string) => void | Promise<void>;
   className?: string;
   disabled?: boolean;
 }

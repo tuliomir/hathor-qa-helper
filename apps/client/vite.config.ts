@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -46,6 +46,17 @@ export default defineConfig({
         ws: true,
         rewrite: (path) => path.replace(/^\/hathor-node\/mainnet/, ''),
       },
+      '/hathor-node/shielded': {
+        target: 'https://node1.shielded-outputs.testnet.hathor.network',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/hathor-node\/shielded/, ''),
+      },
+      // Local QA server (apps/server). It strips the /qa-server prefix itself.
+      '/qa-server': {
+        target: 'http://127.0.0.1:5180',
+        changeOrigin: true,
+      },
       '/swap-tokens': {
         target: 'https://wallet.swap.allowed-tokens.hathor.network',
         changeOrigin: true,
@@ -70,4 +81,4 @@ export default defineConfig({
     // This is crucial to avoid SES lockdown conflicts with polyfills
     modulePreload: false,
   },
-})
+});

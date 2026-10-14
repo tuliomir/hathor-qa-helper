@@ -6,15 +6,15 @@
  * Push Notifications stages.
  */
 
-import type { NetworkType } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 import NetworkSwapButton from './NetworkSwapButton';
 
 interface WalletNetworkControlProps {
   walletId: string;
-  network: NetworkType;
+  network: NetworkKey;
   status: string;
   error?: string | null;
-  onSwapNetwork: (walletId: string, currentNetwork: NetworkType, status: string) => void | Promise<void>;
+  onSwapNetwork: (walletId: string, currentNetwork: NetworkKey, status: string) => void | Promise<void>;
   onForceStop?: (walletId: string) => void | Promise<void>;
 }
 

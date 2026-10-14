@@ -41,7 +41,7 @@ export const BetInitializeStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.betBlueprintId);
+  const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.blueprints?.bet ?? '');
   const [oracleAddress, setOracleAddress] = useState<string>('');
   const [token, setToken] = useState<string>(NATIVE_TOKEN_UID);
   const [deadline, setDeadline] = useState<string>(() => {

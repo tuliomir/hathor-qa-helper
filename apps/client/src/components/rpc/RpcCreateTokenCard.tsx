@@ -12,7 +12,7 @@ import DryRunCheckbox from '../common/DryRunCheckbox';
 import Select from '../common/Select';
 import { RpcRequestPreview } from './RpcRequestPreview';
 import type { CreateTokenParams, CreateTokenVersion } from '../../services/rpcHandlers';
-import type { NetworkType } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 import { LoadingOverlay } from '../common/LoadingOverlay';
 import { extractErrorMessage } from '../../utils/errorUtils';
 import { BASE_NAME, BASE_SYMBOL, VERSION_DEFAULTS, swapVersionSuffix } from '../../utils/createTokenDefaults';
@@ -23,7 +23,7 @@ export interface RpcCreateTokenCardProps {
   isDryRun?: boolean;
   walletAddress?: string | null;
   fundingWalletAddress?: string | null;
-  network?: NetworkType;
+  network?: NetworkKey;
   initialRequest?: { method: string; params: unknown } | null;
   initialResponse?: unknown | null;
   initialError?: string | null;

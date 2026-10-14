@@ -24,7 +24,7 @@ export const SnapBetInitializeStage: React.FC = () => {
   const snapAddress = useSelector(selectSnapAddress);
 
   // Form state
-  const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.betBlueprintId);
+  const [blueprintId, setBlueprintId] = useState(NETWORK_CONFIG.TESTNET.blueprints?.bet ?? '');
   const [oracleAddress, setOracleAddress] = useState(snapAddress ?? '');
   const [token, setToken] = useState('00');
   const [deadline, setDeadline] = useState<string>(() => {

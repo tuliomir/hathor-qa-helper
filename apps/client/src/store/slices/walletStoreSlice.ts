@@ -9,7 +9,7 @@ import type { WalletStatus } from '../../types/wallet';
 import type { RootState } from '../index';
 import HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import Connection from '@hathor/wallet-lib/lib/new/connection.js';
-import { NETWORK_CONFIG, type NetworkType, WALLET_CONFIG, WALLET_SCAN_POLICY } from '../../constants/network';
+import { NETWORK_CONFIG, type NetworkKey, WALLET_CONFIG, WALLET_SCAN_POLICY } from '../../constants/network';
 import { treatSeedWords } from '../../utils/walletUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
@@ -637,7 +637,7 @@ const walletStoreSlice = createSlice({
       }
     },
 
-    updateNetwork: (state, action: PayloadAction<{ id: string; network: NetworkType }>) => {
+    updateNetwork: (state, action: PayloadAction<{ id: string; network: NetworkKey }>) => {
       const { id, network } = action.payload;
       const walletInfo = state.wallets[id];
 

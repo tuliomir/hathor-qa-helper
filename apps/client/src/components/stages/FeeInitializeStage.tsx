@@ -40,7 +40,7 @@ export const FeeInitializeStage: React.FC = () => {
 
   // Local state
   const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-  const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.feeBlueprintId);
+  const [blueprintId, setBlueprintId] = useState<string>(NETWORK_CONFIG.TESTNET.blueprints?.fee ?? '');
   const [amount, setAmount] = useState<string>('2');
   const [changeAddress, setChangeAddress] = useState<string>('');
   const [addressIndex, setAddressIndex] = useState<number>(0);

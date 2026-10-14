@@ -3,7 +3,7 @@
  */
 
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
-import type { NetworkType } from '../constants/network';
+import type { NetworkKey } from '../constants/network';
 
 export type WalletStatus = 'idle' | 'connecting' | 'syncing' | 'ready' | 'error';
 
@@ -16,7 +16,7 @@ export interface WalletState {
 
 export interface WalletConfig {
   seed: string;
-  network: NetworkType;
+  network: NetworkKey;
   password?: string;
   pinCode?: string;
   connectionTimeout?: number;
@@ -24,7 +24,7 @@ export interface WalletConfig {
 
 export interface WalletProps {
   seedPhrase: string;
-  network: NetworkType;
+  network: NetworkKey;
   walletId?: string; // Optional ID to integrate with global wallet store
   onStatusChange?: (state: WalletState) => void;
   onWalletReady?: (wallet: HathorWallet) => void;

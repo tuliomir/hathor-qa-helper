@@ -41,7 +41,7 @@ import NetworkSwapButton from '../common/NetworkSwapButton';
 import Select from '../common/Select';
 import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
-import type { NetworkType } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 import { getAddressesForWallet } from '../../services/addressDatabase';
 
 const DEFAULT_WALLETS_KEY = 'qa-helper-default-wallets';
@@ -53,7 +53,7 @@ export default function WalletInitialization() {
 
   const [seedInput, setSeedInput] = useState('');
   const [walletName, setWalletName] = useState('');
-  const [network, setNetwork] = useState<NetworkType>('TESTNET');
+  const [network, setNetwork] = useState<NetworkKey>('TESTNET');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [invalidWords, setInvalidWords] = useState<string[]>([]);
   const [pastedImageUrl, setPastedImageUrl] = useState<string | null>(null);
@@ -231,7 +231,7 @@ export default function WalletInitialization() {
   };
 
   const handleNetworkChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setNetwork(e.target.value as NetworkType);
+    setNetwork(e.target.value as NetworkKey);
   };
 
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -335,8 +335,8 @@ export default function WalletInitialization() {
     localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(defaults));
   };
 
-  const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkType, status: string) => {
-    const newNetwork: NetworkType = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
+  const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkKey, status: string) => {
+    const newNetwork: NetworkKey = currentNetwork === 'TESTNET' ? 'MAINNET' : 'TESTNET';
 
     // Stop the wallet if it's running in any state
     if (status === 'ready' || status === 'connecting' || status === 'syncing') {
