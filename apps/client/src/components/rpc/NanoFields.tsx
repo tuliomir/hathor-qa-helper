@@ -6,6 +6,7 @@ import React from 'react';
 import { MdOpenInNew } from 'react-icons/md';
 import { Field } from '../ui/Field';
 import { Callout } from '../ui/Callout';
+import { AmountInput } from '../common/AmountInput';
 import { Identifier, type IdentifierKind } from '../common/Identifier';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import type { NetworkKey } from '../../constants/network';
@@ -28,6 +29,48 @@ export function PushTxToggle({ checked, onChange }: { checked: boolean; onChange
           ? 'The wallet broadcasts the transaction.'
           : 'The wallet returns the transaction without broadcasting it.'}
       </span>
+    </div>
+  );
+}
+
+/** "Contract pays fees" toggle plus the HTR the contract withdraws to pay them. */
+export function ContractPaysFeesFields({
+  checked,
+  onChange,
+  htrAmount,
+  onHtrAmountChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  /** HTR base units. */
+  htrAmount: string;
+  onHtrAmountChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <label className="flex cursor-pointer items-center gap-2 text-body font-medium">
+          <input
+            type="checkbox"
+            className="toggle toggle-sm"
+            checked={checked}
+            onChange={(e) => onChange(e.target.checked)}
+          />
+          Contract pays fees
+        </label>
+        <span className="text-caption text-ink-muted">
+          The contract pays the transaction fee through an HTR withdrawal.
+        </span>
+      </div>
+      {checked && (
+        <AmountInput
+          value={htrAmount}
+          onChange={onHtrAmountChange}
+          label="HTR withdrawn for fees"
+          className="sm:max-w-xs"
+          allowZero
+        />
+      )}
     </div>
   );
 }
