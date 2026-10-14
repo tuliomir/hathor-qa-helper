@@ -1,449 +1,104 @@
 /**
- * RPC Sign with Address Card Component
- *
- * Card for testing htr_signWithAddress RPC call
+ * RPC Sign with Address Card — htr_signWithAddress.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useToast } from '../../hooks/useToast';
+import React, { useState } from 'react';
+import { MethodCard, type MethodData } from '../common/MethodCard';
+import { Identifier } from '../common/Identifier';
 import CopyButton from '../common/CopyButton';
-import DryRunCheckbox from '../common/DryRunCheckbox';
-import { RpcRequestPreview } from './RpcRequestPreview';
-import { LoadingOverlay } from '../common/LoadingOverlay';
-import { extractErrorMessage } from '../../utils/errorUtils';
+import { Field } from '../ui/Field';
+import { ResponseFields } from './ResponseFields';
+import { buildSignWithAddressRequest, unwrapResponse } from '../../utils/rpcCoreRequests';
 
-/**
- * Helper function to safely stringify objects containing BigInt values
- */
-const safeStringify = (obj: unknown, space?: number): string => {
-  return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
-};
+interface SignatureResponse {
+  message?: string;
+  signature?: string;
+  address?: { address?: string; index?: number; addressPath?: string };
+}
 
 export interface RpcSignWithAddressCardProps {
-  onExecute: (message: string, addressIndex: number) => Promise<{ request: unknown; response: unknown }>;
-  disabled?: boolean;
-  isDryRun?: boolean;
-  // Persisted data from Redux
-  initialRequest?: { method: string; params: unknown } | null;
-  initialResponse?: unknown | null;
-  initialError?: string | null;
+  onExecute: (message: string, addressIndex: number) => Promise<unknown>;
+  methodData: MethodData | null;
+  isDryRun: boolean;
+  disabledReason?: string | null;
 }
 
 export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
   onExecute,
-  disabled = false,
-  isDryRun = false,
-  initialRequest = null,
-  initialResponse = null,
-  initialError = null,
+  methodData,
+  isDryRun,
+  disabledReason = null,
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<unknown>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [requestInfo, setRequestInfo] = useState<{ method: string; params: unknown } | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [showRawResponse, setShowRawResponse] = useState(false);
-  const { showToast } = useToast();
-
-  // Form state
   const [message, setMessage] = useState('Hello, Hathor!');
   const [addressIndex, setAddressIndex] = useState('0');
+  const index = parseInt(addressIndex, 10);
+  const indexError = isNaN(index) || index < 0 ? 'Enter a non-negative whole number.' : undefined;
 
-  const liveRequest = useMemo(
-    () => ({
-      method: 'htr_signWithAddress',
-      params: {
-        network: 'testnet',
-        message,
-        addressIndex: parseInt(addressIndex, 10) || 0,
-      },
-    }),
-    [message, addressIndex]
-  );
-
-  // Load persisted data from Redux when component mounts or when initial data changes
-  useEffect(() => {
-    if (initialRequest) {
-      setRequestInfo(initialRequest);
-    }
-    if (initialResponse) {
-      setResult(initialResponse);
-      setExpanded(true);
-    }
-    if (initialError) {
-      setError(initialError);
-      setExpanded(true);
-    }
-  }, [initialRequest, initialResponse, initialError]);
-
-  const handleExecute = async () => {
-    const index = parseInt(addressIndex, 10);
-
-    if (isNaN(index) || index < 0) {
-      const errorMsg = 'Address index must be a valid non-negative number';
-      setError(errorMsg);
-      showToast(errorMsg, 'error');
-      return;
-    }
-
-    if (!message.trim()) {
-      const errorMsg = 'Message cannot be empty';
-      setError(errorMsg);
-      showToast(errorMsg, 'error');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setRequestInfo(null);
-
-    try {
-      const { request, response } = await onExecute(message, index);
-
-      // Store request and response separately
-      setRequestInfo(request as { method: string; params: unknown });
-      setResult(response);
-      setExpanded(true);
-
-      console.log(`[RPC Request] Sign with Address`, request);
-      console.log(`[RPC Success] Sign with Address`, response);
-
-      showToast(isDryRun ? 'Request generated (not sent to RPC)' : 'Message signed successfully', 'success');
-    } catch (err: unknown) {
-      console.error('Error in handleExecute:', err);
-      const errorMessage = extractErrorMessage(err);
-      setError(errorMessage);
-      setExpanded(true);
-
-      // Capture request params from error if available
-      if (err && typeof err === 'object' && 'requestParams' in err) {
-        setRequestInfo(err.requestParams as { method: string; params: unknown });
-      }
-
-      console.error(`[RPC Error] Sign with Address`, {
-        message: errorMessage,
-        error: err,
-        requestParams: err && typeof err === 'object' && 'requestParams' in err ? err.requestParams : undefined,
-      });
-
-      showToast(errorMessage, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const hasResult = result !== null || error !== null;
-
-  // Check if result has the expected signature response structure
-  const isSignatureResponse = (
-    data: unknown
-  ): data is {
-    type?: number;
-    response?: { message?: string; signature?: string; address?: string };
-    message?: string;
-    signature?: string;
-    address?: string;
-  } => {
-    // Check if it's the full response with type field
-    if (
-      data &&
-      typeof data === 'object' &&
-      'type' in data &&
-      (data as { type?: number }).type === 1 &&
-      'response' in data
-    ) {
-      const response = (data as { response?: unknown }).response;
-      return !!(
-        response &&
-        typeof response === 'object' &&
-        'message' in response &&
-        'signature' in response &&
-        'address' in response
-      );
-    }
-    // Or if it's just the response data directly
-    return !!(data && typeof data === 'object' && 'message' in data && 'signature' in data && 'address' in data);
-  };
-
-  // Render formatted signature response
-  const renderFormattedResponse = (parsedResult: unknown) => {
-    if (!isSignatureResponse(parsedResult)) {
-      return null;
-    }
-
-    // Extract the actual response data (handle both formats)
-    const responseData = ((parsedResult as { response?: unknown }).response || parsedResult) as {
-      message?: string;
-      signature?: string;
-      address?: { address?: string; index?: number; addressPath?: string };
-    };
-
-    return (
-      <div className="bg-green-50 border border-green-300 rounded p-4 mb-4">
-        <div className="flex items-center gap-2 text-green-700 mb-3">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span className="text-sm font-semibold">Message Signed Successfully</span>
-        </div>
-
-        <div className="space-y-3">
-          {/* Message */}
-          <div>
-            <div className="text-xs text-muted mb-1 font-semibold">Message</div>
-            <div className="bg-white border border-green-200 rounded p-2 font-mono text-sm break-words">
-              {responseData.message}
-            </div>
-          </div>
-
-          {/* Signature */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <div className="text-xs text-muted font-semibold">Signature</div>
-              <CopyButton text={responseData.signature || ''} label="Copy signature" />
-            </div>
-            <div className="bg-white border border-green-200 rounded p-2 font-mono text-xs break-all">
-              {responseData.signature}
-            </div>
-          </div>
-
-          {/* Address Details */}
-          <div>
-            <div className="text-xs text-muted mb-2 font-semibold">Signed with Address</div>
-            <div className="space-y-2">
-              <div className="bg-white border border-green-200 rounded p-2">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-xs text-muted">Address</div>
-                  <CopyButton text={responseData.address?.address || ''} label="Copy address" />
-                </div>
-                <div className="font-mono text-xs break-all">{responseData.address?.address}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white border border-green-200 rounded p-2">
-                  <div className="text-xs text-muted mb-1">Index</div>
-                  <div className="font-mono text-sm">{responseData.address?.index}</div>
-                </div>
-                <div className="bg-white border border-green-200 rounded p-2">
-                  <div className="text-xs text-muted mb-1">Address Path</div>
-                  <div className="font-mono text-xs">{responseData.address?.addressPath}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Render raw JSON view
-  const renderRawJson = (data: unknown) => {
-    try {
-      const parsedResult = typeof data === 'string' ? JSON.parse(data) : data;
-      const entries = Object.entries(parsedResult as Record<string, unknown>);
-
-      return (
-        <div className="space-y-3">
-          {entries.map(([key, value]) => (
-            <div key={key} className="border border-gray-300 rounded overflow-hidden">
-              <div className="bg-gray-100 px-3 py-2 border-b border-gray-300">
-                <span className="text-sm font-semibold text-primary break-all">{key}</span>
-              </div>
-              <div className="max-h-64 overflow-y-auto px-3 py-2">
-                <span className="text-sm font-mono break-all">
-                  {typeof value === 'object' ? safeStringify(value, 2) : String(value)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    } catch {
-      return (
-        <div className="border border-gray-300 rounded p-3 overflow-auto max-h-64">
-          <pre className="text-sm font-mono">{String(data)}</pre>
-        </div>
-      );
-    }
+  const handleExecute = () => {
+    if (indexError) throw new Error('Address index must be a valid non-negative number');
+    if (!message.trim()) throw new Error('Message cannot be empty');
+    return onExecute(message, index);
   };
 
   return (
-    <>
-      {/* Input Form */}
-      <div className="card-primary mb-7.5 relative">
-        {loading && <LoadingOverlay />}
-        <h3 className="text-lg font-bold mb-1">Sign with Address</h3>
-        <p className="text-sm text-muted mb-4">Sign a message using a specific address from your wallet</p>
-
-        <div className="space-y-4">
-          {/* Message Input */}
-          <div>
-            <label htmlFor="message" className="block text-sm font-medium mb-2">
-              Message to Sign
-            </label>
-            <textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter the message you want to sign..."
-              rows={4}
-              className="input font-mono resize-y"
-            />
-            <p className="text-xs text-muted mt-1">
-              Enter any text message that you want to sign with your wallet address
-            </p>
-          </div>
-
-          {/* Address Index Input */}
-          <div>
-            <label htmlFor="addressIndex" className="block text-sm font-medium mb-2">
-              Address Index
-            </label>
-            <input
-              id="addressIndex"
-              type="number"
-              min="0"
-              value={addressIndex}
-              onChange={(e) => setAddressIndex(e.target.value)}
-              placeholder="0"
-              className="input"
-            />
-            <p className="text-xs text-muted mt-1">Enter the address index (0 for first address, 1 for second, etc.)</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Execute Button */}
-      <div className="card-primary mb-7.5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold">Execute RPC Call</h3>
-            <p className="text-sm text-muted mt-1">
-              {isDryRun
-                ? 'Generate request (will not be sent to RPC server)'
-                : 'Send htr_signWithAddress request to RPC server'}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <DryRunCheckbox />
-            <button onClick={handleExecute} disabled={loading || disabled} className="btn-primary">
-              {loading ? 'Signing...' : 'Sign Message'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Request Section */}
-      <div className="card-primary mb-7.5">
-        <RpcRequestPreview liveRequest={liveRequest} sentRequest={requestInfo} />
-      </div>
-
-      {/* Response Section */}
-      {hasResult && (
-        <div className="card-primary mb-7.5">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-base font-bold text-primary hover:text-primary-dark flex items-center gap-2"
-            >
-              <span>{expanded ? '▼' : '▶'}</span>
-              {error ? 'Error Details' : 'Response'}
-            </button>
-            <div className="flex items-center gap-2">
-              {result && isSignatureResponse(typeof result === 'string' ? JSON.parse(result) : result) ? (
-                <button
-                  onClick={() => setShowRawResponse(!showRawResponse)}
-                  className="btn-secondary py-1.5 px-3 text-sm"
-                >
-                  {showRawResponse ? 'Show Formatted' : 'Show Raw'}
-                </button>
-              ) : null}
-              <CopyButton text={result ? (safeStringify(result, 2) as string) : error || ''} label="Copy response" />
-            </div>
-          </div>
-
-          {expanded && (
-            <div className="relative">
-              {isDryRun && result === null ? (
-                <div className="bg-purple-50 border border-purple-300 rounded p-4">
-                  <div className="flex items-center gap-2 text-purple-700 mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-                    </svg>
-                    <span className="text-sm font-medium">Dry Run Mode</span>
-                  </div>
-                  <p className="text-sm text-purple-700">
-                    The request was generated but not sent to the RPC server. Check the Request section above to see the
-                    parameters that would be sent.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {error ? (
-                    <div className="flex items-start gap-2 p-4 bg-red-50 border border-danger rounded">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-danger flex-shrink-0 mt-0.5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <p className="text-sm text-red-900 break-words">{error}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-success">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <span className="text-sm font-medium">Success</span>
-                      </div>
-                      {(() => {
-                        try {
-                          const parsedResult = typeof result === 'string' ? JSON.parse(result) : result;
-
-                          // Show raw or formatted based on toggle
-                          if (showRawResponse) {
-                            return renderRawJson(result);
-                          }
-
-                          // Show formatted if it's a signature response
-                          if (isSignatureResponse(parsedResult)) {
-                            return renderFormattedResponse(parsedResult);
-                          }
-
-                          // Otherwise show raw
-                          return renderRawJson(result);
-                        } catch {
-                          return renderRawJson(result);
-                        }
-                      })()}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </>
+    <MethodCard
+      title="Sign message"
+      liveRequest={buildSignWithAddressRequest(message, isNaN(index) ? 0 : index)}
+      methodData={methodData}
+      isDryRun={isDryRun}
+      onExecute={handleExecute}
+      disabledReason={disabledReason}
+      successToast="Message signed"
+      renderResponse={(response) => {
+        const r = unwrapResponse<SignatureResponse>(response);
+        if (!r?.signature) return undefined;
+        return (
+          <ResponseFields
+            fields={[
+              { label: 'Message', value: r.message && <span className="break-words">{r.message}</span> },
+              {
+                label: 'Signature',
+                value: (
+                  <span className="flex items-start gap-1">
+                    <span className="min-w-0 font-mono text-data [overflow-wrap:anywhere]">{r.signature}</span>
+                    <CopyButton text={r.signature} label="Copy signature" />
+                  </span>
+                ),
+              },
+              {
+                label: 'Address',
+                value: r.address?.address && <Identifier value={r.address.address} kind="address" />,
+              },
+              {
+                label: 'Index',
+                value: r.address?.index !== undefined && <span className="font-mono text-data">{r.address.index}</span>,
+              },
+              {
+                label: 'Path',
+                value: r.address?.addressPath && <span className="font-mono text-data">{r.address.addressPath}</span>,
+              },
+            ]}
+          />
+        );
+      }}
+    >
+      <Field label="Message" required error={message.trim() ? undefined : 'The message cannot be empty.'}>
+        <textarea
+          className="textarea w-full font-mono text-data"
+          rows={3}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+      </Field>
+      <Field label="Address index" hint="Index of the wallet address that signs. Starts at 0." error={indexError}>
+        <input
+          type="number"
+          min="0"
+          className="input w-40 font-mono"
+          value={addressIndex}
+          onChange={(e) => setAddressIndex(e.target.value)}
+        />
+      </Field>
+    </MethodCard>
   );
 };

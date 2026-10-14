@@ -3,6 +3,8 @@ import {
   buildGetAddressRequest,
   buildGetBalanceRequest,
   buildGetUtxosRequest,
+  buildSignOracleDataRequest,
+  oracleSignatureOf,
   toFilterNumber,
   unwrapResponse,
 } from '../src/utils/rpcCoreRequests';
@@ -59,5 +61,24 @@ describe('unwrapResponse', () => {
     expect(unwrapResponse({ address: 'H1' })).toEqual({ address: 'H1' });
     expect(unwrapResponse(null)).toBeNull();
     expect(unwrapResponse('x')).toBeNull();
+  });
+});
+
+describe('oracleSignatureOf', () => {
+  test('reads signedData.signature or a signedData string, wrapped or not', () => {
+    expect(oracleSignatureOf({ type: 9, response: { signedData: { signature: 'abc' } } })).toBe('abc');
+    expect(oracleSignatureOf({ signedData: { signature: 'def' } })).toBe('def');
+    expect(oracleSignatureOf({ response: { signedData: 'ghi' } })).toBe('ghi');
+    expect(oracleSignatureOf({ response: {} })).toBeNull();
+    expect(oracleSignatureOf(null)).toBeNull();
+  });
+});
+
+describe('buildSignOracleDataRequest', () => {
+  test('mirrors the handler params', () => {
+    expect(buildSignOracleDataRequest('nc', 'WAddr', 'Result_1')).toEqual({
+      method: 'htr_signOracleData',
+      params: { network: 'testnet', nc_id: 'nc', data: 'Result_1', oracle: 'WAddr' },
+    });
   });
 });

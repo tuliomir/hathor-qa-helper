@@ -56,3 +56,22 @@ export function unwrapResponse<T>(response: unknown): T | null {
   const r = response as { response?: unknown };
   return (r.response && typeof r.response === 'object' ? r.response : response) as T;
 }
+
+export function buildSignWithAddressRequest(message: string, addressIndex: number) {
+  return { method: 'htr_signWithAddress', params: { network: NETWORK, message, addressIndex } };
+}
+
+export function buildSignOracleDataRequest(ncId: string, oracle: string, data: string) {
+  return { method: 'htr_signOracleData', params: { network: NETWORK, nc_id: ncId, data, oracle } };
+}
+
+/** The oracle signature in an htr_signOracleData response, wrapped or not. */
+export function oracleSignatureOf(response: unknown): string | null {
+  const r = unwrapResponse<{ signedData?: unknown }>(response);
+  const signed = r?.signedData;
+  if (typeof signed === 'string') return signed;
+  if (signed && typeof signed === 'object' && typeof (signed as { signature?: unknown }).signature === 'string') {
+    return (signed as { signature: string }).signature;
+  }
+  return null;
+}
