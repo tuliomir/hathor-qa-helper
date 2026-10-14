@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import {
   MdSync,
+  MdClose,
   MdDelete,
   MdEdit,
   MdFilterList,
@@ -27,6 +28,10 @@ import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from './CopyButton';
 import NetworkSwapButton from './NetworkSwapButton';
 import NetworkChip from './NetworkChip';
+import { Identifier } from './Identifier';
+import { Callout } from '../ui/Callout';
+import { StatusChip } from '../ui/StatusChip';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 
 /**
  * Scan progress state passed from parent
@@ -205,40 +210,6 @@ export default function WalletBrowserModal({
     return sorted;
   }, [filteredWallets, sortByBalance, scanResults]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return 'text-success';
-      case 'error':
-        return 'text-danger';
-      case 'connecting':
-      case 'syncing':
-        return 'text-warning-ink';
-      default:
-        return 'text-muted';
-    }
-  };
-
-  const getRowBackgroundColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return 'bg-green-50';
-      case 'error':
-        return 'bg-red-50';
-      case 'connecting':
-      case 'syncing':
-        return 'bg-yellow-50';
-      default:
-        return '';
-    }
-  };
-
-  const truncateAddress = (addr: string, start = 3, end = 8) => {
-    if (!addr) return '';
-    if (addr.length <= start + end + 3) return addr;
-    return addr.slice(0, start) + '...' + addr.slice(-end);
-  };
-
   const firstNWords = (seed: string, n: number = 3) => {
     if (!seed) return '';
     const words = seed.trim().split(/\s+/);
@@ -258,334 +229,319 @@ export default function WalletBrowserModal({
     const customTokenCount = result.customTokenBalances.length;
 
     return (
-      <div className="text-xs mt-1 space-y-0.5">
-        <div className="text-success">HTR: {formatBalance(htrBalance)}</div>
+      <span className="flex flex-col text-caption">
+        <span className="font-mono tabular-nums">Scanned: {formatBalance(htrBalance)} HTR</span>
         {customTokenCount > 0 && (
-          <div className="text-info">
+          <span className="text-ink-muted">
             +{customTokenCount} token{customTokenCount > 1 ? 's' : ''}
-          </div>
+          </span>
         )}
-      </div>
+      </span>
     );
   };
 
   if (!isOpen) return null;
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
-
-      {/* Modal */}
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="wallet-browser-modal-title"
-      >
-        <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 id="wallet-browser-modal-title" className="text-2xl font-bold m-0">
-              All Wallets ({wallets.length})
-            </h2>
-            <div className="flex items-center gap-3">
-              {/* Cloud Sync Button */}
+  const columns: DataTableColumn<WalletInfo>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (wallet) => (
+        <span className="flex flex-col">
+          <span className="font-semibold">{wallet.metadata.friendlyName}</span>
+          {wallet.metadata.lastUsedAt && (
+            <span className="text-caption text-ink-muted">
+              Last used {new Date(wallet.metadata.lastUsedAt).toLocaleDateString()}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: 'seed',
+      header: 'Seed',
+      render: (wallet) => (
+        <span className="inline-flex items-center gap-1">
+          <span className="max-w-48 truncate font-mono text-data-sm text-ink-muted">
+            {firstNWords(wallet.metadata.seedWords, 3)}
+          </span>
+          <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} />
+          <button
+            type="button"
+            onClick={() => onShowSeedModal(wallet.metadata.id)}
+            title="Show QR code"
+            aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
+            className="btn btn-ghost btn-xs btn-square"
+          >
+            <MdQrCode aria-hidden="true" />
+          </button>
+        </span>
+      ),
+    },
+    {
+      key: 'network',
+      header: 'Network',
+      render: (wallet) => (
+        <span className="inline-flex items-center gap-1">
+          <NetworkChip network={wallet.metadata.network} size="sm" />
+          <NetworkSwapButton
+            walletId={wallet.metadata.id}
+            walletName={wallet.metadata.friendlyName}
+            currentNetwork={wallet.metadata.network}
+            walletStatus={wallet.status}
+            onSwap={onSwapNetwork}
+          />
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status / balance',
+      render: (wallet) => (
+        <span className="flex flex-col items-start gap-1">
+          <StatusChip status={wallet.status} />
+          {wallet.status === 'ready' && (
+            <span className="font-mono text-data tabular-nums">{formatBalance(wallet.balance ?? 0n)} HTR</span>
+          )}
+          {wallet.error && <span className="text-caption text-error">{wallet.error}</span>}
+          {wallet.status !== 'ready' && renderScanInfo(wallet.metadata.id)}
+        </span>
+      ),
+    },
+    {
+      key: 'address',
+      header: 'Address',
+      type: 'identifier',
+      render: (wallet) => {
+        // Runtime address when the wallet is running, else the one stored in the database.
+        const storedAddress = storedFirstAddresses?.[wallet.metadata.id];
+        const displayAddress = wallet.firstAddress || storedAddress;
+        if (!displayAddress) return <span className="text-ink-muted">None</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5">
+            <Identifier value={displayAddress} kind="address" walletTag={false} />
+            {!wallet.firstAddress && <span className="text-caption text-ink-muted">stored</span>}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'actions',
+      header: <span className="sr-only">Actions</span>,
+      type: 'actions',
+      hideLabelWhenStacked: true,
+      render: (wallet) => {
+        const name = wallet.metadata.friendlyName;
+        return (
+          <span className="inline-flex flex-wrap justify-end gap-1">
+            {wallet.status === 'idle' || wallet.status === 'error' ? (
               <button
-                onClick={handleCloudSync}
-                disabled={isSyncing}
-                className={`btn flex items-center gap-2 ${
-                  isSyncing ? 'btn-secondary cursor-not-allowed opacity-60' : 'btn-info'
-                }`}
-                title="Sync wallets between this machine and cloud"
+                type="button"
+                onClick={() => onStartWallet(wallet.metadata.id)}
+                title="Start"
+                aria-label={`Start ${name}`}
+                className="btn btn-primary btn-sm btn-square"
               >
-                {isSyncing ? (
-                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                ) : (
-                  <MdSync size={18} />
-                )}
-                {isSyncing ? 'Syncing...' : 'Sync Wallets'}
+                <MdPlayArrow aria-hidden="true" />
               </button>
-              {onScanForLostFunds && (
-                <button
-                  onClick={onScanForLostFunds}
-                  disabled={scanState?.isScanning}
-                  className={`btn flex items-center gap-2 ${
-                    scanState?.isScanning ? 'btn-secondary cursor-not-allowed opacity-60' : 'btn-primary'
-                  }`}
-                >
-                  <MdSearch size={18} />
-                  {scanState?.isScanning ? 'Scanning...' : 'Scan for Lost Funds'}
-                </button>
-              )}
+            ) : wallet.status === 'ready' ? (
               <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                aria-label="Close"
+                type="button"
+                onClick={() => onStopWallet(wallet.metadata.id)}
+                title="Stop"
+                aria-label={`Stop ${name}`}
+                className="btn btn-secondary btn-sm btn-square"
               >
-                ×
+                <MdStop aria-hidden="true" />
               </button>
-            </div>
-          </div>
-
-          {/* Cloud Sync Result Feedback */}
-          {syncResult && (
-            <div
-              className={`p-3 border-b ${
-                syncResult.success
-                  ? 'bg-green-50 border-green-200 text-green-700'
-                  : 'bg-red-50 border-red-200 text-red-700'
-              }`}
+            ) : (
+              <button
+                type="button"
+                disabled
+                aria-label={`${name} is ${wallet.status}`}
+                className="btn btn-secondary btn-sm btn-square"
+              >
+                <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onEditWallet(wallet.metadata.id, name)}
+              title="Rename"
+              aria-label={`Rename ${name}`}
+              className="btn btn-ghost btn-sm btn-square"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-medium">
-                  {syncResult.success ? '✓' : '✗'} {syncResult.message}
-                </span>
-                <button onClick={() => setSyncResult(null)} className="text-current opacity-60 hover:opacity-100">
-                  ×
+              <MdEdit aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onRemoveWallet(wallet.metadata.id)}
+              title="Remove"
+              aria-label={`Remove ${name}`}
+              className="btn btn-ghost btn-sm btn-square text-error"
+            >
+              <MdDelete aria-hidden="true" />
+            </button>
+          </span>
+        );
+      },
+    },
+  ];
+
+  return (
+    <div
+      className="modal modal-open"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wallet-browser-modal-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+    >
+      <div className="modal-box flex max-h-[90vh] w-full max-w-6xl flex-col gap-0 rounded-box border border-base-300 p-0 text-left shadow-float">
+        <header className="flex flex-wrap items-center gap-3 border-b border-base-300 px-5 py-4">
+          <h2 id="wallet-browser-modal-title" className="m-0 text-title">
+            All wallets <span className="font-mono text-ink-muted">({wallets.length})</span>
+          </h2>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCloudSync}
+              disabled={isSyncing}
+              className="btn btn-secondary btn-sm"
+              title="Sync wallets between this machine and the cloud"
+            >
+              {isSyncing ? (
+                <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+              ) : (
+                <MdSync aria-hidden="true" />
+              )}
+              {isSyncing ? 'Syncing…' : 'Sync wallets'}
+            </button>
+            {onScanForLostFunds && (
+              <button
+                type="button"
+                onClick={onScanForLostFunds}
+                disabled={scanState?.isScanning}
+                className="btn btn-primary btn-sm"
+              >
+                <MdSearch aria-hidden="true" />
+                {scanState?.isScanning ? 'Scanning…' : 'Scan for lost funds'}
+              </button>
+            )}
+            <button type="button" onClick={onClose} className="btn btn-ghost btn-sm btn-square" aria-label="Close">
+              <MdClose aria-hidden="true" />
+            </button>
+          </div>
+        </header>
+
+        <div className="flex flex-col gap-3 border-b border-base-300 px-5 py-4">
+          {syncResult && (
+            <Callout
+              tone={syncResult.success ? 'success' : 'error'}
+              role={syncResult.success ? 'status' : 'alert'}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setSyncResult(null)}
+                  className="btn btn-ghost btn-xs btn-square"
+                  aria-label="Dismiss"
+                >
+                  <MdClose aria-hidden="true" />
                 </button>
-              </div>
-            </div>
+              }
+            >
+              {syncResult.message}
+            </Callout>
           )}
 
-          {/* Scan Progress */}
           {scanState?.isScanning && (
-            <div className="p-4 bg-blue-50 border-b border-blue-200">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                  <span className="font-medium">Scanning: {scanState.currentWalletName || '...'}</span>
-                </div>
-                <span className="text-sm text-muted">
+            <div className="flex flex-col gap-1.5" role="status">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-body">
+                <span className="inline-flex items-center gap-2 font-medium">
+                  <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+                  Scanning {scanState.currentWalletName || '…'}
+                </span>
+                <span className="text-caption text-ink-muted">
                   {scanState.scannedCount} of {scanState.totalWallets} wallets
                   {scanState.estimatedRemainingMs
                     ? ` (${formatTimeRemaining(scanState.estimatedRemainingMs)} remaining)`
                     : ''}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${scanState.progress}%` }}
-                />
-              </div>
+              <progress className="progress progress-primary w-full" value={scanState.progress} max={100} />
             </div>
           )}
 
-          {/* Search and Filters */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="relative">
-              <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search by name, seed words, or address..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input pl-10 w-full"
-                autoFocus
-              />
+          <label className="input w-full">
+            <MdSearch className="h-4 w-4 flex-none text-ink-muted" aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Search by name, seed words or address"
+              aria-label="Search wallets"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="min-w-0 grow"
+              autoFocus
+            />
+          </label>
+
+          {(hasScanData || searchQuery) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {hasScanData && onToggleFilterHasBalance && (
+                <button
+                  type="button"
+                  onClick={onToggleFilterHasBalance}
+                  aria-pressed={!!filterHasBalance}
+                  className={`btn btn-sm ${filterHasBalance ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  <MdFilterList aria-hidden="true" />
+                  {filterHasBalance ? 'Showing with balance' : 'Show all'}
+                </button>
+              )}
+              {hasScanData && onToggleSortByBalance && (
+                <button
+                  type="button"
+                  onClick={onToggleSortByBalance}
+                  aria-pressed={!!sortByBalance}
+                  className={`btn btn-sm ${sortByBalance ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  <MdSort aria-hidden="true" />
+                  {sortByBalance ? 'Sorted by balance' : 'Sort by balance'}
+                </button>
+              )}
+              {searchQuery && (
+                <span className="text-caption text-ink-muted">
+                  Showing {filteredWallets.length} of {wallets.length} wallets
+                </span>
+              )}
             </div>
-
-            {/* Filter/Sort Controls */}
-            {hasScanData && (
-              <div className="flex items-center gap-4 mt-3">
-                {onToggleFilterHasBalance && (
-                  <button
-                    onClick={onToggleFilterHasBalance}
-                    className={`btn text-sm flex items-center gap-1.5 ${
-                      filterHasBalance ? 'btn-primary' : 'btn-secondary'
-                    }`}
-                  >
-                    <MdFilterList size={16} />
-                    {filterHasBalance ? 'Showing with balance' : 'Show all'}
-                  </button>
-                )}
-                {onToggleSortByBalance && (
-                  <button
-                    onClick={onToggleSortByBalance}
-                    className={`btn text-sm flex items-center gap-1.5 ${
-                      sortByBalance ? 'btn-primary' : 'btn-secondary'
-                    }`}
-                  >
-                    <MdSort size={16} />
-                    {sortByBalance ? 'Sorted by balance' : 'Sort by balance'}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {searchQuery && (
-              <p className="text-sm text-muted mt-2 mb-0">
-                Showing {filteredWallets.length} of {wallets.length} wallets
-              </p>
-            )}
-          </div>
-
-          {/* Table */}
-          <div className="flex-1 overflow-auto p-4">
-            {sortedWallets.length === 0 ? (
-              <div className="p-10 text-center text-muted">
-                <p className="text-lg m-0">
-                  {searchQuery
-                    ? 'No wallets match your search'
-                    : filterHasBalance
-                      ? 'No wallets with balance found'
-                      : 'No wallets registered'}
-                </p>
-              </div>
-            ) : (
-              <table className="w-full border-collapse bg-white">
-                <thead className="sticky top-0 bg-white z-10">
-                  <tr className="table-header">
-                    <th className="p-3 text-left font-bold">Name</th>
-                    <th className="p-3 text-left font-bold">Seed</th>
-                    <th className="p-3 text-left font-bold">Network</th>
-                    <th className="p-3 text-left font-bold">Status / Balance</th>
-                    <th className="p-3 text-left font-bold">Address</th>
-                    <th className="p-3 text-center font-bold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedWallets.map((wallet) => (
-                    <tr key={wallet.metadata.id} className={`table-row ${getRowBackgroundColor(wallet.status)}`}>
-                      <td className="p-3">
-                        <strong>{wallet.metadata.friendlyName}</strong>
-                        {wallet.metadata.lastUsedAt && (
-                          <div className="text-xs text-muted mt-1">
-                            Last used: {new Date(wallet.metadata.lastUsedAt).toLocaleDateString()}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3 font-mono text-xs text-muted">
-                        <div className="flex items-center gap-2">
-                          <span className="break-words max-w-[12rem] block font-mono">
-                            {firstNWords(wallet.metadata.seedWords, 3)}
-                          </span>
-                          <CopyButton
-                            text={wallet.metadata.seedWords}
-                            label={`Copy seed for ${wallet.metadata.friendlyName}`}
-                            className="text-muted"
-                          />
-                          <button
-                            onClick={() => onShowSeedModal(wallet.metadata.id)}
-                            title="Show QR Code"
-                            aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
-                            className="text-muted hover:text-primary transition-colors"
-                          >
-                            <MdQrCode size={16} />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <NetworkChip network={wallet.metadata.network} size="sm" />
-                          <NetworkSwapButton
-                            walletId={wallet.metadata.id}
-                            walletName={wallet.metadata.friendlyName}
-                            currentNetwork={wallet.metadata.network}
-                            walletStatus={wallet.status}
-                            onSwap={onSwapNetwork}
-                          />
-                        </div>
-                      </td>
-                      <td className={`p-3 ${getStatusColor(wallet.status)} font-bold text-sm`}>
-                        {wallet.status}
-                        {wallet.status === 'ready' && (
-                          <div className="text-xs text-success mt-1">
-                            Balance: {formatBalance(wallet.balance ?? 0n)} HTR
-                          </div>
-                        )}
-                        {wallet.error && <div className="text-xs text-danger mt-1">{wallet.error}</div>}
-                        {/* Show scan results for non-ready wallets */}
-                        {wallet.status !== 'ready' && renderScanInfo(wallet.metadata.id)}
-                      </td>
-                      <td className="p-3 font-mono text-xs">
-                        {(() => {
-                          // Use runtime address if available, otherwise check stored address
-                          const storedAddress = storedFirstAddresses?.[wallet.metadata.id];
-                          const displayAddress = wallet.firstAddress || storedAddress;
-                          const isStoredOnly = !wallet.firstAddress && storedAddress;
-
-                          if (displayAddress) {
-                            return (
-                              <div
-                                className={`flex items-center gap-2 ${isStoredOnly ? 'text-muted' : 'text-success'}`}
-                              >
-                                <span className="break-all">{truncateAddress(displayAddress)}</span>
-                                <CopyButton
-                                  text={displayAddress}
-                                  label={`Copy address for ${wallet.metadata.friendlyName}`}
-                                  className="text-muted"
-                                />
-                              </div>
-                            );
-                          }
-                          return <span className="text-muted">-</span>;
-                        })()}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex gap-1.5 justify-center flex-wrap">
-                          {wallet.status === 'idle' || wallet.status === 'error' ? (
-                            <button
-                              onClick={() => onStartWallet(wallet.metadata.id)}
-                              title="Start"
-                              aria-label={`Start ${wallet.metadata.friendlyName}`}
-                              className="btn-primary btn-square text-xs p-2"
-                            >
-                              <MdPlayArrow />
-                            </button>
-                          ) : wallet.status === 'ready' ? (
-                            <button
-                              onClick={() => onStopWallet(wallet.metadata.id)}
-                              title="Stop"
-                              aria-label={`Stop ${wallet.metadata.friendlyName}`}
-                              className="btn btn-square text-xs p-2 bg-black text-white hover:bg-gray-800"
-                            >
-                              <MdStop />
-                            </button>
-                          ) : (
-                            <button
-                              disabled
-                              className="btn-secondary btn-square text-xs cursor-not-allowed opacity-60 p-2"
-                            >
-                              ⏳
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => onEditWallet(wallet.metadata.id, wallet.metadata.friendlyName)}
-                            title="Rename"
-                            aria-label={`Rename ${wallet.metadata.friendlyName}`}
-                            className="btn-warning btn-square text-xs p-2"
-                          >
-                            <MdEdit />
-                          </button>
-
-                          <button
-                            onClick={() => onRemoveWallet(wallet.metadata.id)}
-                            title="Remove"
-                            aria-label={`Remove ${wallet.metadata.friendlyName}`}
-                            className="btn-danger btn-square text-xs p-2"
-                          >
-                            <MdDelete />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end p-4 border-t border-gray-200">
-            <button onClick={onClose} className="btn btn-ghost px-6 py-2">
-              Close
-            </button>
-          </div>
+          )}
         </div>
+
+        <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
+          <DataTable<WalletInfo>
+            caption="Wallets"
+            rows={sortedWallets}
+            getRowKey={(w) => w.metadata.id}
+            columns={columns}
+            empty={
+              searchQuery
+                ? 'No wallets match your search.'
+                : filterHasBalance
+                  ? 'No wallets with a balance found.'
+                  : 'No wallets registered.'
+            }
+          />
+        </div>
+
+        <footer className="flex justify-end border-t border-base-300 px-5 py-3">
+          <button type="button" onClick={onClose} className="btn btn-ghost">
+            Close
+          </button>
+        </footer>
       </div>
-    </>
+      <div className="modal-backdrop" onClick={onClose} aria-hidden="true" />
+    </div>
   );
 }

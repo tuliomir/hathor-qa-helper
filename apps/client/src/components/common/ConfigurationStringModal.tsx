@@ -1,11 +1,12 @@
 /**
  * Configuration String Modal
- * Reusable modal for displaying token configuration strings with QR code
+ * Shows a token's configuration string with a QR code.
  */
 
 import QRCode from 'react-qr-code';
 import { getConfigurationString } from '../../utils/tokenConfigString';
 import CopyButton from './CopyButton';
+import { Modal } from '../ui/Modal';
 
 interface ConfigurationStringModalProps {
   isOpen: boolean;
@@ -27,74 +28,28 @@ export default function ConfigurationStringModal({
   const configString = getConfigurationString(tokenUid, tokenName, tokenSymbol);
 
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
-
-      {/* Modal */}
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="config-string-modal-title"
-      >
-        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 id="config-string-modal-title" className="text-2xl font-bold m-0">
-              Configuration String
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-              aria-label="Close"
-            >
-              ×
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-6">
-            {/* Token Info */}
-            <div className="mb-6 p-4 bg-gray-50 rounded">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted mb-1">Symbol:</p>
-                  <p className="font-bold m-0">{tokenSymbol}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted mb-1">Name:</p>
-                  <p className="font-bold m-0">{tokenName}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Configuration String */}
-            <div className="mb-6">
-              <h3 className="text-lg font-bold mb-3">Configuration String</h3>
-              <div className="flex items-start gap-2">
-                <div className="flex-1 p-3 bg-gray-100 rounded font-mono text-xs break-all">{configString}</div>
-                <CopyButton text={configString} label="Copy" className="flex-shrink-0" />
-              </div>
-            </div>
-
-            {/* QR Code */}
-            <div className="flex flex-col items-center">
-              <h3 className="text-lg font-bold mb-3">QR Code</h3>
-              <div className="p-4 bg-white border-2 border-gray-300 rounded">
-                <QRCode value={configString} size={200} />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end p-6 border-t border-gray-200">
-            <button onClick={onClose} className="btn btn-ghost px-6 py-2">
-              Close
-            </button>
-          </div>
+    <Modal title="Configuration string" onClose={onClose}>
+      <dl className="m-0 grid grid-cols-2 gap-3 rounded-box bg-base-200 p-3">
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-caption text-ink-muted">Symbol</dt>
+          <dd className="m-0 font-semibold">{tokenSymbol}</dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-caption text-ink-muted">Name</dt>
+          <dd className="m-0 font-semibold">{tokenName}</dd>
+        </div>
+      </dl>
+      <div className="flex items-start gap-2">
+        <code className="block flex-1 rounded-field bg-base-200 px-3 py-2 font-mono text-data [overflow-wrap:anywhere]">
+          {configString}
+        </code>
+        <CopyButton text={configString} label="Copy configuration string" className="flex-none" />
+      </div>
+      <div className="flex justify-center">
+        <div className="rounded-box border border-base-300 bg-base-100 p-4">
+          <QRCode value={configString} size={200} />
         </div>
       </div>
-    </>
+    </Modal>
   );
 }
