@@ -13,229 +13,79 @@ import {
   setFeeInitializeResponse,
 } from '../../store/slices/feeInitializeSlice';
 import { setFeeNanoContractId } from '../../store/slices/feeNanoContractSlice';
-import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { RpcFeeInitializeCard } from '../rpc/RpcFeeInitializeCard';
-import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
-import { createRpcHandlers } from '../../services/rpcHandlers';
-import { DEFAULT_NETWORK, NETWORK_CONFIG } from '../../constants/network';
+import { BlueprintUnavailableCallout } from '../rpc/NanoFields';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { NETWORK_CONFIG } from '../../constants/network';
 import { blueprintIdFor } from '../../utils/blueprints';
-import BlueprintUnavailable from '../common/BlueprintUnavailable';
-import { useWalletStore } from '../../hooks/useWalletStore';
-import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
-import { extractErrorMessage } from '../../utils/errorUtils';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
+import { buildFeeInitializeRequest, nanoTxHash } from '../../utils/nanoRpcRequests';
+import { firstUnmetReason } from '../../utils/requirements';
+import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
 
 export const FeeInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { getWallet } = useWalletStore();
-
-  // Redux state
-  const walletConnect = useSelector((state: RootState) => state.walletConnect);
-  const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
-  const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const isConnected = useSelector(selectIsWalletConnectConnected);
-  const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const feeInitializeData = useSelector((state: RootState) => state.feeInitialize);
 
-  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
-  const testWallet = testWalletId ? getWallet(testWalletId) : null;
+  const [addressIndex, setAddressIndex] = useState<number>(0);
+  const { network, derivedAddress: changeAddress, requirements } = useNanoStageWallet(addressIndex);
 
-  // Local state
-  const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
   // QA blueprints exist only on some networks; the test wallet's network decides.
-  const network = testWallet?.metadata.network ?? DEFAULT_NETWORK;
   const defaultBlueprintId = blueprintIdFor(network, 'fee');
   const [blueprintId, setBlueprintId] = useState<string>(defaultBlueprintId ?? '');
   useEffect(() => {
     if (defaultBlueprintId) setBlueprintId(defaultBlueprintId);
   }, [defaultBlueprintId]);
   const [amount, setAmount] = useState<string>('2');
-  const [changeAddress, setChangeAddress] = useState<string>('');
-  const [addressIndex, setAddressIndex] = useState<number>(0);
   const [pushTx, setPushTx] = useState<boolean>(false);
 
-  // Get test wallet address at index 0
-  useEffect(() => {
-    const getAddress = async () => {
-      if (testWallet?.instance) {
-        try {
-          const address = await testWallet.instance.getAddressAtIndex(0);
-          setTestWalletAddress(address);
-        } catch (error) {
-          console.error('Failed to get test wallet address:', error);
-          setTestWalletAddress(null);
-        }
-      } else {
-        setTestWalletAddress(null);
-      }
-    };
+  const liveRequest = useMemo(
+    () =>
+      buildFeeInitializeRequest({
+        blueprintId: blueprintId || '<blueprint_id>',
+        amount: amount || '<amount>',
+        changeAddress: changeAddress || '<change_address>',
+        pushTx,
+      }),
+    [blueprintId, amount, changeAddress, pushTx]
+  );
 
-    getAddress();
-  }, [testWallet]);
+  const { isDryRun, execute } = useNanoRpcExecute({
+    request: setFeeInitializeRequest,
+    response: (response, duration) => setFeeInitializeResponse({ response, duration }),
+    error: setFeeInitializeError,
+  });
 
-  // Derive changeAddress from selected index
-  useEffect(() => {
-    const deriveAddress = async () => {
-      if (testWallet?.instance) {
-        try {
-          const address = await testWallet.instance.getAddressAtIndex(addressIndex);
-          setChangeAddress(address);
-        } catch (error) {
-          console.error(`[FeeInitialize] Failed to derive address at index ${addressIndex}:`, error);
-          // Keep the previous value or empty string on error
-          setChangeAddress('');
-        }
-      } else {
-        console.log('[FeeInitialize] Wallet not loaded yet');
-        // Wallet not loaded yet, clear the address and wait
-        setChangeAddress('');
-      }
-    };
-
-    deriveAddress();
-  }, [testWallet, addressIndex]);
-
-  // Check if connected address matches test wallet address at index 0
-  const addressMismatch = useMemo(() => {
-    if (!isConnected || !connectedAddress || !testWalletAddress) return false;
-
-    return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
-  }, [isConnected, connectedAddress, testWalletAddress]);
-
-  // Deep link callback and cleanup for RPC requests
-  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
-
-  // Create RPC handlers
-  const rpcHandlers = useMemo(() => {
-    if (!walletConnect.client || !walletConnect.session) {
-      return null;
-    }
-
-    return createRpcHandlers({
-      client: walletConnect.client,
-      session: walletConnect.session,
-      balanceTokens: [],
-      dryRun: isDryRun,
-      onDeepLinkAvailable,
-    });
-  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
-
-  // Wrapper for onExecute that stores results in Redux
-  const handleExecuteFeeInitialize = async () => {
-    if (!rpcHandlers) {
-      throw new Error('RPC handlers not initialized');
-    }
-
-    const startTime = Date.now();
-
-    try {
-      const { request, response } = await rpcHandlers.getRpcFeeInitialize(blueprintId, amount, changeAddress, pushTx);
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification after RPC response
-      clearDeepLinkNotification();
-
-      // Store request in Redux
-      dispatch(
-        setFeeInitializeRequest({
-          method: request.method,
-          params: request.params,
-          isDryRun,
-        })
-      );
-
-      // Serialize BigInt values before storing in Redux
-      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
-
-      // Store response in Redux
-      dispatch(
-        setFeeInitializeResponse({
-          response: serializedResponse,
-          duration,
-        })
-      );
-
-      // Store the nano contract ID for use in other stages
-      if (
-        serializedResponse &&
-        typeof serializedResponse === 'object' &&
-        'response' in serializedResponse &&
-        serializedResponse.response &&
-        typeof serializedResponse.response === 'object' &&
-        'hash' in serializedResponse.response
-      ) {
-        dispatch(
-          setFeeNanoContractId({
-            ncId: (serializedResponse.response as { hash: string }).hash,
-            blueprintId,
-          })
-        );
-      }
-
-      return { request, response: serializedResponse };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification on error too
-      clearDeepLinkNotification();
-
-      // Store error in Redux
-      const errorMessage = extractErrorMessage(error);
-      dispatch(
-        setFeeInitializeError({
-          error: errorMessage,
-          duration,
-        })
-      );
-
-      throw error;
-    }
+  const handleExecute = async () => {
+    const response = await execute(
+      (h) => h.getRpcFeeInitialize(blueprintId, amount, changeAddress, pushTx),
+      liveRequest
+    );
+    // Store the nano contract ID for the other fee stages.
+    const ncId = nanoTxHash(response);
+    if (ncId) dispatch(setFeeNanoContractId({ ncId, blueprintId }));
+    return response;
   };
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Initialize Fee RPC</h1>
-      <p className="text-muted mb-7.5">Initialize a new fee nano contract with an HTR deposit</p>
-
-      {!isConnected && <RpcNotConnectedBanner />}
-
-      {defaultBlueprintId === null && <BlueprintUnavailable kind="Fee" networkLabel={NETWORK_CONFIG[network].label} />}
-
-      {/* Address Mismatch Warning */}
-      {addressMismatch && (
-        <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-warning flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
-              <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC testing has been
-                disabled. Please connect the correct wallet or select a different test wallet.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FeeInitialize Card */}
-      {isConnected && !addressMismatch && rpcHandlers && defaultBlueprintId !== null && (
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="rpc-fee-initialize"
+        title="Initialize fee"
+        description="Create a fee nano contract funded with an HTR deposit."
+        method="htr_sendNanoContractTx"
+      />
+      <PreconditionStrip requirements={requirements} />
+      {defaultBlueprintId === null ? (
+        <BlueprintUnavailableCallout kind="Fee" networkLabel={NETWORK_CONFIG[network].label} />
+      ) : (
         <RpcFeeInitializeCard
+          onExecute={handleExecute}
+          liveRequest={liveRequest}
+          methodData={methodDataOf(feeInitializeData)}
+          isDryRun={isDryRun}
+          disabledReason={firstUnmetReason(requirements)}
           network={network}
-          onExecute={handleExecuteFeeInitialize}
-          disabled={false}
           blueprintId={blueprintId}
           setBlueprintId={setBlueprintId}
           amount={amount}
@@ -245,41 +95,7 @@ export const FeeInitializeStage: React.FC = () => {
           setAddressIndex={setAddressIndex}
           pushTx={pushTx}
           setPushTx={setPushTx}
-          isDryRun={isDryRun}
-          initialRequest={feeInitializeData.request}
-          initialResponse={feeInitializeData.rawResponse}
-          initialError={feeInitializeData.error}
         />
-      )}
-
-      {/* Persisted Data Info */}
-      {feeInitializeData.timestamp && (
-        <div className="card-primary mt-7.5 bg-green-50 border border-success">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-success flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-green-900 m-0">Request duration</p>
-              <p className="text-sm text-green-800 mt-1 mb-0">
-                {feeInitializeData.duration !== null && (
-                  <span className="block mt-1">Last request took {feeInitializeData.duration}ms</span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
