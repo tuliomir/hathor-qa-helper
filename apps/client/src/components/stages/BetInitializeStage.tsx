@@ -4,7 +4,7 @@
  * Tests htr_sendNanoContractTx (initialize) RPC call with Redux state persistence
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
@@ -13,303 +13,133 @@ import {
   setBetInitializeResponse,
 } from '../../store/slices/betInitializeSlice';
 import { setBetNanoContractId } from '../../store/slices/betNanoContractSlice';
-import { selectIsWalletConnectConnected, selectWalletConnectFirstAddress } from '../../store/slices/walletConnectSlice';
 import { RpcBetInitializeCard } from '../rpc/RpcBetInitializeCard';
-import { RpcNotConnectedBanner } from '../rpc/RpcNotConnectedBanner';
-import { createRpcHandlers } from '../../services/rpcHandlers';
-import { DEFAULT_NETWORK, NETWORK_CONFIG } from '../../constants/network';
+import { BlueprintUnavailableCallout, type TokenOption } from '../rpc/NanoFields';
+import { StageHeader } from '../common/StageHeader';
+import { PreconditionStrip } from '../common/PreconditionStrip';
+import { NETWORK_CONFIG } from '../../constants/network';
 import { blueprintIdFor } from '../../utils/blueprints';
-import BlueprintUnavailable from '../common/BlueprintUnavailable';
-import { useWalletStore } from '../../hooks/useWalletStore';
-import { useDeepLinkCallback } from '../../hooks/useDeepLinkCallback';
-import { extractErrorMessage } from '../../utils/errorUtils';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
+import { getOracleBuffer } from '../../utils/betHelpers';
+import { buildInitializeBetRequest, nanoTxHash } from '../../utils/nanoRpcRequests';
+import { firstUnmetReason } from '../../utils/requirements';
+import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+
+/** The handler's oracle script; a placeholder for the no-session dry run when it can't be derived. */
+function oracleScriptOrPlaceholder(address: string): string {
+  if (!address.trim()) return '<oracle_script>';
+  try {
+    return getOracleBuffer(address);
+  } catch {
+    return '<oracle_script>';
+  }
+}
+
+const HTR: TokenOption = {
+  uid: NATIVE_TOKEN_UID,
+  symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+  name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+};
 
 export const BetInitializeStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { getWallet } = useWalletStore();
-
-  // Redux state
-  const walletConnect = useSelector((state: RootState) => state.walletConnect);
-  const isDryRun = useSelector((state: RootState) => state.rpc.isDryRun);
-  const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
-  const isConnected = useSelector(selectIsWalletConnectConnected);
-  const connectedAddress = useSelector(selectWalletConnectFirstAddress);
   const betInitializeData = useSelector((state: RootState) => state.betInitialize);
+  const allTokens = useSelector((state: RootState) => state.tokens.tokens);
 
-  // Get the actual wallet instance (not from Redux, from walletInstancesMap)
-  const testWallet = testWalletId ? getWallet(testWalletId) : null;
+  const [addressIndex, setAddressIndex] = useState<number>(0);
+  const { testWallet, network, derivedAddress: oracleAddress, requirements } = useNanoStageWallet(addressIndex);
 
-  // Local state
-  const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
   // QA blueprints exist only on some networks; the test wallet's network decides.
-  const network = testWallet?.metadata.network ?? DEFAULT_NETWORK;
   const defaultBlueprintId = blueprintIdFor(network, 'bet');
   const [blueprintId, setBlueprintId] = useState<string>(defaultBlueprintId ?? '');
   useEffect(() => {
     if (defaultBlueprintId) setBlueprintId(defaultBlueprintId);
   }, [defaultBlueprintId]);
-  const [oracleAddress, setOracleAddress] = useState<string>('');
   const [token, setToken] = useState<string>(NATIVE_TOKEN_UID);
   const [deadline, setDeadline] = useState<string>(() => {
     const date = new Date(Date.now() + 3600 * 1000);
     return date.toISOString().slice(0, 16);
   });
   const [pushTx, setPushTx] = useState<boolean>(false);
-  const [addressIndex, setAddressIndex] = useState<number>(0);
 
-  // Get test wallet address at index 0
+  // Tokens the test wallet holds (a deposit follows the initialize); HTR as fallback.
+  const [walletTokens, setWalletTokens] = useState<TokenOption[]>([HTR]);
   useEffect(() => {
-    const getAddress = async () => {
-      if (testWallet?.instance) {
-        try {
-          const address = await testWallet.instance.getAddressAtIndex(0);
-          setTestWalletAddress(address);
-        } catch (error) {
-          console.error('Failed to get test wallet address:', error);
-          setTestWalletAddress(null);
-        }
-      } else {
-        setTestWalletAddress(null);
+    let cancelled = false;
+    const load = async () => {
+      const instance = testWallet?.instance;
+      if (!instance) {
+        setWalletTokens([HTR]);
+        return;
       }
-    };
-
-    getAddress();
-  }, [testWallet]);
-
-  // Compute wallet tokens with non-zero balance (needed for deposit after initialize)
-  const allTokens = useSelector((state: RootState) => state.tokens.tokens);
-  const [walletTokens, setWalletTokens] = useState<{ uid: string; symbol: string; name: string }[]>([
-    { uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name },
-  ]);
-
-  useEffect(() => {
-    const loadTokensWithBalance = async () => {
-      const tokens: { uid: string; symbol: string; name: string }[] = [];
-
-      // Always include HTR if it has balance
-      if (testWallet?.instance) {
+      const tokens: TokenOption[] = [];
+      try {
+        const htrBal = await instance.getBalance(NATIVE_TOKEN_UID);
+        if (htrBal?.[0]?.balance?.unlocked > 0n) tokens.push(HTR);
+      } catch {
+        tokens.push(HTR);
+      }
+      for (const uid of testWallet.tokenUids ?? []) {
+        if (uid === NATIVE_TOKEN_UID) continue;
+        const info = allTokens.find((t) => t.uid === uid);
+        if (!info) continue;
         try {
-          const htrBal = await testWallet.instance.getBalance(NATIVE_TOKEN_UID);
-          if (htrBal?.[0]?.balance?.unlocked > 0n) {
-            tokens.push({
-              uid: NATIVE_TOKEN_UID,
-              symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
-              name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
-            });
-          }
+          const bal = await instance.getBalance(uid);
+          if (bal?.[0]?.balance?.unlocked > 0n) tokens.push({ uid: info.uid, symbol: info.symbol, name: info.name });
         } catch {
-          /* include HTR as fallback */
-          tokens.push({
-            uid: NATIVE_TOKEN_UID,
-            symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
-            name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
-          });
-        }
-      } else {
-        tokens.push({
-          uid: NATIVE_TOKEN_UID,
-          symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
-          name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
-        });
-      }
-
-      // Check custom tokens
-      if (testWallet?.instance && testWallet.tokenUids) {
-        for (const uid of testWallet.tokenUids) {
-          if (uid === NATIVE_TOKEN_UID) continue;
-          const tokenInfo = allTokens.find((t) => t.uid === uid);
-          if (!tokenInfo) continue;
-          try {
-            const bal = await testWallet.instance.getBalance(uid);
-            if (bal?.[0]?.balance?.unlocked > 0n) {
-              tokens.push({ uid: tokenInfo.uid, symbol: tokenInfo.symbol, name: tokenInfo.name });
-            }
-          } catch {
-            /* skip tokens that fail balance check */
-          }
+          /* skip tokens that fail the balance check */
         }
       }
-
-      setWalletTokens(tokens);
+      if (!cancelled) setWalletTokens(tokens);
     };
-
-    loadTokensWithBalance();
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [testWallet, allTokens]);
 
-  // Derive oracle address from selected index
-  useEffect(() => {
-    const deriveAddress = async () => {
-      if (testWallet?.instance) {
-        try {
-          const address = await testWallet.instance.getAddressAtIndex(addressIndex);
-          setOracleAddress(address);
-        } catch (error) {
-          console.error(`[BetInitialize] Failed to derive address at index ${addressIndex}:`, error);
-          // Keep the previous value or empty string on error
-          setOracleAddress('');
-        }
-      } else {
-        console.log('[BetInitialize] Wallet not loaded yet');
-        // Wallet not loaded yet, clear the address and wait
-        setOracleAddress('');
-      }
-    };
+  const { isDryRun, execute } = useNanoRpcExecute({
+    request: setBetInitializeRequest,
+    response: (response, duration) => setBetInitializeResponse({ response, duration }),
+    error: setBetInitializeError,
+  });
 
-    deriveAddress();
-  }, [testWallet, addressIndex]);
-
-  // Check if connected address matches test wallet address at index 0
-  const addressMismatch = useMemo(() => {
-    if (!isConnected || !connectedAddress || !testWalletAddress) return false;
-
-    return connectedAddress.toLowerCase() !== testWalletAddress.toLowerCase();
-  }, [isConnected, connectedAddress, testWalletAddress]);
-
-  // Deep link callback and cleanup for RPC requests
-  const { onDeepLinkAvailable, clearDeepLinkNotification } = useDeepLinkCallback();
-
-  // Create RPC handlers
-  const rpcHandlers = useMemo(() => {
-    if (!walletConnect.client || !walletConnect.session) {
-      return null;
-    }
-
-    return createRpcHandlers({
-      client: walletConnect.client,
-      session: walletConnect.session,
-      balanceTokens: [],
-      dryRun: isDryRun,
-      onDeepLinkAvailable,
-    });
-  }, [walletConnect.client, walletConnect.session, isDryRun, onDeepLinkAvailable]);
-
-  // Wrapper for onExecute that stores results in Redux
-  const handleExecuteBetInitialize = async () => {
-    if (!rpcHandlers) {
-      throw new Error('RPC handlers not initialized');
-    }
-
-    const startTime = Date.now();
-
-    try {
-      const deadlineDate = new Date(deadline);
-      const { request, response } = await rpcHandlers.getRpcInitializeBet(
+  const handleExecute = async () => {
+    const deadlineDate = new Date(deadline);
+    const response = await execute(
+      (h) => h.getRpcInitializeBet(blueprintId, oracleAddress, token, deadlineDate, pushTx),
+      buildInitializeBetRequest({
         blueprintId,
-        oracleAddress,
+        oracleScript: oracleScriptOrPlaceholder(oracleAddress),
         token,
-        deadlineDate,
-        pushTx
-      );
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification after RPC response
-      clearDeepLinkNotification();
-
-      // Store request in Redux
-      dispatch(
-        setBetInitializeRequest({
-          method: request.method,
-          params: request.params,
-          isDryRun,
-        })
-      );
-
-      // Serialize BigInt values before storing in Redux
-      const serializedResponse = response ? JSON.parse(JSONBigInt.stringify(response)) : null;
-
-      // Store response in Redux
-      dispatch(
-        setBetInitializeResponse({
-          response: serializedResponse,
-          duration,
-        })
-      );
-
-      // Store the nano contract ID for use in other stages
-      if (
-        serializedResponse &&
-        typeof serializedResponse === 'object' &&
-        'response' in serializedResponse &&
-        serializedResponse.response &&
-        typeof serializedResponse.response === 'object' &&
-        'hash' in serializedResponse.response
-      ) {
-        dispatch(
-          setBetNanoContractId({
-            ncId: (serializedResponse.response as { hash: string }).hash,
-            blueprintId,
-            token,
-          })
-        );
-      }
-
-      return { request, response: serializedResponse };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-
-      // Clear deep link notification on error too
-      clearDeepLinkNotification();
-
-      // Store error in Redux
-      const errorMessage = extractErrorMessage(error);
-      dispatch(
-        setBetInitializeError({
-          error: errorMessage,
-          duration,
-        })
-      );
-
-      throw error;
-    }
+        timestamp: Math.floor(deadlineDate.getTime() / 1000),
+        pushTx,
+      })
+    );
+    // Store the nano contract ID for the other bet stages.
+    const ncId = nanoTxHash(response);
+    if (ncId) dispatch(setBetNanoContractId({ ncId, blueprintId, token }));
+    return response;
   };
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">Initialize Bet RPC</h1>
-      <p className="text-muted mb-7.5">Initialize a new bet nano contract with oracle and token configuration</p>
-
-      {!isConnected && <RpcNotConnectedBanner />}
-
-      {defaultBlueprintId === null && <BlueprintUnavailable kind="Bet" networkLabel={NETWORK_CONFIG[network].label} />}
-
-      {/* Address Mismatch Warning */}
-      {addressMismatch && (
-        <div className="card-primary mb-7.5 bg-yellow-50 border border-warning">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-warning flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-yellow-900 m-0">Address Mismatch Warning</p>
-              <p className="text-sm text-yellow-800 mt-1 mb-0">
-                The connected wallet address does not match the selected test wallet address. RPC testing has been
-                disabled. Please connect the correct wallet or select a different test wallet.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* BetInitialize Card */}
-      {isConnected && !addressMismatch && rpcHandlers && defaultBlueprintId !== null && (
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="rpc-bet-initialize"
+        title="Initialize bet"
+        description="Create a bet nano contract with an oracle, a token and a deadline."
+        method="htr_sendNanoContractTx"
+      />
+      <PreconditionStrip requirements={requirements} />
+      {defaultBlueprintId === null ? (
+        <BlueprintUnavailableCallout kind="Bet" networkLabel={NETWORK_CONFIG[network].label} />
+      ) : (
         <RpcBetInitializeCard
+          onExecute={handleExecute}
+          methodData={methodDataOf(betInitializeData)}
+          isDryRun={isDryRun}
+          disabledReason={firstUnmetReason(requirements)}
           network={network}
-          onExecute={handleExecuteBetInitialize}
-          disabled={false}
-          tokens={walletTokens}
           blueprintId={blueprintId}
           setBlueprintId={setBlueprintId}
           oracleAddress={oracleAddress}
@@ -321,41 +151,8 @@ export const BetInitializeStage: React.FC = () => {
           setPushTx={setPushTx}
           addressIndex={addressIndex}
           setAddressIndex={setAddressIndex}
-          isDryRun={isDryRun}
-          initialRequest={betInitializeData.request}
-          initialResponse={betInitializeData.rawResponse}
-          initialError={betInitializeData.error}
+          tokens={walletTokens}
         />
-      )}
-
-      {/* Persisted Data Info */}
-      {betInitializeData.timestamp && (
-        <div className="card-primary mt-7.5 bg-green-50 border border-success">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-success flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-green-900 m-0">Request duration</p>
-              <p className="text-sm text-green-800 mt-1 mb-0">
-                {betInitializeData.duration !== null && (
-                  <span className="block mt-1">Last request took {betInitializeData.duration}ms</span>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
