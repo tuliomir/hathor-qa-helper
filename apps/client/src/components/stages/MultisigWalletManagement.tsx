@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { MdCheckCircle, MdError, MdPending, MdPlayArrow, MdQrCode, MdRefresh, MdSend, MdStop } from 'react-icons/md';
+import { MdPlayArrow, MdQrCode, MdRefresh, MdSend, MdStop, MdSwapVert } from 'react-icons/md';
 import QRCode from 'react-qr-code';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
@@ -29,6 +29,15 @@ import {
 import { MULTISIG_CONFIG, MULTISIG_MIN_SIGNATURES } from '../../constants/multisig';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
+import NetworkChip from '../common/NetworkChip';
+import { Identifier } from '../common/Identifier';
+import { TxIdDisplay } from '../common/TxIdDisplay';
+import { StageHeader } from '../common/StageHeader';
+import { Panel } from '../ui/Panel';
+import { Callout } from '../ui/Callout';
+import { Field } from '../ui/Field';
+import { StatusChip } from '../ui/StatusChip';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { NETWORK_CONFIG, nextNetwork } from '../../constants/network';
 import { useWalletStore } from '../../hooks/useWalletStore';
 
@@ -223,41 +232,6 @@ export default function MultisigWalletManagement() {
     dispatch(setNetwork(newNetwork));
   };
 
-  // Helper functions
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return 'text-success';
-      case 'error':
-        return 'text-danger';
-      case 'connecting':
-      case 'syncing':
-        return 'text-warning';
-      default:
-        return 'text-muted';
-    }
-  };
-
-  const getRowBackgroundColor = (status: string) => {
-    switch (status) {
-      case 'ready':
-        return 'bg-green-50';
-      case 'error':
-        return 'bg-red-50';
-      case 'connecting':
-      case 'syncing':
-        return 'bg-yellow-50';
-      default:
-        return '';
-    }
-  };
-
-  const truncateAddress = (addr: string, start = 6, end = 6) => {
-    if (!addr) return '';
-    if (addr.length <= start + end + 3) return addr;
-    return addr.slice(0, start) + '...' + addr.slice(-end);
-  };
-
   const isSignerSelected = (participantId: string) => transaction.selectedSigners.includes(participantId);
 
   const hasSignedTransaction = (participantId: string) =>
@@ -277,270 +251,242 @@ export default function MultisigWalletManagement() {
   const canAssembleAndSend =
     transaction.step === 'signing' && transaction.collectedSignatures.length >= MULTISIG_MIN_SIGNATURES;
 
-  const explorerUrl = NETWORK_CONFIG[network]?.explorerUrl || '';
+  type Participant = (typeof participants)[number];
+  const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
+  const nextLabel = NETWORK_CONFIG[nextNetwork(network)].label;
+
+  const participantColumns: DataTableColumn<Participant>[] = [
+    {
+      key: 'sign',
+      header: 'Sign',
+      className: 'w-12',
+      render: (participant) => (
+        <input
+          type="checkbox"
+          checked={isSignerSelected(participant.id)}
+          onChange={() => handleToggleSigner(participant.id)}
+          disabled={participant.status !== 'ready'}
+          className="checkbox checkbox-primary checkbox-sm"
+          aria-label={`Sign with ${participant.friendlyName}`}
+          title={participant.status !== 'ready' ? 'Start the wallet to enable signing' : 'Select to sign transactions'}
+        />
+      ),
+    },
+    {
+      key: 'name',
+      header: 'Name',
+      render: (participant) => (
+        <span className="whitespace-nowrap">
+          <span className="font-semibold">{participant.friendlyName}</span>{' '}
+          <span className="text-caption text-ink-muted">(seed #{participant.seedIndex + 1})</span>
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (participant) => (
+        <span className="flex flex-col items-start gap-0.5">
+          <StatusChip status={participant.status} />
+          {participant.error && <span className="text-caption text-error">{participant.error}</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'address',
+      header: 'First address',
+      type: 'identifier',
+      render: (participant) =>
+        participant.firstAddress ? (
+          <span className="inline-flex items-center gap-1">
+            <Identifier value={participant.firstAddress} kind="address" walletTag={false} />
+            <button
+              type="button"
+              onClick={() => setQrAddress(participant.firstAddress!)}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-field text-ink-muted hover:bg-base-200 hover:text-base-content"
+              title={`Show QR code for ${participant.friendlyName}`}
+              aria-label={`Show QR code for ${participant.friendlyName}`}
+            >
+              <MdQrCode aria-hidden="true" />
+            </button>
+          </span>
+        ) : null,
+    },
+    {
+      key: 'balance',
+      header: 'Balance',
+      type: 'amount',
+      render: (participant) =>
+        participant.status === 'ready' ? (
+          <>
+            {formatBalance(participant.balance)} <span className="font-sans text-ink-muted">HTR</span>
+          </>
+        ) : null,
+    },
+    {
+      key: 'actions',
+      header: <span className="sr-only">Actions</span>,
+      type: 'actions',
+      hideLabelWhenStacked: true,
+      render: (participant) => (
+        <span className="inline-flex items-center justify-end gap-1">
+          {participant.status === 'idle' || participant.status === 'error' ? (
+            <button
+              type="button"
+              onClick={() => handleStartParticipant(participant.id)}
+              title="Start"
+              aria-label={`Start ${participant.friendlyName}`}
+              className="btn btn-primary btn-xs btn-square"
+            >
+              <MdPlayArrow aria-hidden="true" />
+            </button>
+          ) : participant.status === 'ready' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleRefreshBalance(participant.id)}
+                title="Refresh balance"
+                aria-label={`Refresh balance of ${participant.friendlyName}`}
+                className="btn btn-ghost btn-xs btn-square"
+              >
+                <MdRefresh aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStopParticipant(participant.id)}
+                title="Stop"
+                aria-label={`Stop ${participant.friendlyName}`}
+                className="btn btn-secondary btn-xs btn-square"
+              >
+                <MdStop aria-hidden="true" />
+              </button>
+            </>
+          ) : (
+            <button type="button" disabled className="btn btn-secondary btn-xs btn-square" aria-label="Starting">
+              <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+            </button>
+          )}
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <div className="max-w-300 mx-auto">
-      <h1 className="mt-0 text-3xl font-bold">MultiSig Wallet Management</h1>
-      <p className="text-muted mb-7.5">
-        Manage multisig participant wallets (2-of-5 configuration) and send transactions requiring multiple signatures.
-      </p>
+    <div className="flex max-w-stage flex-col gap-4">
+      <StageHeader
+        stageId="multisig-wallet-management"
+        description={`Manage multisig participant wallets (${MULTISIG_MIN_SIGNATURES}-of-${MULTISIG_CONFIG.seeds.length}) and send transactions that need several signatures.`}
+      />
 
-      {/* Configuration Info */}
-      <div className="card-primary mb-7.5 bg-blue-50 border border-info">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-info flex-shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-bold text-blue-900 m-0">MultiSig Configuration</p>
-              <p className="text-sm text-blue-800 mt-1 mb-0">
-                This is a{' '}
-                <strong>
-                  {MULTISIG_MIN_SIGNATURES}-of-{MULTISIG_CONFIG.seeds.length}
-                </strong>{' '}
-                multisig wallet. At least {MULTISIG_MIN_SIGNATURES} participants must sign each transaction.
-              </p>
-            </div>
-          </div>
-          {/* Network Toggle */}
-          <div className="flex flex-col items-end gap-1">
-            <span
-              className={`text-xs font-bold px-2 py-1 rounded ${
-                network === 'MAINNET' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
-              }`}
-            >
-              {network}
-            </span>
-            <button
-              onClick={handleNetworkSwitch}
-              className="text-xs text-info hover:underline"
-              title={`Switch to ${NETWORK_CONFIG[nextNetwork(network)].label}`}
-            >
-              Switch to {NETWORK_CONFIG[nextNetwork(network)].label}
+      <Callout
+        tone="info"
+        title="Multisig configuration"
+        action={
+          <span className="flex flex-wrap items-center gap-2">
+            <NetworkChip network={network} size="sm" />
+            <button type="button" onClick={handleNetworkSwitch} className="btn btn-secondary btn-xs">
+              <MdSwapVert aria-hidden="true" />
+              Switch to {nextLabel}
             </button>
-          </div>
-        </div>
-      </div>
+          </span>
+        }
+      >
+        This is a{' '}
+        <strong>
+          {MULTISIG_MIN_SIGNATURES}-of-{MULTISIG_CONFIG.seeds.length}
+        </strong>{' '}
+        multisig wallet. At least {MULTISIG_MIN_SIGNATURES} participants must sign each transaction.
+      </Callout>
 
-      {/* Section A: Participant Wallets Table */}
-      <div className="mb-10">
-        <h2 className="text-2xl font-bold mb-4">Participant Wallets ({participants.length})</h2>
+      <Panel
+        title={`Participant wallets (${participants.length})`}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                participants.filter((p) => p.status === 'idle').forEach((p) => handleStartParticipant(p.id));
+              }}
+              disabled={participants.every((p) => p.status !== 'idle')}
+              className="btn btn-primary btn-sm"
+            >
+              Start all idle
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                participants.filter((p) => p.status === 'ready').forEach((p) => handleStopParticipant(p.id));
+              }}
+              disabled={participants.every((p) => p.status !== 'ready')}
+              className="btn btn-secondary btn-sm"
+            >
+              Stop all ready
+            </button>
+          </>
+        }
+      >
+        <DataTable
+          caption="Participant wallets"
+          columns={participantColumns}
+          rows={participants}
+          getRowKey={(p) => p.id}
+          empty="No participant wallets configured."
+        />
+      </Panel>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse bg-white shadow-sm">
-            <thead>
-              <tr className="table-header">
-                <th className="p-3 text-center font-bold w-12">Sign</th>
-                <th className="p-3 text-left font-bold">Name</th>
-                <th className="p-3 text-left font-bold">Status</th>
-                <th className="p-3 text-left font-bold">First Address</th>
-                <th className="p-3 text-right font-bold">Balance</th>
-                <th className="p-3 text-center font-bold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((participant) => (
-                <tr key={participant.id} className={`table-row ${getRowBackgroundColor(participant.status)}`}>
-                  {/* Sign Checkbox */}
-                  <td className="p-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={isSignerSelected(participant.id)}
-                      onChange={() => handleToggleSigner(participant.id)}
-                      disabled={participant.status !== 'ready'}
-                      className="w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
-                      title={
-                        participant.status !== 'ready'
-                          ? 'Start the wallet to enable signing'
-                          : 'Select to sign transactions'
-                      }
-                    />
-                  </td>
-
-                  {/* Name */}
-                  <td className="p-3">
-                    <strong>{participant.friendlyName}</strong>
-                    <span className="text-xs text-muted ml-2">(Seed #{participant.seedIndex + 1})</span>
-                  </td>
-
-                  {/* Status */}
-                  <td className={`p-3 ${getStatusColor(participant.status)} font-bold text-sm`}>
-                    <div className="flex items-center gap-2">
-                      {participant.status === 'ready' && <MdCheckCircle />}
-                      {participant.status === 'error' && <MdError />}
-                      {(participant.status === 'connecting' || participant.status === 'syncing') && (
-                        <MdPending className="animate-spin" />
-                      )}
-                      {participant.status}
-                    </div>
-                    {participant.error && <div className="text-xs text-danger mt-1">{participant.error}</div>}
-                  </td>
-
-                  {/* First Address */}
-                  <td className="p-3">
-                    {participant.firstAddress ? (
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs">{truncateAddress(participant.firstAddress)}</span>
-                        <CopyButton
-                          text={participant.firstAddress}
-                          label={`Copy address for ${participant.friendlyName}`}
-                          className="text-muted"
-                        />
-                        <button
-                          onClick={() => setQrAddress(participant.firstAddress!)}
-                          className="btn btn-ghost btn-xs p-0 text-muted hover:text-primary"
-                          title={`Show QR code for ${participant.friendlyName}`}
-                        >
-                          <MdQrCode size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-muted">-</span>
-                    )}
-                  </td>
-
-                  {/* Balance */}
-                  <td className="p-3 text-right font-mono">
-                    {participant.status === 'ready' ? (
-                      <span className="text-success">{formatBalance(participant.balance)} HTR</span>
-                    ) : (
-                      <span className="text-muted">-</span>
-                    )}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="p-3">
-                    <div className="flex gap-1.5 justify-center">
-                      {participant.status === 'idle' || participant.status === 'error' ? (
-                        <button
-                          onClick={() => handleStartParticipant(participant.id)}
-                          title="Start"
-                          className="btn-primary btn-square text-xs p-2"
-                        >
-                          <MdPlayArrow />
-                        </button>
-                      ) : participant.status === 'ready' ? (
-                        <>
-                          <button
-                            onClick={() => handleRefreshBalance(participant.id)}
-                            title="Refresh Balance"
-                            className="btn-secondary btn-square text-xs p-2"
-                          >
-                            <MdRefresh />
-                          </button>
-                          <button
-                            onClick={() => handleStopParticipant(participant.id)}
-                            title="Stop"
-                            className="btn btn-square text-xs p-2 bg-black text-white hover:bg-gray-800"
-                          >
-                            <MdStop />
-                          </button>
-                        </>
-                      ) : (
-                        <button disabled className="btn-secondary btn-square text-xs cursor-not-allowed opacity-60 p-2">
-                          <MdPending className="animate-spin" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Start/Stop All Buttons */}
-        <div className="mt-4 flex gap-3">
-          <button
-            onClick={() => {
-              participants.filter((p) => p.status === 'idle').forEach((p) => handleStartParticipant(p.id));
-            }}
-            disabled={participants.every((p) => p.status !== 'idle')}
-            className="btn-primary text-sm"
-          >
-            Start All Idle
-          </button>
-          <button
-            onClick={() => {
-              participants.filter((p) => p.status === 'ready').forEach((p) => handleStopParticipant(p.id));
-            }}
-            disabled={participants.every((p) => p.status !== 'ready')}
-            className="btn-secondary text-sm"
-          >
-            Stop All Ready
-          </button>
-        </div>
-      </div>
-
-      {/* Section B: Send Transaction Panel */}
-      <div className="card-primary">
-        <h2 className="text-xl font-bold mb-4">Send MultiSig Transaction</h2>
-
-        {/* Prerequisites Check */}
+      <Panel title="Send multisig transaction">
         {readyParticipants.length < MULTISIG_MIN_SIGNATURES && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-warning rounded-lg">
-            <p className="text-warning text-sm m-0">
-              <strong>Note:</strong> At least {MULTISIG_MIN_SIGNATURES} participant wallets must be started before
-              sending transactions. Currently {readyParticipants.length} ready.
-            </p>
-          </div>
+          <Callout tone="warning">
+            Start at least {MULTISIG_MIN_SIGNATURES} participant wallets before sending. Currently{' '}
+            {readyParticipants.length} ready.
+          </Callout>
         )}
 
-        {/* Transaction Form */}
-        <div className="mb-4">
-          <label className="block mb-1.5 font-bold">Destination Address:</label>
+        <Field
+          label="Destination address"
+          htmlFor="multisig-destination"
+          trailing={
+            transaction.step === 'idle' &&
+            (fundingWallet?.firstAddress || testWallet?.firstAddress) && (
+              <>
+                {fundingWallet?.firstAddress && (
+                  <button
+                    type="button"
+                    onClick={() => setDestination(fundingWallet.firstAddress!)}
+                    className="btn btn-secondary btn-xs"
+                    title={fundingWallet.firstAddress}
+                  >
+                    Funding addr 0
+                  </button>
+                )}
+                {testWallet?.firstAddress && (
+                  <button
+                    type="button"
+                    onClick={() => setDestination(testWallet.firstAddress!)}
+                    className="btn btn-secondary btn-xs"
+                    title={testWallet.firstAddress}
+                  >
+                    Test addr 0
+                  </button>
+                )}
+              </>
+            )
+          }
+        >
           <input
             type="text"
             value={destination}
             onChange={(e) => setDestination(e.target.value)}
-            placeholder="Enter destination address..."
+            placeholder="Destination address"
             disabled={transaction.step !== 'idle'}
-            className="input font-mono"
+            className="input w-full font-mono text-data"
           />
-          {/* Quick fill buttons */}
-          {transaction.step === 'idle' && (fundingWallet?.firstAddress || testWallet?.firstAddress) && (
-            <div className="mt-2 flex gap-2 flex-wrap">
-              {fundingWallet?.firstAddress && (
-                <button
-                  type="button"
-                  onClick={() => setDestination(fundingWallet.firstAddress!)}
-                  className="btn-secondary text-xs"
-                  title={fundingWallet.firstAddress}
-                >
-                  Funding Wallet ({fundingWallet.metadata.friendlyName})
-                </button>
-              )}
-              {testWallet?.firstAddress && (
-                <button
-                  type="button"
-                  onClick={() => setDestination(testWallet.firstAddress!)}
-                  className="btn-secondary text-xs"
-                  title={testWallet.firstAddress}
-                >
-                  Test Wallet ({testWallet.metadata.friendlyName})
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        </Field>
 
-        <div className="mb-4">
-          <label className="block mb-1.5 font-bold">Amount (HTR):</label>
+        <Field label="Amount (HTR)" htmlFor="multisig-amount" wireControl={false}>
           <div className="flex gap-2">
             <input
+              id="multisig-amount"
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -548,80 +494,82 @@ export default function MultisigWalletManagement() {
               step="0.01"
               min="0.01"
               disabled={transaction.step !== 'idle'}
-              className="input flex-1"
+              className="input w-48 font-mono text-data"
             />
             {maxBalanceHtr && transaction.step === 'idle' && (
               <button
                 type="button"
                 onClick={() => setAmount(maxBalanceHtr)}
-                className="btn-secondary px-3 whitespace-nowrap"
+                className="btn btn-secondary"
                 title={`Fill with max balance: ${maxBalanceHtr} HTR`}
               >
                 Max ({maxBalanceHtr})
               </button>
             )}
           </div>
-        </div>
+        </Field>
 
-        {/* Selected Signers Info */}
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <div className="font-bold mb-2">
-            Selected Signers: {transaction.selectedSigners.length} / {MULTISIG_MIN_SIGNATURES} required
-          </div>
+        <section className="flex flex-col gap-2 border-t border-base-300 pt-3">
+          <h3 className="m-0 text-body font-semibold">
+            Selected signers: {transaction.selectedSigners.length} / {MULTISIG_MIN_SIGNATURES} required
+          </h3>
           {transaction.selectedSigners.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {transaction.selectedSigners.map((signerId) => {
                 const signer = participants.find((p) => p.id === signerId);
                 const hasSigned = hasSignedTransaction(signerId);
                 return (
-                  <span
+                  <StatusChip
                     key={signerId}
-                    className={`px-2 py-1 rounded text-xs ${
-                      hasSigned ? 'bg-green-200 text-green-800' : 'bg-blue-200 text-blue-800'
-                    }`}
-                  >
-                    {signer?.friendlyName || signerId}
-                    {hasSigned && ' (signed)'}
-                  </span>
+                    status={hasSigned ? 'signed' : 'selected'}
+                    tone={hasSigned ? 'success' : 'info'}
+                    label={`${signer?.friendlyName || signerId}${hasSigned ? ' (signed)' : ''}`}
+                  />
                 );
               })}
             </div>
           ) : (
-            <p className="text-muted text-sm m-0">Select participants from the table above to sign the transaction.</p>
+            <p className="m-0 text-body text-ink-muted">Select participants in the table above to sign.</p>
           )}
-        </div>
+        </section>
 
-        {/* Create Transaction Button */}
         {transaction.step === 'idle' && (
-          <button
-            onClick={handleCreateTransaction}
-            disabled={!canCreateTransaction || isCreating}
-            className={`w-full btn text-base font-bold mb-4 ${
-              canCreateTransaction && !isCreating ? 'btn-primary' : 'btn-secondary cursor-not-allowed'
-            }`}
-          >
-            {isCreating ? 'Creating Transaction...' : 'Create Transaction'}
-          </button>
-        )}
-
-        {/* Transaction Hex Display */}
-        {transaction.txHex && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-bold">Transaction Hex:</span>
-              <CopyButton text={transaction.txHex} label="Copy transaction hex" />
-            </div>
-            <div className="font-mono text-xs break-all max-h-20 overflow-y-auto">{transaction.txHex}</div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {!canCreateTransaction && (
+              <span className="text-caption text-ink-muted">
+                Enter a destination and amount, with {MULTISIG_MIN_SIGNATURES} participants ready
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleCreateTransaction}
+              disabled={!canCreateTransaction || isCreating}
+              className="btn btn-primary"
+            >
+              {isCreating && spinner}
+              {isCreating ? 'Creating transaction' : 'Create transaction'}
+            </button>
           </div>
         )}
 
-        {/* Signature Collection */}
+        {transaction.txHex && (
+          <section className="flex flex-col gap-2 border-t border-base-300 pt-3">
+            <div className="flex items-center justify-between">
+              <h3 className="m-0 text-body font-semibold">Transaction hex</h3>
+              <CopyButton text={transaction.txHex} label="Copy transaction hex" />
+            </div>
+            <pre className="m-0 max-h-20 overflow-y-auto whitespace-pre-wrap rounded-field bg-base-200 p-2 font-mono text-data-sm [overflow-wrap:anywhere]">
+              {transaction.txHex}
+            </pre>
+          </section>
+        )}
+
         {transaction.step === 'signing' && (
-          <div className="mb-4">
-            <h3 className="font-bold mb-3">
-              Collect Signatures ({transaction.collectedSignatures.length} / {MULTISIG_MIN_SIGNATURES} required)
+          <section className="flex flex-col gap-2 border-t border-base-300 pt-3">
+            <h3 className="m-0 text-body font-semibold">
+              Collect signatures ({transaction.collectedSignatures.length} / {MULTISIG_MIN_SIGNATURES} required)
             </h3>
-            <div className="space-y-2">
+            <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {transaction.selectedSigners.map((signerId) => {
                 const signer = participants.find((p) => p.id === signerId);
                 const hasSigned = hasSignedTransaction(signerId);
@@ -629,135 +577,93 @@ export default function MultisigWalletManagement() {
                 const isReady = signer?.status === 'ready';
 
                 return (
-                  <div key={signerId} className="flex items-center justify-between p-2 bg-white border rounded">
-                    <span className="font-medium">{signer?.friendlyName || signerId}</span>
-                    {hasSigned ? (
-                      <span className="text-success flex items-center gap-1">
-                        <MdCheckCircle /> Signed
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleCollectSignature(signerId)}
-                        disabled={!isReady || isSigning || !canCollectSignatures}
-                        className={`btn text-xs ${
-                          isReady && !isSigning && canCollectSignatures
-                            ? 'btn-primary'
-                            : 'btn-secondary cursor-not-allowed'
-                        }`}
-                      >
-                        {isSigning ? 'Signing...' : 'Sign'}
-                      </button>
-                    )}
-                  </div>
+                  <li key={signerId}>
+                    <Panel variant="inset" className="!flex-row items-center justify-between">
+                      <span className="font-medium">{signer?.friendlyName || signerId}</span>
+                      {hasSigned ? (
+                        <StatusChip status="signed" tone="success" label="Signed" />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleCollectSignature(signerId)}
+                          disabled={!isReady || isSigning || !canCollectSignatures}
+                          className="btn btn-primary btn-sm"
+                        >
+                          {isSigning && spinner}
+                          {isSigning ? 'Signing' : 'Sign'}
+                        </button>
+                      )}
+                    </Panel>
+                  </li>
                 );
               })}
+            </ul>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleAssembleAndSend}
+                disabled={!canAssembleAndSend || isSending}
+                className="btn btn-primary"
+              >
+                {isSending ? spinner : <MdSend aria-hidden="true" />}
+                {isSending
+                  ? 'Assembling and sending'
+                  : `Assemble and send (${transaction.collectedSignatures.length}/${MULTISIG_MIN_SIGNATURES} signatures)`}
+              </button>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Assemble & Send Button */}
-        {transaction.step === 'signing' && (
-          <button
-            onClick={handleAssembleAndSend}
-            disabled={!canAssembleAndSend || isSending}
-            className={`w-full btn text-base font-bold mb-4 flex items-center justify-center gap-2 ${
-              canAssembleAndSend && !isSending ? 'btn-success' : 'btn-secondary cursor-not-allowed'
-            }`}
-          >
-            {isSending ? (
-              <>
-                <MdPending className="animate-spin" />
-                Assembling & Sending...
-              </>
-            ) : (
-              <>
-                <MdSend />
-                Assemble & Send ({transaction.collectedSignatures.length}/{MULTISIG_MIN_SIGNATURES} signatures)
-              </>
-            )}
-          </button>
-        )}
-
-        {/* Transaction Result */}
         {transaction.step === 'complete' && transaction.result && (
-          <div className="mb-4 p-4 bg-green-50 border border-success rounded-lg">
-            <div className="flex items-start gap-3">
-              <MdCheckCircle className="text-success text-2xl flex-shrink-0" />
-              <div>
-                <p className="font-bold text-green-900 m-0">Transaction Sent Successfully!</p>
-                <div className="mt-2">
-                  <span className="text-sm text-green-800">Transaction Hash:</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="font-mono text-xs break-all">{transaction.result.hash}</span>
-                    <CopyButton text={transaction.result.hash} label="Copy transaction hash" />
-                  </div>
-                  {explorerUrl && (
-                    <a
-                      href={`${explorerUrl}transaction/${transaction.result.hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-info hover:underline mt-2 inline-block"
-                    >
-                      View in Explorer
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <Callout tone="success" title="Transaction sent">
+            <TxIdDisplay hash={transaction.result.hash} network={network} />
+          </Callout>
         )}
 
-        {/* Transaction Error */}
         {transaction.step === 'error' && transaction.error && (
-          <div className="mb-4 p-4 bg-red-50 border border-danger rounded-lg">
-            <div className="flex items-start gap-3">
-              <MdError className="text-danger text-2xl flex-shrink-0" />
-              <div>
-                <p className="font-bold text-red-900 m-0">Transaction Failed</p>
-                <p className="text-sm text-red-800 mt-1 mb-0">{transaction.error}</p>
-              </div>
-            </div>
+          <Callout tone="error" title="Transaction failed">
+            {transaction.error}
+          </Callout>
+        )}
+
+        {(transaction.step === 'complete' || transaction.step === 'error' || transaction.step === 'signing') && (
+          <div className="flex justify-end">
+            <button type="button" onClick={handleResetTransaction} className="btn btn-ghost btn-sm">
+              Reset / new transaction
+            </button>
           </div>
         )}
+      </Panel>
 
-        {/* Reset Button */}
-        {(transaction.step === 'complete' || transaction.step === 'error' || transaction.step === 'signing') && (
-          <button onClick={handleResetTransaction} className="btn-secondary w-full text-sm">
-            Reset / New Transaction
-          </button>
-        )}
-      </div>
-
-      {/* Debug Info (Development) */}
       {import.meta.env.DEV && (
-        <details className="mt-7.5">
-          <summary className="cursor-pointer text-muted text-sm">Debug Info</summary>
-          <div className="mt-2 p-3 bg-gray-50 rounded font-mono text-xs">
-            <p>Wallet Instances: {multisigWalletInstancesMap.size}</p>
-            <p>Transaction Step: {transaction.step}</p>
-            <p>Selected Signers: {transaction.selectedSigners.join(', ') || 'none'}</p>
-            <p>Collected Signatures: {transaction.collectedSignatures.length}</p>
+        <details className="text-body">
+          <summary className="cursor-pointer text-ink-muted">Debug info</summary>
+          <div className="mt-2 rounded-field bg-base-200 p-3 font-mono text-data-sm">
+            <p className="m-0">Wallet instances: {multisigWalletInstancesMap.size}</p>
+            <p className="m-0">Transaction step: {transaction.step}</p>
+            <p className="m-0">Selected signers: {transaction.selectedSigners.join(', ') || 'none'}</p>
+            <p className="m-0">Collected signatures: {transaction.collectedSignatures.length}</p>
           </div>
         </details>
       )}
-      {/* QR Code Modal */}
+
       {qrAddress && (
-        <div className="modal modal-open" onClick={() => setQrAddress(null)}>
-          <div className="modal-box max-w-xs text-center" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-lg mb-4">Wallet Address</h3>
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-white border-2 border-gray-300 rounded">
-                <QRCode value={qrAddress} size={180} />
-              </div>
+        <div className="modal modal-open" role="dialog" aria-modal="true" aria-labelledby="multisig-qr-title">
+          <div className="modal-box flex max-w-xs flex-col items-start gap-3 rounded-box border border-base-300 p-5 shadow-float">
+            <h3 id="multisig-qr-title" className="m-0 text-title">
+              Wallet address
+            </h3>
+            <div className="rounded-field border border-base-300 bg-base-100 p-3">
+              <QRCode value={qrAddress} size={180} />
             </div>
-            <div className="font-mono text-xs break-all bg-gray-100 p-2 rounded mb-4">{qrAddress}</div>
-            <div className="flex justify-center gap-2">
-              <CopyButton text={qrAddress} label="Copy address" />
-              <button className="btn btn-ghost btn-sm" onClick={() => setQrAddress(null)}>
+            <Identifier value={qrAddress} kind="address" truncate="none" walletTag={false} />
+            <div className="flex w-full justify-end">
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQrAddress(null)}>
                 Close
               </button>
             </div>
           </div>
+          <div className="modal-backdrop" onClick={() => setQrAddress(null)} aria-hidden="true" />
         </div>
       )}
     </div>
