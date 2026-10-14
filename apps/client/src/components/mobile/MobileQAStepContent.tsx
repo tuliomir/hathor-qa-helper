@@ -12,6 +12,7 @@ import {
 } from '../../store/slices/mobileQAProgressSlice';
 import { getSection, getStep, getNextStep, getPreviousStep } from '../../config/mobileQA';
 import MarkdownText from '../common/MarkdownText';
+import StageHeader from '../common/StageHeader';
 import { Panel } from '../ui/Panel';
 import { Callout } from '../ui/Callout';
 import { StatusChip } from '../ui/StatusChip';
@@ -84,16 +85,16 @@ export default function MobileQAStepContent() {
 
   return (
     <div className="flex w-full max-w-stage flex-col gap-4 px-4 pt-4 md:px-6 md:pt-6">
-      <header className="flex flex-col gap-0.5 text-left">
-        <nav aria-label="Breadcrumb" className="text-caption text-ink-muted">
-          {section.title} / Step <span className="font-mono">{stepNumber}</span> of{' '}
-          <span className="font-mono">{section.steps.length}</span>
-        </nav>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 className="m-0 text-page">{step.title}</h1>
-          {isCompleted && <StatusChip status="completed" label="Completed" tone="success" />}
-        </div>
-      </header>
+      <StageHeader
+        title={step.title}
+        breadcrumb={
+          <>
+            {section.title} / Step <span className="font-mono">{stepNumber}</span> of{' '}
+            <span className="font-mono">{section.steps.length}</span>
+          </>
+        }
+        titleAdornment={isCompleted && <StatusChip status="completed" label="Completed" tone="success" />}
+      />
 
       <Panel title="Instructions">
         <div className="max-w-prose text-body-lg text-left">
