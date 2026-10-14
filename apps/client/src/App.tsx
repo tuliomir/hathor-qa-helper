@@ -4,12 +4,18 @@ import MobileQALayout from './components/mobile/MobileQALayout';
 import DesktopQALayout from './components/desktop/DesktopQALayout';
 import WalletAutoLoader from './components/common/WalletAutoLoader';
 import { DEFAULT_STAGE_URL } from './config/stageRoutes';
+import NetworkRail from './components/shell/NetworkRail';
 
 function App() {
   return (
     <>
       {/* Auto-start selected wallets on any route */}
       <WalletAutoLoader />
+
+      {/* Interim placement until AppShell owns the rail */}
+      <div className="fixed inset-x-0 top-0 z-50">
+        <NetworkRail />
+      </div>
 
       <Routes>
         <Route path="/" element={<Navigate to={DEFAULT_STAGE_URL} replace />} />

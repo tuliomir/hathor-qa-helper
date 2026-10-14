@@ -11,6 +11,9 @@ import CopyButton from '../common/CopyButton';
 import { ExplorerLink } from '../common/ExplorerLink';
 import { TransactionResponseDisplay } from '../common/TransactionResponseDisplay';
 import { safeStringify } from '../../utils/betHelpers';
+import { snapNetworkKey } from '../../utils/blueprints';
+import { DEFAULT_NETWORK, type NetworkKey } from '../../constants/network';
+import { useAppSelector } from '../../store/hooks';
 import { RpcResponseType } from '../../constants/snap';
 import {
   parseSnapResponse,
@@ -18,6 +21,11 @@ import {
   isTransactionLike,
   safeDisplayValue,
 } from '../../utils/snapResponseHelpers';
+
+/** Explorer links in snap responses follow the snap's own network. */
+function useSnapExplorerNetwork(): NetworkKey {
+  return snapNetworkKey(useAppSelector((state) => state.snap.network)) ?? DEFAULT_NETWORK;
+}
 
 /* ------------------------------------------------------------------ */
 /*  JSON Syntax Highlighting                                          */
@@ -183,9 +191,7 @@ function RenderGetBalance({
               <div>
                 <div className="text-xs text-muted mb-1">Lock Expires</div>
                 <div className="text-base font-semibold">
-                  {item.lockExpires
-                    ? new Date(item.lockExpires * 1000).toLocaleString()
-                    : 'N/A'}
+                  {item.lockExpires ? new Date(item.lockExpires * 1000).toLocaleString() : 'N/A'}
                 </div>
               </div>
             </div>
@@ -249,6 +255,7 @@ function RenderGetNetwork({ data }: { data: Record<string, unknown> }) {
 
 /** type 5 - htr_getUtxos */
 function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
+  const network = useSnapExplorerNetwork();
   const utxos = Array.isArray(data.utxos) ? (data.utxos as Record<string, unknown>[]) : [];
   return (
     <div className="space-y-4">
@@ -299,7 +306,7 @@ function RenderGetUtxos({ data }: { data: Record<string, unknown> }) {
                         <span className="text-muted">TX ID:</span>
                         <p className="font-mono text-2xs break-all mt-1 mb-0">{safeDisplayValue(utxo.tx_id)}</p>
                       </div>
-                      {typeof utxo.tx_id === 'string' && <ExplorerLink hash={utxo.tx_id} network="testnet" />}
+                      {typeof utxo.tx_id === 'string' && <ExplorerLink hash={utxo.tx_id} network={network} />}
                     </div>
                   </div>
                   <div>
@@ -431,6 +438,7 @@ interface SnapResponseDisplayProps {
 }
 
 export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({ response, showRaw = false }) => {
+  const network = useSnapExplorerNetwork();
   const parsed = parseSnapResponse(response);
 
   // Raw mode: highlighted JSON
@@ -442,7 +450,7 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({ respon
   if (isTransactionLike(parsed)) {
     return (
       <div className="space-y-3">
-        <TransactionResponseDisplay response={parsed} network="testnet" />
+        <TransactionResponseDisplay response={parsed} network={network} />
       </div>
     );
   }
@@ -511,7 +519,7 @@ export const SnapResponseDisplay: React.FC<SnapResponseDisplayProps> = ({ respon
         // Transaction-like responses (sendTransaction, createToken,
         // sendNanoContractTx, createNanoContractCreateTokenTx)
         if (isTransactionLike(inner)) {
-          formatted = <TransactionResponseDisplay response={inner} network="testnet" />;
+          formatted = <TransactionResponseDisplay response={inner} network={network} />;
         }
         break;
     }

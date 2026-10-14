@@ -19,6 +19,7 @@ import {
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useScanForLostFunds } from '../../hooks/useScanForLostFunds';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { selectPreferredNetwork } from '../../store/slices/networkSlice';
 import { startWallet, stopWallet } from '../../store/slices/walletStoreSlice';
 import { setFundingWallet, setTestWallet } from '../../store/slices/walletSelectionSlice';
 import {
@@ -54,7 +55,9 @@ export default function WalletInitialization() {
 
   const [seedInput, setSeedInput] = useState('');
   const [walletName, setWalletName] = useState('');
-  const [network, setNetwork] = useState<NetworkKey>('TESTNET');
+  // New wallets default to the network chosen in the network switcher.
+  const preferredNetwork = useAppSelector(selectPreferredNetwork);
+  const [network, setNetwork] = useState<NetworkKey>(preferredNetwork);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [invalidWords, setInvalidWords] = useState<string[]>([]);
   const [pastedImageUrl, setPastedImageUrl] = useState<string | null>(null);

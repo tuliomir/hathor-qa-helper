@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { resolveExplorerUrl } from '../src/utils/networkHelpers';
+import { buildExplorerUrl, resolveExplorerUrl, resolveNetworkKey } from '../src/utils/networkHelpers';
 
 describe('resolveExplorerUrl', () => {
   test('resolves uppercase TESTNET', () => {
@@ -44,5 +44,44 @@ describe('resolveExplorerUrl', () => {
 
   test('returns testnet URL for undefined', () => {
     expect(resolveExplorerUrl(undefined as unknown as string)).toBe('https://explorer.testnet.hathor.network/');
+  });
+});
+
+describe('buildExplorerUrl', () => {
+  const hash = 'abc123';
+
+  test('builds transaction URLs on every network', () => {
+    expect(buildExplorerUrl('TESTNET', hash)).toBe('https://explorer.testnet.hathor.network/transaction/abc123');
+    expect(buildExplorerUrl('MAINNET', hash)).toBe('https://explorer.hathor.network/transaction/abc123');
+    expect(buildExplorerUrl('SHIELDED_TESTNET', hash)).toBe(
+      'https://explorer.shielded-outputs.testnet.hathor.network/transaction/abc123'
+    );
+  });
+
+  test('builds nano contract and token pages', () => {
+    expect(buildExplorerUrl('MAINNET', hash, 'nc_detail')).toBe(
+      'https://explorer.hathor.network/nano_contract/detail/abc123'
+    );
+    expect(buildExplorerUrl('SHIELDED_TESTNET', hash, 'token_detail')).toBe(
+      'https://explorer.shielded-outputs.testnet.hathor.network/token_detail/abc123'
+    );
+  });
+
+  test('accepts lib and snap network names', () => {
+    expect(buildExplorerUrl('mainnet', hash)).toBe('https://explorer.hathor.network/transaction/abc123');
+  });
+});
+
+describe('resolveNetworkKey', () => {
+  test('resolves keys and names case-insensitively', () => {
+    expect(resolveNetworkKey('TESTNET')).toBe('TESTNET');
+    expect(resolveNetworkKey('mainnet')).toBe('MAINNET');
+    expect(resolveNetworkKey('shielded_testnet')).toBe('SHIELDED_TESTNET');
+  });
+
+  test('returns null for unknown or empty names', () => {
+    expect(resolveNetworkKey('dev-testnet')).toBeNull();
+    expect(resolveNetworkKey(null)).toBeNull();
+    expect(resolveNetworkKey(undefined)).toBeNull();
   });
 });
