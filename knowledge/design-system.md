@@ -55,6 +55,16 @@ Colours are daisyUI 5 theme variables set by `[data-theme='bench']` on `<html>` 
 - No `/<alpha>` modifiers on theme colours (Tailwind 3 cannot apply them to CSS variables); use the `tint-*` colours
 - Legacy aliases kept until the stage sweep: `danger`, `muted`, `light`, `dark`, `border`, `primary-dark`
 
+## App shell (src/components/shell/)
+
+Every route renders inside `AppShell`: network rail, 48px top bar, navigation slot, content. Spec: `docs/design/shell.md`.
+
+- **Active network**: `selectActiveNetwork` (`store/slices/networkSlice.ts`) follows the selected test wallet, else the funding wallet, else the preferred network from the network switcher. Use it instead of hard-coding `testnet`. The switcher never restarts or moves wallets.
+- **Network visuals key off `kind`** (`NETWORK_CONFIG[key].kind`: `test`, `shielded-test`, `main`) via `utils/networkVisuals.ts`. Use `common/NetworkChip` for a network label.
+- **`ExplorerLink`** defaults to the active network; pass `network` only when the link belongs to another one (e.g. the snap's network).
+- **Helper server status** lives in `helperServerSlice`; read it for preconditions instead of polling again.
+- Stage navigation is driven by `STAGE_FAMILIES` and `family` on each group in `types/stage.ts`. Stage titles are sentence case without "(Snap)" or "RPC"; the family carries that.
+
 ## Common Patterns
 
 ```tsx

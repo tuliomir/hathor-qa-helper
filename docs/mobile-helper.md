@@ -51,7 +51,7 @@ src/
     ├── MobileQASidebar.tsx            # Section navigation
     ├── MobileQAStepContent.tsx        # Step instructions display
     ├── MobileQAToolPanel.tsx          # Embedded tool panel (reads from config)
-    ├── MobileQAHeader.tsx             # Header with progress bar
+    # (header and progress bar now come from the app shell, src/components/shell/)
     ├── MobileQAProgressBar.tsx        # Visual progress indicator
     └── StepCheckbox.tsx               # Step completion toggle
 ```
@@ -906,7 +906,9 @@ function ToolRenderer({ config, context }: { config: ToolConfig; context: StepRe
 }
 ```
 
-#### 4.5 MobileQAHeader.tsx
+#### 4.5 MobileQAHeader.tsx (replaced)
+
+Superseded by the app shell (`src/components/shell/`): the workspace switcher shows progress and a 2px bar under the top bar tracks it. The original plan follows.
 
 Features:
 - Document title

@@ -4,7 +4,15 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { getGroupForStage, type Stage, STAGE_GROUPS, type StageGroup, type StageId, STAGES, } from '../src/types/stage';
+import {
+  getGroupForStage,
+  type Stage,
+  STAGE_FAMILIES,
+  STAGE_GROUPS,
+  type StageGroup,
+  type StageId,
+  STAGES,
+} from '../src/types/stage';
 
 describe('stage types', () => {
   describe('STAGE_GROUPS', () => {
@@ -23,19 +31,19 @@ describe('stage types', () => {
     test('contains rpc group', () => {
       const rpc = STAGE_GROUPS.find((g) => g.id === 'rpc');
       expect(rpc).toBeDefined();
-      expect(rpc!.title).toBe('RPC Requests');
+      expect(rpc!.title).toBe('RPC requests');
     });
 
     test('contains bet-nano-contracts group', () => {
       const bet = STAGE_GROUPS.find((g) => g.id === 'bet-nano-contracts');
       expect(bet).toBeDefined();
-      expect(bet!.title).toBe('Bet Nano Contract');
+      expect(bet!.title).toBe('Bet nano contract');
     });
 
     test('contains fee-nano-contracts group', () => {
       const fee = STAGE_GROUPS.find((g) => g.id === 'fee-nano-contracts');
       expect(fee).toBeDefined();
-      expect(fee!.title).toBe('Fee Nano Contract');
+      expect(fee!.title).toBe('Fee nano contract');
     });
 
     test('contains auditing group', () => {
@@ -47,13 +55,13 @@ describe('stage types', () => {
     test('contains multisig group', () => {
       const multisig = STAGE_GROUPS.find((g) => g.id === 'multisig');
       expect(multisig).toBeDefined();
-      expect(multisig!.title).toBe('MultiSig');
+      expect(multisig!.title).toBe('Multisig');
     });
 
     test('contains snaps group', () => {
       const snaps = STAGE_GROUPS.find((g) => g.id === 'snaps');
       expect(snaps).toBeDefined();
-      expect(snaps!.title).toBe('MetaMask Snaps');
+      expect(snaps!.title).toBe('Snap requests');
       expect(snaps!.stages).toHaveLength(14);
     });
 
@@ -208,6 +216,50 @@ describe('stage types', () => {
         const found = STAGE_GROUPS.some((g) => g.stages.some((s) => s.id === stageId));
         expect(found).toBe(true);
       });
+    });
+  });
+
+  describe('STAGE_FAMILIES', () => {
+    test('lists the four families in order', () => {
+      expect(STAGE_FAMILIES.map((f) => f.id)).toEqual(['wallets', 'rpc', 'snap', 'shielded']);
+    });
+
+    test('every group belongs to a known family', () => {
+      const ids = new Set(STAGE_FAMILIES.map((f) => f.id));
+      for (const group of STAGE_GROUPS) {
+        expect(ids.has(group.family)).toBe(true);
+      }
+    });
+
+    test('groups are assigned per shell.md', () => {
+      const family = (id: string) => STAGE_GROUPS.find((g) => g.id === id)!.family;
+      expect(['main-qa', 'auditing', 'push-notifications', 'multisig'].map(family)).toEqual([
+        'wallets',
+        'wallets',
+        'wallets',
+        'wallets',
+      ]);
+      expect(['rpc', 'bet-nano-contracts', 'fee-nano-contracts'].map(family)).toEqual(['rpc', 'rpc', 'rpc']);
+      expect(['snaps', 'snap-bet-nc', 'snap-fee-nc'].map(family)).toEqual(['snap', 'snap', 'snap']);
+    });
+  });
+
+  describe('titles', () => {
+    test('stages carry no emoji icon', () => {
+      for (const group of STAGE_GROUPS) {
+        for (const stage of group.stages) {
+          expect(stage.icon).toBeUndefined();
+        }
+      }
+    });
+
+    test('titles drop family prefixes and suffixes', () => {
+      for (const group of STAGE_GROUPS) {
+        expect(group.title).not.toMatch(/^Snap (Bet|Fee)| NC$/);
+        for (const stage of group.stages) {
+          expect(stage.title).not.toMatch(/\(Snap\)|^Snap | RPC$/);
+        }
+      }
     });
   });
 });

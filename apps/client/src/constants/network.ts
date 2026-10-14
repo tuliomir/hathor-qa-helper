@@ -15,9 +15,34 @@ import {
 export { NETWORK_KEYS };
 export type { NetworkKey };
 
+/**
+ * Visual category of a network. UI decisions (rail, chips, mainnet warnings)
+ * key off the kind, so a new network only has to declare which one it is.
+ */
+export type NetworkKind = 'test' | 'shielded-test' | 'main';
+
+const NETWORK_KINDS: Record<NetworkKey, NetworkKind> = {
+  TESTNET: 'test',
+  SHIELDED_TESTNET: 'shielded-test',
+  MAINNET: 'main',
+};
+
+/** Compact names for narrow screens. */
+const SHORT_LABELS: Record<NetworkKey, string> = {
+  TESTNET: 'Test',
+  SHIELDED_TESTNET: 'Shielded',
+  MAINNET: 'Main',
+};
+
+export function networkKind(key: NetworkKey): NetworkKind {
+  return NETWORK_KINDS[key];
+}
+
 export interface ClientNetworkConfig extends NetworkDefinition {
   /** wallet-lib network name (alias of `libName`). */
   name: LibNetworkName;
+  kind: NetworkKind;
+  shortLabel: string;
 }
 
 /** Path segment of each network's Vite dev proxy (see vite.config.ts). */
@@ -38,6 +63,8 @@ export function buildNetworkConfig({ dev, origin }: { dev: boolean; origin?: str
     config[key] = {
       ...network,
       name: network.libName,
+      kind: NETWORK_KINDS[key],
+      shortLabel: SHORT_LABELS[key],
       fullNodeUrl: dev ? `${origin}/hathor-node/${DEV_PROXY_SLUG[key]}/v1a/` : network.fullNodeUrl,
     };
   }

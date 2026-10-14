@@ -15,6 +15,12 @@
       if (typeof process === 'undefined') {
         window.process = { env: {}, browser: true };
       }
+      // Apply the stored theme before first paint (see src/components/shell/useTheme.ts)
+      try {
+        if (localStorage.getItem('qa-helper-theme') === 'bench-dark') {
+          document.documentElement.dataset.theme = 'bench-dark';
+        }
+      } catch (e) {}
       // NOTE: Buffer is NOT pre-initialized here - the bundle's polyfill provides
       // the full Buffer implementation. A simple shim would break Buffer.from(), etc.
     </script>

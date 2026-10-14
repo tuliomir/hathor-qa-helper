@@ -69,12 +69,35 @@ export type GroupId =
   | 'snap-fee-nc';
 
 /**
+ * Families sit above groups in the stage navigation. They carry the
+ * integration (RPC, Snap), so group and stage titles do not repeat it.
+ */
+export type FamilyId = 'wallets' | 'rpc' | 'snap' | 'shielded';
+
+export interface StageFamily {
+  id: FamilyId;
+  title: string;
+  /** Short name for chips (command palette results). */
+  chip: string;
+}
+
+export const STAGE_FAMILIES: StageFamily[] = [
+  { id: 'wallets', title: 'Wallets', chip: 'Wallets' },
+  { id: 'rpc', title: 'WalletConnect RPC', chip: 'RPC' },
+  { id: 'snap', title: 'MetaMask Snap', chip: 'Snap' },
+  { id: 'shielded', title: 'Shielded', chip: 'Shielded' },
+];
+
+/**
  * Stage configuration
  */
 export interface Stage {
   id: StageId;
   title: string;
   description: string;
+  /** RPC / Snap methods the stage calls, for search and the stage header. */
+  methods?: string[];
+  /** @deprecated Stage emoji were dropped in the redesign; kept optional so nothing breaks. */
   icon?: string;
 }
 
@@ -84,6 +107,7 @@ export interface Stage {
 export interface StageGroup {
   id: GroupId;
   title: string;
+  family: FamilyId;
   stages: Stage[];
 }
 
@@ -107,342 +131,341 @@ export const STAGE_GROUPS: StageGroup[] = [
   {
     id: 'main-qa',
     title: 'Main QA',
+    family: 'wallets',
     stages: [
       {
         id: 'wallet-initialization',
-        title: 'Wallet Initialization',
+        title: 'Wallet initialization',
         description: 'Initialize wallets by entering seed words',
-        icon: '🔑',
       },
       {
         id: 'address-validation',
-        title: 'Address Validation',
+        title: 'Address validation',
         description: 'Validate addresses using initialized wallets',
-        icon: '✅',
       },
       {
         id: 'custom-tokens',
-        title: 'Custom Tokens',
+        title: 'Custom tokens',
         description: 'View custom tokens for funding and test wallets',
-        icon: '🪙',
       },
     ],
   },
   {
     id: 'rpc',
-    title: 'RPC Requests',
+    title: 'RPC requests',
+    family: 'rpc',
     stages: [
       {
         id: 'rpc-connection',
         title: 'Connection',
         description: 'Connect to wallet via WalletConnect and configure RPC options',
-        icon: '🔌',
       },
       {
         id: 'rpc-basic-info',
-        title: 'Basic Information',
+        title: 'Basic information',
         description: 'Test basic wallet information RPC methods',
-        icon: 'ℹ️',
+        methods: ['htr_getWalletInformation', 'htr_getConnectedNetwork'],
       },
       {
         id: 'rpc-get-address',
-        title: 'Get Address',
+        title: 'Get address',
         description: 'Retrieve addresses by type (first empty, index, or client)',
-        icon: '📍',
+        methods: ['htr_getAddress'],
       },
       {
         id: 'rpc-get-balance',
-        title: 'Get Balance',
+        title: 'Get balance',
         description: 'Test htr_getBalance RPC method to query token balances',
-        icon: '💰',
+        methods: ['htr_getBalance'],
       },
       {
         id: 'rpc-get-utxos',
         title: 'Get UTXOs',
         description: 'Retrieve unspent transaction outputs for a specific token',
-        icon: '📦',
+        methods: ['htr_getUtxos'],
       },
       {
         id: 'rpc-sign-with-address',
-        title: 'Sign with Address',
+        title: 'Sign with address',
         description: 'Test htr_signWithAddress RPC method to sign messages',
-        icon: '✍️',
+        methods: ['htr_signWithAddress'],
       },
       {
         id: 'rpc-create-token',
-        title: 'Create Token',
+        title: 'Create token',
         description: 'Create a new custom token with mint/melt authorities',
-        icon: '🪙',
+        methods: ['htr_createToken'],
       },
       {
         id: 'rpc-send-transaction',
-        title: 'Send Transaction',
+        title: 'Send transaction',
         description: 'Send a transaction with one or more outputs',
-        icon: '📤',
+        methods: ['htr_sendTransaction'],
       },
       {
         id: 'rpc-sign-oracle-data',
-        title: 'Sign Oracle Data',
+        title: 'Sign oracle data',
         description: 'Sign data as oracle for a nano contract',
-        icon: '🔮',
+        methods: ['htr_signOracleData'],
       },
       {
         id: 'rpc-raw-editor',
-        title: 'Raw RPC Editor',
+        title: 'Raw RPC editor',
         description: 'Send raw JSON RPC requests directly to the wallet',
-        icon: '{}',
       },
     ],
   },
   {
     id: 'bet-nano-contracts',
-    title: 'Bet Nano Contract',
+    title: 'Bet nano contract',
+    family: 'rpc',
     stages: [
       {
         id: 'rpc-bet-initialize',
-        title: 'Initialize Bet',
+        title: 'Initialize bet',
         description: 'Initialize a new bet nano contract with oracle and token configuration',
-        icon: '🎲',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-bet-deposit',
-        title: 'Place Bet',
+        title: 'Place bet',
         description: 'Place a bet on an existing bet nano contract',
-        icon: '💸',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-set-bet-result',
-        title: 'Set Bet Result',
+        title: 'Set bet result',
         description: 'Set the result for a bet nano contract (oracle action)',
-        icon: '⚖️',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-bet-withdraw',
-        title: 'Withdraw Prize',
+        title: 'Withdraw prize',
         description: 'Withdraw your prize from a bet nano contract',
-        icon: '🏆',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },
   {
     id: 'fee-nano-contracts',
-    title: 'Fee Nano Contract',
+    title: 'Fee nano contract',
+    family: 'rpc',
     stages: [
       {
         id: 'rpc-fee-initialize',
-        title: 'Initialize Fee',
+        title: 'Initialize fee',
         description: 'Initialize a new fee nano contract with an HTR deposit',
-        icon: '💎',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-fee-deposit',
-        title: 'Deposit Fee Token',
+        title: 'Deposit fee token',
         description: 'Deposit a fee-based token into the fee nano contract',
-        icon: '📥',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'rpc-fee-withdraw',
-        title: 'Withdraw Fee Token',
+        title: 'Withdraw fee token',
         description: 'Withdraw a fee-based token from the fee nano contract',
-        icon: '📤',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },
   {
     id: 'push-notifications',
-    title: 'Push Notification',
+    title: 'Push notifications',
+    family: 'wallets',
     stages: [
       {
         id: 'push-notifications',
-        title: 'Push Notifications',
+        title: 'Push notifications',
         description: 'Test push notifications by sending tokens to test wallet',
-        icon: '🔔',
       },
     ],
   },
   {
     id: 'auditing',
     title: 'Auditing',
+    family: 'wallets',
     stages: [
       {
         id: 'transaction-history',
-        title: 'Transaction History',
+        title: 'Transaction history',
         description: 'View transaction history for the test wallet',
-        icon: '📜',
       },
       {
         id: 'tx-update-events',
-        title: 'Tx Update Events',
+        title: 'Tx update events',
         description: 'Monitor real-time wallet events (new-tx, update-tx, state, etc.)',
-        icon: '📡',
       },
       {
         id: 'test-wallet-cleanup',
-        title: 'Test Wallet Cleanup',
+        title: 'Test wallet cleanup',
         description: 'Melt all tokens and return HTR to funding wallet',
-        icon: '🧹',
       },
     ],
   },
   {
     id: 'multisig',
-    title: 'MultiSig',
+    title: 'Multisig',
+    family: 'wallets',
     stages: [
       {
         id: 'multisig-wallet-management',
-        title: 'MultiSig Wallets',
+        title: 'Multisig wallets',
         description: 'Manage multisig participant wallets and send transactions',
-        icon: '🔐',
       },
     ],
   },
   {
     id: 'snaps',
-    title: 'MetaMask Snaps',
+    title: 'Snap requests',
+    family: 'snap',
     stages: [
       // 1. Connection
       {
         id: 'snap-connection',
-        title: 'Snap Connection',
+        title: 'Connection',
         description: 'Connect to MetaMask Snap and configure snap origin',
-        icon: '🦊',
       },
       // 2. No-approval reads
       {
         id: 'snap-get-connected-network',
-        title: 'Get Network',
+        title: 'Get network',
         description: 'Get the connected network information via Snap',
-        icon: '🌐',
+        methods: ['htr_getConnectedNetwork'],
       },
       {
         id: 'snap-get-wallet-info',
-        title: 'Wallet Information',
+        title: 'Wallet information',
         description: 'Get wallet network and address via Snap',
-        icon: '📋',
+        methods: ['htr_getWalletInformation'],
       },
       // 3. Read-only (require approval)
       {
         id: 'snap-get-address',
-        title: 'Get Address',
+        title: 'Get address',
         description: 'Retrieve addresses by type and index via Snap',
-        icon: '📍',
+        methods: ['htr_getAddress'],
       },
       {
         id: 'snap-get-balance',
-        title: 'Get Balance',
+        title: 'Get balance',
         description: 'Query token balances via Snap',
-        icon: '💰',
+        methods: ['htr_getBalance'],
       },
       {
         id: 'snap-get-utxos',
         title: 'Get UTXOs',
         description: 'Retrieve unspent transaction outputs via Snap',
-        icon: '📦',
+        methods: ['htr_getUtxos'],
       },
       {
         id: 'snap-get-xpub',
-        title: 'Get Xpub',
+        title: 'Get xpub',
         description: 'Retrieve the wallet extended public key via Snap',
-        icon: '🔑',
+        methods: ['htr_getXpub'],
       },
       // 4. Signatures (no side effects)
       {
         id: 'snap-sign-with-address',
-        title: 'Sign with Address',
+        title: 'Sign with address',
         description: 'Sign a message using a specific address via Snap',
-        icon: '✍️',
+        methods: ['htr_signWithAddress'],
       },
       {
         id: 'snap-sign-oracle-data',
-        title: 'Sign Oracle Data',
+        title: 'Sign oracle data',
         description: 'Sign oracle data for a nano contract via Snap',
-        icon: '🔮',
+        methods: ['htr_signOracleData'],
       },
       // 5. Transactions & token creation
       {
         id: 'snap-send-transaction',
-        title: 'Send Transaction',
+        title: 'Send transaction',
         description: 'Send a transaction with outputs via Snap',
-        icon: '📤',
+        methods: ['htr_sendTransaction'],
       },
       {
         id: 'snap-create-token',
-        title: 'Create Token',
+        title: 'Create token',
         description: 'Create a new custom token via Snap',
-        icon: '🪙',
+        methods: ['htr_createToken'],
       },
       {
         id: 'snap-change-network',
-        title: 'Change Network',
+        title: 'Change network',
         description: 'Change the connected network via Snap',
-        icon: '🔄',
+        methods: ['htr_changeNetwork'],
       },
       // 6. Nano contract stages
       {
         id: 'snap-send-nano-contract-tx',
-        title: 'Nano Contract TX',
+        title: 'Nano contract tx',
         description: 'Send a nano contract transaction via Snap',
-        icon: '📜',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-create-nc-token',
-        title: 'NC + Create Token',
+        title: 'NC + create token',
         description: 'Create a nano contract with token creation via Snap',
-        icon: '🔗',
+        methods: ['htr_createNanoContractCreateTokenTx'],
       },
     ],
   },
   {
     id: 'snap-bet-nc',
-    title: 'Snap Bet NC',
+    title: 'Bet nano contract',
+    family: 'snap',
     stages: [
       {
         id: 'snap-bet-initialize',
-        title: 'Initialize Bet',
+        title: 'Initialize bet',
         description: 'Initialize a bet nano contract via Snap',
-        icon: '🎲',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-bet-deposit',
-        title: 'Place Bet',
+        title: 'Place bet',
         description: 'Place a bet on a nano contract via Snap',
-        icon: '💸',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-set-bet-result',
-        title: 'Set Bet Result',
+        title: 'Set bet result',
         description: 'Set the result for a bet nano contract via Snap',
-        icon: '⚖️',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-bet-withdraw',
-        title: 'Withdraw Prize',
+        title: 'Withdraw prize',
         description: 'Withdraw prize from a bet nano contract via Snap',
-        icon: '🏆',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },
   {
     id: 'snap-fee-nc',
-    title: 'Snap Fee NC',
+    title: 'Fee nano contract',
+    family: 'snap',
     stages: [
       {
         id: 'snap-fee-initialize',
-        title: 'Initialize Fee',
+        title: 'Initialize fee',
         description: 'Initialize a fee nano contract via Snap',
-        icon: '💎',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-fee-deposit',
-        title: 'Deposit Fee Token',
+        title: 'Deposit fee token',
         description: 'Deposit a fee-based token via Snap',
-        icon: '📥',
+        methods: ['htr_sendNanoContractTx'],
       },
       {
         id: 'snap-fee-withdraw',
-        title: 'Withdraw Fee Token',
+        title: 'Withdraw fee token',
         description: 'Withdraw a fee-based token via Snap',
-        icon: '📤',
+        methods: ['htr_sendNanoContractTx'],
       },
     ],
   },

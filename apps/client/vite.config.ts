@@ -1,10 +1,38 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+
+const QA_SERVER_TARGET = 'http://127.0.0.1:5180';
+
+/**
+ * Answers `/qa-server/health` itself: 204 when the QA server is not running.
+ * Through the plain proxy that case is a 500, which the browser logs as a
+ * console error on every poll of the helper server pill.
+ */
+function qaServerHealth(): Plugin {
+  return {
+    name: 'qa-server-health',
+    configureServer(server) {
+      server.middlewares.use('/qa-server/health', async (_req, res) => {
+        try {
+          const upstream = await fetch(`${QA_SERVER_TARGET}/health`, { signal: AbortSignal.timeout(3000) });
+          res.statusCode = upstream.status;
+          res.setHeader('content-type', upstream.headers.get('content-type') ?? 'application/json');
+          res.end(await upstream.text());
+        } catch {
+          res.statusCode = 204;
+          res.setHeader('x-qa-server', 'unreachable');
+          res.end();
+        }
+      });
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    qaServerHealth(),
     react(),
     nodePolyfills({
       globals: {
@@ -54,7 +82,7 @@ export default defineConfig({
       },
       // Local QA server (apps/server). It strips the /qa-server prefix itself.
       '/qa-server': {
-        target: 'http://127.0.0.1:5180',
+        target: QA_SERVER_TARGET,
         changeOrigin: true,
       },
       '/swap-tokens': {

@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test';
 import { createConsoleCollector } from './helpers/console-collector';
 import { DESKTOP_QA_SECTIONS, MAIN_QA_STAGES, MOBILE_QA_SECTIONS } from './helpers/stage-navigator';
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Use fast timeouts — a screen should load in under 3 seconds
 test.use({ actionTimeout: 3_000 });
 
@@ -9,27 +13,25 @@ test.use({ actionTimeout: 3_000 });
 
 test.describe('Main QA Stages', () => {
   for (const stage of MAIN_QA_STAGES) {
-    test(`loads stage: ${stage.groupTitle} / ${stage.title}`, async ({ page }) => {
+    test(`loads stage: ${stage.familyTitle} / ${stage.groupTitle} / ${stage.title}`, async ({ page }) => {
       const collector = createConsoleCollector(page);
 
       // Navigate directly to the stage URL
       await page.goto(stage.url);
-      await page.locator('h2', { hasText: 'QA Stages' }).waitFor();
+      const nav = page.getByRole('navigation', { name: 'Stages' });
 
-      // Locate the accordion group container that wraps this stage
-      const groupContainer = page.locator('div.rounded-lg.overflow-hidden').filter({
-        has: page.locator('span.uppercase', { hasText: stage.groupTitle }),
-      });
+      // The stage's group is expanded inside its family section
+      const family = nav.getByRole('region', { name: stage.familyTitle });
+      const groupButton = family.getByRole('button', { name: new RegExp(`^${escapeRegExp(stage.groupTitle)}\\b`) });
+      await expect(groupButton).toHaveAttribute('aria-expanded', 'true');
 
-      // The sidebar stage button should be active (bg-primary)
-      const stageButton = groupContainer.locator('button').filter({
-        has: page.locator('span', { hasText: new RegExp(`^${stage.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) }),
-      });
-      await expect(stageButton).toHaveClass(/bg-primary/);
+      // The sidebar row for this stage is the current page
+      const stageLink = nav.getByRole('link', { name: stage.title, exact: true });
+      await expect(stageLink).toHaveAttribute('aria-current', 'page');
+      await expect(stageLink).toBeInViewport();
 
       // Assert: content area is present and not empty
-      const content = page.locator('.flex-1.bg-white.overflow-y-auto');
-      await expect(content).not.toBeEmpty();
+      await expect(page.getByTestId('stage-content')).not.toBeEmpty();
 
       // Assert: no error boundary
       await expect(page.getByText('Something went wrong')).not.toBeVisible();
