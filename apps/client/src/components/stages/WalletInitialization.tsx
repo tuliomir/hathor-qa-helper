@@ -222,7 +222,7 @@ export default function WalletInitialization() {
     addWallet({ friendlyName: walletName, seedWords: treatedWords, network });
     setSeedInput('');
     setWalletName('');
-    setNetwork('TESTNET');
+    setNetwork(preferredNetwork);
   };
 
   const handleSeedChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
