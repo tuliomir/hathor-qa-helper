@@ -100,7 +100,9 @@ export type UnblindingResponse = Record<string, unknown>;
 
 export type ApiErrorCode =
   | 'BAD_REQUEST'
+  | 'FORBIDDEN'
   | 'NOT_FOUND'
+  | 'CONFLICT'
   | 'WALLET_NOT_READY'
   | 'INSUFFICIENT_FUNDS'
   | 'LIB_ERROR'

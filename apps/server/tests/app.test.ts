@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { createApp, type App } from '../src/app.ts';
 import { FakeFactory } from './fakes.ts';
+import type { ApiErrorBody } from '@qa-helper/shared/serverApi';
 
 const BASE = 'http://127.0.0.1:5180';
 const ORIGIN = 'http://localhost:5173';
@@ -82,6 +83,7 @@ describe('CORS', () => {
       { origin: 'https://evil.example' }
     );
     expect(res.status).toBe(403);
+    expect((await res.json()).error.code).toBe('FORBIDDEN');
     expect(res.headers.get('access-control-allow-origin')).toBeNull();
     expect(factory.wallets).toHaveLength(0);
   });
@@ -89,6 +91,7 @@ describe('CORS', () => {
   test('rejects a foreign Host header (DNS rebinding)', async () => {
     const res = await app(new Request('http://evil.example:5180/health'));
     expect(res.status).toBe(403);
+    expect(((await res.json()) as ApiErrorBody).error.code).toBe('FORBIDDEN');
   });
 });
 
@@ -171,6 +174,7 @@ describe('wallet lifecycle', () => {
     await call('POST', '/wallets', { seed: 'seed-a', network: 'TESTNET' });
     const res = await call('POST', '/wallets', { seed: 'seed-a', network: 'SHIELDED_TESTNET' });
     expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe('CONFLICT');
     expect(factory.wallets).toHaveLength(1);
   });
 

@@ -236,7 +236,7 @@ export function createApp(deps: AppDeps): App {
     // POST skips preflight), and DNS rebinding can point a foreign name at
     // 127.0.0.1: refuse both before any wallet is touched.
     if ((origin && !ALLOWED_ORIGINS.has(origin)) || !ALLOWED_HOSTNAMES.has(url.hostname)) {
-      return errorResponse(new ApiError(403, 'BAD_REQUEST', 'Origin or host not allowed'), cors);
+      return errorResponse(new ApiError(403, 'FORBIDDEN', 'Origin or host not allowed'), cors);
     }
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (url.pathname === QA_SERVER_PROXY_PREFIX || url.pathname.startsWith(QA_SERVER_PROXY_PREFIX + '/')) {

@@ -67,7 +67,7 @@ export class WalletRegistry {
     if (existing && existing.view.network !== network) {
       throw new ApiError(
         409,
-        'BAD_REQUEST',
+        'CONFLICT',
         `Wallet ${id} is already running on ${existing.view.network}; DELETE it first`
       );
     }
