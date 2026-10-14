@@ -67,7 +67,7 @@ export function createWalletFactory(): WalletFactory {
       // A process-global in wallet-lib, read on every tx-mining request
       // (api/txMiningAxios). Without it the lib picks the URL from the network
       // name, so SHIELDED_TESTNET ('testnet') would mine on the regular testnet
-      // service. Callers set it before every start and send, and sends are
+      // service. Only the send queue sets it, before each send, and sends are
       // serialized so no two networks share it at once.
       config.setTxMiningUrl(NETWORKS[network].txMiningUrl);
     },

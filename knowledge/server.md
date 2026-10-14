@@ -75,7 +75,7 @@ Behaviour worth knowing:
 
 `config.setTxMiningUrl` sets a process-wide singleton in wallet-lib, and the lib reads it on every tx-mining request, including the status polls during a send. Without it, the lib derives the URL from the network name, so a `SHIELDED_TESTNET` wallet (lib name `testnet`) would mine on the regular testnet service.
 
-So the server applies the URL of the wallet's network before every start and before every send. Sends go through one process-wide queue, which also keeps two wallets on different networks from swapping the URL under each other mid-send. The cost: sends run one at a time, even across wallets.
+So the server applies the URL of the wallet's network before every send, and only inside one process-wide send queue. The queue keeps two wallets on different networks from swapping the URL under each other mid-send. Starting a wallet doesn't need the URL and must not touch it, because a start can run while a send is in flight. The cost: sends run one at a time, even across wallets.
 
 ## Future: Cloudflare hosting
 

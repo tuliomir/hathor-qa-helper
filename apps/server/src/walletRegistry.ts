@@ -92,7 +92,9 @@ export class WalletRegistry {
   private async boot(session: Session): Promise<void> {
     const { wallet, view } = session;
     try {
-      this.factory.applyNetworkConfig(view.network);
+      // No applyNetworkConfig here: starting only talks to the fullnode, and
+      // switching the global tx-mining URL outside sendQueue would redirect
+      // an in-flight send on another network.
       await wallet.start({ pinCode: WALLET_PIN, password: WALLET_PASSWORD });
       await this.waitUntilReady(wallet);
       const shielded = NETWORKS[view.network].supportsShielded;

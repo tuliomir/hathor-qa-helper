@@ -179,10 +179,13 @@ describe('wallet lifecycle', () => {
     expect(JSON.stringify(ready)).not.toContain('"seed-a"');
   });
 
-  test('applies the network config before starting', async () => {
+  test('starting a wallet leaves the global network config alone', async () => {
+    // The tx-mining URL is process-global and only the send queue may switch
+    // it; a start racing an in-flight send on another network would redirect it.
     await call('POST', '/wallets', { seed: 'seed-a', network: 'SHIELDED_TESTNET' });
     await factory.last().started;
-    expect(factory.log[0]).toBe('config:SHIELDED_TESTNET');
+    await waitForState('W-seed-a-0', 'ready');
+    expect(factory.log.filter((entry) => entry.startsWith('config:'))).toEqual([]);
   });
 
   test('a transparent-only network has no shielded address', async () => {
