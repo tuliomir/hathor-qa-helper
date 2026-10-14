@@ -4,7 +4,6 @@ import MobileQALayout from './components/mobile/MobileQALayout';
 import DesktopQALayout from './components/desktop/DesktopQALayout';
 import WalletAutoLoader from './components/common/WalletAutoLoader';
 import { DEFAULT_STAGE_URL } from './config/stageRoutes';
-import './App.css';
 
 function App() {
   return (

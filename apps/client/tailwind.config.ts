@@ -5,6 +5,14 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontSize: {
+        // LEGACY: used by 22 call sites, removed by the stage sweep
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+      },
+      spacing: {
+        // LEGACY: 211 call sites rely on this; removed by the stage sweep
+        '7.5': '1.875rem',
+      },
       colors: {
         primary: '#007bff',
         'primary-dark': '#0056b3',
@@ -20,8 +28,4 @@ export default {
     },
   },
   plugins: [daisyui],
-  daisyui: {
-    themes: ['light'],
-    logs: false,
-  },
 } satisfies Config;
