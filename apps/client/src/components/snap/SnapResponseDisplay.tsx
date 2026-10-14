@@ -154,7 +154,7 @@ function RenderGetBalance({
       {data.map((item, idx) => (
         <div key={idx} className="border border-gray-300 rounded overflow-hidden">
           {/* Token Header */}
-          <div className="bg-primary/10 px-4 py-3 border-b border-gray-300">
+          <div className="bg-tint-info px-4 py-3 border-b border-gray-300">
             <h4 className="text-lg font-bold text-primary m-0">
               {item.token?.name || 'Unknown Token'} ({item.token?.symbol || 'N/A'})
             </h4>

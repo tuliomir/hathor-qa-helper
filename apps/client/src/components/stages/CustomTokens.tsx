@@ -99,7 +99,7 @@ function TokenRow({
     <tr
       onClick={onClick}
       className={`border-b border-gray-200 cursor-pointer transition-colors ${
-        isSelected ? 'bg-primary/10' : 'hover:bg-gray-50'
+        isSelected ? 'bg-tint-info' : 'hover:bg-gray-50'
       }`}
     >
       <td className="py-2 px-3 font-semibold">{token.symbol}</td>

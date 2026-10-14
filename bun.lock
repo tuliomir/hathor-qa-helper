@@ -13,6 +13,7 @@
       "name": "@qa-helper/client",
       "version": "0.3.0",
       "dependencies": {
+        "@fontsource/atkinson-hyperlegible-next": "5.3.0",
         "@hathor/ct-crypto-wasm": "0.5.0",
         "@hathor/snap-utils": "^0.1.0",
         "@hathor/wallet-lib": "4.2.0",
@@ -162,6 +163,8 @@
     "@ethereumjs/tx": ["@ethereumjs/tx@4.2.0", "", { "dependencies": { "@ethereumjs/common": "^3.2.0", "@ethereumjs/rlp": "^4.0.1", "@ethereumjs/util": "^8.1.0", "ethereum-cryptography": "^2.0.0" } }, "sha512-1nc6VO4jtFd172BbSnTnDQVr9IYBFl1y4xPzZdtkrkKIncBCkdbgfdRV+MiTkJYAtTxvV12GRZLqBFT1PNK6Yw=="],
 
     "@ethereumjs/util": ["@ethereumjs/util@8.1.0", "", { "dependencies": { "@ethereumjs/rlp": "^4.0.1", "ethereum-cryptography": "^2.0.0", "micro-ftch": "^0.3.1" } }, "sha512-zQ0IqbdX8FZ9aw11vP+dZkKDkS+kgIvQPHnSAXzP9pLu+Rfu3D3XEeLbicvoXJTYnhZiPmsZUxgdzXwNKxRPbA=="],
+
+    "@fontsource/atkinson-hyperlegible-next": ["@fontsource/atkinson-hyperlegible-next@5.3.0", "", {}, "sha512-8p1tHVoPDo6oYwSO3sMw5snGwFwSf3TmeSF9Gcj792GXdsg6oqvhoItbj6Hj/XZIk0Xs+Cwu6pkLBAl3Q5HrwA=="],
 
     "@hathor/ct-crypto-node": ["@hathor/ct-crypto-node@0.5.0", "", { "dependencies": { "@hathor/ct-crypto-provider": "0.5.0" }, "optionalDependencies": { "@hathor/ct-crypto-node-darwin-arm64": "0.5.0", "@hathor/ct-crypto-node-darwin-x64": "0.5.0", "@hathor/ct-crypto-node-linux-arm64-gnu": "0.5.0", "@hathor/ct-crypto-node-linux-arm64-musl": "0.5.0", "@hathor/ct-crypto-node-linux-x64-gnu": "0.5.0", "@hathor/ct-crypto-node-linux-x64-musl": "0.5.0", "@hathor/ct-crypto-node-win32-x64-msvc": "0.5.0" } }, "sha512-Qhr7iMnQZlPbNYRN05wKCni3BEPIpKMJh9ZpRhyG76x6FF3IulgTsttXwXy9/LzRsNrMruh4qRGksT8Rg5Lk8A=="],
 
