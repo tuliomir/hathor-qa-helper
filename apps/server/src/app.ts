@@ -15,7 +15,14 @@ import { HTR_UID, toLibSend } from './sendMapping.ts';
 import { WalletRegistry } from './walletRegistry.ts';
 import type { WalletFactory } from './walletPort.ts';
 
-export const ALLOWED_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173']);
+// Any port on loopback: the Vite dev proxy forwards the browser's Origin, and
+// dev clients run on whatever port is free. The pattern is anchored, so
+// `localhost.evil.example` or a userinfo trick cannot slip through.
+const LOOPBACK_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{1,5})?$/;
+
+export function isAllowedOrigin(origin: string): boolean {
+  return LOOPBACK_ORIGIN.test(origin);
+}
 const ALLOWED_HOSTNAMES = new Set(['127.0.0.1', 'localhost']);
 
 export interface AppDeps {
@@ -81,7 +88,7 @@ async function readJson(req: Request): Promise<unknown> {
 const query = (url: URL) => Object.fromEntries(url.searchParams);
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  if (!origin || !ALLOWED_ORIGINS.has(origin)) return { vary: 'Origin' };
+  if (!origin || !isAllowedOrigin(origin)) return { vary: 'Origin' };
   return {
     'access-control-allow-origin': origin,
     'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
@@ -235,7 +242,7 @@ export function createApp(deps: AppDeps): App {
     // Browsers on other sites can still send "simple" requests (a text/plain
     // POST skips preflight), and DNS rebinding can point a foreign name at
     // 127.0.0.1: refuse both before any wallet is touched.
-    if ((origin && !ALLOWED_ORIGINS.has(origin)) || !ALLOWED_HOSTNAMES.has(url.hostname)) {
+    if ((origin && !isAllowedOrigin(origin)) || !ALLOWED_HOSTNAMES.has(url.hostname)) {
       return errorResponse(new ApiError(403, 'FORBIDDEN', 'Origin or host not allowed'), cors);
     }
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });

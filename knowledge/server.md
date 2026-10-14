@@ -68,7 +68,8 @@ Behaviour worth knowing:
 
 - **Dev-only.** It binds `127.0.0.1` and has no authentication.
 - **It holds seeds.** The client sends testnet seeds, and wallets keep them in memory until they are deleted or the server stops. Seeds are never logged or returned. Use test wallets only.
-- **Browser guards.** Only the client's dev origins (`localhost:5173`, `127.0.0.1:5173`, `localhost:4173`) pass CORS. Any other `Origin` is refused with 403 before routing, because a "simple" cross-site POST skips preflight. Requests whose `Host` is not `localhost`/`127.0.0.1` are refused too, which blocks DNS rebinding. Requests without an `Origin` (curl, the Vite proxy) are allowed.
+- **Browser guards.** Only loopback origins pass: `http://localhost:<port>` and `http://127.0.0.1:<port>`, any port (`isAllowedOrigin` in `src/app.ts`). Any other `Origin` is refused with 403 before routing, because a "simple" cross-site POST skips preflight. Requests whose `Host` is not `localhost`/`127.0.0.1` are refused too, whatever their `Origin`, which blocks DNS rebinding. Requests without an `Origin` (curl) are allowed.
+- **The Vite proxy forwards `Origin`.** `/qa-server` requests from the dev client reach the server with the browser's `Origin` (e.g. `http://localhost:5184`); `changeOrigin` only rewrites `Host`. That is why every loopback port is accepted: a dev client on a port other than 5173 used to get `FORBIDDEN`.
 
 ## The tx-mining global
 
