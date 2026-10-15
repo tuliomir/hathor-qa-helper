@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { formatAmount, parseAmount } from '../src/utils/amount';
+import { formatAmount, keyedAmount, parseAmount, pastedAmount } from '../src/utils/amount';
 
 describe('parseAmount', () => {
   test('decimal to base units with 2 decimals', () => {
@@ -82,5 +82,74 @@ describe('formatAmount', () => {
       expect(parseAmount(formatAmount(v, 2), 2)).toEqual({ ok: true, value: v });
       expect(parseAmount(formatAmount(v, 18), 18)).toEqual({ ok: true, value: v });
     }
+  });
+});
+
+describe('keyedAmount', () => {
+  // Types each character into the field, like a QA would.
+  const type = (keys: string, decimals = 2, start = '') => {
+    let text = start;
+    for (const key of keys) text = keyedAmount(text, text + key, decimals).text;
+    return text;
+  };
+
+  test('digits shift in from the right', () => {
+    expect(type('500')).toBe('5.00');
+    expect(type('30')).toBe('0.30');
+    expect(type('1')).toBe('0.01');
+    expect(type('123456')).toBe('1234.56');
+  });
+
+  test('reports base units', () => {
+    expect(keyedAmount('', '500', 2)).toEqual({ text: '5.00', value: 500n });
+    expect(keyedAmount('0.03', '0.030', 2)).toEqual({ text: '0.30', value: 30n });
+  });
+
+  test('ignores separators and other characters', () => {
+    expect(type('5.00')).toBe('5.00');
+    expect(type('1,5a')).toBe('0.15');
+    expect(type('-5')).toBe('0.05');
+  });
+
+  test('leading zeros do not stack', () => {
+    expect(type('0')).toBe('0.00');
+    expect(type('005')).toBe('0.05');
+  });
+
+  test('backspace shifts digits back out', () => {
+    expect(keyedAmount('5.00', '5.0', 2)).toEqual({ text: '0.50', value: 50n });
+    expect(keyedAmount('0.50', '0.5', 2)).toEqual({ text: '0.05', value: 5n });
+  });
+
+  test('deleting down to zero empties the field', () => {
+    expect(keyedAmount('0.05', '0.0', 2)).toEqual({ text: '', value: null });
+    expect(keyedAmount('0.00', '0.0', 2)).toEqual({ text: '', value: null });
+    expect(keyedAmount('5.00', '', 2)).toEqual({ text: '', value: null });
+  });
+
+  test('replacing a selection starts over', () => {
+    expect(keyedAmount('12.34', '7', 2)).toEqual({ text: '0.07', value: 7n });
+  });
+
+  test('other precisions', () => {
+    expect(type('5', 0)).toBe('5');
+    expect(type('1', 18)).toBe('0.000000000000000001');
+  });
+
+  test('BigInt-safe', () => {
+    expect(keyedAmount('', '900719925474099312345', 2).value).toBe(900719925474099312345n);
+  });
+});
+
+describe('pastedAmount', () => {
+  test('a pasted decimal is read as token units', () => {
+    expect(pastedAmount('12.5', 2)).toBe(1250n);
+    expect(pastedAmount(' 0.30 ', 2)).toBe(30n);
+  });
+
+  test('anything else is left to keyedAmount', () => {
+    expect(pastedAmount('500', 2)).toBeNull();
+    expect(pastedAmount('1.234', 2)).toBeNull();
+    expect(pastedAmount('abc', 2)).toBeNull();
   });
 });

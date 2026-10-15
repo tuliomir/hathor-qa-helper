@@ -4,7 +4,7 @@ What QA will notice compared with the pre-redesign app (`main` before the `apps/
 
 ## Amount inputs are decimal
 
-Amount fields take decimal token units (`1.50`), not base units (`150`), and show the base-unit value under the field. Requests still send base units. Convention: `design-system.md` → Amounts.
+Amount fields show decimal token units (`1.50`), not base units (`150`), and show the base-unit value under the field. Requests still send base units. Typing keeps the old muscle memory: digits enter from the right, so typing `150` gives `1.50`. Pasting a decimal (`1.5`) reads it as token units. Convention: `design-system.md` → Amounts.
 
 Fields that changed from base units to decimals:
 
@@ -14,6 +14,7 @@ Fields that changed from base units to decimals:
 - RPC Fee initialize: HTR deposit. Fee deposit and Fee withdraw: Amount and HTR withdrawn for fees.
 - RPC Get UTXOs: Amount smaller than / Amount bigger than. Scatter funds now describes its UTXOs as 0.01, 0.02, 0.03 … HTR (1, 2, 3 … base units).
 - QA server: fund amount (new stage).
+- Multisig: Amount. It took decimals typed as `1.50` before; it now types like the others.
 
 The other Snap stages still take base-unit integers.
 

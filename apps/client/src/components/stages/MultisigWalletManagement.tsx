@@ -36,6 +36,7 @@ import { StageHeader } from '../common/StageHeader';
 import { Panel } from '../ui/Panel';
 import { Callout } from '../ui/Callout';
 import { Field } from '../ui/Field';
+import { AmountInput } from '../common/AmountInput';
 import { StatusChip } from '../ui/StatusChip';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { NETWORK_CONFIG, nextNetwork } from '../../constants/network';
@@ -66,8 +67,8 @@ export default function MultisigWalletManagement() {
   const [qrAddress, setQrAddress] = useState<string | null>(null);
 
   // Max balance across all ready multisig wallets (they share the same addresses,
-  // so the largest value is the most up-to-date). Stored as human-readable HTR string.
-  const maxBalanceHtr = useMemo(() => {
+  // so the largest value is the most up-to-date). Base units; '' when none.
+  const maxBalance = useMemo(() => {
     let maxRaw = 0n;
     for (const p of readyParticipants) {
       if (p.balance) {
@@ -79,19 +80,15 @@ export default function MultisigWalletManagement() {
         }
       }
     }
-    if (maxRaw === 0n) return '';
-    // Convert from smallest unit to human-readable (2 decimal places)
-    const whole = maxRaw / 100n;
-    const frac = maxRaw % 100n;
-    return `${whole}.${frac.toString().padStart(2, '0')}`;
+    return maxRaw === 0n ? '' : maxRaw.toString();
   }, [readyParticipants]);
 
   // Auto-fill amount with the full balance when wallets become ready
   useEffect(() => {
-    if (maxBalanceHtr && !amount && transaction.step === 'idle') {
-      setAmount(maxBalanceHtr);
+    if (maxBalance && !amount && transaction.step === 'idle') {
+      setAmount(maxBalance);
     }
-  }, [maxBalanceHtr]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [maxBalance]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handlers
   const handleStartParticipant = async (participantId: string) => {
@@ -135,14 +132,11 @@ export default function MultisigWalletManagement() {
 
     setIsCreating(true);
     try {
-      // Convert amount to smallest unit (multiply by 100 for 2 decimal places)
-      const amountInSmallestUnit = Math.floor(parseFloat(amount) * 100).toString();
-
       await dispatch(
         createMultisigTransaction({
           fromParticipantId: readyParticipant.id,
           destination: destination.trim(),
-          amount: amountInSmallestUnit,
+          amount,
         })
       ).unwrap();
     } catch (error) {
@@ -483,31 +477,15 @@ export default function MultisigWalletManagement() {
           />
         </Field>
 
-        <Field label="Amount (HTR)" htmlFor="multisig-amount" wireControl={false}>
-          <div className="flex gap-2">
-            <input
-              id="multisig-amount"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              step="0.01"
-              min="0.01"
-              disabled={transaction.step !== 'idle'}
-              className="input w-48 font-mono text-data"
-            />
-            {maxBalanceHtr && transaction.step === 'idle' && (
-              <button
-                type="button"
-                onClick={() => setAmount(maxBalanceHtr)}
-                className="btn btn-secondary"
-                title={`Fill with max balance: ${maxBalanceHtr} HTR`}
-              >
-                Max ({maxBalanceHtr})
-              </button>
-            )}
-          </div>
-        </Field>
+        <AmountInput
+          id="multisig-amount"
+          value={amount}
+          onChange={setAmount}
+          max={maxBalance && transaction.step === 'idle' ? maxBalance : undefined}
+          balance={maxBalance || null}
+          disabled={transaction.step !== 'idle'}
+          className="max-w-xs"
+        />
 
         <section className="flex flex-col gap-2 border-t border-base-300 pt-3">
           <h3 className="m-0 text-body font-semibold">

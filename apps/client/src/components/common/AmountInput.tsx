@@ -1,15 +1,17 @@
 /**
- * AmountInput — accepts the decimal amount ("12.50") and reports base
- * units as a decimal string ("1250"), BigInt-safe. The base-unit value is
+ * AmountInput — shows the decimal amount ("12.50") and reports base units
+ * as a decimal string ("1250"), BigInt-safe. Typing works like a cash
+ * register (keyedAmount): "500" reads 5.00, "30" reads 0.30. A pasted
+ * decimal ("12.5") is read as token units. The base-unit value is
  * shown as a hint because QA often checks the raw value in requests.
  * Above-balance is a warning, not an error: insufficient-funds tests must
  * stay sendable.
  */
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
 import { Field } from '../ui/Field';
-import { formatAmount, parseAmount } from '../../utils/amount';
+import { formatAmount, keyedAmount, parseAmount, pastedAmount } from '../../utils/amount';
 
 export interface AmountToken {
   uid: string;
@@ -60,6 +62,7 @@ export function AmountInput({
   const inputId = id ?? autoId;
   const [text, setText] = useState(() => textFor(value, decimals));
   const [loadingMax, setLoadingMax] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const parsed = parseAmount(text, decimals);
 
@@ -70,10 +73,24 @@ export function AmountInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, decimals]);
 
+  // Digits enter from the right, so the caret belongs at the end after every edit.
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (input && document.activeElement === input) input.setSelectionRange(text.length, text.length);
+  }, [text]);
+
   const handleText = (next: string) => {
-    setText(next);
-    const r = parseAmount(next, decimals);
-    onChange(r.ok ? r.value.toString() : '');
+    const r = keyedAmount(text, next, decimals);
+    setText(r.text);
+    onChange(r.value === null ? '' : r.value.toString());
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    const v = pastedAmount(event.clipboardData.getData('text'), decimals);
+    if (v === null) return;
+    event.preventDefault();
+    setText(formatAmount(v, decimals));
+    onChange(v.toString());
   };
 
   const handleMax = async () => {
@@ -126,16 +143,18 @@ export function AmountInput({
     >
       <label className={`input w-full ${error ? 'input-error' : ''}`}>
         <input
+          ref={inputRef}
           id={inputId}
           aria-describedby={baseHint || error || warning ? `${inputId}-hint` : undefined}
           aria-invalid={error ? true : undefined}
           type="text"
-          inputMode="decimal"
+          inputMode="numeric"
           autoComplete="off"
           value={text}
           disabled={disabled}
           placeholder={formatAmount(0n, decimals)}
           onChange={(e) => handleText(e.target.value)}
+          onPaste={handlePaste}
           className="grow text-right font-mono text-data tabular-nums"
         />
         <span className="text-body text-ink-muted">{token.symbol}</span>
