@@ -74,6 +74,7 @@ A wallet known only by name, network and address 0 (`metadata.kind === 'address'
 - It can only be the **test** wallet; the funding wallet must sign.
 - `utils/addressOnlyWallet.ts`: `isAddressOnly`, `walletAddress0` (address 0 for either kind) and `addressOnlyError` (validates against the wallet's network).
 - Preconditions: `useRequireTestAddress()` accepts it, `useRequireTestWallet()` reports "Test wallet is address-only". RPC stages and Send between wallets (Funding → Test only) use the former; the bet and fee stages accept it at address index 0 only.
+- It can't list its own tokens: RPC Get balance lets the QA add tokens by UID or configuration string (`parseTokenInput` in `utils/tokenConfigString.ts`), saved on the wallet as `metadata.tokens` (`setAddressOnlyTokens`).
 - Wallets saved before this have no `kind` and are seed wallets.
 
 ## Available Thunks

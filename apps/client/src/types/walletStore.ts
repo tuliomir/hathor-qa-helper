@@ -24,6 +24,11 @@ export interface WalletMetadata {
   kind?: 'seed' | 'address';
   /** Address 0 of an address-only wallet. */
   address0?: string;
+  /**
+   * Tokens added by hand to an address-only wallet, which can't list its own.
+   * Name and symbol are known when added from a configuration string.
+   */
+  tokens?: Array<{ uid: string; name?: string; symbol?: string }>;
   createdAt: number;
   lastUsedAt?: number; // Timestamp of last wallet interaction (start, select, etc.)
   lastInitDurationMs?: number; // Time to reach ready state (ms), used for scan time estimation

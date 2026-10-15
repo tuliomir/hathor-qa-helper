@@ -2,13 +2,14 @@
  * RPC Get Balance Card — htr_getBalance for the test wallet's known tokens.
  */
 
-import React from 'react';
-import { MdRefresh } from 'react-icons/md';
-import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
+import React, { useState } from 'react';
+import { MdAdd, MdClose, MdRefresh } from 'react-icons/md';
+import { DECIMAL_PLACES, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import type { MethodData } from '../common/MethodCard';
 import { RpcMethodCard } from './RpcMethodCard';
 import { Identifier } from '../common/Identifier';
-import { DataTable } from '../ui/DataTable';
+import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { Field } from '../ui/Field';
 import { formatAmount } from '../../utils/amount';
 import { buildGetBalanceRequest, unwrapResponse } from '../../utils/rpcCoreRequests';
 
@@ -65,6 +66,49 @@ function BalanceTable({ rows }: { rows: BalanceRow[] }) {
   );
 }
 
+/** Adds a token by UID or configuration string; `onAdd` returns an error message or null. */
+function AddTokenField({ onAdd }: { onAdd: (input: string) => string | null }) {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const add = () => {
+    const problem = onAdd(value);
+    setError(problem);
+    if (!problem) setValue('');
+  };
+  return (
+    <Field
+      label="Add a token"
+      htmlFor="get-balance-add-token"
+      hint="A token UID or a configuration string, e.g. [Name:SYMBOL:uid:checksum]."
+      error={error ?? undefined}
+      wireControl={false}
+    >
+      <div className="flex gap-2">
+        <input
+          id="get-balance-add-token"
+          aria-describedby="get-balance-add-token-hint"
+          aria-invalid={error ? true : undefined}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError(null);
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && value.trim() && add()}
+          placeholder="Token UID or configuration string"
+          autoComplete="off"
+          spellCheck={false}
+          className={`input w-full font-mono text-data ${error ? 'input-error' : ''}`}
+        />
+        <button type="button" className="btn btn-secondary" onClick={add} disabled={!value.trim()}>
+          <MdAdd aria-hidden="true" />
+          Add
+        </button>
+      </div>
+    </Field>
+  );
+}
+
 export interface RpcGetBalanceCardProps {
   onExecute: () => Promise<unknown>;
   methodData: MethodData | null;
@@ -73,6 +117,12 @@ export interface RpcGetBalanceCardProps {
   tokens: BalanceToken[];
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  /**
+   * For test wallets that can't list their own tokens (address-only): adds
+   * a token from user input and returns an error message or null.
+   */
+  onAddToken?: (input: string) => string | null;
+  onRemoveToken?: (uid: string) => void;
 }
 
 export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
@@ -83,45 +133,70 @@ export const RpcGetBalanceCard: React.FC<RpcGetBalanceCardProps> = ({
   tokens,
   onRefresh,
   isRefreshing = false,
-}) => (
-  <RpcMethodCard
-    title="Get balance"
-    liveRequest={buildGetBalanceRequest(tokens.map((t) => t.uid))}
-    methodData={methodData}
-    isDryRun={isDryRun}
-    onExecute={onExecute}
-    disabledReason={disabledReason}
-    successToast="Balance received"
-    renderResponse={(response) => {
-      const rows = unwrapResponse<BalanceRow[]>(response);
-      return Array.isArray(rows) ? <BalanceTable rows={rows} /> : undefined;
-    }}
-  >
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <h3 className="m-0 text-body font-medium">Tokens to query</h3>
-        {onRefresh && (
-          <button type="button" className="btn btn-ghost btn-xs ml-auto" onClick={onRefresh} disabled={isRefreshing}>
-            {isRefreshing ? (
-              <span className="loading loading-spinner loading-xs" aria-hidden="true" />
-            ) : (
-              <MdRefresh aria-hidden="true" />
-            )}
-            Refresh tokens
+  onAddToken,
+  onRemoveToken,
+}) => {
+  const columns: DataTableColumn<BalanceToken>[] = [
+    { key: 'symbol', header: 'Symbol', value: (t) => t.symbol },
+    { key: 'name', header: 'Name', value: (t) => t.name },
+    { key: 'uid', header: 'UID', type: 'identifier', render: (t) => <Identifier value={t.uid} kind="token" /> },
+  ];
+  if (onRemoveToken) {
+    columns.push({
+      key: 'remove',
+      header: <span className="sr-only">Remove</span>,
+      type: 'actions',
+      hideLabelWhenStacked: true,
+      render: (t) =>
+        t.uid === NATIVE_TOKEN_UID ? null : (
+          <button
+            type="button"
+            className="btn btn-ghost btn-xs btn-square"
+            onClick={() => onRemoveToken(t.uid)}
+            aria-label={`Remove ${t.symbol}`}
+            title="Remove"
+          >
+            <MdClose aria-hidden="true" />
           </button>
-        )}
+        ),
+    });
+  }
+  return (
+    <RpcMethodCard
+      title="Get balance"
+      liveRequest={buildGetBalanceRequest(tokens.map((t) => t.uid))}
+      methodData={methodData}
+      isDryRun={isDryRun}
+      onExecute={onExecute}
+      disabledReason={disabledReason}
+      successToast="Balance received"
+      renderResponse={(response) => {
+        const rows = unwrapResponse<BalanceRow[]>(response);
+        return Array.isArray(rows) ? <BalanceTable rows={rows} /> : undefined;
+      }}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <h3 className="m-0 text-body font-medium">Tokens to query</h3>
+          {onRefresh && (
+            <button type="button" className="btn btn-ghost btn-xs ml-auto" onClick={onRefresh} disabled={isRefreshing}>
+              {isRefreshing ? (
+                <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+              ) : (
+                <MdRefresh aria-hidden="true" />
+              )}
+              Refresh tokens
+            </button>
+          )}
+        </div>
+        <p className="m-0 text-caption text-ink-muted">
+          {onAddToken
+            ? 'HTR plus the tokens you add: an address-only test wallet can’t list its own.'
+            : "HTR plus the test wallet's custom tokens."}
+        </p>
+        <DataTable<BalanceToken> caption="Tokens to query" rows={tokens} getRowKey={(t) => t.uid} columns={columns} />
+        {onAddToken && <AddTokenField onAdd={onAddToken} />}
       </div>
-      <p className="m-0 text-caption text-ink-muted">HTR plus the test wallet's custom tokens.</p>
-      <DataTable<BalanceToken>
-        caption="Tokens to query"
-        rows={tokens}
-        getRowKey={(t) => t.uid}
-        columns={[
-          { key: 'symbol', header: 'Symbol', value: (t) => t.symbol },
-          { key: 'name', header: 'Name', value: (t) => t.name },
-          { key: 'uid', header: 'UID', type: 'identifier', render: (t) => <Identifier value={t.uid} kind="token" /> },
-        ]}
-      />
-    </div>
-  </RpcMethodCard>
-);
+    </RpcMethodCard>
+  );
+};

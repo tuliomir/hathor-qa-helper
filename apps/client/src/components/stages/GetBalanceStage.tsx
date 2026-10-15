@@ -1,14 +1,19 @@
 /**
  * Get Balance Stage
  *
- * Tests htr_getBalance for HTR and the test wallet's custom tokens.
+ * Tests htr_getBalance for HTR and the test wallet's custom tokens. An
+ * address-only test wallet can't list its tokens, so they are added by hand
+ * (UID or configuration string) and saved on the wallet.
  */
 
 import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import { setGetBalanceError, setGetBalanceRequest, setGetBalanceResponse } from '../../store/slices/getBalanceSlice';
-import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
+import { refreshWalletBalance, refreshWalletTokens, setAddressOnlyTokens } from '../../store/slices/walletStoreSlice';
+import { addToken } from '../../store/slices/tokensSlice';
+import { isAddressOnly } from '../../utils/addressOnlyWallet';
+import { parseTokenInput } from '../../utils/tokenConfigString';
 import { RpcGetBalanceCard, type BalanceToken } from '../rpc/RpcGetBalanceCard';
 import { buildGetBalanceRequest } from '../../utils/rpcCoreRequests';
 import { StageHeader } from '../common/StageHeader';
@@ -45,14 +50,31 @@ export const GetBalanceStage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const mismatch = useRpcAddressMismatch();
 
+  const addressOnly = testWallet ? isAddressOnly(testWallet.metadata) : false;
+  // The stored array itself (not a fresh `[]`), so the memo below stays stable.
+  const addedTokens = addressOnly ? testWallet?.metadata.tokens : undefined;
+
   const walletTokens = useMemo<BalanceToken[]>(() => {
+    if (addressOnly) {
+      return [
+        HTR,
+        ...(addedTokens ?? []).map((t) => {
+          const known = allTokens.find((k) => k.uid === t.uid);
+          return {
+            uid: t.uid,
+            name: t.name ?? known?.name ?? 'Unknown',
+            symbol: t.symbol ?? known?.symbol ?? `${t.uid.slice(0, 8)}…`,
+          };
+        }),
+      ];
+    }
     const custom = (testWallet?.tokenUids ?? [])
       .filter((uid) => uid !== NATIVE_TOKEN_UID)
       .map((uid) => allTokens.find((t) => t.uid === uid))
       .filter((t): t is NonNullable<typeof t> => t !== undefined)
       .map((t) => ({ uid: t.uid, name: t.name, symbol: t.symbol }));
     return [HTR, ...custom];
-  }, [testWallet, allTokens]);
+  }, [testWallet, allTokens, addressOnly, addedTokens]);
 
   const tokenUids = useMemo(() => walletTokens.map((t) => t.uid), [walletTokens]);
   const { isDryRun, execute } = useRpcStageCall(GET_BALANCE_ACTIONS, { balanceTokens: tokenUids });
@@ -76,6 +98,24 @@ export const GetBalanceStage: React.FC = () => {
     }
   };
 
+  const handleAddToken = (input: string): string | null => {
+    if (!testWalletId || !addressOnly) return 'No address-only test wallet selected';
+    const parsed = parseTokenInput(input);
+    if (!parsed.ok) return parsed.error;
+    const { token } = parsed;
+    const current = addedTokens ?? [];
+    if (current.some((t) => t.uid === token.uid)) return 'Already in the list';
+    dispatch(setAddressOnlyTokens({ id: testWalletId, tokens: [...current, token] }));
+    // Let other stages show the symbol too.
+    if (token.name && token.symbol) dispatch(addToken({ uid: token.uid, name: token.name, symbol: token.symbol }));
+    return null;
+  };
+
+  const handleRemoveToken = (uid: string) => {
+    if (!testWalletId || !addedTokens) return;
+    dispatch(setAddressOnlyTokens({ id: testWalletId, tokens: addedTokens.filter((t) => t.uid !== uid) }));
+  };
+
   const disabledReason = mismatch ? ADDRESS_MISMATCH_REASON : firstUnmetReason([rpcSession]);
 
   return (
@@ -93,8 +133,10 @@ export const GetBalanceStage: React.FC = () => {
         isDryRun={isDryRun}
         disabledReason={disabledReason}
         tokens={walletTokens}
-        onRefresh={testWalletId ? handleRefreshTokens : undefined}
+        onRefresh={testWalletId && !addressOnly ? handleRefreshTokens : undefined}
         isRefreshing={isRefreshing}
+        onAddToken={addressOnly ? handleAddToken : undefined}
+        onRemoveToken={addressOnly ? handleRemoveToken : undefined}
       />
     </div>
   );

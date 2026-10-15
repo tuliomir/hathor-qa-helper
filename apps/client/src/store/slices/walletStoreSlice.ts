@@ -640,6 +640,17 @@ const walletStoreSlice = createSlice({
       },
     },
 
+    /** Replaces the hand-added token list of an address-only wallet. */
+    setAddressOnlyTokens: (
+      state,
+      action: PayloadAction<{ id: string; tokens: NonNullable<WalletMetadata['tokens']> }>
+    ) => {
+      const walletInfo = state.wallets[action.payload.id];
+      if (!walletInfo || !isAddressOnly(walletInfo.metadata)) return;
+      walletInfo.metadata.tokens = action.payload.tokens;
+      saveWalletsToStorage(Object.values(state.wallets).map((info) => info.metadata));
+    },
+
     removeWallet: (state, action: PayloadAction<string>) => {
       const id = action.payload;
 
@@ -854,6 +865,7 @@ export const {
   updateLastUsedAt,
   addWalletEvent,
   updateWalletInitDuration,
+  setAddressOnlyTokens,
 } = walletStoreSlice.actions;
 
 export default walletStoreSlice.reducer;
