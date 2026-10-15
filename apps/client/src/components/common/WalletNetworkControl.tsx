@@ -16,7 +16,12 @@ interface WalletNetworkControlProps {
   network: NetworkKey;
   status: string;
   error?: string | null;
-  onSwapNetwork: (walletId: string, currentNetwork: NetworkKey, status: string) => void | Promise<void>;
+  onSwapNetwork: (
+    walletId: string,
+    currentNetwork: NetworkKey,
+    status: string,
+    target: NetworkKey
+  ) => void | Promise<void>;
   onForceStop?: (walletId: string) => void | Promise<void>;
 }
 

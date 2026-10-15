@@ -54,7 +54,7 @@ interface WalletBrowserModalProps {
   onRemoveWallet: (walletId: string) => void;
   onEditWallet: (walletId: string, currentName: string) => void;
   onShowSeedModal: (walletId: string) => void;
-  onSwapNetwork: (walletId: string, currentNetwork: NetworkKey, status: string) => Promise<void>;
+  onSwapNetwork: (walletId: string, currentNetwork: NetworkKey, status: string, target: NetworkKey) => Promise<void>;
   // Stored addresses from database (walletId -> address at index 0)
   storedFirstAddresses?: Record<string, string>;
   // Scan props

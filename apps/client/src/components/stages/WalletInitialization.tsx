@@ -54,7 +54,7 @@ import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { StatusChip } from '../ui/StatusChip';
 import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
-import { NETWORK_CONFIG, NETWORK_KEYS, nextNetwork, type NetworkKey } from '../../constants/network';
+import { NETWORK_CONFIG, NETWORK_KEYS, type NetworkKey } from '../../constants/network';
 import { getAddressesForWallet } from '../../services/addressDatabase';
 import { useConfirm } from '../../hooks/useConfirm';
 
@@ -360,9 +360,12 @@ export default function WalletInitialization() {
     localStorage.setItem(DEFAULT_WALLETS_KEY, JSON.stringify(defaults));
   };
 
-  const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkKey, status: string) => {
-    const newNetwork: NetworkKey = nextNetwork(currentNetwork);
-
+  const handleSwapNetwork = async (
+    walletId: string,
+    _currentNetwork: NetworkKey,
+    status: string,
+    newNetwork: NetworkKey
+  ) => {
     // Stop the wallet if it's running in any state
     if (status === 'ready' || status === 'connecting' || status === 'syncing') {
       await handleStopWallet(walletId);

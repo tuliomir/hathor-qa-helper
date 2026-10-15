@@ -11,15 +11,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { FiCheck, FiChevronDown } from 'react-icons/fi';
 import { NETWORKS } from '@qa-helper/shared/networks';
-import { NETWORK_CONFIG, NETWORK_KEYS, type NetworkKey } from '../../constants/network';
+import { NETWORK_CONFIG, NETWORK_MENU_ORDER, type NetworkKey } from '../../constants/network';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectActiveNetworkInfo, selectPreferredNetwork, setPreferredNetwork } from '../../store/slices/networkSlice';
 import { useStage } from '../../hooks/useStage';
 import NetworkChip from '../common/NetworkChip';
-import { NETWORK_FILL_CLASS, VEIL_ON_SOLID } from '../../utils/networkVisuals';
+import NetworkSwatch from '../common/NetworkSwatch';
 import { POPOVER_PANEL_CLASS, usePopover } from '../ui/usePopover';
-
-const DISPLAY_ORDER: NetworkKey[] = ['TESTNET', 'SHIELDED_TESTNET', 'MAINNET'];
 
 const NOTES: Record<NetworkKey, { text: string; className: string }> = {
   TESTNET: { text: '', className: '' },
@@ -33,17 +31,6 @@ function hostOf(url: string): string {
   } catch {
     return url;
   }
-}
-
-function Swatch({ network }: { network: NetworkKey }) {
-  const { kind } = NETWORK_CONFIG[network];
-  return (
-    <span
-      aria-hidden="true"
-      className={`w-3 h-3 rounded-full flex-none ${NETWORK_FILL_CLASS[kind]}`}
-      style={kind === 'shielded-test' ? VEIL_ON_SOLID : undefined}
-    />
-  );
 }
 
 export default function NetworkSwitcher() {
@@ -78,8 +65,6 @@ export default function NetworkSwitcher() {
   };
 
   const label = NETWORK_CONFIG[active.network].label;
-  // Keep every network listed even if the registry grows.
-  const order = [...DISPLAY_ORDER, ...NETWORK_KEYS.filter((k) => !DISPLAY_ORDER.includes(k))];
 
   return (
     <div className="relative flex-none">
@@ -121,7 +106,7 @@ export default function NetworkSwitcher() {
             </p>
           )}
           <ul className="m-0 p-0 list-none flex flex-col gap-0.5">
-            {order.map((key) => {
+            {NETWORK_MENU_ORDER.map((key) => {
               const isActive = key === active.network;
               const isPreferred = key === preferred;
               const note = NOTES[key];
@@ -133,7 +118,7 @@ export default function NetworkSwitcher() {
                     onClick={() => choose(key)}
                     className={`grid w-full grid-cols-[16px_1fr_auto] items-center gap-x-2.5 gap-y-0.5 p-2 rounded-field text-left hover:bg-base-200 ${isActive ? 'bg-base-200' : ''}`}
                   >
-                    <Swatch network={key} />
+                    <NetworkSwatch network={key} />
                     <span className="font-semibold">{NETWORK_CONFIG[key].label}</span>
                     <span className={`text-caption ${note.className}`}>
                       {isActive ? (

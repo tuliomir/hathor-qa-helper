@@ -9,7 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { startWallet, stopWallet, updateNetwork } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import WalletNetworkControl from '../common/WalletNetworkControl';
-import { nextNetwork, type NetworkKey } from '../../constants/network';
+import type { NetworkKey } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
 import type { WalletInfo } from '../../types/walletStore';
 import { MdQrCode } from 'react-icons/md';
@@ -193,9 +193,12 @@ export default function PushNotifications() {
     }
   }, [fundTokens]);
 
-  const handleSwapNetwork = async (walletId: string, currentNetwork: NetworkKey, status: string) => {
-    const newNetwork: NetworkKey = nextNetwork(currentNetwork);
-
+  const handleSwapNetwork = async (
+    walletId: string,
+    _currentNetwork: NetworkKey,
+    status: string,
+    newNetwork: NetworkKey
+  ) => {
     // Stop the wallet if it's running (ready, connecting, or syncing)
     if (status === 'ready' || status === 'connecting' || status === 'syncing') {
       try {

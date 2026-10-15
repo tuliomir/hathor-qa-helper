@@ -79,6 +79,13 @@ export const NETWORK_CONFIG = buildNetworkConfig({
 // Default network for the application
 export const DEFAULT_NETWORK: NetworkKey = 'TESTNET';
 
+/** Order of network pickers: test networks first, mainnet last. */
+export const NETWORK_MENU_ORDER: NetworkKey[] = (() => {
+  const preferred: NetworkKey[] = ['TESTNET', 'SHIELDED_TESTNET', 'MAINNET'];
+  // Keep every network listed even if the registry grows.
+  return [...preferred, ...NETWORK_KEYS.filter((k) => !preferred.includes(k))];
+})();
+
 /** The network after `current` in NETWORK_KEYS order, wrapping around. */
 export function nextNetwork(current: NetworkKey): NetworkKey {
   const index = NETWORK_KEYS.indexOf(current);
