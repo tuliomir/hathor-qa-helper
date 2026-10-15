@@ -1,9 +1,17 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // A second checkout (e.g. a worktree) can run its own QA server beside the main one.
 const QA_SERVER_TARGET = `http://127.0.0.1:${process.env.QA_SERVER_PORT ?? 5180}`;
+
+// Opt-in HTTPS with a given certificate, e.g. to serve the app as wallet.hathor.network for
+// passkey testing (knowledge/passkeys.md).
+const HTTPS =
+  process.env.QA_HTTPS_CERT && process.env.QA_HTTPS_KEY
+    ? { cert: readFileSync(process.env.QA_HTTPS_CERT), key: readFileSync(process.env.QA_HTTPS_KEY) }
+    : undefined;
 
 /**
  * Answers `/qa-server/health` itself: 204 when the QA server is not running.
@@ -62,6 +70,7 @@ export default defineConfig({
     global: 'globalThis',
   },
   server: {
+    https: HTTPS,
     proxy: {
       '/hathor-node/testnet': {
         target: 'https://node1.testnet.hathor.network',

@@ -93,6 +93,7 @@ In-depth guides live in `knowledge/`:
 | `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
 | `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
 | `shielded-qa-stages.md` | The Shielded stages (QA server, send, balances, inspector) and the fund → shield → inspect → unshield flow |
+| `passkeys.md` | Passkey wallets: how Hathor derives them, why the QA Helper can't open them directly, and the paused `wallet.hathor.network` setup |
 | `../docs/design/` | UI redesign: audit, direction, tokens, shell, components, rollout, Claude Design brief |
 | `redesign-changes.md` | Behaviour that changed in the redesign (decimal amounts, enforced checks, previews, confirmations) |
 | `architecture.md` | System structure, Redux patterns, two integration paths (RPC vs Snap) |

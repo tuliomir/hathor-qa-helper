@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Passkey probe</title>
+    <style>
+      body {
+        font:
+          15px/1.5 system-ui,
+          sans-serif;
+        max-width: 720px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      button {
+        font: inherit;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem 0.5rem 0.25rem 0;
+        cursor: pointer;
+      }
+      pre {
+        background: #f3f4f6;
+        padding: 1rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .ok {
+        color: #047857;
+      }
+      .err {
+        color: #b91c1c;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Passkey probe</h1>
+    <p>
+      Throwaway check: can a 1Password passkey for <code>wallet.hathor.network</code> be used from this page, and does
+      it return the PRF secret? Nothing is stored or sent anywhere. The seed is never shown; only the wallet's first
+      address, so you can compare it with the mobile app.
+    </p>
+    <p>Page origin: <code id="origin"></code></p>
+    <button id="norp">Try (one prompt, two salt variants)</button>
+    <pre id="out">Not run yet.</pre>
+    <script type="module">
+      import { walletUtils } from '@hathor/wallet-lib';
+      import { deriveAddressFromXPubP2PKH } from '@hathor/wallet-lib/lib/utils/address';
+
+      // Same values as hathor-wallet-mobile src/passkey/passkeyService.js
+      const SALT = new TextEncoder().encode('hathor-passkey/prf/v1');
+      // The salt as WebAuthn clients must hash it before hmac-secret: SHA-256("WebAuthn PRF" || 0x00 || salt).
+      const PREHASHED = new Uint8Array(
+        await crypto.subtle.digest('SHA-256', new Uint8Array([...new TextEncoder().encode('WebAuthn PRF'), 0, ...SALT]))
+      );
+      const out = document.getElementById('out');
+      document.getElementById('origin').textContent = location.origin;
+
+      const log = (lines, cls) => {
+        out.className = cls ?? '';
+        out.textContent = lines.join('\n');
+      };
+
+      // 1Password has returned PRF results as a plain Array instead of an ArrayBuffer.
+      const toBytes = (v) =>
+        v == null
+          ? null
+          : v instanceof ArrayBuffer
+            ? new Uint8Array(v)
+            : ArrayBuffer.isView(v)
+              ? new Uint8Array(v.buffer, v.byteOffset, v.byteLength)
+              : Array.isArray(v)
+                ? Uint8Array.from(v)
+                : null;
+
+      async function probe(rpId) {
+        log(['Waiting for the passkey prompt…']);
+        const lines = [`rpId requested: ${rpId ?? '(none: defaults to ' + location.hostname + ')'}`];
+        try {
+          const cred = await navigator.credentials.get({
+            publicKey: {
+              challenge: crypto.getRandomValues(new Uint8Array(32)),
+              ...(rpId ? { rpId } : {}),
+              userVerification: 'required',
+              extensions: { prf: { eval: { first: SALT, second: PREHASHED } } },
+            },
+          });
+          const ext = cred.getClientExtensionResults?.() ?? {};
+          const authData = new Uint8Array(cred.response.authenticatorData);
+          const uv = (authData[32] & 0x04) !== 0;
+          const handle = cred.response.userHandle ? new Uint8Array(cred.response.userHandle) : null;
+          const label = handle ? new TextDecoder().decode(handle.slice(0, Math.max(0, handle.indexOf(0)))) : '(none)';
+          const results = {
+            'raw salt': toBytes(ext.prf?.results?.first),
+            'pre-hashed salt': toBytes(ext.prf?.results?.second),
+          };
+          lines.push(
+            `credential: ${cred.id}`,
+            `label (userHandle): ${label}`,
+            `user verified: ${uv}`,
+            `PRF results type: ${ext.prf?.results?.first == null ? 'none' : Object.prototype.toString.call(ext.prf.results.first)}`
+          );
+          for (const [name, prf] of Object.entries(results)) {
+            lines.push('', `[${name}] PRF bytes: ${prf ? prf.length : 'none'}`);
+            if (prf?.length !== 32) continue;
+            const words = walletUtils.generateWalletWords(Buffer.from(prf));
+            const xpub = walletUtils.getXPubKeyFromSeed(words, {
+              networkName: 'mainnet',
+              accountDerivationIndex: "0'",
+            });
+            const change = walletUtils.xpubDeriveChild(xpub, 0);
+            lines.push(
+              `[${name}] first address (testnet): ${deriveAddressFromXPubP2PKH(change, 0, 'testnet').base58}`,
+              `[${name}] first address (mainnet): ${deriveAddressFromXPubP2PKH(change, 0, 'mainnet').base58}`
+            );
+          }
+          lines.push(
+            '',
+            'Expected (mobile app): testnet WgYxrPPFXgMRefkMAbZwKJkUYeyqon4stw / mainnet HQQ4MoYk6j4WfN9VMkaRKAmWn1UiQqw46x'
+          );
+          log(lines, uv ? 'ok' : 'err');
+        } catch (err) {
+          lines.push(`error: ${err?.name}: ${err?.message}`);
+          log(lines, 'err');
+        }
+      }
+
+      document.getElementById('norp').onclick = () => probe(undefined);
+    </script>
+  </body>
+</html>
