@@ -33,7 +33,7 @@ With the WASM provider, `getShieldedCapability()` still reports `level: 'full', 
 
 - `getBalance()` counts shielded UTXOs.
 - `getUtxos()` and `getAvailableUtxos()` list transparent UTXOs only by default. `{ shielded: true }` lists shielded UTXOs *only*.
-- Input selection (`sendManyOutputsSendTransaction`, templates) is transparent-only.
+- Input selection depends on the path. Templates and `getUtxosForAmount` pick transparent UTXOs only. `sendManyOutputsTransaction` selects from both pools and can mix them, so in the browser it may pick a shielded UTXO when transparent funds are short, then fail on the WASM provider (`shielded-semantics.md` §4).
 - So sweeps must send the transparent amount only. `splitAvailableUtxos(wallet, token)` (`src/services/shieldedUtxos.ts`) returns both totals. `shieldedSweepNotice()` builds the "N shielded UTXOs not sweepable from the browser — use the QA server" message.
 - Test Wallet Cleanup and the scatter tool in Get UTXOs use it.
 

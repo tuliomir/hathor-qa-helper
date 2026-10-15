@@ -92,6 +92,7 @@ In-depth guides live in `knowledge/`:
 | `helper-script.md` | `scripts/qa-helper.sh` up/down/status: systemd user units, tailnet URL, `--json` contract for Ruffus |
 | `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
 | `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
+| `shielded-semantics.md` | How shielded outputs work in wallet-lib and the mobile wallet: address types, the three modes, fees, the two-output rule, change, mobile QR formats |
 | `shielded-qa-stages.md` | The Shielded stages (QA server, send, balances, inspector) and the fund → shield → inspect → unshield flow |
 | `passkeys.md` | Passkey wallets: how Hathor derives them, why the QA Helper can't open them directly, and the paused `wallet.hathor.network` setup |
 | `../docs/design/` | UI redesign: audit, direction, tokens, shell, components, rollout, Claude Design brief |
