@@ -98,9 +98,12 @@ export default function AppShell({ nav, navWidth = 'stage', children }: AppShell
         )}
       </div>
 
-      <div className="hidden lg:flex min-h-0">{nav}</div>
+      {/* Both slots are `relative overflow-hidden`: absolutely positioned descendants (sr-only
+          labels) otherwise resolve against the page and stretch it past the shell, so the page
+          scrolls and shows a white band under the app. */}
+      <div className="relative hidden lg:flex min-h-0 overflow-hidden">{nav}</div>
 
-      <main className="min-h-0 min-w-0 flex flex-col overflow-hidden">{children}</main>
+      <main className="relative min-h-0 min-w-0 flex flex-col overflow-hidden">{children}</main>
 
       {drawerOpen && (
         <NavDrawer onClose={closeDrawer}>
