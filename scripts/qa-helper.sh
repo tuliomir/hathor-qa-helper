@@ -49,6 +49,16 @@ bun_bin() {
   }
 }
 
+# Vite must run on Node: without `node` on PATH, `bun x` shims it with Bun,
+# whose proxy never answers the fullnode websocket upgrade, so wallets
+# sync forever.
+node_bin() {
+  command -v node || {
+    echo "node not found on PATH; the client dev server needs Node" >&2
+    exit 1
+  }
+}
+
 # `<machine>.<tailnet>.ts.net`, or empty when Tailscale is unavailable.
 ts_dns_name() {
   command -v tailscale >/dev/null || return 0
@@ -107,8 +117,11 @@ start_unit() {
     echo "port $port is already in use by something this script did not start; stop it first" >&2
     exit 1
   fi
+  local node
+  node="$(node_bin)"
   systemctl --user reset-failed "$unit" 2>/dev/null || true
-  systemd-run --user --unit="$unit" --collect --quiet --same-dir -E PATH="$(dirname "$(bun_bin)"):/usr/bin:/bin" "$@"
+  systemd-run --user --unit="$unit" --collect --quiet --same-dir \
+    -E PATH="$(dirname "$(bun_bin)"):$(dirname "$node"):/usr/bin:/bin" "$@"
 }
 
 wait_for() {
