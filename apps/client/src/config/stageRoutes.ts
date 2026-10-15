@@ -56,6 +56,7 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   // Auditing
   'transaction-history': 'transaction-history',
   'tx-update-events': 'tx-update-events',
+  'send-between-wallets': 'send-between-wallets',
   'test-wallet-cleanup': 'test-wallet-cleanup',
   // MultiSig
   'multisig-wallet-management': 'wallet-management',

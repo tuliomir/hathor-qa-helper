@@ -31,8 +31,8 @@ describe('stageRoutes', () => {
 
     test('all stages are covered', () => {
       const totalStages = STAGE_GROUPS.reduce((sum, group) => sum + group.stages.length, 0);
-      expect(totalStages).toBe(50);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(50);
+      expect(totalStages).toBe(51);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(51);
     });
   });
 

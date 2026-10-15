@@ -182,6 +182,13 @@ export const MAIN_QA_STAGES: StageEntry[] = [
     url: '/tools/auditing/tx-update-events',
   },
   {
+    id: 'send-between-wallets',
+    title: 'Send between wallets',
+    groupTitle: 'Auditing',
+    familyTitle: 'Wallets',
+    url: '/tools/auditing/send-between-wallets',
+  },
+  {
     id: 'test-wallet-cleanup',
     title: 'Test wallet cleanup',
     groupTitle: 'Auditing',

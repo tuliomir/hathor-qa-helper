@@ -30,6 +30,7 @@ import PushNotifications from './stages/PushNotifications';
 import { BasicInfoStage } from './stages/BasicInfoStage';
 import { GetAddressStage } from './stages/GetAddressStage';
 import { RawRpcEditorStage } from './stages/RawRpcEditorStage';
+import SendBetweenWalletsStage from './stages/SendBetweenWalletsStage';
 import TestWalletCleanup from './stages/TestWalletCleanup';
 import MultisigWalletManagement from './stages/MultisigWalletManagement';
 import { SnapConnectionStage } from './stages/SnapConnectionStage';
@@ -82,6 +83,7 @@ const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'push-notifications': PushNotifications,
   'transaction-history': TransactionHistory,
   'tx-update-events': TxUpdateEvents,
+  'send-between-wallets': SendBetweenWalletsStage,
   'test-wallet-cleanup': TestWalletCleanup,
   'multisig-wallet-management': MultisigWalletManagement,
   'snap-connection': SnapConnectionStage,

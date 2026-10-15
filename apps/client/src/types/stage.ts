@@ -29,6 +29,7 @@ export type StageId =
   | 'rpc-fee-deposit'
   | 'rpc-fee-withdraw'
   | 'push-notifications'
+  | 'send-between-wallets'
   | 'test-wallet-cleanup'
   | 'multisig-wallet-management'
   | 'snap-connection'
@@ -289,6 +290,11 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'tx-update-events',
         title: 'Tx update events',
         description: 'Monitor real-time wallet events (new-tx, update-tx, state, etc.)',
+      },
+      {
+        id: 'send-between-wallets',
+        title: 'Send between wallets',
+        description: 'Send tokens between the funding and test wallets, or send back this session’s transfers',
       },
       {
         id: 'test-wallet-cleanup',

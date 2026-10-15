@@ -30,6 +30,7 @@ import feeWithdrawReducer from './slices/feeWithdrawSlice';
 import txUpdateEventsReducer from './slices/txUpdateEventsSlice';
 import navigationReducer from './slices/navigationSlice';
 import pushNotificationsReducer from './slices/pushNotificationsSlice';
+import walletTransfersReducer from './slices/walletTransfersSlice';
 import walletInformationReducer from './slices/walletInformationSlice';
 import connectedNetworkReducer from './slices/connectedNetworkSlice';
 import getAddressReducer from './slices/getAddressSlice';
@@ -76,6 +77,7 @@ export const store = configureStore({
     txUpdateEvents: txUpdateEventsReducer,
     navigation: navigationReducer,
     pushNotifications: pushNotificationsReducer,
+    walletTransfers: walletTransfersReducer,
     walletInformation: walletInformationReducer,
     connectedNetwork: connectedNetworkReducer,
     getAddress: getAddressReducer,
