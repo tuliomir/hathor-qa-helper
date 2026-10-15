@@ -30,6 +30,7 @@ import { WALLET_CONFIG } from '../../constants/network';
 import { computeScatterOutputs, scatterResultMessage, scatterShortfallMessage } from '../../utils/scatterFunds';
 import { applyNetworkServices } from '../../services/networkServices';
 import { shieldedSweepNotice, splitAvailableUtxos } from '../../services/shieldedUtxos';
+import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
 
 const GET_UTXOS_ACTIONS = {
   setRequest: setGetUtxosRequest,
@@ -61,9 +62,15 @@ export const GetUtxosStage: React.FC = () => {
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const { tokenUid } = filters;
 
-  // Tokens with an unlocked balance in the test wallet.
+  // Tokens with an unlocked balance in the test wallet. An address-only wallet
+  // can't check balances, so all its added tokens are offered.
+  const addressOnlyTokens = useAddressOnlyTokens();
   useEffect(() => {
     const loadTokens = async () => {
+      if (addressOnlyTokens) {
+        setAvailableTokens([HTR, ...addressOnlyTokens]);
+        return;
+      }
       if (!testWallet?.instance || !testWallet.tokenUids) {
         setAvailableTokens([HTR]);
         return;
@@ -97,7 +104,7 @@ export const GetUtxosStage: React.FC = () => {
       }
     };
     loadTokens();
-  }, [testWallet, allTokens, tokenUid]);
+  }, [testWallet, allTokens, tokenUid, addressOnlyTokens]);
 
   // Persist the form across navigation.
   useEffect(() => {

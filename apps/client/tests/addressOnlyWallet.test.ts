@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { addressOnlyError, isAddressOnly, walletAddress0 } from '../src/utils/addressOnlyWallet';
+import {
+  addressOnlyError,
+  addressOnlyTokenOptions,
+  isAddressOnly,
+  walletAddress0,
+} from '../src/utils/addressOnlyWallet';
 import type { WalletMetadata } from '../src/types/walletStore';
 
 const TESTNET_ADDR = 'WgYxrPPFXgMRefkMAbZwKJkUYeyqon4stw';
@@ -49,5 +54,22 @@ describe('addressOnlyError', () => {
     expect(addressOnlyError(MAINNET_ADDR, 'TESTNET')).toMatch(/mainnet/i);
     expect(addressOnlyError(TESTNET_ADDR.slice(0, -1) + 'x', 'TESTNET')).toMatch(/checksum/i);
     expect(addressOnlyError('  ', 'TESTNET')).toMatch(/enter/i);
+  });
+});
+
+describe('addressOnlyTokenOptions', () => {
+  const UID = '00b6e7cfa5e1e2b6d0b3a6e3c8a9d1f2e4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9';
+
+  test('names from the configuration string first', () => {
+    const known = [{ uid: UID, name: 'Registry', symbol: 'REG' }];
+    expect(addressOnlyTokenOptions([{ uid: UID, name: 'Config', symbol: 'CFG' }], known)).toEqual([
+      { uid: UID, name: 'Config', symbol: 'CFG' },
+    ]);
+  });
+
+  test('falls back to the token registry, then a shortened UID', () => {
+    const known = [{ uid: UID, name: 'Registry', symbol: 'REG' }];
+    expect(addressOnlyTokenOptions([{ uid: UID }], known)).toEqual([{ uid: UID, name: 'Registry', symbol: 'REG' }]);
+    expect(addressOnlyTokenOptions([{ uid: UID }], [])).toEqual([{ uid: UID, name: 'Unknown', symbol: '00b6e7cf…' }]);
   });
 });

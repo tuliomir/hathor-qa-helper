@@ -24,6 +24,7 @@ import { getOracleBuffer } from '../../utils/betHelpers';
 import { buildInitializeBetRequest, nanoTxHash } from '../../utils/nanoRpcRequests';
 import { firstUnmetReason } from '../../utils/requirements';
 import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
+import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
 /** The handler's oracle script; a placeholder for the no-session dry run when it can't be derived. */
@@ -64,10 +65,16 @@ export const BetInitializeStage: React.FC = () => {
   const [pushTx, setPushTx] = useState<boolean>(false);
 
   // Tokens the test wallet holds (a deposit follows the initialize); HTR as fallback.
+  // An address-only wallet can't check balances, so all its added tokens are offered.
+  const addressOnlyTokens = useAddressOnlyTokens();
   const [walletTokens, setWalletTokens] = useState<TokenOption[]>([HTR]);
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      if (addressOnlyTokens) {
+        setWalletTokens([HTR, ...addressOnlyTokens]);
+        return;
+      }
       const instance = testWallet?.instance;
       if (!instance) {
         setWalletTokens([HTR]);
@@ -97,7 +104,7 @@ export const BetInitializeStage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [testWallet, allTokens]);
+  }, [testWallet, allTokens, addressOnlyTokens]);
 
   const { isDryRun, execute } = useNanoRpcExecute({
     request: setBetInitializeRequest,

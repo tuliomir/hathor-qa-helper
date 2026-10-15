@@ -27,6 +27,7 @@ import { extractErrorMessage } from '../../utils/errorUtils';
 import { firstUnmetReason } from '../../utils/requirements';
 import { DEFAULT_NETWORK } from '../../constants/network';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
 
 const HTR: OutputTokenOption = { uid: NATIVE_TOKEN_UID, name: 'Hathor', symbol: 'HTR' };
 
@@ -41,15 +42,19 @@ export const SendTransactionStage: React.FC = () => {
   const allTokens = useSelector((state: RootState) => state.tokens.tokens);
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
 
-  // HTR plus the test wallet's custom tokens that the token registry knows.
+  const addressOnlyTokens = useAddressOnlyTokens();
+
+  // HTR plus the test wallet's custom tokens that the token registry knows,
+  // or those added by hand to an address-only wallet.
   const availableTokens = useMemo<OutputTokenOption[]>(() => {
+    if (addressOnlyTokens) return [HTR, ...addressOnlyTokens];
     const known = (testWallet?.tokenUids ?? [])
       .filter((uid) => uid !== NATIVE_TOKEN_UID)
       .map((uid) => allTokens.find((t) => t.uid === uid))
       .filter((t): t is NonNullable<typeof t> => !!t)
       .map((t) => ({ uid: t.uid, name: t.name, symbol: t.symbol }));
     return [HTR, ...known];
-  }, [testWallet?.tokenUids, allTokens]);
+  }, [testWallet?.tokenUids, allTokens, addressOnlyTokens]);
 
   const handleExecute = async (outputs: SendTransactionOutput[], pushTx: boolean) => {
     dispatch(setSendTransactionFormData({ outputs, pushTx }));

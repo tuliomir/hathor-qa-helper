@@ -27,3 +27,22 @@ export function addressOnlyError(address: string, network: NetworkKey): string |
   if (address.trim() === '') return 'Enter the wallet’s address 0';
   return addressAcceptError(detectAddressKind(address, network), 'transparent', network);
 }
+
+/**
+ * The tokens added by hand to an address-only wallet, named from the
+ * configuration string they were added with, then the token registry, then
+ * a shortened UID.
+ */
+export function addressOnlyTokenOptions(
+  added: NonNullable<WalletMetadata['tokens']>,
+  known: ReadonlyArray<{ uid: string; name: string; symbol: string }>
+): Array<{ uid: string; name: string; symbol: string }> {
+  return added.map((t) => {
+    const k = known.find((token) => token.uid === t.uid);
+    return {
+      uid: t.uid,
+      name: t.name ?? k?.name ?? 'Unknown',
+      symbol: t.symbol ?? k?.symbol ?? `${t.uid.slice(0, 8)}…`,
+    };
+  });
+}

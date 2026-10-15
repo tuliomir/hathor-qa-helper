@@ -13,6 +13,7 @@ import { setGetBalanceError, setGetBalanceRequest, setGetBalanceResponse } from 
 import { refreshWalletBalance, refreshWalletTokens, setAddressOnlyTokens } from '../../store/slices/walletStoreSlice';
 import { addToken } from '../../store/slices/tokensSlice';
 import { isAddressOnly } from '../../utils/addressOnlyWallet';
+import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
 import { parseTokenInput } from '../../utils/tokenConfigString';
 import { RpcGetBalanceCard, type BalanceToken } from '../rpc/RpcGetBalanceCard';
 import { buildGetBalanceRequest } from '../../utils/rpcCoreRequests';
@@ -54,27 +55,17 @@ export const GetBalanceStage: React.FC = () => {
   // The stored array itself (not a fresh `[]`), so the memo below stays stable.
   const addedTokens = addressOnly ? testWallet?.metadata.tokens : undefined;
 
+  const addressOnlyTokens = useAddressOnlyTokens();
+
   const walletTokens = useMemo<BalanceToken[]>(() => {
-    if (addressOnly) {
-      return [
-        HTR,
-        ...(addedTokens ?? []).map((t) => {
-          const known = allTokens.find((k) => k.uid === t.uid);
-          return {
-            uid: t.uid,
-            name: t.name ?? known?.name ?? 'Unknown',
-            symbol: t.symbol ?? known?.symbol ?? `${t.uid.slice(0, 8)}…`,
-          };
-        }),
-      ];
-    }
+    if (addressOnlyTokens) return [HTR, ...addressOnlyTokens];
     const custom = (testWallet?.tokenUids ?? [])
       .filter((uid) => uid !== NATIVE_TOKEN_UID)
       .map((uid) => allTokens.find((t) => t.uid === uid))
       .filter((t): t is NonNullable<typeof t> => t !== undefined)
       .map((t) => ({ uid: t.uid, name: t.name, symbol: t.symbol }));
     return [HTR, ...custom];
-  }, [testWallet, allTokens, addressOnly, addedTokens]);
+  }, [testWallet, allTokens, addressOnlyTokens]);
 
   const tokenUids = useMemo(() => walletTokens.map((t) => t.uid), [walletTokens]);
   const { isDryRun, execute } = useRpcStageCall(GET_BALANCE_ACTIONS, { balanceTokens: tokenUids });

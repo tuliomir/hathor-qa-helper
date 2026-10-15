@@ -21,3 +21,17 @@ export async function isFeeToken(walletInstance: WalletInstance, tokenUid: strin
     return false;
   }
 }
+
+/**
+ * Check if a token is a fee-based token by asking the full node, for wallets
+ * without storage (address-only wallets). The node reports the version.
+ */
+export async function isFeeTokenOnNode(fullNodeUrl: string, tokenUid: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${fullNodeUrl}thin_wallet/token?id=${encodeURIComponent(tokenUid)}`);
+    const data = (await res.json()) as { success?: boolean; version?: number | null };
+    return data.success === true && data.version === TokenVersion.FEE;
+  } catch {
+    return false;
+  }
+}

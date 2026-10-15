@@ -20,6 +20,7 @@ import { PreconditionStrip } from '../common/PreconditionStrip';
 import { buildBetDepositRequest } from '../../utils/nanoRpcRequests';
 import { firstUnmetReason } from '../../utils/requirements';
 import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
+import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
 export const BetDepositStage: React.FC = () => {
@@ -51,18 +52,24 @@ export const BetDepositStage: React.FC = () => {
     dispatch(setBetDepositFormData({ ncId, amount, token, addressIndex }));
   }, [ncId, amount, token, addressIndex, dispatch]);
 
-  // HTR plus the test wallet's custom tokens that the token registry knows.
+  const addressOnlyTokens = useAddressOnlyTokens();
+
+  // HTR plus the test wallet's custom tokens that the token registry knows,
+  // or those added by hand to an address-only wallet.
   const walletTokens = useMemo<TokenOption[]>(() => {
+    const htr = {
+      uid: NATIVE_TOKEN_UID,
+      symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol,
+      name: DEFAULT_NATIVE_TOKEN_CONFIG.name,
+    };
+    if (addressOnlyTokens) return [htr, ...addressOnlyTokens];
     const custom = (testWallet?.tokenUids ?? [])
       .filter((uid) => uid !== NATIVE_TOKEN_UID)
       .map((uid) => allTokens.find((t) => t.uid === uid))
       .filter((t): t is NonNullable<typeof t> => !!t)
       .map((t) => ({ uid: t.uid, symbol: t.symbol, name: t.name }));
-    return [
-      { uid: NATIVE_TOKEN_UID, symbol: DEFAULT_NATIVE_TOKEN_CONFIG.symbol, name: DEFAULT_NATIVE_TOKEN_CONFIG.name },
-      ...custom,
-    ];
-  }, [testWallet, allTokens]);
+    return [htr, ...custom];
+  }, [testWallet, allTokens, addressOnlyTokens]);
 
   const amountNum = parseFloat(amount) || 0;
   const liveRequest = useMemo(
