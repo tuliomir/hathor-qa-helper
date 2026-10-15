@@ -73,6 +73,23 @@ const txResponse = await sendTx.runFromMining();
 
 ## Common Patterns
 
+### Sending tokens: use `buildTransferTemplate`
+
+Every "send these outputs and return the change" transaction goes through `buildTransferTemplate(outputs, changeAddress)` in `src/services/tokenTransfer.ts`. Don't build that template by hand.
+
+It sets `calculateFee: true` on the complete action, so wallet-lib adds the HTR fee for fee-based tokens (`TokenVersion.FEE`) and charges nothing for HTR or deposit tokens. Without it, sending a fee token fails with `Fee amount is different than expected`. Callers never check token versions to decide the fee; `utils/feeTokenUtils.ts` (`isFeeToken`) is only for showing or sorting fee tokens.
+
+```ts
+const template = buildTransferTemplate(
+  [{ address: testAddress, amount: 500n, token: tokenUid }], // token defaults to HTR
+  fundingChangeAddress
+);
+await sendTransaction(template, metadata, pinCode); // hooks/useSendTransaction
+```
+
+The cleanup melt template (`services/cleanupTemplateBuilder.ts`) is the exception: it selects every input itself and skips `addCompleteAction` (see below), and it leaves fee tokens out.
+
+
 ### Melt Tokens Pattern
 Melt 100 tokens to get 1 HTR:
 ```typescript

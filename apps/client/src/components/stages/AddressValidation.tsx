@@ -25,7 +25,6 @@ import { formatBalance } from '../../utils/balanceUtils';
 import type { WalletInfo } from '../../types/walletStore';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network.ts';
-import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import QrScanner from '../QrScanner';
 import TimelockPicker from '../common/TimelockPicker';
@@ -33,6 +32,7 @@ import { defaultTimelockValue, timelockToUnix } from '../../utils/timelockUtils'
 import { getAddressRecord } from '../../services/addressDatabase';
 import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
 import { applyNetworkServices } from '../../services/networkServices';
+import { buildTransferTemplate } from '../../services/tokenTransfer';
 
 type TabType = 'funding' | 'test';
 
@@ -180,18 +180,10 @@ function WalletAddressDisplay({
       const fundWalletFirstAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
       // Build the transaction template
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: derivedAddress })
-        .addSetVarAction({ name: 'changeAddr', value: fundWalletFirstAddress })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: BigInt(amount),
-          token: selectedToken.uid,
-        })
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+      const template = buildTransferTemplate(
+        [{ address: derivedAddress, amount: BigInt(amount), token: selectedToken.uid }],
+        fundWalletFirstAddress
+      );
 
       // Send the transaction using the centralized hook
       await sendTransaction(

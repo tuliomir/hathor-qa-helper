@@ -15,7 +15,6 @@ import type { WalletInfo } from '../../types/walletStore';
 import { MdQrCode } from 'react-icons/md';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { addSentToken, clearSentTokens } from '../../store/slices/pushNotificationsSlice';
-import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
@@ -28,6 +27,7 @@ import { DataTable } from '../ui/DataTable';
 import { useRequireFundingWallet, useRequireTestWallet } from '../../hooks/useRequirements';
 import type { Requirement } from '../../utils/requirements';
 import ConfigurationStringModal from '../common/ConfigurationStringModal';
+import { buildTransferTemplate } from '../../services/tokenTransfer';
 
 interface Token {
   uid: string;
@@ -280,18 +280,7 @@ export default function PushNotifications() {
       const testWalletAddress = await testWallet.instance.getAddressAtIndex(0);
       const fundWalletAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
-        .addSetVarAction({ name: 'changeAddr', value: fundWalletAddress })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: 1n,
-          token: NATIVE_TOKEN_UID,
-        })
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+      const template = buildTransferTemplate([{ address: testWalletAddress, amount: 1n }], fundWalletAddress);
 
       await sendTransaction(
         template,
@@ -330,23 +319,13 @@ export default function PushNotifications() {
       // Parse amount from state
       const amount1 = BigInt(parseFloat(token1Amount) || 1);
 
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
-        .addSetVarAction({ name: 'changeAddr', value: fundWalletAddress })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: 1n,
-          token: NATIVE_TOKEN_UID,
-        })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: amount1,
-          token: selectedToken1,
-        })
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+      const template = buildTransferTemplate(
+        [
+          { address: testWalletAddress, amount: 1n },
+          { address: testWalletAddress, amount: amount1, token: selectedToken1 },
+        ],
+        fundWalletAddress
+      );
 
       await sendTransaction(
         template,
@@ -394,28 +373,14 @@ export default function PushNotifications() {
       const amount1 = BigInt(parseFloat(token1Amount) || 1);
       const amount2 = BigInt(parseFloat(token2Amount) || 1);
 
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
-        .addSetVarAction({ name: 'changeAddr', value: fundWalletAddress })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: 1n,
-          token: NATIVE_TOKEN_UID,
-        })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: amount1,
-          token: selectedToken1,
-        })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: amount2,
-          token: selectedToken2,
-        })
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+      const template = buildTransferTemplate(
+        [
+          { address: testWalletAddress, amount: 1n },
+          { address: testWalletAddress, amount: amount1, token: selectedToken1 },
+          { address: testWalletAddress, amount: amount2, token: selectedToken2 },
+        ],
+        fundWalletAddress
+      );
 
       await sendTransaction(
         template,
@@ -473,33 +438,15 @@ export default function PushNotifications() {
       const amount2 = BigInt(parseFloat(token2Amount) || 1);
       const amount3 = BigInt(parseFloat(token3Amount) || 1);
 
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
-        .addSetVarAction({ name: 'changeAddr', value: fundWalletAddress })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: 1n,
-          token: NATIVE_TOKEN_UID,
-        })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: amount1,
-          token: selectedToken1,
-        })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: amount2,
-          token: selectedToken2,
-        })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: amount3,
-          token: selectedToken3,
-        })
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+      const template = buildTransferTemplate(
+        [
+          { address: testWalletAddress, amount: 1n },
+          { address: testWalletAddress, amount: amount1, token: selectedToken1 },
+          { address: testWalletAddress, amount: amount2, token: selectedToken2 },
+          { address: testWalletAddress, amount: amount3, token: selectedToken3 },
+        ],
+        fundWalletAddress
+      );
 
       await sendTransaction(
         template,
@@ -571,23 +518,14 @@ export default function PushNotifications() {
       }, new Map<string, (typeof sentTokens)[0]>());
 
       // Build transaction with all tokens
-      let builder = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: fundWalletAddress })
-        .addSetVarAction({ name: 'changeAddr', value: testWalletAddress });
-
-      tokenGroups.forEach((token) => {
-        builder = builder.addTokenOutput({
-          address: '{recipientAddr}',
+      const template = buildTransferTemplate(
+        Array.from(tokenGroups.values(), (token) => ({
+          address: fundWalletAddress,
           amount: BigInt(token.amount),
           token: token.tokenId,
-        });
-      });
-
-      const template = builder
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+        })),
+        testWalletAddress
+      );
 
       await sendTransaction(
         template,

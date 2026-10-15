@@ -8,7 +8,6 @@ import { useState } from 'react';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppSelector } from '../../store/hooks';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
-import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import { WALLET_CONFIG } from '../../constants/network';
 import { formatBalance } from '../../utils/balanceUtils';
@@ -17,6 +16,7 @@ import { PreconditionStrip } from './PreconditionStrip';
 import { Field } from '../ui/Field';
 import { Callout } from '../ui/Callout';
 import { useRequireFundingWallet } from '../../hooks/useRequirements';
+import { buildTransferTemplate } from '../../services/tokenTransfer';
 
 interface SendFromFundWalletProps {
   /** Target address to send to */
@@ -75,18 +75,10 @@ export default function SendFromFundWallet({
       const fundWalletFirstAddress = await fundingWallet.instance.getAddressAtIndex(0);
 
       // Build the transaction template
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: targetAddress })
-        .addSetVarAction({ name: 'changeAddr', value: fundWalletFirstAddress })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: BigInt(amount),
-          token: selectedToken.uid,
-        })
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+      const template = buildTransferTemplate(
+        [{ address: targetAddress, amount: BigInt(amount), token: selectedToken.uid }],
+        fundWalletFirstAddress
+      );
 
       // Send the transaction
       const result = await sendTransaction(

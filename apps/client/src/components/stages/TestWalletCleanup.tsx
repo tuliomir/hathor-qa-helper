@@ -9,8 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { TokenVersion } from '@hathor/wallet-lib/lib/types';
-import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
+import { isFeeToken } from '../../utils/feeTokenUtils';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
 import { applyNetworkServices } from '../../services/networkServices';
@@ -41,6 +40,7 @@ import {
   getRemainingTokens,
   getDisplayableTokens,
 } from '../../services/cleanupTokenCategorizer';
+import { buildTransferTemplate } from '../../services/tokenTransfer';
 
 interface TokenToMelt {
   uid: string;
@@ -176,8 +176,7 @@ export default function TestWalletCleanup() {
             if (balance === 0n) return null;
 
             // Check if this is a fee token (version FEE) — never move, costs HTR to transfer
-            const storedToken = await testWallet.instance!.storage.getToken(uid);
-            if (storedToken?.version === TokenVersion.FEE) {
+            if (await isFeeToken(testWallet.instance!, uid)) {
               return {
                 uid,
                 symbol: tokenInfo.symbol,
@@ -322,18 +321,10 @@ export default function TestWalletCleanup() {
       const fundingWalletAddress = await fundingWallet.instance!.getAddressAtIndex(0);
 
       // Build transaction to send tokens FROM Funding Wallet TO Test Wallet
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: testWalletAddress })
-        .addSetVarAction({ name: 'changeAddr', value: fundingWalletAddress })
-        .addTokenOutput({
-          address: '{recipientAddr}',
-          amount: BigInt(amount),
-          token: tokenUid,
-        })
-        .addCompleteAction({
-          changeAddress: '{changeAddr}',
-        })
-        .build();
+      const template = buildTransferTemplate(
+        [{ address: testWalletAddress, amount: BigInt(amount), token: tokenUid }],
+        fundingWalletAddress
+      );
 
       applyNetworkServices(fundingWallet.metadata.network);
       const tx = await fundingWallet.instance!.buildTxTemplate(template, {
@@ -692,8 +683,7 @@ export default function TestWalletCleanup() {
             if (balance === 0n) return null;
 
             // Check if this is a fee token
-            const storedToken = await testWallet.instance!.storage.getToken(uid);
-            if (storedToken?.version === TokenVersion.FEE) {
+            if (await isFeeToken(testWallet.instance!, uid)) {
               return {
                 uid,
                 symbol: tokenInfo.symbol,

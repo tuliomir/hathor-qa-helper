@@ -9,7 +9,6 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { DECIMAL_PLACES, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import type { IHistoryTx } from '@hathor/wallet-lib/lib/types';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -32,6 +31,7 @@ import { Field } from '../ui/Field';
 import { Callout } from '../ui/Callout';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { SegmentedControl } from '../ui/SegmentedControl';
+import { buildTransferTemplate } from '../../services/tokenTransfer';
 
 interface SourceToken {
   uid: string;
@@ -209,12 +209,10 @@ export default function SendBetweenWalletsStage() {
     try {
       const toAddress = await destination.instance.getAddressAtIndex(0);
       const changeAddress = await source.instance.getAddressAtIndex(0);
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: toAddress })
-        .addSetVarAction({ name: 'changeAddr', value: changeAddress })
-        .addTokenOutput({ address: '{recipientAddr}', amount: BigInt(amount), token: tokenUid })
-        .addCompleteAction({ changeAddress: '{changeAddr}' })
-        .build();
+      const template = buildTransferTemplate(
+        [{ address: toAddress, amount: BigInt(amount), token: tokenUid }],
+        changeAddress
+      );
       const result = await sendTransaction(
         template,
         {

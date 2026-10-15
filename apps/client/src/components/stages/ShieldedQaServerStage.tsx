@@ -8,7 +8,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { MdRefresh, MdStop } from 'react-icons/md';
-import { TransactionTemplateBuilder } from '@hathor/wallet-lib';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import type { WalletSession } from '@qa-helper/shared/serverApi';
 import { QA_SERVER_PROXY_PREFIX } from '@qa-helper/shared/serverApi';
@@ -45,6 +44,7 @@ import { toErrorInfo, type QaServerErrorInfo } from '../../services/qaServerClie
 import { WALLET_CONFIG, NETWORK_CONFIG } from '../../constants/network';
 import { firstUnmetReason } from '../../utils/requirements';
 import { fundRequirements } from '../../utils/shieldedFunding';
+import { buildTransferTemplate } from '../../services/tokenTransfer';
 
 const SERVER_WORD: Record<string, string> = {
   idle: 'Checking',
@@ -342,12 +342,7 @@ function FundPanel({
     setTxId(null);
     try {
       const change = await instance.getAddressAtIndex(0);
-      const template = TransactionTemplateBuilder.new()
-        .addSetVarAction({ name: 'recipientAddr', value: session.legacyAddress0 })
-        .addSetVarAction({ name: 'changeAddr', value: change })
-        .addTokenOutput({ address: '{recipientAddr}', amount: BigInt(amount), token: NATIVE_TOKEN_UID })
-        .addCompleteAction({ changeAddress: '{changeAddr}' })
-        .build();
+      const template = buildTransferTemplate([{ address: session.legacyAddress0, amount: BigInt(amount) }], change);
       const result = await sendTransaction(
         template,
         {
