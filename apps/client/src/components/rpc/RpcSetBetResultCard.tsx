@@ -11,6 +11,7 @@ import { Field } from '../ui/Field';
 import { nanoTxHash } from '../../utils/nanoRpcRequests';
 import type { NetworkKey } from '../../constants/network';
 import { AddressIndexField, DerivedValues, NcIdField, PushTxToggle, NanoResponse } from './NanoFields';
+import { stripWhitespace } from '../../utils/hexInput';
 
 export interface RpcSetBetResultCardProps {
   onExecute: () => Promise<unknown>;
@@ -115,7 +116,7 @@ export const RpcSetBetResultCard: React.FC<RpcSetBetResultCardProps> = ({
         className="textarea w-full font-mono text-data"
         rows={3}
         value={oracleSignature}
-        onChange={(e) => setOracleSignature(e.target.value)}
+        onChange={(e) => setOracleSignature(stripWhitespace(e.target.value))}
         placeholder="Oracle signature (hex)"
         spellCheck={false}
       />
