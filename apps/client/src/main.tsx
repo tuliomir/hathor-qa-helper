@@ -12,6 +12,7 @@ import './index.css';
 import App from './App.tsx';
 import { store } from './store';
 import { walletInstancesMap, importWalletsFromCloud } from './store/slices/walletStoreSlice';
+import { CLOUD_SYNC_ENABLED } from './constants/network';
 
 // Lazy-load WalletConnect to avoid SES lockdown conflicts in production builds
 // SES (Secure ECMAScript) from WalletConnect can conflict with polyfills during bundle initialization
@@ -24,20 +25,22 @@ const initWalletConnect = async () => {
 setTimeout(initWalletConnect, 0);
 
 // Sync wallets from cloud storage on app load
-store
-  .dispatch(importWalletsFromCloud())
-  .then((result) => {
-    if (result.payload && typeof result.payload === 'object' && 'imported' in result.payload) {
-      const { imported, skipped } = result.payload as { imported: number; skipped: number };
-      if (imported > 0) {
-        console.log(
-          `%c☁️ Cloud Sync: Imported ${imported} wallet(s)${skipped > 0 ? `, ${skipped} already existed` : ''}`,
-          'color: #10b981'
-        );
+if (CLOUD_SYNC_ENABLED) {
+  store
+    .dispatch(importWalletsFromCloud())
+    .then((result) => {
+      if (result.payload && typeof result.payload === 'object' && 'imported' in result.payload) {
+        const { imported, skipped } = result.payload as { imported: number; skipped: number };
+        if (imported > 0) {
+          console.log(
+            `%c☁️ Cloud Sync: Imported ${imported} wallet(s)${skipped > 0 ? `, ${skipped} already existed` : ''}`,
+            'color: #10b981'
+          );
+        }
       }
-    }
-  })
-  .catch((err) => console.warn('[CloudSync] Failed to sync on startup:', err));
+    })
+    .catch((err) => console.warn('[CloudSync] Failed to sync on startup:', err));
+}
 
 // Expose wallet instances globally for DevTools debugging
 // Usage in console: fundingWallet.getTokens(), testWallet.getAddressAtIndex(0), etc.

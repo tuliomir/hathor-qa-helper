@@ -21,7 +21,7 @@ import {
 import { useAppDispatch } from '../../store/hooks';
 import { exportWalletsToCloud, importWalletsFromCloud } from '../../store/slices/walletStoreSlice';
 import type { WalletInfo } from '../../types/walletStore';
-import type { NetworkKey } from '../../constants/network';
+import { CLOUD_SYNC_ENABLED, type NetworkKey } from '../../constants/network';
 import type { WalletScanResult } from '../../store/slices/walletScanSlice';
 import { calculateTotalValue } from '../../store/slices/walletScanSlice';
 import { formatBalance } from '../../utils/balanceUtils';
@@ -407,9 +407,13 @@ export default function WalletBrowserModal({
             <button
               type="button"
               onClick={handleCloudSync}
-              disabled={isSyncing}
+              disabled={!CLOUD_SYNC_ENABLED || isSyncing}
               className="btn btn-secondary btn-sm"
-              title="Sync wallets between this machine and the cloud"
+              title={
+                CLOUD_SYNC_ENABLED
+                  ? 'Sync wallets between this machine and the cloud'
+                  : 'Cloud sync is offline until it moves to the QA server'
+              }
             >
               {isSyncing ? (
                 <span className="loading loading-spinner loading-xs" aria-hidden="true" />

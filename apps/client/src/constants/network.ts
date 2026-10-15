@@ -112,3 +112,9 @@ export const WALLET_SCAN_POLICY: IGapLimitAddressScanPolicy = {
  * Cloud API URL for wallet synchronization
  */
 export const CLOUD_API_URL = 'https://tuliomir.com/qa-helper/wallets-api.php';
+
+/**
+ * The endpoint above is gone. Cloud sync stays off until it is rebuilt on the
+ * QA server (apps/server).
+ */
+export const CLOUD_SYNC_ENABLED = false;
