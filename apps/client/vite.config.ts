@@ -2,7 +2,8 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
-const QA_SERVER_TARGET = 'http://127.0.0.1:5180';
+// A second checkout (e.g. a worktree) can run its own QA server beside the main one.
+const QA_SERVER_TARGET = `http://127.0.0.1:${process.env.QA_SERVER_PORT ?? 5180}`;
 
 /**
  * Answers `/qa-server/health` itself: 204 when the QA server is not running.
