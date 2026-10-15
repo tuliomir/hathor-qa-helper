@@ -3,9 +3,11 @@ import { SendTransaction } from '@hathor/wallet-lib';
 import { useAppDispatch } from '../store/hooks';
 import { addTransaction } from '../store/slices/transactionHistorySlice';
 import { useToast } from './useToast';
-import { NETWORK_CONFIG } from '../constants/network';
+import { NETWORK_CONFIG, type NetworkKey } from '../constants/network';
 import type { WalletInfo } from '../types/walletStore';
 import { applyNetworkServices } from '../services/networkServices';
+import { qaServerClient } from '../services/qaServerClient';
+import type { SendRequest } from '@qa-helper/shared/serverApi';
 
 export interface TransactionMetadata {
   fromWallet: WalletInfo; // Only required: needed to create the actual tx
@@ -19,12 +21,40 @@ export interface TransactionMetadata {
 /**
  * Custom hook for sending transactions with built-in loading state,
  * error handling, transaction history tracking, and toast notifications.
+ * `sendTransaction` signs a template in the browser; `sendShielded` sends
+ * through the wallet's signer on the QA server, which can create shielded
+ * outputs (`knowledge/shielded-qa-stages.md`).
  */
 export function useSendTransaction() {
   const dispatch = useAppDispatch();
   const { success, error: showError } = useToast();
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** History entry and explorer toast for a sent transaction. */
+  const recordSent = (hash: string, metadata: Omit<TransactionMetadata, 'fromWallet'> & { network: NetworkKey }) => {
+    const { fromWalletId, toAddress, amount, tokenUid, tokenSymbol, network } = metadata;
+    // TODO: Simplify this, as not all transactions will have these metadata fields
+    dispatch(
+      addTransaction({
+        hash,
+        timestamp: Date.now(),
+        fromWalletId,
+        toAddress,
+        amount,
+        tokenUid,
+        tokenSymbol,
+        network,
+        status: 'confirmed',
+      })
+    );
+    const txUrl = `${NETWORK_CONFIG[network].explorerUrl}transaction/${hash}`;
+    // Show toast with a link and longer duration (20s)
+    success('Transaction sent successfully! View on explorer:', {
+      duration: 20000,
+      link: { url: txUrl, label: 'link' },
+    });
+  };
 
   /**
    * Sends a transaction using the provided template and metadata.
@@ -39,7 +69,7 @@ export function useSendTransaction() {
     metadata: TransactionMetadata,
     pinCode: string
   ): Promise<{ hash: string } | undefined> => {
-    const { fromWallet, toAddress, amount, tokenUid, tokenSymbol, fromWalletId } = metadata;
+    const { fromWallet } = metadata;
 
     if (!fromWallet || !fromWallet.instance) {
       throw new Error('Wallet not found or not ready');
@@ -62,34 +92,7 @@ export function useSendTransaction() {
       const sendTx = new SendTransaction({ storage: hWallet.storage, transaction: tx });
       await sendTx.runFromMining();
 
-      // Track transaction in history
-      if (tx.hash) {
-        // TODO: Simplify this, as not all transactions will have these metadata fields
-        dispatch(
-          addTransaction({
-            hash: tx.hash,
-            timestamp: Date.now(),
-            fromWalletId,
-            toAddress,
-            amount,
-            tokenUid,
-            tokenSymbol,
-            network: fromWallet.metadata.network,
-            status: 'confirmed',
-          })
-        );
-      }
-
-      // Get explorer URL for the network (use the actual wallet's network)
-      const explorerUrl = NETWORK_CONFIG[fromWallet.metadata.network].explorerUrl;
-      const txUrl = `${explorerUrl}transaction/${tx.hash}`;
-
-      // Show toast with a link and longer duration (20s)
-      success('Transaction sent successfully! View on explorer:', {
-        duration: 20000,
-        link: { url: txUrl, label: 'link' },
-      });
-
+      if (tx.hash) recordSent(tx.hash, { ...metadata, network: fromWallet.metadata.network });
       return tx.hash ? { hash: tx.hash } : undefined;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
@@ -102,8 +105,34 @@ export function useSendTransaction() {
     }
   };
 
+  /**
+   * Sends through the signer session of `metadata.fromWallet` (see
+   * `signerForWallet`); the server builds, proves and mines the tx.
+   */
+  const sendShielded = async (
+    sessionId: string,
+    request: SendRequest,
+    metadata: TransactionMetadata
+  ): Promise<{ hash: string }> => {
+    setIsSending(true);
+    setError(null);
+    try {
+      const { txId } = await qaServerClient.send(sessionId, request);
+      recordSent(txId, { ...metadata, network: metadata.fromWallet.metadata.network });
+      return { hash: txId };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send transaction';
+      setError(errorMessage);
+      showError(errorMessage);
+      throw err;
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return {
     sendTransaction,
+    sendShielded,
     isSending,
     error,
     clearError: () => setError(null),

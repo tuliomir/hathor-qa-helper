@@ -17,7 +17,7 @@ import { formatBalance } from '../../utils/balanceUtils';
 import { useSendTransaction } from '../../hooks/useSendTransaction';
 import type { NetworkKey } from '../../constants/network';
 import { WALLET_CONFIG } from '../../constants/network';
-import { MdRefresh } from 'react-icons/md';
+import { MdRefresh, MdShield } from 'react-icons/md';
 import NetworkChip from '../common/NetworkChip';
 import { Identifier } from '../common/Identifier';
 import { StageHeader } from '../common/StageHeader';
@@ -36,6 +36,11 @@ import { applyNetworkServices } from '../../services/networkServices';
 import { useConfirm } from '../../hooks/useConfirm';
 import { buildTransferTemplate } from '../../services/tokenTransfer';
 import { toAddressUri } from '../../utils/addressUri';
+import { useShieldedTransfer } from '../../hooks/useShieldedTransfer';
+import { estimateShieldedFee } from '../../fees';
+import type { ShieldedOutputModeName } from '@qa-helper/shared/serverApi';
+import { DECIMAL_PLACES } from '@hathor/wallet-lib/lib/constants';
+import { formatAmount } from '../../utils/amount';
 
 type TabType = 'fund' | 'test';
 
@@ -115,7 +120,8 @@ function WalletTokensDisplay({
 }) {
   const dispatch = useAppDispatch();
   const { getAllWallets } = useWalletStore();
-  const { sendTransaction, isSending, error: transactionError } = useSendTransaction();
+  const { sendTransaction, sendShielded, isSending, error: transactionError } = useSendTransaction();
+  const shieldedTransfer = useShieldedTransfer(wallet.metadata.id, isTestWallet ? fundingWalletId : testWalletId);
   const allTokens = useAppSelector((s) => s.tokens.tokens);
   const [selectedTokenUid, setSelectedTokenUid] = useState<string | null>(null);
   const [configString, setConfigString] = useState<string | null>(null);
@@ -498,6 +504,29 @@ function WalletTokensDisplay({
     }
   };
 
+  // Shielded send to the other wallet's shielded address 0, through this wallet's signer
+  const handleSendShieldedToOtherWallet = async (mode: ShieldedOutputModeName) => {
+    const { sessionId, recipient } = shieldedTransfer;
+    if (!sessionId || !recipient || !selectedToken) return;
+    try {
+      await sendShielded(
+        sessionId,
+        { outputs: [{ address: recipient, value: String(amount), token: selectedToken.uid, shielded: mode }] },
+        {
+          fromWalletId: wallet.metadata.id,
+          fromWallet: wallet,
+          toAddress: recipient,
+          amount,
+          tokenUid: selectedToken.uid,
+          tokenSymbol: selectedToken.symbol,
+        }
+      );
+    } catch (err) {
+      // Error is already handled by the hook
+      console.error('Shielded transaction error:', err);
+    }
+  };
+
   // Handler for melting tokens
   const handleMeltTokens = async () => {
     if (!selectedToken || !wallet.instance || !isTestWallet) {
@@ -575,6 +604,8 @@ function WalletTokensDisplay({
 
   const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
   const otherLabel = isTestWallet ? 'funding' : 'test';
+  const shieldedFee = (mode: ShieldedOutputModeName) =>
+    `${formatAmount(estimateShieldedFee([{ privacy: mode, value: String(amount) }]).minFee, DECIMAL_PLACES)} HTR`;
 
   const tokenColumns: DataTableColumn<Token>[] = [
     {
@@ -867,7 +898,7 @@ function WalletTokensDisplay({
               description={`Payment request for the ${otherLabel} wallet (address at index 0)`}
             >
               {qrBlock(getOtherWalletPaymentRequest(), 'Payment request', 'Copy payment request')}
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
                   onClick={handleSendToOtherWallet}
@@ -877,7 +908,31 @@ function WalletTokensDisplay({
                   {isSending && spinner}
                   {isSending ? 'Sending' : `Send to ${otherLabel} wallet`}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSendShieldedToOtherWallet('AMOUNT_SHIELDED')}
+                  className="btn btn-secondary"
+                  disabled={isSending || shieldedTransfer.unavailable !== null}
+                  title={shieldedTransfer.unavailable ?? undefined}
+                >
+                  {`Send to ${otherLabel} wallet - Amount shielded`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSendShieldedToOtherWallet('FULLY_SHIELDED')}
+                  className="btn btn-secondary"
+                  disabled={isSending || shieldedTransfer.unavailable !== null}
+                  title={shieldedTransfer.unavailable ?? undefined}
+                >
+                  {`Send to ${otherLabel} wallet - Fully shielded`}
+                  <MdShield aria-hidden="true" className="text-accent" />
+                </button>
               </div>
+              <p className="m-0 text-right text-caption text-ink-muted">
+                {shieldedTransfer.unavailable
+                  ? `Shielded sends unavailable: ${shieldedTransfer.unavailable}.`
+                  : `Shielded sends go to the ${otherLabel} wallet's shielded address 0 and pay at least ${shieldedFee('AMOUNT_SHIELDED')} (amount shielded) or ${shieldedFee('FULLY_SHIELDED')} (fully shielded) in fees.`}
+              </p>
             </Panel>
           )}
 
