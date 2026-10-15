@@ -11,6 +11,7 @@ import { getStageUrl } from '../config/stageRoutes';
 import { NETWORKS, type NetworkKey } from '@qa-helper/shared/networks';
 import type { ShieldedCapabilityLevel, WalletSession } from '@qa-helper/shared/serverApi';
 import type { Requirement } from '../utils/requirements';
+import { isAddressOnly } from '../utils/addressOnlyWallet';
 
 const WALLETS_URL = getStageUrl('wallet-initialization');
 
@@ -38,6 +39,14 @@ function useWalletRequirement(role: 'test' | 'funding'): Requirement {
         action: `Restart the ${role} wallet`,
         fix: { label: 'Open wallets', to: WALLETS_URL },
       };
+    case 'address-only':
+      return {
+        ...base,
+        met: false,
+        label: `${Role} wallet is address-only`,
+        action: `Choose a ${role} wallet with a seed`,
+        fix: { label: 'Open wallets', to: WALLETS_URL },
+      };
     default:
       return {
         ...base,
@@ -49,7 +58,25 @@ function useWalletRequirement(role: 'test' | 'funding'): Requirement {
   }
 }
 
+/** A running test wallet: for stages that sign with it or read its balances. */
 export const useRequireTestWallet = () => useWalletRequirement('test');
+
+/**
+ * The test wallet's address 0 is known: a running wallet, or an
+ * address-only one. For stages that only need the address, like RPC
+ * requests and sends to the test wallet.
+ */
+export function useRequireTestAddress(): Requirement {
+  const running = useWalletRequirement('test');
+  const addressOnly = useSelector((state: RootState) => {
+    const id = state.walletSelection.testWalletId;
+    const wallet = id ? state.walletStore.wallets[id] : undefined;
+    return wallet ? isAddressOnly(wallet.metadata) : false;
+  });
+  return addressOnly
+    ? { ...running, met: true, label: 'Test wallet: address only', action: undefined, fix: undefined }
+    : running;
+}
 export const useRequireFundingWallet = () => useWalletRequirement('funding');
 
 export function useRequireRpcSession(): Requirement {

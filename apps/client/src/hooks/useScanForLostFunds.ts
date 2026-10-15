@@ -20,6 +20,7 @@ import {
   updateScanProgress,
 } from '../store/slices/walletScanSlice';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { isAddressOnly } from '../utils/addressOnlyWallet';
 
 // Average init time to use when no historical data is available (15 seconds)
 const DEFAULT_INIT_DURATION_MS = 15000;
@@ -146,7 +147,8 @@ export function useScanForLostFunds() {
     if (isScanning) return;
 
     // Get all wallet IDs
-    const walletIds = Object.keys(wallets);
+    // Address-only wallets can't be started, so they have no balance to scan.
+    const walletIds = Object.keys(wallets).filter((id) => !isAddressOnly(wallets[id].metadata));
     if (walletIds.length === 0) return;
 
     // Reset tracking

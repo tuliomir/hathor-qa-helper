@@ -23,6 +23,7 @@ import type { RootState } from '../../store';
 import { NETWORK_CONFIG, type NetworkKey } from '../../constants/network';
 import { addressAcceptError, detectAddressKind, type AddressAccept } from '../../utils/addressKind';
 import { groupChars } from '../../utils/truncate';
+import { isAddressOnly } from '../../utils/addressOnlyWallet';
 
 export type AddressSource = 'snap' | 'test' | 'fund' | 'multisig' | 'test-shielded' | 'fund-shielded' | 'snap-shielded';
 
@@ -101,6 +102,11 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   const [fillError, setFillError] = useState<string | null>(null);
 
   const fillFromWallet = async (wallet: ReturnType<typeof getWallet> | null) => {
+    if (wallet && isAddressOnly(wallet.metadata)) {
+      setFillError(null);
+      if (wallet.metadata.address0) onChange(wallet.metadata.address0);
+      return;
+    }
     if (!wallet?.instance) return;
     setFillError(null);
     try {
@@ -126,6 +132,9 @@ export const AddressInput: React.FC<AddressInputProps> = ({
 
   const walletReason = (wallet: ReturnType<typeof getWallet> | null, role: string, needReady: boolean) => {
     if (!wallet) return `No ${role} wallet selected`;
+    // Address-only wallets know their transparent address 0, nothing else.
+    if (isAddressOnly(wallet.metadata))
+      return needReady ? `Address-only ${role} wallet: only address 0 is known` : null;
     if (needReady ? wallet.status !== 'ready' : !wallet.instance)
       return `${role[0].toUpperCase()}${role.slice(1)} wallet not started`;
     return null;

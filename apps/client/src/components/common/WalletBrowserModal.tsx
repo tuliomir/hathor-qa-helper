@@ -32,6 +32,7 @@ import { Identifier } from './Identifier';
 import { Callout } from '../ui/Callout';
 import { StatusChip } from '../ui/StatusChip';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
+import { isAddressOnly } from '../../utils/addressOnlyWallet';
 
 /**
  * Scan progress state passed from parent
@@ -260,23 +261,26 @@ export default function WalletBrowserModal({
     {
       key: 'seed',
       header: 'Seed',
-      render: (wallet) => (
-        <span className="inline-flex items-center gap-1">
-          <span className="max-w-48 truncate font-mono text-data-sm text-ink-muted">
-            {firstNWords(wallet.metadata.seedWords, 3)}
+      render: (wallet) =>
+        isAddressOnly(wallet.metadata) ? (
+          <span className="text-caption text-ink-muted">No seed (address only)</span>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <span className="max-w-48 truncate font-mono text-data-sm text-ink-muted">
+              {firstNWords(wallet.metadata.seedWords, 3)}
+            </span>
+            <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} />
+            <button
+              type="button"
+              onClick={() => onShowSeedModal(wallet.metadata.id)}
+              title="Show QR code"
+              aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
+              className="btn btn-ghost btn-xs btn-square"
+            >
+              <MdQrCode aria-hidden="true" />
+            </button>
           </span>
-          <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} />
-          <button
-            type="button"
-            onClick={() => onShowSeedModal(wallet.metadata.id)}
-            title="Show QR code"
-            aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
-            className="btn btn-ghost btn-xs btn-square"
-          >
-            <MdQrCode aria-hidden="true" />
-          </button>
-        </span>
-      ),
+        ),
     },
     {
       key: 'network',
@@ -284,13 +288,15 @@ export default function WalletBrowserModal({
       render: (wallet) => (
         <span className="inline-flex items-center gap-1">
           <NetworkChip network={wallet.metadata.network} size="sm" />
-          <NetworkSwapButton
-            walletId={wallet.metadata.id}
-            walletName={wallet.metadata.friendlyName}
-            currentNetwork={wallet.metadata.network}
-            walletStatus={wallet.status}
-            onSwap={onSwapNetwork}
-          />
+          {!isAddressOnly(wallet.metadata) && (
+            <NetworkSwapButton
+              walletId={wallet.metadata.id}
+              walletName={wallet.metadata.friendlyName}
+              currentNetwork={wallet.metadata.network}
+              walletStatus={wallet.status}
+              onSwap={onSwapNetwork}
+            />
+          )}
         </span>
       ),
     },
@@ -299,7 +305,11 @@ export default function WalletBrowserModal({
       header: 'Status / balance',
       render: (wallet) => (
         <span className="flex flex-col items-start gap-1">
-          <StatusChip status={wallet.status} />
+          {wallet.status === 'address-only' ? (
+            <StatusChip status={wallet.status} label="Address only" tone="info" />
+          ) : (
+            <StatusChip status={wallet.status} />
+          )}
           {wallet.status === 'ready' && (
             <span className="font-mono text-data tabular-nums">{formatBalance(wallet.balance ?? 0n)} HTR</span>
           )}

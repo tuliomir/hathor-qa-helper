@@ -16,7 +16,8 @@ import { useSendTransaction } from '../../hooks/useSendTransaction';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearSentBack, markSentBack } from '../../store/slices/walletTransfersSlice';
 import { WALLET_CONFIG } from '../../constants/network';
-import { useRequireFundingWallet, useRequireNetwork, useRequireTestWallet } from '../../hooks/useRequirements';
+import { useRequireFundingWallet, useRequireNetwork, useRequireTestAddress } from '../../hooks/useRequirements';
+import { isAddressOnly } from '../../utils/addressOnlyWallet';
 import { firstUnmetReason } from '../../utils/requirements';
 import { formatAmount } from '../../utils/amount';
 import { transferKey, transfersInTx, type TransferDirection, type WalletTransfer } from '../../utils/walletTransfers';
@@ -67,7 +68,9 @@ export default function SendBetweenWalletsStage() {
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
 
   const fundingRequirement = useRequireFundingWallet();
-  const testRequirement = useRequireTestWallet();
+  // An address-only test wallet can receive, from the funding wallet only.
+  const testRequirement = useRequireTestAddress();
+  const testAddressOnly = testWallet ? isAddressOnly(testWallet.metadata) : false;
   const networkRequirement = useRequireNetwork(
     fundingWallet?.metadata.network ?? 'TESTNET',
     testWallet?.metadata.network ?? null
@@ -77,7 +80,8 @@ export default function SendBetweenWalletsStage() {
       ? [fundingRequirement, testRequirement, networkRequirement]
       : [fundingRequirement, testRequirement];
   const blockedReason = firstUnmetReason(requirements);
-  const ready = !blockedReason && fundingWallet?.status === 'ready' && testWallet?.status === 'ready';
+  const ready =
+    !blockedReason && fundingWallet?.status === 'ready' && (testWallet?.status === 'ready' || testAddressOnly);
 
   const symbolOf = (uid: string) =>
     uid === NATIVE_TOKEN_UID ? 'HTR' : (allTokens.find((t) => t.uid === uid)?.symbol ?? `${uid.slice(0, 8)}…`);
@@ -141,6 +145,11 @@ export default function SendBetweenWalletsStage() {
   const formRef = useRef<HTMLDivElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Only the funding wallet can send to an address-only test wallet.
+  useEffect(() => {
+    if (testAddressOnly) setDirection('funding-to-test');
+  }, [testAddressOnly]);
+
   const source = direction === 'funding-to-test' ? fundingWallet : testWallet;
   const destination = direction === 'funding-to-test' ? testWallet : fundingWallet;
 
@@ -203,11 +212,13 @@ export default function SendBetweenWalletsStage() {
   };
 
   const handleSend = async () => {
-    if (!source?.instance || !destination?.instance || !amount) return;
+    const toAddressOnly =
+      destination && isAddressOnly(destination.metadata) ? destination.metadata.address0 : undefined;
+    if (!source?.instance || !(toAddressOnly || destination?.instance) || !amount) return;
     setShowSendError(true);
     setLastTx(null);
     try {
-      const toAddress = await destination.instance.getAddressAtIndex(0);
+      const toAddress = toAddressOnly ?? (await destination!.instance!.getAddressAtIndex(0));
       const changeAddress = await source.instance.getAddressAtIndex(0);
       const template = buildTransferTemplate(
         [{ address: toAddress, amount: BigInt(amount), token: tokenUid }],
@@ -290,13 +301,20 @@ export default function SendBetweenWalletsStage() {
           ) : undefined
         }
       >
-        <DataTable
-          columns={columns}
-          rows={transfers}
-          getRowKey={transferKey}
-          caption="Transfers between the funding and test wallets"
-          empty="No transfers between the two wallets yet. Use the form below to send any token."
-        />
+        {testAddressOnly ? (
+          <p className="m-0 text-body text-ink-muted">
+            The test wallet is address-only, so its transfers can't be tracked. Use the form below to send to its
+            address 0.
+          </p>
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={transfers}
+            getRowKey={transferKey}
+            caption="Transfers between the funding and test wallets"
+            empty="No transfers between the two wallets yet. Use the form below to send any token."
+          />
+        )}
       </Panel>
 
       <div ref={formRef}>
@@ -309,7 +327,12 @@ export default function SendBetweenWalletsStage() {
                 onChange={changeDirection}
                 options={[
                   { value: 'funding-to-test', label: DIRECTION_LABEL['funding-to-test'] },
-                  { value: 'test-to-funding', label: DIRECTION_LABEL['test-to-funding'] },
+                  {
+                    value: 'test-to-funding',
+                    label: DIRECTION_LABEL['test-to-funding'],
+                    disabled: testAddressOnly,
+                    reason: testAddressOnly ? 'The test wallet is address-only and can’t send' : undefined,
+                  },
                 ]}
               />
               {source && destination && (

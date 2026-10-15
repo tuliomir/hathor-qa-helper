@@ -65,6 +65,17 @@ The `startWallet` thunk:
 
 Event handlers stored in `walletEventHandlers` map for cleanup when wallet stops.
 
+## Address-only wallets
+
+A wallet known only by name, network and address 0 (`metadata.kind === 'address'`, `metadata.address0`), for wallets whose seed can't be copied, such as passkey wallets (`passkeys.md`). Added from Wallet initialization with "Address only".
+
+- It is never started: its status is `address-only` from the moment it is loaded or added, `startWallet` refuses it and `updateWalletStatus` leaves it alone. It has no instance, balance, tokens or events.
+- `firstAddress` is set from `address0`, so everything that reads `firstAddress` (top bar, command palette, quick fills) works unchanged.
+- It can only be the **test** wallet; the funding wallet must sign.
+- `utils/addressOnlyWallet.ts`: `isAddressOnly`, `walletAddress0` (address 0 for either kind) and `addressOnlyError` (validates against the wallet's network).
+- Preconditions: `useRequireTestAddress()` accepts it, `useRequireTestWallet()` reports "Test wallet is address-only". RPC stages and Send between wallets (Funding → Test only) use the former; the bet and fee stages accept it at address index 0 only.
+- Wallets saved before this have no `kind` and are seed wallets.
+
 ## Available Thunks
 
 - **`startWallet(walletId)`** — Initialize and start wallet, set up listeners

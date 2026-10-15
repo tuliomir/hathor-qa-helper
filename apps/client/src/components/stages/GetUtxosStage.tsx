@@ -21,7 +21,7 @@ import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { Panel } from '../ui/Panel';
 import { Callout } from '../ui/Callout';
-import { useRequireRpcSession, useRequireTestWallet } from '../../hooks/useRequirements';
+import { useRequireRpcSession, useRequireTestAddress } from '../../hooks/useRequirements';
 import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { firstUnmetReason } from '../../utils/requirements';
@@ -43,7 +43,7 @@ export const GetUtxosStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { getWallet } = useWalletStore();
   const rpcSession = useRequireRpcSession();
-  const testWalletReq = useRequireTestWallet();
+  const testWalletReq = useRequireTestAddress();
   const { isDryRun, execute } = useRpcStageCall(GET_UTXOS_ACTIONS);
 
   const getUtxosData = useSelector((state: RootState) => state.getUtxos);

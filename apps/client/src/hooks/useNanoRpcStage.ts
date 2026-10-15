@@ -16,7 +16,9 @@ import {
 } from '../store/slices/walletConnectSlice';
 import { getStageUrl } from '../config/stageRoutes';
 import { useWalletStore } from './useWalletStore';
-import { useRequireRpcSession, useRequireTestWallet } from './useRequirements';
+import { useRequireRpcSession, useRequireTestAddress } from './useRequirements';
+import { useTestWalletAddress0 } from './useTestWalletAddress';
+import { isAddressOnly } from '../utils/addressOnlyWallet';
 import { RpcRunError, useRpcMethod, type RpcHandlers } from './useRpcMethod';
 import { addressMatchRequirement } from '../utils/addressMatch';
 import { extractErrorMessage } from '../utils/errorUtils';
@@ -52,8 +54,9 @@ function useAddressAt(testWallet: TestWallet, index: number | null): string | nu
 
 /**
  * The test wallet, the RPC network, the address at `addressIndex`, and the
- * stage preconditions: RPC session, test wallet, and the session's wallet
- * being the test wallet (compared on address 0).
+ * stage preconditions: RPC session, test wallet address, and the session's
+ * wallet being the test wallet (compared on address 0). Address-only test
+ * wallets work at address index 0.
  */
 export function useNanoStageWallet(addressIndex: number) {
   const { getWallet } = useWalletStore();
@@ -63,15 +66,33 @@ export function useNanoStageWallet(addressIndex: number) {
   const testWallet = testWalletId ? getWallet(testWalletId) : undefined;
   const rpcNetwork = useSelector(selectRpcNetwork);
 
-  const address0 = useAddressAt(testWallet, 0);
-  const derivedAddress = useAddressAt(testWallet, addressIndex);
+  const addressOnly = testWallet ? isAddressOnly(testWallet.metadata) : false;
+  const address0 = useTestWalletAddress0();
+  const runningAddress = useAddressAt(addressOnly ? undefined : testWallet, addressIndex);
+  // An address-only wallet knows only address 0.
+  const derivedAddress = addressOnly ? (addressIndex === 0 ? address0 : null) : runningAddress;
 
   const rpcSession = useRequireRpcSession();
-  const testWalletReq = useRequireTestWallet();
+  const testWalletReq = useRequireTestAddress();
   const match = isConnected
     ? addressMatchRequirement(connectedAddress || null, address0, getStageUrl('rpc-connection'))
     : null;
-  const requirements: Requirement[] = [rpcSession, testWalletReq, ...(match ? [match] : [])];
+  const indexReq: Requirement | null =
+    addressOnly && addressIndex !== 0
+      ? {
+          id: 'address-index',
+          short: 'Address index',
+          met: false,
+          label: 'Only address 0 is known for an address-only wallet',
+          action: 'Use address index 0',
+        }
+      : null;
+  const requirements: Requirement[] = [
+    rpcSession,
+    testWalletReq,
+    ...(match ? [match] : []),
+    ...(indexReq ? [indexReq] : []),
+  ];
 
   return {
     testWallet,

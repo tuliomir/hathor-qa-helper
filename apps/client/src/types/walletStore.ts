@@ -13,8 +13,17 @@ import type { ShieldedCapabilitySummary } from '../services/shieldedCapability';
 export interface WalletMetadata {
   id: string;
   friendlyName: string;
+  /** Empty for address-only wallets. */
   seedWords: string;
   network: NetworkKey;
+  /**
+   * `address`: a wallet known only by its address 0 (e.g. a passkey wallet,
+   * which has no seed to copy). It is never started; stages that only need
+   * the address accept it. Absent on wallets saved before this existed.
+   */
+  kind?: 'seed' | 'address';
+  /** Address 0 of an address-only wallet. */
+  address0?: string;
   createdAt: number;
   lastUsedAt?: number; // Timestamp of last wallet interaction (start, select, etc.)
   lastInitDurationMs?: number; // Time to reach ready state (ms), used for scan time estimation

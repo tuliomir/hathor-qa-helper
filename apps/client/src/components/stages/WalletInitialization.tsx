@@ -52,6 +52,8 @@ import { Callout } from '../ui/Callout';
 import { Field } from '../ui/Field';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { StatusChip } from '../ui/StatusChip';
+import { SegmentedControl } from '../ui/SegmentedControl';
+import { addressOnlyError, isAddressOnly } from '../../utils/addressOnlyWallet';
 import SeedPhraseModal from '../common/SeedPhraseModal';
 import WalletBrowserModal from '../common/WalletBrowserModal';
 import { NETWORK_CONFIG, NETWORK_KEYS, type NetworkKey } from '../../constants/network';
@@ -67,6 +69,9 @@ export default function WalletInitialization() {
   const { confirm, confirmDialog } = useConfirm();
 
   const [seedInput, setSeedInput] = useState('');
+  // 'address': a wallet known only by its address 0, e.g. a passkey wallet (no seed to copy).
+  const [addMode, setAddMode] = useState<'seed' | 'address'>('seed');
+  const [address0Input, setAddress0Input] = useState('');
   const [walletName, setWalletName] = useState('');
   // New wallets default to the network chosen in the network switcher.
   const preferredNetwork = useAppSelector(selectPreferredNetwork);
@@ -186,6 +191,7 @@ export default function WalletInitialization() {
 
   // Get ready wallets for selection
   const readyWallets = wallets.filter((w) => w.status === 'ready');
+  const addressOnlyWallets = wallets.filter((w) => isAddressOnly(w.metadata));
 
   // Sort wallets by balance for selection (BigInt comparison)
   const walletsSortedByBalanceDesc = [...readyWallets].sort((a, b) => {
@@ -204,6 +210,20 @@ export default function WalletInitialization() {
   });
 
   const handleAddWallet = () => {
+    if (addMode === 'address') {
+      const address = address0Input.trim();
+      const error = !walletName.trim() ? 'Please enter a wallet name' : addressOnlyError(address, network);
+      if (error) {
+        setValidationError(error);
+        return;
+      }
+      setValidationError(null);
+      addWallet({ friendlyName: walletName, seedWords: '', network, kind: 'address', address0: address });
+      setAddress0Input('');
+      setWalletName('');
+      setNetwork(preferredNetwork);
+      return;
+    }
     const { valid: validation, treatedWords, error, invalidWords: invalidWordsList } = treatSeedWords(seedInput);
 
     if (!validation) {
@@ -482,23 +502,26 @@ export default function WalletInitialization() {
     {
       key: 'seed',
       header: 'Seed',
-      render: (wallet) => (
-        <span className="inline-flex items-center gap-1">
-          <span className="whitespace-nowrap font-mono text-data-sm text-ink-muted">
-            {firstNWords(wallet.metadata.seedWords, 3)}
+      render: (wallet) =>
+        isAddressOnly(wallet.metadata) ? (
+          <span className="text-caption text-ink-muted">No seed (address only)</span>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <span className="whitespace-nowrap font-mono text-data-sm text-ink-muted">
+              {firstNWords(wallet.metadata.seedWords, 3)}
+            </span>
+            <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} />
+            <button
+              type="button"
+              onClick={() => setSeedModalWalletId(wallet.metadata.id)}
+              title="Show QR code"
+              aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-field text-ink-muted hover:bg-base-200 hover:text-base-content"
+            >
+              <MdQrCode aria-hidden="true" />
+            </button>
           </span>
-          <CopyButton text={wallet.metadata.seedWords} label={`Copy seed for ${wallet.metadata.friendlyName}`} />
-          <button
-            type="button"
-            onClick={() => setSeedModalWalletId(wallet.metadata.id)}
-            title="Show QR code"
-            aria-label={`Show QR code for ${wallet.metadata.friendlyName}`}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-field text-ink-muted hover:bg-base-200 hover:text-base-content"
-          >
-            <MdQrCode aria-hidden="true" />
-          </button>
-        </span>
-      ),
+        ),
     },
     {
       key: 'network',
@@ -507,13 +530,16 @@ export default function WalletInitialization() {
         return (
           <span className="inline-flex flex-wrap items-center gap-1">
             <NetworkChip network={wallet.metadata.network} size="sm" />
-            <NetworkSwapButton
-              walletId={wallet.metadata.id}
-              walletName={wallet.metadata.friendlyName}
-              currentNetwork={wallet.metadata.network}
-              walletStatus={wallet.status}
-              onSwap={handleSwapNetwork}
-            />
+            {/* An address belongs to one network, so address-only wallets can't move. */}
+            {!isAddressOnly(wallet.metadata) && (
+              <NetworkSwapButton
+                walletId={wallet.metadata.id}
+                walletName={wallet.metadata.friendlyName}
+                currentNetwork={wallet.metadata.network}
+                walletStatus={wallet.status}
+                onSwap={handleSwapNetwork}
+              />
+            )}
             {NETWORK_CONFIG[wallet.metadata.network].supportsShielded && wallet.shieldedCapability && (
               <CapabilityBadge
                 level={wallet.shieldedCapability.level}
@@ -530,7 +556,11 @@ export default function WalletInitialization() {
       header: 'Status',
       render: (wallet) => (
         <span className="flex flex-col items-start gap-0.5">
-          <StatusChip status={wallet.status} />
+          {wallet.status === 'address-only' ? (
+            <StatusChip status={wallet.status} label="Address only" tone="info" />
+          ) : (
+            <StatusChip status={wallet.status} />
+          )}
           {wallet.status === 'ready' && (
             <span className="whitespace-nowrap font-mono text-data-sm">
               {formatBalance(wallet.balance ?? 0n)} <span className="font-sans text-ink-muted">HTR</span>
@@ -584,7 +614,7 @@ export default function WalletInitialization() {
             </>
           ) : (
             <>
-              {wallet.status === 'idle' || wallet.status === 'error' ? (
+              {wallet.status === 'address-only' ? null : wallet.status === 'idle' || wallet.status === 'error' ? (
                 <button
                   type="button"
                   onClick={() => handleStartWallet(wallet.metadata.id)}
@@ -653,7 +683,7 @@ export default function WalletInitialization() {
     },
   ];
 
-  const canAdd = !!seedInput.trim() && !!walletName.trim();
+  const canAdd = !!walletName.trim() && (addMode === 'address' ? !!address0Input.trim() : !!seedInput.trim());
 
   return (
     <div className="flex max-w-stage flex-col gap-4">
@@ -685,7 +715,7 @@ export default function WalletInitialization() {
         />
       </Panel>
 
-      {readyWallets.length > 0 && (
+      {(readyWallets.length > 0 || addressOnlyWallets.length > 0) && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Panel title="Funding wallet" description="A wallet with funds for testing. Sorted by highest balance.">
             <Field label="Funding wallet" htmlFor="funding-wallet-select">
@@ -736,6 +766,11 @@ export default function WalletInitialization() {
                     {wallet.metadata.friendlyName} - {formatBalance(wallet.balance)} HTR
                   </option>
                 ))}
+                {addressOnlyWallets.map((wallet) => (
+                  <option key={wallet.metadata.id} value={wallet.metadata.id}>
+                    {wallet.metadata.friendlyName} - address only
+                  </option>
+                ))}
               </select>
             </Field>
             {testWalletId && (
@@ -768,29 +803,65 @@ export default function WalletInitialization() {
           />
         </Field>
 
-        <Field
-          label="Seed phrase (24 words)"
-          htmlFor="seed-input"
-          hint="Tip: paste an image of the seed words here to extract them with OCR."
-          trailing={
-            <button type="button" onClick={() => setShowCamera(true)} className="btn btn-secondary btn-sm">
-              <MdCamera aria-hidden="true" />
-              Open camera
-            </button>
-          }
-        >
-          <textarea
-            ref={textareaRef}
-            value={seedInput}
-            onChange={handleSeedChange}
-            onPaste={handlePaste}
-            placeholder="Enter the 24-word seed phrase separated by spaces, or paste an image with the seed words"
-            rows={3}
-            className={`textarea min-h-[4.5rem] w-full resize-y whitespace-pre-wrap break-words border-field-border font-mono text-data ${
-              validationError ? 'textarea-error' : ''
-            }`}
-          />
-        </Field>
+        <SegmentedControl<'seed' | 'address'>
+          aria-label="Wallet kind"
+          value={addMode}
+          onChange={(mode) => {
+            setAddMode(mode);
+            setValidationError(null);
+            setInvalidWords([]);
+          }}
+          options={[
+            { value: 'seed', label: 'Seed phrase' },
+            { value: 'address', label: 'Address only' },
+          ]}
+          className="self-start"
+        />
+
+        {addMode === 'address' ? (
+          <Field
+            label="Address 0"
+            htmlFor="address0-input"
+            hint="For wallets without a seed you can copy, like passkey wallets. The QA Helper can send to it and use it in RPC requests, but can't start it or sign with it."
+          >
+            <input
+              type="text"
+              value={address0Input}
+              onChange={(e) => {
+                setAddress0Input(e.target.value);
+                setValidationError(null);
+              }}
+              placeholder="The wallet's first address"
+              autoComplete="off"
+              spellCheck={false}
+              className={`input w-full font-mono text-data ${validationError ? 'input-error' : ''}`}
+            />
+          </Field>
+        ) : (
+          <Field
+            label="Seed phrase (24 words)"
+            htmlFor="seed-input"
+            hint="Tip: paste an image of the seed words here to extract them with OCR."
+            trailing={
+              <button type="button" onClick={() => setShowCamera(true)} className="btn btn-secondary btn-sm">
+                <MdCamera aria-hidden="true" />
+                Open camera
+              </button>
+            }
+          >
+            <textarea
+              ref={textareaRef}
+              value={seedInput}
+              onChange={handleSeedChange}
+              onPaste={handlePaste}
+              placeholder="Enter the 24-word seed phrase separated by spaces, or paste an image with the seed words"
+              rows={3}
+              className={`textarea min-h-[4.5rem] w-full resize-y whitespace-pre-wrap break-words border-field-border font-mono text-data ${
+                validationError ? 'textarea-error' : ''
+              }`}
+            />
+          </Field>
+        )}
 
         {validationError && ocrSourceImageUrl && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -850,7 +921,9 @@ export default function WalletInitialization() {
 
         <div className="flex flex-wrap items-center justify-end gap-3">
           {!canAdd && (
-            <span className="text-caption text-ink-muted">Enter a name and a seed phrase to add the wallet</span>
+            <span className="text-caption text-ink-muted">
+              Enter a name and {addMode === 'address' ? 'an address' : 'a seed phrase'} to add the wallet
+            </span>
           )}
           <button type="button" onClick={handleAddWallet} disabled={!canAdd} className="btn btn-primary">
             <MdAdd aria-hidden="true" />

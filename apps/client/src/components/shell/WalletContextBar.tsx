@@ -35,6 +35,7 @@ const WALLET_STATUS: Record<WalletStatus, { tone: StatusTone; word: string }> = 
   syncing: { tone: 'progress', word: 'Syncing' },
   ready: { tone: 'success', word: 'Ready' },
   error: { tone: 'error', word: 'Error' },
+  'address-only': { tone: 'info', word: 'Address only' },
 };
 
 const SEGMENT_CLASS = {

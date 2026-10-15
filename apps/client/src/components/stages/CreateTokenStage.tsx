@@ -2,10 +2,10 @@
  * Create Token Stage
  *
  * Tests htr_createToken; refreshes the test wallet's tokens after a real
- * creation.
+ * creation. Works with an address-only test wallet.
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import {
@@ -19,7 +19,8 @@ import { RpcAddressMismatchCallout } from '../rpc/RpcAddressMismatchCallout';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import type { CreateTokenParams } from '../../services/rpcHandlers';
-import { useRequireRpcSession, useRequireTestWallet } from '../../hooks/useRequirements';
+import { useRequireRpcSession, useRequireTestAddress } from '../../hooks/useRequirements';
+import { useTestWalletAddress0 } from '../../hooks/useTestWalletAddress';
 import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { ADDRESS_MISMATCH_REASON, useRpcAddressMismatch } from '../../hooks/useRpcAddressMismatch';
 import { useWalletStore } from '../../hooks/useWalletStore';
@@ -36,33 +37,20 @@ export const CreateTokenStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { getWallet } = useWalletStore();
   const rpcSession = useRequireRpcSession();
-  const testWalletReq = useRequireTestWallet();
+  const testWalletReq = useRequireTestAddress();
   const mismatch = useRpcAddressMismatch();
   const { isDryRun, execute } = useRpcStageCall(CREATE_TOKEN_ACTIONS);
 
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const createTokenData = useSelector((state: RootState) => state.createToken);
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
-  const [testWalletAddress, setTestWalletAddress] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!testWallet?.instance) {
-      setTestWalletAddress(null);
-      return;
-    }
-    testWallet.instance
-      .getAddressAtIndex(0)
-      .then(setTestWalletAddress)
-      .catch((error: unknown) => {
-        console.error('Failed to get test wallet address:', error);
-        setTestWalletAddress(null);
-      });
-  }, [testWallet]);
+  const testWalletAddress = useTestWalletAddress0();
 
   const handleExecute = async (params: CreateTokenParams) => {
     const response = await execute((h) => h.getRpcCreateToken(params), buildCreateTokenRequest(params));
-    // A real creation changes the test wallet's tokens; the refresh is best effort.
-    if (!isDryRun && response && testWalletId) {
+    // A real creation changes the test wallet's tokens; the refresh is best effort
+    // and needs a running wallet (not an address-only one).
+    if (!isDryRun && response && testWalletId && testWallet?.instance) {
       try {
         await Promise.all([
           dispatch(refreshWalletTokens(testWalletId)).unwrap(),

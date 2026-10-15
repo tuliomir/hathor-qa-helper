@@ -5,7 +5,8 @@
 import type HathorWallet from '@hathor/wallet-lib/lib/new/wallet.js';
 import type { NetworkKey } from '../constants/network';
 
-export type WalletStatus = 'idle' | 'connecting' | 'syncing' | 'ready' | 'error';
+/** `address-only`: an address-only wallet, which is never started. */
+export type WalletStatus = 'idle' | 'connecting' | 'syncing' | 'ready' | 'error' | 'address-only';
 
 export interface WalletState {
   status: WalletStatus;

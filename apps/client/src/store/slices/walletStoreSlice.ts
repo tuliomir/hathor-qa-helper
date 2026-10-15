@@ -25,6 +25,7 @@ import { applyNetworkServices } from '../../services/networkServices';
 import { enableShieldedProvider } from '../../services/shieldedProvider';
 import { summarizeShieldedCapability, type ShieldedCapabilitySummary } from '../../services/shieldedCapability';
 import type { IShieldedCapability } from '@hathor/wallet-lib';
+import { isAddressOnly } from '../../utils/addressOnlyWallet';
 
 const STORAGE_KEY = 'qa-helper-wallets';
 
@@ -91,15 +92,17 @@ interface WalletStoreState {
 /**
  * Initialize state from LocalStorage
  */
+/** Runtime state of a wallet that was just loaded or added. Address-only wallets are never started. */
+function freshWalletInfo(metadata: WalletMetadata): StoredWalletInfo {
+  return isAddressOnly(metadata)
+    ? { metadata, instance: null, status: 'address-only', firstAddress: metadata.address0, events: [] }
+    : { metadata, instance: null, status: 'idle', events: [] };
+}
+
 const initialState: WalletStoreState = {
   wallets: loadWalletsFromStorage().reduce(
     (acc, metadata) => {
-      acc[metadata.id] = {
-        metadata,
-        instance: null,
-        status: 'idle',
-        events: [],
-      };
+      acc[metadata.id] = freshWalletInfo(metadata);
       return acc;
     },
     {} as Record<string, StoredWalletInfo>
@@ -128,6 +131,9 @@ export const startWallet = createAsyncThunk(
 
     if (!walletInfo) {
       throw new Error(`Wallet ${walletId} not found`);
+    }
+    if (isAddressOnly(walletInfo.metadata)) {
+      throw new Error(`${walletInfo.metadata.friendlyName} is address-only; it can't be started`);
     }
 
     const { seedWords, network } = walletInfo.metadata;
@@ -617,12 +623,7 @@ const walletStoreSlice = createSlice({
       reducer: (state, action: PayloadAction<{ metadata: WalletMetadata; id: string }>) => {
         const { metadata, id } = action.payload;
 
-        state.wallets[id] = {
-          metadata,
-          instance: null,
-          status: 'idle',
-          events: [],
-        };
+        state.wallets[id] = freshWalletInfo(metadata);
 
         // Sync to LocalStorage
         const metadataArray = Object.values(state.wallets).map((info) => info.metadata);
@@ -710,7 +711,8 @@ const walletStoreSlice = createSlice({
       const { id, status, firstAddress, error } = action.payload;
       const walletInfo = state.wallets[id];
 
-      if (walletInfo) {
+      // Address-only wallets are never started, so nothing changes their status.
+      if (walletInfo && !isAddressOnly(walletInfo.metadata)) {
         walletInfo.status = status;
         if (firstAddress) {
           walletInfo.firstAddress = firstAddress;

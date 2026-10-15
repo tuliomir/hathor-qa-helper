@@ -280,7 +280,8 @@ export default function TestWalletCleanup() {
 
   // Refresh wallet data and reload preview
   const handleRefresh = useCallback(async () => {
-    if (!testWallet || busyReason) return;
+    // Only a running wallet can refresh (not a stopped or address-only one).
+    if (!testWallet?.instance || busyReason) return;
 
     setIsRefreshing(true);
     try {
