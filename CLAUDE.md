@@ -106,7 +106,7 @@ In-depth guides live in `knowledge/`:
 | `testing.md` | Bun unit tests + Playwright e2e |
 | `playwright-debugging.md` | Playwright debugging workflow |
 | `bigint-handling.md` | BigInt serialization, Redux compatibility |
-| `development-practices.md` | Code style, render loop prevention, best practices |
+| `development-practices.md` | Code style, render loop prevention, best practices, **pitfalls we hit** (read before adding sends, scroll containers or dev servers) |
 | `new-transaction-handling.md` | Transaction ID display with ExplorerLink and TxStatus |
 | `desktop-qa-development.md` | Desktop QA walkthrough: config-driven architecture, sections, steps |
 | `manual-test-setup.md` | Manual testing setup with live wallets on testnet |
