@@ -1,13 +1,11 @@
 /**
- * Balance breakdown for the Shielded balances stage: the token balance next
+ * Balance breakdown for the Shielded stages: the token balance next
  * to the transparent and shielded UTXO totals.
  *
  * wallet-lib 4.2.0 credits decoded shielded outputs to the same balance as
  * transparent ones, and its UTXO listing filters strictly (`shielded: true`
  * lists shielded only), so the shielded share has to come from the UTXOs.
  */
-
-import type { BalanceResponse, UtxoEntry } from '@qa-helper/shared/serverApi';
 
 export interface UtxoSum {
   amount: bigint;
@@ -49,19 +47,6 @@ export function balanceBreakdown(
     shieldedSharePct: listed === 0n ? null : Number((shielded.amount * 1000n) / listed) / 10,
     unaccounted: total - listed,
   };
-}
-
-export function serverBreakdown(
-  balance: BalanceResponse,
-  transparent: readonly UtxoEntry[],
-  shielded: readonly UtxoEntry[]
-): BalanceBreakdown {
-  const toValues = (list: readonly UtxoEntry[]) => list.map((u) => ({ value: BigInt(u.value) }));
-  return balanceBreakdown(
-    { unlocked: BigInt(balance.unlocked), locked: BigInt(balance.locked) },
-    toValues(transparent),
-    toValues(shielded)
-  );
 }
 
 /** Shape of `HathorWallet.getBalance(token)` entries that matters here. */

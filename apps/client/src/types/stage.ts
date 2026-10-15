@@ -53,8 +53,8 @@ export type StageId =
   | 'snap-fee-initialize'
   | 'snap-fee-deposit'
   | 'snap-fee-withdraw'
-  | 'shielded-qa-server'
   | 'shielded-send'
+  | 'shielded-receive'
   | 'shielded-balances'
   | 'shielded-inspector';
 
@@ -473,19 +473,19 @@ export const STAGE_GROUPS: StageGroup[] = [
     family: 'shielded',
     stages: [
       {
-        id: 'shielded-qa-server',
-        title: 'QA server',
-        description: 'Run client wallets on the local QA server, which can create shielded outputs, and fund them',
-      },
-      {
         id: 'shielded-send',
         title: 'Shielded send',
-        description: 'Send shielded, fully shielded and transparent outputs from a QA server wallet',
+        description: 'Send transparent, amount-shielded and fully shielded outputs between wallets or to a phone',
+      },
+      {
+        id: 'shielded-receive',
+        title: 'Receive',
+        description: 'Show a wallet address as a QR code for the phone to scan, transparent or shielded',
       },
       {
         id: 'shielded-balances',
         title: 'Shielded balances',
-        description: 'Compare transparent and shielded balances decoded by the server and by the browser',
+        description: 'See how much of a wallet balance is transparent and how much is shielded',
       },
       {
         id: 'shielded-inspector',

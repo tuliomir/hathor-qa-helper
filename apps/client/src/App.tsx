@@ -3,6 +3,7 @@ import QALayout from './components/QALayout';
 import MobileQALayout from './components/mobile/MobileQALayout';
 import DesktopQALayout from './components/desktop/DesktopQALayout';
 import WalletAutoLoader from './components/common/WalletAutoLoader';
+import SignerSync from './components/common/SignerSync';
 import { DEFAULT_STAGE_URL } from './config/stageRoutes';
 
 function App() {
@@ -10,6 +11,8 @@ function App() {
     <>
       {/* Auto-start selected wallets on any route */}
       <WalletAutoLoader />
+      {/* Shielded-network wallets get a signer on the QA server */}
+      <SignerSync />
 
       <Routes>
         <Route path="/" element={<Navigate to={DEFAULT_STAGE_URL} replace />} />

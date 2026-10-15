@@ -54,7 +54,7 @@ import { SnapBetWithdrawStage } from './stages/SnapBetWithdrawStage';
 import { SnapFeeInitializeStage } from './stages/SnapFeeInitializeStage';
 import { SnapFeeDepositStage } from './stages/SnapFeeDepositStage';
 import { SnapFeeWithdrawStage } from './stages/SnapFeeWithdrawStage';
-import { ShieldedQaServerStage } from './stages/ShieldedQaServerStage';
+import { ShieldedReceiveStage } from './stages/ShieldedReceiveStage';
 import { ShieldedSendStage } from './stages/ShieldedSendStage';
 import { ShieldedBalancesStage } from './stages/ShieldedBalancesStage';
 import { ShieldedInspectorStage } from './stages/ShieldedInspectorStage';
@@ -110,8 +110,8 @@ const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'snap-fee-deposit': SnapFeeDepositStage,
   'snap-fee-withdraw': SnapFeeWithdrawStage,
   // Shielded outputs
-  'shielded-qa-server': ShieldedQaServerStage,
   'shielded-send': ShieldedSendStage,
+  'shielded-receive': ShieldedReceiveStage,
   'shielded-balances': ShieldedBalancesStage,
   'shielded-inspector': ShieldedInspectorStage,
 };

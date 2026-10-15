@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'bun:test';
 import type { WalletSession } from '@qa-helper/shared/serverApi';
 import reducer, {
-  sessionLabelSet,
+  sessionOwnerSet,
   sessionRemoved,
   sessionUpserted,
   sessionsFailed,
   sessionsLoaded,
   sessionsLoading,
-  selectReadySessions,
-  isSessionShieldedReady,
+  signerBusy,
+  signerFailed,
+  signerForWallet,
+  signerRetry,
 } from '../src/store/slices/qaServerSlice';
 
 const session = (id: string, patch: Partial<WalletSession> = {}): WalletSession => ({
@@ -25,7 +27,7 @@ const init = () => reducer(undefined, { type: '@@init' });
 
 describe('qaServerSlice', () => {
   it('starts empty and idle', () => {
-    expect(init()).toMatchObject({ sessions: [], status: 'idle', error: null, labels: {} });
+    expect(init()).toMatchObject({ sessions: [], status: 'idle', error: null, owners: {}, busy: [], failures: {} });
   });
 
   it('loads sessions and clears the error', () => {
@@ -53,25 +55,38 @@ describe('qaServerSlice', () => {
     expect(s.sessions.map((x) => `${x.id}:${x.state}`)).toEqual(['a:ready', 'b:ready', 'c:ready']);
   });
 
-  it('removes a session and its label', () => {
+  it('removes a session and its owner', () => {
     let s = reducer(init(), sessionsLoaded([session('a')]));
-    s = reducer(s, sessionLabelSet({ id: 'a', label: 'Test wallet 1' }));
+    s = reducer(s, sessionOwnerSet({ sessionId: 'a', walletId: 'w1' }));
     s = reducer(s, sessionRemoved('a'));
     expect(s.sessions).toEqual([]);
-    expect(s.labels).toEqual({});
+    expect(s.owners).toEqual({});
+  });
+});
+
+describe('signerForWallet', () => {
+  it('is off without a session', () => {
+    expect(signerForWallet(init(), 'w1')).toEqual({ state: 'off', session: null, error: null });
   });
 
-  it('selects ready sessions only', () => {
-    const s = reducer(
-      init(),
-      sessionsLoaded([session('a', { state: 'starting' }), session('b'), session('c', { state: 'error' })])
-    );
-    expect(selectReadySessions({ qaServer: s } as never).map((x) => x.id)).toEqual(['b']);
+  it('is starting while a start is in flight', () => {
+    const s = reducer(init(), signerBusy({ walletId: 'w1', busy: true }));
+    expect(signerForWallet(s, 'w1').state).toBe('starting');
   });
 
-  it('a ready session on a shielded network with a shielded address can create shielded outputs', () => {
-    expect(isSessionShieldedReady(session('a'))).toBe(true);
-    expect(isSessionShieldedReady(session('a', { state: 'starting' }))).toBe(false);
-    expect(isSessionShieldedReady(session('a', { network: 'TESTNET', shieldedAddress0: null }))).toBe(false);
+  it('follows the owned session, or the one whose id is the wallet address 0', () => {
+    let s = reducer(init(), sessionsLoaded([session('a', { state: 'starting' }), session('b')]));
+    s = reducer(s, sessionOwnerSet({ sessionId: 'a', walletId: 'w1' }));
+    expect(signerForWallet(s, 'w1').state).toBe('starting');
+    expect(signerForWallet(s, 'w2', 'b')).toMatchObject({ state: 'ready', session: { id: 'b' } });
+  });
+
+  it('reports a failed start until retried, and a session in error', () => {
+    let s = reducer(init(), signerFailed({ walletId: 'w1', error: 'unreachable' }));
+    expect(signerForWallet(s, 'w1')).toMatchObject({ state: 'error', error: 'unreachable' });
+    s = reducer(s, signerRetry('w1'));
+    expect(signerForWallet(s, 'w1').state).toBe('off');
+    s = reducer(s, sessionsLoaded([session('a', { state: 'error', error: 'boom' })]));
+    expect(signerForWallet(s, 'w1', 'a')).toMatchObject({ state: 'error', error: 'boom' });
   });
 });

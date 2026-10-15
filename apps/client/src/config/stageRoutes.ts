@@ -85,8 +85,8 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   'snap-fee-deposit': 'deposit',
   'snap-fee-withdraw': 'withdraw',
   // Shielded outputs
-  'shielded-qa-server': 'qa-server',
   'shielded-send': 'send',
+  'shielded-receive': 'receive',
   'shielded-balances': 'balances',
   'shielded-inspector': 'inspector',
 };

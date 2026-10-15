@@ -50,7 +50,7 @@ describe('stageRoutes', () => {
     });
 
     test('builds correct URL for shielded stages', () => {
-      expect(getStageUrl('shielded-qa-server')).toBe('/tools/shielded/qa-server');
+      expect(getStageUrl('shielded-receive')).toBe('/tools/shielded/receive');
       expect(getStageUrl('shielded-send')).toBe('/tools/shielded/send');
       expect(getStageUrl('shielded-balances')).toBe('/tools/shielded/balances');
       expect(getStageUrl('shielded-inspector')).toBe('/tools/shielded/inspector');

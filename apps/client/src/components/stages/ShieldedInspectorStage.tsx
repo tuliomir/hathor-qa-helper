@@ -1,8 +1,8 @@
 /**
  * Shielded transaction inspector: the fullnode's view of a transaction with
- * its shielded outputs highlighted, plus what a QA server wallet and a
- * browser wallet can unblind (`getShieldedUnblindingForTx`). Decrypted
- * values are merged into the output table.
+ * its shielded outputs highlighted, plus what the sending and receiving
+ * wallets can unblind (`getShieldedUnblindingForTx`). Decrypted values are
+ * merged into the output table.
  */
 
 import { useState } from 'react';
@@ -23,13 +23,10 @@ import { Field } from '../ui/Field';
 import { DataTable } from '../ui/DataTable';
 import { EmptyState } from '../ui/EmptyState';
 import { ErrorState } from '../ui/ErrorState';
-import { ClientWalletPicker, QaServerErrorCallout, SessionPicker } from '../shielded/QaServerParts';
-import { useServerSessions } from '../../hooks/useServerSessions';
+import { ShieldedWalletSelect } from '../shielded/ShieldedWalletSelect';
 import { useAppSelector } from '../../store/hooks';
 import { selectActiveNetwork } from '../../store/slices/networkSlice';
-import { isSessionShieldedReady } from '../../store/slices/qaServerSlice';
 import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
-import { qaServerClient, toErrorInfo, type QaServerErrorInfo } from '../../services/qaServerClient';
 import { canCreateShieldedOutputs } from '../../services/shieldedCapability';
 import { NETWORK_CONFIG, NETWORK_KEYS, type NetworkKey } from '../../constants/network';
 import { formatAmount } from '../../utils/amount';
@@ -57,8 +54,6 @@ function PrivacyCell({ privacy }: { privacy: InspectedOutput['privacy'] }) {
   return <ShieldedBadge variant={privacy === 'FULLY_SHIELDED' ? 'full' : 'amount'} />;
 }
 
-const DECRYPTER_WORD: Record<Decrypter, string> = { server: 'server', client: 'browser' };
-
 function ValueCell({ value, token, by }: { value: bigint | null; token: string | null; by: Decrypter[] }) {
   if (value === null) return <HiddenAmount />;
   const text = formatAmount(value, DECIMAL_PLACES, { grouping: true });
@@ -69,8 +64,8 @@ function ValueCell({ value, token, by }: { value: bigint | null; token: string |
       {by.length > 0 && (
         <MdVisibility
           className="text-accent"
-          aria-label={`Decrypted by the ${by.map((b) => DECRYPTER_WORD[b]).join(' and ')} wallet`}
-          title={`Decrypted by the ${by.map((b) => DECRYPTER_WORD[b]).join(' and ')} wallet`}
+          aria-label={`Decrypted by ${by.join(' and ')}`}
+          title={`Decrypted by ${by.join(' and ')}`}
         />
       )}
     </span>
@@ -125,7 +120,7 @@ function TxView({ fetched, openings }: { fetched: Fetched; openings: Partial<Rec
         {inspected.hiddenCount > 0 && (
           <Callout tone="shielded">
             {inspected.hiddenCount} {inspected.hiddenCount === 1 ? 'amount is' : 'amounts are'} hidden. Unblind with a
-            server or browser wallet that received or spent them (below) to see the values.
+            wallet that received or spent them (below) to see the values.
           </Callout>
         )}
       </Panel>
@@ -219,20 +214,17 @@ function TxView({ fetched, openings }: { fetched: Fetched; openings: Partial<Rec
 type UnblindState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'done'; raw: unknown; openings: Openings }
-  | { kind: 'server-error'; error: QaServerErrorInfo }
+  | { kind: 'done'; raw: unknown; openings: Openings; by: Decrypter }
   | { kind: 'error'; message: string };
 
-function UnblindResult({ state, who }: { state: UnblindState; who: string }) {
+function UnblindResult({ state }: { state: UnblindState }) {
   switch (state.kind) {
     case 'idle':
       return null;
     case 'loading':
       return <span className="skeleton block h-16 w-full" />;
-    case 'server-error':
-      return <QaServerErrorCallout error={state.error} title={`Unblinding on the ${who} failed`} />;
     case 'error':
-      return <ErrorState message={`Unblinding in the ${who} failed`} detail={state.message} />;
+      return <ErrorState message="Unblinding failed" detail={state.message} />;
     case 'done': {
       const n = state.openings.outputs.length + state.openings.inputs.length;
       return (
@@ -258,78 +250,13 @@ function UnblindResult({ state, who }: { state: UnblindState; who: string }) {
   }
 }
 
-function ServerUnblind({
+function WalletUnblind({
+  title,
   txId,
   state,
   setState,
 }: {
-  txId: string | null;
-  state: UnblindState;
-  setState: (s: UnblindState) => void;
-}) {
-  const { sessions, labels, online } = useServerSessions();
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const session = sessions.find((s) => s.id === sessionId) ?? null;
-
-  let unavailable: string | null = null;
-  if (!online) unavailable = 'Not available: the QA server is not running.';
-  else if (!txId) unavailable = 'Inspect a transaction first.';
-  else if (!session) unavailable = 'Choose a ready server wallet.';
-
-  const run = async () => {
-    if (!session || !txId) return;
-    setState({ kind: 'loading' });
-    try {
-      const raw = await qaServerClient.getUnblinding(session.id, txId);
-      setState({ kind: 'done', raw, openings: normalizeOpenings(raw) });
-    } catch (err) {
-      setState({ kind: 'server-error', error: toErrorInfo(err) });
-    }
-  };
-
-  return (
-    <Panel
-      title="Server unblinding"
-      description="GET /wallets/:id/tx/:txId/unblinding on a QA server wallet."
-      footer={
-        <>
-          {unavailable && <span className="text-caption text-ink-muted">{unavailable}</span>}
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm ml-auto"
-            disabled={!!unavailable || state.kind === 'loading'}
-            onClick={() => void run()}
-          >
-            <MdLockOpen aria-hidden="true" />
-            Unblind on server
-          </button>
-        </>
-      }
-    >
-      {online ? (
-        <SessionPicker sessions={sessions} labels={labels} value={sessionId} onChange={setSessionId} onlyReady />
-      ) : (
-        <EmptyState>Not available: start the QA server to unblind with a server wallet.</EmptyState>
-      )}
-      {session && (
-        <p className="m-0 flex items-center gap-2 text-caption text-ink-muted">
-          Decrypting with
-          <CapabilityBadge
-            level={session.capability?.level}
-            canCreateShieldedOutputs={isSessionShieldedReady(session)}
-          />
-        </p>
-      )}
-      <UnblindResult state={state} who="server" />
-    </Panel>
-  );
-}
-
-function ClientUnblind({
-  txId,
-  state,
-  setState,
-}: {
+  title: string;
   txId: string | null;
   state: UnblindState;
   setState: (s: UnblindState) => void;
@@ -337,21 +264,19 @@ function ClientUnblind({
   const wallets = useAppSelector((s) => s.walletStore.wallets);
   const [walletId, setWalletId] = useState<string | null>(null);
   const wallet = walletId ? wallets[walletId] : undefined;
-  const supportsShielded = wallet ? NETWORK_CONFIG[wallet.metadata.network].supportsShielded : false;
 
   let unavailable: string | null = null;
   if (!txId) unavailable = 'Inspect a transaction first.';
-  else if (!wallet) unavailable = 'Choose a started client wallet.';
-  else if (!supportsShielded)
-    unavailable = `Not available: ${NETWORK_CONFIG[wallet.metadata.network].label} has no shielded outputs.`;
+  else if (!wallet) unavailable = 'Choose a wallet.';
+  else if (wallet.status !== 'ready') unavailable = `Start ${wallet.metadata.friendlyName} first.`;
 
   const run = async () => {
     const instance = walletId ? walletInstancesMap.get(walletId) : null;
-    if (!instance || !txId) return;
+    if (!instance || !txId || !wallet) return;
     setState({ kind: 'loading' });
     try {
       const raw = await instance.getShieldedUnblindingForTx(txId);
-      setState({ kind: 'done', raw, openings: normalizeOpenings(raw) });
+      setState({ kind: 'done', raw, openings: normalizeOpenings(raw), by: wallet.metadata.friendlyName });
     } catch (err) {
       setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
     }
@@ -359,8 +284,8 @@ function ClientUnblind({
 
   return (
     <Panel
-      title="Browser unblinding"
-      description="getShieldedUnblindingForTx on a client wallet (WASM provider)."
+      title={title}
+      description="getShieldedUnblindingForTx: the values this wallet can decrypt."
       footer={
         <>
           {unavailable && <span className="text-caption text-ink-muted">{unavailable}</span>}
@@ -371,12 +296,12 @@ function ClientUnblind({
             onClick={() => void run()}
           >
             <MdLockOpen aria-hidden="true" />
-            Unblind in browser
+            Unblind
           </button>
         </>
       }
     >
-      <ClientWalletPicker value={walletId} onChange={setWalletId} onlyReady />
+      <ShieldedWalletSelect value={walletId} onChange={setWalletId} />
       {wallet && (
         <p className="m-0 flex items-center gap-2 text-caption text-ink-muted">
           Decrypting with
@@ -386,7 +311,7 @@ function ClientUnblind({
           />
         </p>
       )}
-      <UnblindResult state={state} who="browser" />
+      <UnblindResult state={state} />
     </Panel>
   );
 }
@@ -398,8 +323,8 @@ export function ShieldedInspectorStage() {
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState<Fetched | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [server, setServer] = useState<UnblindState>({ kind: 'idle' });
-  const [client, setClient] = useState<UnblindState>({ kind: 'idle' });
+  const [first, setFirst] = useState<UnblindState>({ kind: 'idle' });
+  const [second, setSecond] = useState<UnblindState>({ kind: 'idle' });
 
   // Default to the active network when it has shielded outputs, else Shielded testnet.
   const chosenNetwork =
@@ -412,8 +337,8 @@ export function ShieldedInspectorStage() {
     setLoading(true);
     setFetchError(null);
     setFetched(null);
-    setServer({ kind: 'idle' });
-    setClient({ kind: 'idle' });
+    setFirst({ kind: 'idle' });
+    setSecond({ kind: 'idle' });
     try {
       const res = await fetch(`${NETWORK_CONFIG[chosenNetwork].fullNodeUrl}transaction?id=${txId}`);
       const body = (await res.json().catch(() => null)) as {
@@ -434,8 +359,7 @@ export function ShieldedInspectorStage() {
   };
 
   const openings: Partial<Record<Decrypter, Openings>> = {};
-  if (server.kind === 'done') openings.server = server.openings;
-  if (client.kind === 'done') openings.client = client.openings;
+  for (const u of [first, second]) if (u.kind === 'done') openings[u.by] = u.openings;
 
   const requirements: Requirement[] = [
     NETWORK_CONFIG[chosenNetwork].supportsShielded
@@ -525,8 +449,8 @@ export function ShieldedInspectorStage() {
       )}
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
-        <ServerUnblind txId={fetched ? fetched.tx.hash : null} state={server} setState={setServer} />
-        <ClientUnblind txId={fetched ? fetched.tx.hash : null} state={client} setState={setClient} />
+        <WalletUnblind title="Sender" txId={fetched ? fetched.tx.hash : null} state={first} setState={setFirst} />
+        <WalletUnblind title="Recipient" txId={fetched ? fetched.tx.hash : null} state={second} setState={setSecond} />
       </div>
     </div>
   );

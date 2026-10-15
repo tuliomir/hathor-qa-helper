@@ -2,12 +2,22 @@
  * HelperServerPill
  *
  * Status of the local QA ("helper") server, which creates shielded outputs
- * for the browser. Only shielded-sending stages need it; nothing blocks on it.
+ * for the browser, and of its signers: the copies of shielded-network
+ * wallets it runs. Signers follow their wallets (`useSignerSync`), so the
+ * popover only shows them, with a retry for a failed start.
  */
 
 import { useEffect, useState } from 'react';
 import { QA_SERVER_PROXY_PREFIX } from '@qa-helper/shared/serverApi';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import {
+  selectQaServer,
+  signerForWallet,
+  signerRetry,
+  startSigner,
+  type SignerState,
+} from '../../store/slices/qaServerSlice';
+import { useShieldedWallets } from '../../hooks/useSigner';
 import type { HelperServerStatus } from '../../store/slices/helperServerSlice';
 import { useHelperServerHealth } from '../../hooks/useHelperServerHealth';
 import CopyButton from '../common/CopyButton';
@@ -50,6 +60,58 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <dt className="text-ink-muted">{label}</dt>
       <dd className="m-0 font-mono text-data-sm">{children}</dd>
     </>
+  );
+}
+
+const SIGNER: Record<SignerState, { tone: StatusTone; label: string }> = {
+  off: { tone: 'idle', label: 'Wallet not started' },
+  starting: { tone: 'progress', label: 'Starting' },
+  ready: { tone: 'success', label: 'Ready' },
+  error: { tone: 'error', label: 'Failed' },
+};
+
+function Signers() {
+  const dispatch = useAppDispatch();
+  const qaServer = useAppSelector(selectQaServer);
+  const storeWallets = useAppSelector((s) => s.walletStore.wallets);
+  const wallets = useShieldedWallets();
+  if (wallets.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="font-semibold">Signers</span>
+      <p className="m-0 text-caption text-ink-muted">
+        Starting a wallet on a shielded network starts its signer here; stopping it stops the signer.
+      </p>
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+        {wallets.map((w) => {
+          const signer = signerForWallet(qaServer, w.id, storeWallets[w.id]?.firstAddress);
+          const view = SIGNER[signer.state];
+          return (
+            <li key={w.id} className="flex flex-col gap-0.5">
+              <span className="flex items-center gap-2">
+                <StatusDot tone={view.tone} />
+                <span className="min-w-0 flex-1 truncate">{w.name}</span>
+                <span className="text-caption text-ink-muted">{view.label}</span>
+                {signer.state === 'error' && (
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-secondary"
+                    onClick={() => {
+                      // The server restarts a session in error, so retry it directly.
+                      dispatch(signerRetry(w.id));
+                      void dispatch(startSigner(w.id));
+                    }}
+                  >
+                    Retry
+                  </button>
+                )}
+              </span>
+              {signer.error && <span className="text-caption text-error break-words">{signer.error}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -108,9 +170,9 @@ export default function HelperServerPill() {
               <Row label="Version">{state.version}</Row>
               <Row label="Latency">{state.latencyMs !== null ? `${state.latencyMs} ms` : 'n/a'}</Row>
               <Row label="Heartbeat">{ago(now, state.lastSeen)}</Row>
-              <Row label="Wallets">{state.sessions ?? 0}</Row>
             </dl>
           )}
+          {state.status === 'online' && <Signers />}
 
           {(state.status === 'idle' || state.status === 'connecting') && (
             <p className="m-0">

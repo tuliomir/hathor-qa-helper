@@ -87,17 +87,23 @@ const DESCRIPTIONS: Record<QaServerErrorCode, ErrorDescription> = {
   BAD_REQUEST: { title: 'The QA server rejected the request', hint: 'Check the addresses and amounts.' },
   FORBIDDEN: {
     title: 'The QA server refused this page',
-    hint: 'It only accepts the dev client on localhost:5173 (or 127.0.0.1:5173, or the preview on 4173).',
+    hint: 'It only accepts clients on localhost or 127.0.0.1 (any port), plus QA_SERVER_EXTRA_ORIGINS.',
   },
-  NOT_FOUND: { title: 'No such session on the QA server', hint: 'It may have been stopped. Refresh the sessions.' },
+  NOT_FOUND: {
+    title: 'The QA server no longer runs this wallet',
+    hint: 'It may have restarted. The signer starts again on its own; retry in a few seconds.',
+  },
   CONFLICT: {
     title: 'This seed already runs on another network',
-    hint: 'Stop that session first, then start it again on this network.',
+    hint: 'Stop the wallet on the other network (or the other QA Helper using it) first.',
   },
-  WALLET_NOT_READY: { title: 'The server wallet is not ready yet', hint: 'Wait until the session shows Ready.' },
+  WALLET_NOT_READY: {
+    title: 'The wallet is still preparing to sign',
+    hint: 'Wait until its signer shows Ready in the Helper pill.',
+  },
   INSUFFICIENT_FUNDS: {
-    title: 'Not enough funds in the server wallet',
-    hint: 'Fund it from a client wallet in QA server › Fund server wallet. There is no faucet on this network.',
+    title: 'Not enough funds in the sending wallet',
+    hint: 'Send it funds from another wallet on this network (e.g. the funding wallet). Shielded fees are paid in HTR.',
   },
   LIB_ERROR: { title: 'wallet-lib failed on the server', hint: null },
   INTERNAL: { title: 'The QA server hit an internal error', hint: null },

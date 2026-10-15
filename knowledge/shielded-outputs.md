@@ -48,4 +48,4 @@ wallet-lib keeps the tx-mining URL in the global `config` singleton. Without one
 ## Not covered yet
 
 - WalletConnect and Snap stages still assume `testnet` (`hathor:testnet`). `hathor-rpc-handler` has no shielded RPC methods.
-- The Shielded stages (`shielded-qa-stages.md`) cover sends, balances and the tx inspector through the QA server.
+- The Shielded stages (`shielded-qa-stages.md`) cover sends (through each wallet's signer on the QA server), receive QR codes, balances and the tx inspector.

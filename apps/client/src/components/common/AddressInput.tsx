@@ -6,7 +6,9 @@
  * still send a wrong-kind address on purpose. Each source is opt-in via
  * `sources`; `test` and `fund` also offer the shielded addr0 when the
  * wallet's network supports shielded outputs. `customSources` adds
- * stage-specific ones (e.g. QA server sessions).
+ * stage-specific ones. `walletPicker` adds any shielded-network wallet's
+ * address at any index, transparent or shielded; `scannable` reads a QR
+ * code with the camera (a phone's receive QR: `hathor:<address>`).
  *
  * Validation uses `network`, defaulting to the active network; pass `null`
  * to accept any network.
@@ -14,7 +16,7 @@
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { MdArrowDropDown, MdShield } from 'react-icons/md';
+import { MdArrowDropDown, MdQrCodeScanner, MdShield } from 'react-icons/md';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { selectSnapAddress } from '../../store/slices/snapSlice';
 import { WELL_KNOWN_ADDRESSES } from '../../constants/addresses';
@@ -24,6 +26,10 @@ import { NETWORK_CONFIG, type NetworkKey } from '../../constants/network';
 import { addressAcceptError, detectAddressKind, type AddressAccept } from '../../utils/addressKind';
 import { groupChars } from '../../utils/truncate';
 import { isAddressOnly } from '../../utils/addressOnlyWallet';
+import { parseScannedAddress } from '../../utils/addressUri';
+import { useWalletAddress } from '../../hooks/useWalletAddress';
+import { WalletAddressPicker, type WalletAddressChoice } from '../shielded/WalletAddressPicker';
+import QrScanner from '../QrScanner';
 
 export type AddressSource = 'snap' | 'test' | 'fund' | 'multisig' | 'test-shielded' | 'fund-shielded' | 'snap-shielded';
 
@@ -53,6 +59,10 @@ interface AddressInputProps {
   id?: string;
   /** Muted line under the field (e.g. "Optional. Defaults to …"); an error replaces it. */
   hint?: React.ReactNode;
+  /** Offer any shielded-network wallet's address at any index. */
+  walletPicker?: boolean;
+  /** Offer reading a QR code with the camera. */
+  scannable?: boolean;
 }
 
 interface FillSource {
@@ -76,6 +86,8 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   network: networkProp,
   id,
   hint,
+  walletPicker = false,
+  scannable = false,
 }) => {
   const activeNetwork = useSelector(selectActiveNetwork);
   const network = networkProp === undefined ? activeNetwork : (networkProp ?? undefined);
@@ -100,6 +112,14 @@ export const AddressInput: React.FC<AddressInputProps> = ({
   }, [suggestedValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [fillError, setFillError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [choice, setChoice] = useState<WalletAddressChoice>({
+    walletId: null,
+    index: 0,
+    kind: accept === 'shielded' ? 'shielded' : 'transparent',
+  });
+  const picked = useWalletAddress(pickerOpen ? choice.walletId : null, choice.index, choice.kind);
 
   const fillFromWallet = async (wallet: ReturnType<typeof getWallet> | null) => {
     if (wallet && isAddressOnly(wallet.metadata)) {
@@ -283,10 +303,30 @@ export const AddressInput: React.FC<AddressInputProps> = ({
         )}
       </div>
 
-      {fills.length > 0 && (
+      {(fills.length > 0 || walletPicker || scannable) && (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-caption text-ink-muted">Fill from</span>
-          {fills.length <= MAX_INLINE_SOURCES ? (
+          {walletPicker && (
+            <button
+              type="button"
+              aria-expanded={pickerOpen}
+              onClick={() => setPickerOpen((o) => !o)}
+              className={`btn btn-xs whitespace-nowrap ${pickerOpen ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              Wallet address
+            </button>
+          )}
+          {scannable && (
+            <button
+              type="button"
+              onClick={() => setScanning(true)}
+              className="btn btn-secondary btn-xs whitespace-nowrap"
+            >
+              <MdQrCodeScanner aria-hidden="true" />
+              Scan QR
+            </button>
+          )}
+          {fills.length === 0 ? null : fills.length <= MAX_INLINE_SOURCES ? (
             fills.map((f) => (
               <button
                 key={f.key}
@@ -305,7 +345,7 @@ export const AddressInput: React.FC<AddressInputProps> = ({
                 Choose address
                 <MdArrowDropDown aria-hidden="true" />
               </summary>
-              <ul className="menu dropdown-content z-20 mt-1 w-64 rounded-box border border-base-300 bg-base-100 p-1 shadow-float">
+              <ul className="menu dropdown-content z-20 mt-1 max-h-72 w-64 flex-nowrap overflow-y-auto rounded-box border border-base-300 bg-base-100 p-1 shadow-float">
                 {fills.map((f) => (
                   <li key={f.key} className={f.disabledReason ? 'menu-disabled' : ''}>
                     <button type="button" disabled={f.disabledReason !== null} onClick={() => runFill(f)}>
@@ -320,6 +360,41 @@ export const AddressInput: React.FC<AddressInputProps> = ({
             </details>
           )}
         </div>
+      )}
+
+      {pickerOpen && (
+        <div className="flex flex-col gap-2 rounded-field border border-base-300 bg-base-100 p-2">
+          <WalletAddressPicker value={choice} onChange={setChoice} />
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="min-w-0 flex-1 truncate font-mono text-data-sm text-ink-muted">
+              {picked.loading ? 'Deriving…' : (picked.address ?? picked.error ?? 'Choose a wallet')}
+            </span>
+            <button
+              type="button"
+              className="btn btn-primary btn-xs"
+              disabled={!picked.address}
+              onClick={() => {
+                if (!picked.address) return;
+                setFillError(null);
+                onChange(picked.address);
+                setPickerOpen(false);
+              }}
+            >
+              Use address
+            </button>
+          </div>
+        </div>
+      )}
+
+      {scanning && (
+        <QrScanner
+          onScan={(text) => {
+            setScanning(false);
+            setFillError(null);
+            onChange(parseScannedAddress(text));
+          }}
+          onCancel={() => setScanning(false)}
+        />
       )}
     </div>
   );

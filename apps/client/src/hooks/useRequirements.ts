@@ -9,7 +9,8 @@ import { selectIsWalletConnectConnected } from '../store/slices/walletConnectSli
 import { selectIsSnapConnected } from '../store/slices/snapSlice';
 import { getStageUrl } from '../config/stageRoutes';
 import { NETWORKS, type NetworkKey } from '@qa-helper/shared/networks';
-import type { ShieldedCapabilityLevel, WalletSession } from '@qa-helper/shared/serverApi';
+import type { ShieldedCapabilityLevel } from '@qa-helper/shared/serverApi';
+import type { SignerInfo } from '../store/slices/qaServerSlice';
 import type { Requirement } from '../utils/requirements';
 import { isAddressOnly } from '../utils/addressOnlyWallet';
 
@@ -129,8 +130,7 @@ export function useRequireHelperServer(): Requirement {
         ...base,
         met: false,
         label: `QA server error${error ? `: ${error}` : ''}`,
-        action: 'Check the QA server',
-        fix: { label: 'Open QA server', to: getStageUrl('shielded-qa-server') },
+        action: 'Check the QA server (Helper pill in the top bar)',
       };
     default:
       return {
@@ -138,23 +138,38 @@ export function useRequireHelperServer(): Requirement {
         met: false,
         label: 'QA server not running',
         action: 'Start the QA server (bun run dev:server)',
-        fix: { label: 'How to start it', to: getStageUrl('shielded-qa-server') },
       };
   }
 }
 
-/** A QA server session must be chosen and ready. */
-export function useRequireServerSession(session: WalletSession | null | undefined): Requirement {
-  const base = { id: 'server-session', short: 'Server session' };
-  const fix = { label: 'Start one', to: getStageUrl('shielded-qa-server') };
-  if (!session) {
-    return { ...base, met: false, label: 'No server session selected', action: 'Choose a ready server session', fix };
+/**
+ * The wallet's signer (its copy on the QA server) must be ready. Signers
+ * follow their wallets, so the fix is always on the wallet itself.
+ */
+export function useRequireSigner(walletName: string | null, signer: SignerInfo | null): Requirement {
+  const base = { id: 'signer', short: 'Signer' };
+  if (!walletName || !signer) return { ...base, met: false, label: 'No sending wallet', action: 'Choose a wallet' };
+  switch (signer.state) {
+    case 'ready':
+      return { ...base, met: true, label: `${walletName} can sign shielded sends` };
+    case 'starting':
+      return { ...base, met: 'pending', label: `Preparing ${walletName} to sign` };
+    case 'error':
+      return {
+        ...base,
+        met: false,
+        label: `${walletName} could not start signing: ${signer.error}`,
+        action: 'Retry from the Helper pill in the top bar',
+      };
+    default:
+      return {
+        ...base,
+        met: false,
+        label: `${walletName} is not started`,
+        action: `Start ${walletName}`,
+        fix: { label: 'Open wallets', to: WALLETS_URL },
+      };
   }
-  if (session.state === 'starting') return { ...base, met: 'pending', label: 'Server session starting' };
-  if (session.state === 'error') {
-    return { ...base, met: false, label: 'Server session failed', action: 'Restart the server session', fix };
-  }
-  return { ...base, met: true, label: 'Server session ready' };
 }
 
 /** The test wallet's network (or `actual`) must be `expected`. */

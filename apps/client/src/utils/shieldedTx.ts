@@ -1,6 +1,6 @@
 /**
  * Reads a fullnode `/transaction?id=` body into inspector rows, merging the
- * unblinding data that a server or browser wallet holds for it.
+ * unblinding data that wallets hold for it.
  *
  * Shielded outputs live in `tx.shielded_outputs[]`; their absolute index is
  * `tx.outputs.length + s` (the index `getShieldedUnblindingForTx` uses).
@@ -50,7 +50,8 @@ export interface Openings {
   inputs: Opening[];
 }
 
-export type Decrypter = 'server' | 'client';
+/** Who unblinded a value: the name of the wallet that holds its opening. */
+export type Decrypter = string;
 
 export interface InspectedOutput {
   index: number;

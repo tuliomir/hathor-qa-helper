@@ -34,6 +34,7 @@ Only use `bun` — `npx` and `yarn` are forbidden. Run these from the repo root;
 - **Section** — Legacy term for group. When someone says "Snaps section" they mean the `snaps` group.
 - **Family** — A set of groups shown together in the stage nav (e.g. Wallets, WalletConnect RPC, Snap, Shielded). Defined as `STAGE_FAMILIES` in `src/types/stage.ts`.
 - **QA server** — The local Bun server in `apps/server` that holds wallets with the native shielded crypto provider so it can create shielded outputs. Used by the Shielded stages.
+- **Signer** — A shielded-network wallet's copy on the QA server, which signs its shielded sends. It starts and stops with the wallet; QA never manages it (Helper pill shows its state).
 - **Snap stages** — Stages prefixed with `Snap*` (e.g. `SnapConnectionStage.tsx`). They use MetaMask Snap RPC via `useSnapMethod` hook and `snapHandlers.ts`.
 - **RPC stages** — Stages using WalletConnect RPC via `rpcHandlers.ts` and the `rpcSlice`.
 
@@ -93,7 +94,7 @@ In-depth guides live in `knowledge/`:
 | `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
 | `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
 | `shielded-semantics.md` | How shielded outputs work in wallet-lib and the mobile wallet: address types, the three modes, fees, the two-output rule, change, mobile QR formats |
-| `shielded-qa-stages.md` | The Shielded stages (QA server, send, balances, inspector) and the fund → shield → inspect → unshield flow |
+| `shielded-qa-stages.md` | The Shielded stages (send, receive, balances, inspector), signers, and the wallet ↔ wallet ↔ phone flows |
 | `passkeys.md` | Passkey wallets: how Hathor derives them, why the QA Helper can't open them directly, and the paused `wallet.hathor.network` setup |
 | `../docs/design/` | UI redesign: audit, direction, tokens, shell, components, rollout, Claude Design brief |
 | `redesign-changes.md` | Behaviour that changed in the redesign (decimal amounts, enforced checks, previews, confirmations) |

@@ -11,10 +11,18 @@ import { newOutputRow, toSendOutputs, type OutputRow } from './outputRows';
 export type ChangeModeChoice = 'AUTO' | ChangeOutputModeName;
 
 export const CHANGE_MODE_OPTIONS: { value: ChangeModeChoice; label: string; hint: string }[] = [
-  { value: 'AUTO', label: 'Automatic', hint: 'wallet-lib decides (sent without changeShieldedMode)' },
+  {
+    value: 'AUTO',
+    label: 'Automatic',
+    hint: 'wallet-lib decides: shielded when a shielded input is spent or every output of the token is shielded',
+  },
   { value: 'AMOUNT_SHIELDED', label: 'Amount shielded', hint: 'Change amount hidden; token public' },
   { value: 'FULLY_SHIELDED', label: 'Fully shielded', hint: 'Change amount and token hidden' },
-  { value: 'TRANSPARENT', label: 'Transparent', hint: 'Change is a public output' },
+  {
+    value: 'TRANSPARENT',
+    label: 'Transparent',
+    hint: 'Change is public, even after spending shielded inputs (their value can then be worked out)',
+  },
 ];
 
 export function buildShieldedSendRequest(rows: readonly OutputRow[], changeMode: ChangeModeChoice): SendRequest {
@@ -63,7 +71,7 @@ export interface PresetTarget {
   value: string;
 }
 
-/** Rows and change mode for a preset. Recipients default to the given addresses (a self-send). */
+/** Rows and change mode for a preset. Recipients default to the given addresses (the sender's own: a self-send). */
 export function applyShieldedPreset(
   id: ShieldedPresetId,
   { legacyAddress, shieldedAddress, value }: PresetTarget

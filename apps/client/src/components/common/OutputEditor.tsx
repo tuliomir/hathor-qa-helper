@@ -35,6 +35,8 @@ export interface OutputEditorProps {
   addressSources?: AddressSource[];
   /** Stage-specific quick-fill entries for every recipient. */
   customAddressSources?: CustomAddressSource[];
+  /** Recipients can take any shielded-network wallet's address, or a scanned QR code. */
+  walletAddressPicker?: boolean;
   /** Network for address validation; defaults to the active network, `null` accepts any. */
   network?: NetworkKey | null;
   allowData?: boolean;
@@ -60,6 +62,7 @@ export function OutputEditor({
   tokens,
   addressSources = [],
   customAddressSources,
+  walletAddressPicker = false,
   network,
   allowData = true,
   allowTimelock = true,
@@ -95,7 +98,9 @@ export function OutputEditor({
             key={row.id}
             className={`relative flex flex-col gap-3 rounded-box bg-base-200 p-3 ${shielded ? 'pl-4' : ''}`}
           >
-            {shielded && <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] rounded-l-box ${VEIL_STRIP}`} />}
+            {shielded && (
+              <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] rounded-l-box ${VEIL_STRIP}`} />
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">Output {n}</span>
               {allowData && (
@@ -152,6 +157,8 @@ export function OutputEditor({
                   placeholder="Recipient address"
                   sources={addressSources}
                   customSources={customAddressSources}
+                  walletPicker={walletAddressPicker}
+                  scannable={walletAddressPicker}
                   accept={shielded ? 'shielded' : 'transparent'}
                   network={network}
                 />

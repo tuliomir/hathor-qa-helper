@@ -355,18 +355,18 @@ export const MAIN_QA_STAGES: StageEntry[] = [
   },
   // Shielded outputs
   {
-    id: 'shielded-qa-server',
-    title: 'QA server',
-    groupTitle: 'Shielded outputs',
-    familyTitle: 'Shielded',
-    url: '/tools/shielded/qa-server',
-  },
-  {
     id: 'shielded-send',
     title: 'Shielded send',
     groupTitle: 'Shielded outputs',
     familyTitle: 'Shielded',
     url: '/tools/shielded/send',
+  },
+  {
+    id: 'shielded-receive',
+    title: 'Receive',
+    groupTitle: 'Shielded outputs',
+    familyTitle: 'Shielded',
+    url: '/tools/shielded/receive',
   },
   {
     id: 'shielded-balances',

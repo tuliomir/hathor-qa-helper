@@ -164,8 +164,8 @@ describe('createQaServerClient: errors', () => {
   it('describes each code in plain words', () => {
     expect(describeQaServerError(new QaServerError(0, 'UNREACHABLE', 'x')).title).toMatch(/not running/i);
     expect(describeQaServerError(new QaServerError(422, 'INSUFFICIENT_FUNDS', 'x')).title).toMatch(/not enough funds/i);
-    expect(describeQaServerError(new QaServerError(403, 'FORBIDDEN', 'x')).hint).toMatch(/5173/);
-    expect(describeQaServerError(new QaServerError(409, 'WALLET_NOT_READY', 'x')).title).toMatch(/not ready/i);
+    expect(describeQaServerError(new QaServerError(403, 'FORBIDDEN', 'x')).hint).toMatch(/localhost/);
+    expect(describeQaServerError(new QaServerError(409, 'WALLET_NOT_READY', 'x')).title).toMatch(/preparing to sign/i);
     expect(describeQaServerError(new Error('boom'))).toEqual({ title: 'The request failed', hint: null });
   });
 });

@@ -72,4 +72,3 @@ export function estimateShieldedFee(outputs: readonly ShieldedFeeInput[]): Shiel
     minFee,
   };
 }
-

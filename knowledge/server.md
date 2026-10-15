@@ -6,7 +6,7 @@ A localhost-only Bun HTTP server that holds Hathor wallets with the native shiel
 
 Browsers can receive and inspect shielded transactions but cannot create them. The only browser provider, `@hathor/ct-crypto-wasm`, is verifier-only: shielded sends and spends of shielded UTXOs (unshielding) throw. Watch out: a WASM-backed wallet still reports `getShieldedCapability()` as `full` with `canSpend: true`, so never gate a client-side send on it.
 
-The server uses `@hathor/ct-crypto-node` (NAPI), which implements the full prover. The client sends it a test wallet's seed, and the server runs that wallet and performs the sends.
+The server uses `@hathor/ct-crypto-node` (NAPI), which implements the full prover. The client sends it a test wallet's seed, and the server runs that wallet and performs the sends. The client calls such a copy a **signer** and never shows it as a wallet of its own: it starts and stops with the browser wallet (`useSignerSync`, see `shielded-qa-stages.md`).
 
 ## Running it
 

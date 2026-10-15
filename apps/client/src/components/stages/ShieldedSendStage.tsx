@@ -1,8 +1,9 @@
 /**
- * Shielded send: build outputs (transparent, amount shielded, fully
- * shielded) and send them from a QA server wallet, which has the native
- * prover. Requests go to `POST /wallets/:id/send`; rows map onto the
- * contract through `toSendOutputs`.
+ * Shielded send: transparent, amount-shielded and fully shielded outputs
+ * from a wallet on a shielded network. The browser can't create shielded
+ * outputs, so the wallet's signer on the QA server sends them
+ * (`POST /wallets/:id/send`); signers follow their wallets, so QA only
+ * picks the wallet. Rows map onto the contract through `toSendOutputs`.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -14,13 +15,14 @@ import { OutputEditor, type OutputTokenOption } from '../common/OutputEditor';
 import { Panel } from '../ui/Panel';
 import { Field } from '../ui/Field';
 import { SegmentedControl } from '../ui/SegmentedControl';
-import { QaServerDownCallout, QaServerErrorCallout, SessionPicker } from '../shielded/QaServerParts';
-import { useServerSessions } from '../../hooks/useServerSessions';
-import { useRequireHelperServer, useRequireServerSession } from '../../hooks/useRequirements';
-import { useShieldedAddressBook } from '../../hooks/useShieldedAddressBook';
+import { QaServerDownCallout, QaServerErrorCallout } from '../shielded/QaServerParts';
+import { ShieldedWalletSelect } from '../shielded/ShieldedWalletSelect';
+import { useSigner } from '../../hooks/useSigner';
+import { deriveWalletAddress } from '../../hooks/useWalletAddress';
+import { useRequireHelperServer, useRequireSigner } from '../../hooks/useRequirements';
 import { useAppSelector } from '../../store/hooks';
+import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
 import { qaServerClient, toErrorInfo } from '../../services/qaServerClient';
-import { NETWORK_CONFIG } from '../../constants/network';
 import { newOutputRow, type OutputRow } from '../../utils/outputRows';
 import {
   CHANGE_MODE_OPTIONS,
@@ -30,7 +32,7 @@ import {
   type ChangeModeChoice,
   type ShieldedPresetId,
 } from '../../utils/shieldedSend';
-import { firstUnmetReason, type Requirement } from '../../utils/requirements';
+import { firstUnmetReason } from '../../utils/requirements';
 
 const HTR: OutputTokenOption = { uid: '00', symbol: 'HTR', name: 'Hathor' };
 const EMPTY_METHOD: MethodData = {
@@ -43,59 +45,47 @@ const EMPTY_METHOD: MethodData = {
 };
 const DEFAULT_PRESET_VALUE = '100';
 
-export function ShieldedSendStage() {
-  const { sessions, labels } = useServerSessions();
-  const isDryRun = useAppSelector((s) => s.rpc.isDryRun);
-  const addressBook = useShieldedAddressBook();
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [rows, setRows] = useState<OutputRow[]>(() => [newOutputRow({ privacy: 'AMOUNT_SHIELDED' })]);
-  const [changeMode, setChangeMode] = useState<ChangeModeChoice>('AUTO');
-  const [methodData, setMethodData] = useState<MethodData>(EMPTY_METHOD);
+/** Unlocked HTR of the browser wallet; the signer runs the same seed, so it sees the same funds. */
+function useUnlockedHtr(walletId: string | null): string | undefined {
+  const status = useAppSelector((s) => (walletId ? s.walletStore.wallets[walletId]?.status : undefined));
+  const lastEvent = useAppSelector((s) => {
+    const events = walletId ? s.walletStore.wallets[walletId]?.events : undefined;
+    return events && events.length > 0 ? events[events.length - 1].id : null;
+  });
   const [balance, setBalance] = useState<string | undefined>(undefined);
-
-  const readySessions = sessions.filter((s) => s.state === 'ready');
-  const session = sessions.find((s) => s.id === sessionId) ?? null;
-
-  // Pick the only ready session automatically.
-  useEffect(() => {
-    if (!sessionId && readySessions.length === 1) setSessionId(readySessions[0].id);
-  }, [sessionId, readySessions]);
-
-  // Available balance for the above-balance warning and the Max button.
   useEffect(() => {
     setBalance(undefined);
-    if (!session || session.state !== 'ready') return;
+    const instance = walletId && status === 'ready' ? walletInstancesMap.get(walletId) : null;
+    if (!instance) return;
     let cancelled = false;
-    qaServerClient
-      .getBalance(session.id)
-      .then((b) => !cancelled && setBalance(b.unlocked))
+    instance
+      .getBalance('00')
+      .then((b) => !cancelled && setBalance((b[0]?.balance.unlocked ?? 0n).toString()))
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [session?.id, session?.state]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [walletId, status, lastEvent]);
+  return balance;
+}
+
+export function ShieldedSendStage() {
+  const isDryRun = useAppSelector((s) => s.rpc.isDryRun);
+  const wallets = useAppSelector((s) => s.walletStore.wallets);
+  const [walletId, setWalletId] = useState<string | null>(null);
+  const [rows, setRows] = useState<OutputRow[]>(() => [newOutputRow({ privacy: 'AMOUNT_SHIELDED' })]);
+  const [changeMode, setChangeMode] = useState<ChangeModeChoice>('AUTO');
+  const [methodData, setMethodData] = useState<MethodData>(EMPTY_METHOD);
+  const [presetError, setPresetError] = useState<string | null>(null);
+
+  const wallet = walletId ? wallets[walletId] : undefined;
+  const signer = useSigner(walletId);
+  const session = signer?.state === 'ready' ? signer.session : null;
+  const balance = useUnlockedHtr(walletId);
 
   const server = useRequireHelperServer();
-  const sessionReq = useRequireServerSession(session);
-  const shieldedNetwork = session ? NETWORK_CONFIG[session.network].supportsShielded : false;
-  const requirements: Requirement[] = [server, sessionReq];
-  if (session) {
-    requirements.push(
-      shieldedNetwork
-        ? {
-            id: 'network',
-            short: 'Shielded network',
-            met: true,
-            label: `Session on ${NETWORK_CONFIG[session.network].label}`,
-          }
-        : {
-            id: 'network',
-            short: 'Shielded network',
-            met: false,
-            label: `Session on ${NETWORK_CONFIG[session.network].label}: transparent outputs only`,
-          }
-    );
-  }
+  const signerReq = useRequireSigner(wallet?.metadata.friendlyName ?? null, signer);
+  const requirements = [server, signerReq];
 
   const built = useMemo((): { request: SendRequest | null; error: string | null } => {
     try {
@@ -107,17 +97,24 @@ export function ShieldedSendStage() {
 
   const path = `POST /wallets/${session ? session.id : ':id'}/send`;
   const liveRequest = built.request ? { method: path, params: built.request } : null;
+  const disabledReason = firstUnmetReason(requirements) ?? built.error;
 
-  const preconditionReason = firstUnmetReason([server, sessionReq]);
-  const disabledReason = preconditionReason ?? built.error;
-
-  const applyPreset = (id: ShieldedPresetId) => {
+  /** Presets send to the wallet's own address 0, a self-send; Fill from changes the recipient. */
+  const applyPreset = async (id: ShieldedPresetId) => {
+    setPresetError(null);
     const value = rows.find((r) => /^\d+$/.test(r.value) && r.value !== '0')?.value ?? DEFAULT_PRESET_VALUE;
-    const preset = applyShieldedPreset(id, {
-      legacyAddress: session?.legacyAddress0 ?? null,
-      shieldedAddress: session?.shieldedAddress0 ?? null,
-      value,
-    });
+    let own = { legacyAddress: null as string | null, shieldedAddress: null as string | null };
+    if (walletId && wallet?.status === 'ready') {
+      try {
+        own = {
+          legacyAddress: await deriveWalletAddress(walletId, 0, 'transparent'),
+          shieldedAddress: await deriveWalletAddress(walletId, 0, 'shielded'),
+        };
+      } catch (err) {
+        setPresetError(`Own addresses unavailable: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    const preset = applyShieldedPreset(id, { ...own, value });
     setRows(preset.rows);
     setChangeMode(preset.changeMode);
   };
@@ -130,7 +127,7 @@ export function ShieldedSendStage() {
       setMethodData({ ...EMPTY_METHOD, request: sent, isDryRun: true, timestamp: Date.now() });
       return;
     }
-    if (!session) throw new Error('Choose a ready server wallet');
+    if (!session) throw new Error('The wallet cannot sign yet');
     const started = performance.now();
     setMethodData({ ...EMPTY_METHOD, request: sent });
     try {
@@ -142,10 +139,6 @@ export function ShieldedSendStage() {
         timestamp: Date.now(),
         duration: Math.round(performance.now() - started),
       });
-      qaServerClient
-        .getBalance(session.id)
-        .then((b) => setBalance(b.unlocked))
-        .catch(() => {});
       return response;
     } catch (err) {
       setMethodData({
@@ -167,7 +160,7 @@ export function ShieldedSendStage() {
 
       <Panel
         title="Presets"
-        description="Common QA flows. Recipients default to the chosen server wallet's own addresses; change them with Fill from."
+        description="Common QA flows. Recipients default to the sending wallet's own address 0; change them with Fill from."
       >
         <div className="flex flex-wrap gap-2">
           {SHIELDED_PRESETS.map((p) => (
@@ -176,7 +169,7 @@ export function ShieldedSendStage() {
               type="button"
               className="btn btn-secondary btn-sm"
               title={p.description}
-              onClick={() => applyPreset(p.id)}
+              onClick={() => void applyPreset(p.id)}
             >
               {p.label}
             </button>
@@ -189,42 +182,34 @@ export function ShieldedSendStage() {
             </li>
           ))}
         </ul>
+        {presetError && <span className="text-caption text-error">{presetError}</span>}
       </Panel>
 
       <MethodCard
-        title="Send from the server wallet"
+        title="Send"
         actionLabel="Send transaction"
-        description="Outputs are sent by the QA server's wallet-lib with the native prover."
+        description="The wallet's signer on the QA server builds and sends the transaction with the native prover."
         liveRequest={liveRequest}
         methodData={methodData}
         isDryRun={isDryRun}
         onExecute={execute}
         disabledReason={disabledReason}
-        isMainnet={session?.network === 'MAINNET'}
+        isMainnet={wallet?.metadata.network === 'MAINNET'}
         getTxHash={(r) => (r as SendResponse | null)?.txId ?? null}
-        explorerNetwork={session?.network}
+        explorerNetwork={wallet?.metadata.network}
         successToast="Transaction sent"
         renderError={(err) => <QaServerErrorCallout error={toErrorInfo(err)} title={undefined} />}
       >
-        <SessionPicker
-          sessions={sessions}
-          labels={labels}
-          value={sessionId}
-          onChange={setSessionId}
-          label="Send from server wallet"
-          onlyReady
-        />
+        <ShieldedWalletSelect value={walletId} onChange={setWalletId} label="From" />
         <OutputEditor
           value={rows}
           onChange={setRows}
           tokens={[HTR]}
-          customAddressSources={addressBook}
-          network={session?.network}
+          walletAddressPicker
+          network={wallet?.metadata.network}
           allowData={false}
           allowTimelock={false}
-          privacy={
-            session && !shieldedNetwork ? `Shielded outputs need ${NETWORK_CONFIG.SHIELDED_TESTNET.label}` : true
-          }
+          privacy
           balances={balance !== undefined ? { '00': balance } : undefined}
           getMax={balance !== undefined ? async () => balance : undefined}
         />
@@ -242,8 +227,6 @@ export function ShieldedSendStage() {
               value: o.value,
               label: o.label,
               tone: o.value === 'AMOUNT_SHIELDED' || o.value === 'FULLY_SHIELDED' ? 'shielded' : 'default',
-              disabled: !!session && !shieldedNetwork && o.value !== 'AUTO' && o.value !== 'TRANSPARENT',
-              reason: 'Needs a shielded network',
             }))}
           />
         </Field>
