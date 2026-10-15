@@ -34,6 +34,9 @@ export default function AddressListViewer() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Re-runs on every wallet event (transaction counts change). Rows stay up
+  // while it refreshes: swapping them for skeletons would shrink the page
+  // and scroll it back up.
   useEffect(() => {
     async function fetchAddresses() {
       if (!testWallet?.instance) return;
@@ -139,7 +142,7 @@ export default function AddressListViewer() {
               columns={columns}
               rows={addresses}
               getRowKey={(a) => String(a.index)}
-              loading={isLoading}
+              loading={isLoading && addresses.length === 0}
               error={error ? { message: 'Could not load addresses.', detail: error } : null}
               empty="No addresses found."
             />

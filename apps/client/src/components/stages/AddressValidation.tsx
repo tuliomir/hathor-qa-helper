@@ -92,10 +92,13 @@ function WalletAddressDisplay({
   const [isInjecting, setIsInjecting] = useState(false);
   const [injectError, setInjectError] = useState<string | null>(null);
 
-  // Auto-derive selected address when wallet is selected
+  // Auto-derive selected address when wallet is selected. Keyed on the
+  // instance: the wallet record is replaced on every event, and re-deriving
+  // would hide the sections below and scroll the stage back up.
+  const instance = wallet?.instance;
   useEffect(() => {
     const deriveAddress = async () => {
-      if (!wallet || !wallet.instance) {
+      if (!instance) {
         setDerivedAddress(null);
         return;
       }
@@ -104,7 +107,7 @@ function WalletAddressDisplay({
       setError(null);
 
       try {
-        const address = await wallet.instance.getAddressAtIndex(addressIndex);
+        const address = await instance.getAddressAtIndex(addressIndex);
         setDerivedAddress(address);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to derive address');
@@ -115,7 +118,7 @@ function WalletAddressDisplay({
     };
 
     deriveAddress();
-  }, [wallet, addressIndex]);
+  }, [instance, addressIndex]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);

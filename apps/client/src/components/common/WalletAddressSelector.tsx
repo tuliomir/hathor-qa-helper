@@ -49,10 +49,13 @@ export default function WalletAddressSelector({
   const wallets = getAllWallets();
   const wallet = wallets.find((w) => w.metadata.id === walletId && w.status === 'ready');
 
-  // Derive address when wallet or index changes
+  // Derive address when wallet or index changes. Keyed on the instance: the
+  // wallet record is replaced on every event, and re-deriving would flash the
+  // loading state and scroll the stage back up.
+  const instance = wallet?.instance;
   useEffect(() => {
     const deriveAddress = async () => {
-      if (!wallet?.instance) {
+      if (!instance) {
         setDerivedAddress(null);
         onAddressChange?.(null, addressIndex);
         return;
@@ -62,7 +65,7 @@ export default function WalletAddressSelector({
       setError(null);
 
       try {
-        const address = await wallet.instance.getAddressAtIndex(addressIndex);
+        const address = await instance.getAddressAtIndex(addressIndex);
         setDerivedAddress(address);
         onAddressChange?.(address, addressIndex);
       } catch (err) {
@@ -75,7 +78,7 @@ export default function WalletAddressSelector({
     };
 
     deriveAddress();
-  }, [wallet, addressIndex]);
+  }, [instance, addressIndex]);
 
   const handleIndexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

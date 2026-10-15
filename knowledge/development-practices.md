@@ -79,6 +79,11 @@ Each entry is a real bug or near miss: the symptom, the cause, and the rule that
 - **Cause:** `sr-only` labels are `position: absolute`. `overflow: hidden/auto` contains absolute descendants only if the overflow box (or something between) is positioned. Without that they resolve against the page and make it taller than the `h-dvh` shell, so the page scrolls.
 - **Rule:** the shell's nav and content slots are `relative overflow-hidden` (`components/shell/AppShell.tsx`); keep it, and give any new scroll container `relative`. To test, check `document.scrollingElement.scrollHeight === innerHeight` on every stage at several window heights, with inner panes scrolled both to the top and to the bottom. A sweep at one height missed the nav case.
 
+### Wallet events must not swap content for a loading state
+- **Symptom:** the stage scrolls back up when a transaction arrives (seen on Address validation).
+- **Cause:** every wallet event replaces the wallet's Redux record (events, balance), so effects keyed on the whole record (`[wallet]`, `[testWallet]`) re-run. Address validation then re-derived its address and hid the sections below behind "Loading address…"; the pane shrank for a frame and its scroll was clamped.
+- **Rule:** key effects on what they read: `wallet?.instance` for address derivation, which no transaction changes. An effect that must reload on events keeps its old content on screen while it does (`loading` only while there is nothing to show). `e2e/wallet-event-scroll.spec.ts` checks Address validation; it starts a testnet wallet and reaches app modules by dev-server URL, so run it against a dev server.
+
 ### Prove a check can fail before trusting it
 - A clean sweep only counts if it would have caught the bug: run it once with the fix reverted. Doing that here is what showed the first shell fix covered the content pane but not the nav.
 
