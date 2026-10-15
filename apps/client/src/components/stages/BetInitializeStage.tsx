@@ -17,14 +17,17 @@ import { RpcBetInitializeCard } from '../rpc/RpcBetInitializeCard';
 import { type TokenOption } from '../rpc/NanoFields';
 import { BlueprintUnavailable } from '../common/BlueprintUnavailable';
 import { StageHeader } from '../common/StageHeader';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { BET_FLOW } from '../../flows';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { NETWORK_CONFIG, type NetworkKey } from '../../constants/network';
 import { blueprintIdFor } from '../../utils/blueprints';
-import { getOracleBuffer } from '../../utils/betHelpers';
+import { defaultBetDeadline, getOracleBuffer } from '../../utils/betHelpers';
 import { buildInitializeBetRequest, nanoTxHash } from '../../utils/nanoRpcRequests';
 import { firstUnmetReason } from '../../utils/requirements';
 import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
 import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
+import { bool, num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
 /** The handler's oracle script; a placeholder for the no-session dry run when it can't be derived. */
@@ -58,10 +61,7 @@ export const BetInitializeStage: React.FC = () => {
     if (defaultBlueprintId) setBlueprintId(defaultBlueprintId);
   }, [defaultBlueprintId]);
   const [token, setToken] = useState<string>(NATIVE_TOKEN_UID);
-  const [deadline, setDeadline] = useState<string>(() => {
-    const date = new Date(Date.now() + 3600 * 1000);
-    return date.toISOString().slice(0, 16);
-  });
+  const [deadline, setDeadline] = useState<string>(() => defaultBetDeadline());
   const [pushTx, setPushTx] = useState<boolean>(false);
 
   // Tokens the test wallet holds (a deposit follows the initialize); HTR as fallback.
@@ -106,6 +106,15 @@ export const BetInitializeStage: React.FC = () => {
     };
   }, [testWallet, allTokens, addressOnlyTokens]);
 
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-bet-initialize', (v) => {
+    setBlueprintId(str(v, 'blueprintId') ?? blueprintId);
+    setToken(str(v, 'token') ?? token);
+    setDeadline(str(v, 'deadline') ?? deadline);
+    setAddressIndex(num(v, 'addressIndex') ?? addressIndex);
+    setPushTx(bool(v, 'pushTx') ?? pushTx);
+  });
+
   const { isDryRun, execute } = useNanoRpcExecute({
     request: setBetInitializeRequest,
     response: (response, duration) => setBetInitializeResponse({ response, duration }),
@@ -137,6 +146,7 @@ export const BetInitializeStage: React.FC = () => {
         title="Initialize bet"
         description="Create a bet nano contract with an oracle, a token and a deadline."
         method="htr_sendNanoContractTx"
+        actions={<StartFlowButton flow={BET_FLOW} label="Run the bet flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       {defaultBlueprintId === null ? (

@@ -47,6 +47,7 @@ import snapMethodsReducer from './slices/snapMethodsSlice';
 import networkReducer from './slices/networkSlice';
 import helperServerReducer from './slices/helperServerSlice';
 import qaServerReducer from './slices/qaServerSlice';
+import flowRunReducer from './slices/flowRunSlice';
 
 export const store = configureStore({
   reducer: {
@@ -94,6 +95,7 @@ export const store = configureStore({
     network: networkReducer,
     helperServer: helperServerReducer,
     qaServer: qaServerReducer,
+    flowRun: flowRunReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

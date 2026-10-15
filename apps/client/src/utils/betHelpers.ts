@@ -22,3 +22,16 @@ export function getOracleBuffer(address: string, networkKey: NetworkKey = DEFAUL
 export const safeStringify = (obj: unknown, space?: number): string => {
   return JSON.stringify(obj, (_, value) => (typeof value === 'bigint' ? value.toString() : value), space);
 };
+
+/** What the bet stages and the bet flow fill in by default (QA_REOWN.md's bet section). */
+export const BET_DEFAULTS = {
+  /** The winning result: the deposit bets on it and the oracle signs it. */
+  betChoice: 'Result_1',
+  /** Deposit amount, in base units. */
+  amount: '1',
+} as const;
+
+/** Default bet deadline: an hour from now, in the deadline field's `YYYY-MM-DDTHH:mm` format. */
+export function defaultBetDeadline(now: number = Date.now()): string {
+  return new Date(now + 3600 * 1000).toISOString().slice(0, 16);
+}

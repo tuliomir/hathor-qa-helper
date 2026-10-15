@@ -27,6 +27,7 @@ import { buildSignOracleDataRequest } from '../../utils/rpcCoreRequests';
 import { getStageUrl } from '../../config/stageRoutes';
 import { useNanoStageWallet } from '../../hooks/useNanoRpcStage';
 import { useStage } from '../../hooks/useStage';
+import { num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 const SIGN_ORACLE_DATA_ACTIONS = {
   setRequest: setSignOracleDataRequest,
@@ -71,6 +72,13 @@ export const SignOracleDataStage: React.FC = () => {
       setNcId(latestNcId);
     }
   }, [latestNcId, ncId]);
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-sign-oracle-data', (v) => {
+    setNcId(str(v, 'ncId') ?? ncId);
+    setData(str(v, 'data') ?? data);
+    setAddressIndex(num(v, 'addressIndex') ?? addressIndex);
+  });
 
   // Save form state to Redux whenever it changes
   useEffect(() => {

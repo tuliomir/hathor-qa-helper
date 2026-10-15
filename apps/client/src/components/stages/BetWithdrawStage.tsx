@@ -15,10 +15,13 @@ import {
 } from '../../store/slices/betWithdrawSlice';
 import { RpcBetWithdrawCard } from '../rpc/RpcBetWithdrawCard';
 import { StageHeader } from '../common/StageHeader';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { BET_FLOW } from '../../flows';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { buildBetWithdrawRequest } from '../../utils/nanoRpcRequests';
 import { firstUnmetReason } from '../../utils/requirements';
 import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
+import { bool, num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 export const BetWithdrawStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -42,6 +45,15 @@ export const BetWithdrawStage: React.FC = () => {
   useEffect(() => {
     dispatch(setBetWithdrawFormData({ address: withdrawAddress, amount, token, pushTx }));
   }, [withdrawAddress, amount, token, pushTx, dispatch]);
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-bet-withdraw', (v) => {
+    setNcId(str(v, 'ncId') ?? ncId);
+    setAddressIndex(num(v, 'addressIndex') ?? addressIndex);
+    setAmount(str(v, 'amount') ?? amount);
+    setToken(str(v, 'token') ?? token);
+    setPushTx(bool(v, 'pushTx') ?? pushTx);
+  });
 
   const amountNum = parseFloat(amount) || 0;
   const liveRequest = useMemo(
@@ -74,6 +86,7 @@ export const BetWithdrawStage: React.FC = () => {
         title="Withdraw prize"
         description="Withdraw your prize from a bet nano contract after the result is set."
         method="htr_sendNanoContractTx"
+        actions={<StartFlowButton flow={BET_FLOW} label="Run the bet flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       <RpcBetWithdrawCard

@@ -16,11 +16,15 @@ import {
 import { RpcBetDepositCard } from '../rpc/RpcBetDepositCard';
 import type { TokenOption } from '../rpc/NanoFields';
 import { StageHeader } from '../common/StageHeader';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { BET_FLOW } from '../../flows';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { buildBetDepositRequest } from '../../utils/nanoRpcRequests';
+import { BET_DEFAULTS } from '../../utils/betHelpers';
 import { firstUnmetReason } from '../../utils/requirements';
 import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
 import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
+import { bool, num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 
 export const BetDepositStage: React.FC = () => {
@@ -32,8 +36,8 @@ export const BetDepositStage: React.FC = () => {
   const initialToken = betNanoContract.token;
 
   const [ncId, setNcId] = useState<string>(latestInitializedNcId || '');
-  const [betChoice, setBetChoice] = useState<string>('Result_1');
-  const [amount, setAmount] = useState<string>('1');
+  const [betChoice, setBetChoice] = useState<string>(BET_DEFAULTS.betChoice);
+  const [amount, setAmount] = useState<string>(BET_DEFAULTS.amount);
   const [token, setToken] = useState<string>(initialToken || NATIVE_TOKEN_UID);
   const [addressIndex, setAddressIndex] = useState<number>(0);
   const [pushTx, setPushTx] = useState<boolean>(false);
@@ -51,6 +55,16 @@ export const BetDepositStage: React.FC = () => {
   useEffect(() => {
     dispatch(setBetDepositFormData({ ncId, amount, token, addressIndex }));
   }, [ncId, amount, token, addressIndex, dispatch]);
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-bet-deposit', (v) => {
+    setNcId(str(v, 'ncId') ?? ncId);
+    setBetChoice(str(v, 'betChoice') ?? betChoice);
+    setAmount(str(v, 'amount') ?? amount);
+    setToken(str(v, 'token') ?? token);
+    setAddressIndex(num(v, 'addressIndex') ?? addressIndex);
+    setPushTx(bool(v, 'pushTx') ?? pushTx);
+  });
 
   const addressOnlyTokens = useAddressOnlyTokens();
 
@@ -103,6 +117,7 @@ export const BetDepositStage: React.FC = () => {
         title="Place bet"
         description="Place a bet on an existing bet nano contract."
         method="htr_sendNanoContractTx"
+        actions={<StartFlowButton flow={BET_FLOW} label="Run the bet flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       <RpcBetDepositCard

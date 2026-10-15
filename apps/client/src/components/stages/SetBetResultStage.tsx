@@ -16,11 +16,14 @@ import {
 import { clearSetBetResultNavigation, navigateToSignOracleData } from '../../store/slices/navigationSlice';
 import { RpcSetBetResultCard } from '../rpc/RpcSetBetResultCard';
 import { StageHeader } from '../common/StageHeader';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { BET_FLOW } from '../../flows';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { useStage } from '../../hooks/useStage';
 import { buildSetBetResultRequest } from '../../utils/nanoRpcRequests';
 import { firstUnmetReason } from '../../utils/requirements';
 import { methodDataOf, useNanoRpcExecute, useNanoStageWallet } from '../../hooks/useNanoRpcStage';
+import { bool, num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 export const SetBetResultStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -74,6 +77,15 @@ export const SetBetResultStage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [depositedBetChoice]);
 
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-set-bet-result', (v) => {
+    setNcId(str(v, 'ncId') ?? ncId);
+    setResult(str(v, 'result') ?? result);
+    setOracleSignature(str(v, 'oracleSignature') ?? oracleSignature);
+    setAddressIndex(num(v, 'addressIndex') ?? addressIndex);
+    setPushTx(bool(v, 'pushTx') ?? pushTx);
+  });
+
   const liveRequest = useMemo(
     () =>
       buildSetBetResultRequest({
@@ -108,6 +120,7 @@ export const SetBetResultStage: React.FC = () => {
         title="Set bet result"
         description="Set the result of a bet nano contract as its oracle."
         method="htr_sendNanoContractTx"
+        actions={<StartFlowButton flow={BET_FLOW} label="Run the bet flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       <RpcSetBetResultCard

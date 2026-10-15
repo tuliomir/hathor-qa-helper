@@ -14,6 +14,7 @@ import {
   selectRpcNetwork,
   selectWalletConnectFirstAddress,
 } from '../store/slices/walletConnectSlice';
+import { selectFlowRunActive } from '../store/slices/flowRunSlice';
 import { getStageUrl } from '../config/stageRoutes';
 import { useWalletStore } from './useWalletStore';
 import { useRequireRpcSession, useRequireTestAddress } from './useRequirements';
@@ -21,7 +22,7 @@ import { useTestWalletAddress0 } from './useTestWalletAddress';
 import { isAddressOnly } from '../utils/addressOnlyWallet';
 import { RpcRunError, useRpcMethod, type RpcHandlers } from './useRpcMethod';
 import { addressMatchRequirement } from '../utils/addressMatch';
-import { extractErrorMessage } from '../utils/errorUtils';
+import { recordRpcFailure, recordRpcResult, type MethodSliceActions } from '../services/rpcRun';
 import type { Requirement } from '../utils/requirements';
 import type { MethodData } from '../components/common/MethodCard';
 
@@ -87,11 +88,23 @@ export function useNanoStageWallet(addressIndex: number) {
           action: 'Use address index 0',
         }
       : null;
+  // A run's request may be open on the wallet; a second one would queue behind it.
+  const flowActive = useSelector(selectFlowRunActive);
+  const flowReq: Requirement | null = flowActive
+    ? {
+        id: 'flow-run',
+        short: 'Automatic run',
+        met: false,
+        label: 'An automatic run is sending requests',
+        action: 'Stop the automatic run to send by hand',
+      }
+    : null;
   const requirements: Requirement[] = [
     rpcSession,
     testWalletReq,
     ...(match ? [match] : []),
     ...(indexReq ? [indexReq] : []),
+    ...(flowReq ? [flowReq] : []),
   ];
 
   return {
@@ -133,28 +146,23 @@ export function useNanoRpcExecute(actions: {
   const dispatch = useDispatch();
   const { isDryRun, run } = useRpcMethod();
 
+  const sliceActions: MethodSliceActions = {
+    setRequest: actions.request,
+    setResponse: ({ response, duration }) => actions.response(response, duration),
+    setError: actions.error,
+  };
+
   const execute = async (
     call: (h: RpcHandlers) => Promise<HandlerResult>,
     dryRunRequest: { method: string; params: unknown }
   ) => {
     try {
-      const { request, response, duration } = await run(call, dryRunRequest);
-      dispatch(actions.request({ method: request.method, params: request.params, isDryRun }));
-      dispatch(actions.response(response, duration));
-      return response;
+      const result = await run(call, dryRunRequest);
+      recordRpcResult(dispatch, sliceActions, isDryRun, result);
+      return result.response;
     } catch (error) {
-      const original = error instanceof RpcRunError ? error.original : error;
-      const requestParams = (original as { requestParams?: { method: string; params: unknown } } | null)?.requestParams;
-      if (requestParams) {
-        dispatch(actions.request({ method: requestParams.method, params: requestParams.params, isDryRun }));
-      }
-      dispatch(
-        actions.error({
-          error: extractErrorMessage(original),
-          duration: error instanceof RpcRunError ? error.duration : 0,
-        })
-      );
-      throw original;
+      recordRpcFailure(dispatch, sliceActions, isDryRun, error);
+      throw error instanceof RpcRunError ? error.original : error;
     }
   };
 
