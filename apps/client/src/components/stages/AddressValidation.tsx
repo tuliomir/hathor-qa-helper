@@ -33,6 +33,7 @@ import { getAddressRecord } from '../../services/addressDatabase';
 import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
 import { applyNetworkServices } from '../../services/networkServices';
 import { buildTransferTemplate } from '../../services/tokenTransfer';
+import { parseScannedAddress, toAddressUri } from '../../utils/addressUri';
 
 type TabType = 'funding' | 'test';
 
@@ -253,12 +254,12 @@ function WalletAddressDisplay({
     }
   };
 
-  const getAddressUri = () => (derivedAddress ? `hathor:${derivedAddress}` : '');
+  const getAddressUri = () => (derivedAddress ? toAddressUri(derivedAddress) : '');
 
   const getPaymentRequest = () => {
     if (!derivedAddress) return '';
     return JSON.stringify({
-      address: `hathor:${derivedAddress}`,
+      address: toAddressUri(derivedAddress),
       amount: amount.toString(),
       token: {
         uid: '00',
@@ -523,9 +524,7 @@ export default function AddressValidation() {
     setLookupResult(null);
 
     try {
-      // Strip hathor: prefix if present
-      const hathorPrefix = 'hathor:';
-      const cleanAddress = address.startsWith(hathorPrefix) ? address.substring(hathorPrefix.length) : address.trim();
+      const cleanAddress = parseScannedAddress(address);
 
       if (!cleanAddress) {
         setLookupResult({

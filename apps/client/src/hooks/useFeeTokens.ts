@@ -12,7 +12,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
 import { useWalletStore } from './useWalletStore';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { isFeeToken, isFeeTokenOnNode } from '../utils/feeTokenUtils';
+import { isFeeToken, isFeeTokenOnNode } from '../fees';
 import { useAddressOnlyTokens } from './useAddressOnlyTokens';
 import { NETWORK_CONFIG } from '../constants/network';
 

@@ -19,6 +19,7 @@ import { Callout } from '../ui/Callout';
 import { Field } from '../ui/Field';
 import { EmptyState } from '../ui/EmptyState';
 import { useRequireTestWallet } from '../../hooks/useRequirements';
+import { parseScannedAddress } from '../../utils/addressUri';
 
 interface ValidationResult {
   address: string;
@@ -77,15 +78,6 @@ export default function AddressQRValidator() {
   }, [testWallet]);
 
   /**
-   * Clean an address string (remove hathor: prefix)
-   */
-  const cleanAddress = (address: string): string => {
-    const hathorPrefix = 'hathor:';
-    const cleaned = address.startsWith(hathorPrefix) ? address.substring(hathorPrefix.length) : address.trim();
-    return cleaned;
-  };
-
-  /**
    * Validate an address against the test wallet
    */
   const validateAddress = async (
@@ -93,7 +85,7 @@ export default function AddressQRValidator() {
     source: ValidationResult['source'],
     filename?: string
   ): Promise<ValidationResult> => {
-    const address = cleanAddress(rawAddress);
+    const address = parseScannedAddress(rawAddress);
 
     if (!address) {
       return {

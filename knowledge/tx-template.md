@@ -77,7 +77,7 @@ const txResponse = await sendTx.runFromMining();
 
 Every "send these outputs and return the change" transaction goes through `buildTransferTemplate(outputs, changeAddress)` in `src/services/tokenTransfer.ts`. Don't build that template by hand.
 
-It sets `calculateFee: true` on the complete action, so wallet-lib adds the HTR fee for fee-based tokens (`TokenVersion.FEE`) and charges nothing for HTR or deposit tokens. Without it, sending a fee token fails with `Fee amount is different than expected`. Callers never check token versions to decide the fee; `utils/feeTokenUtils.ts` (`isFeeToken`) is only for showing or sorting fee tokens.
+It sets `calculateFee: true` on the complete action, so wallet-lib adds the HTR fee for fee-based tokens (`TokenVersion.FEE`) and charges nothing for HTR or deposit tokens. Without it, sending a fee token fails with `Fee amount is different than expected`. Callers never check token versions to decide the fee; `fees/tokenFees.ts` (`isFeeToken`, via `src/fees`) is only for showing or sorting fee tokens.
 
 ```ts
 const template = buildTransferTemplate(

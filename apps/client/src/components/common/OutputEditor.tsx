@@ -18,6 +18,7 @@ import { VEIL_STRIP } from '../ui/veil';
 import type { NetworkKey } from '../../constants/network';
 import { formatAmount } from '../../utils/amount';
 import { newOutputRow, outputSummary, type OutputRow } from '../../utils/outputRows';
+import { estimateShieldedFee } from '../../fees';
 
 export interface OutputTokenOption {
   uid: string;
@@ -69,6 +70,7 @@ export function OutputEditor({
   disabled = false,
 }: OutputEditorProps) {
   const summary = outputSummary(rows);
+  const fee = estimateShieldedFee(rows.filter((r) => r.type === 'token'));
   const tokenFor = (uid: string): OutputTokenOption =>
     tokens?.find((t) => t.uid === uid) ?? (uid === '00' ? HTR : { uid, symbol: `${uid.slice(0, 8)}…` });
   const privacyReason = typeof privacy === 'string' ? privacy : null;
@@ -91,9 +93,9 @@ export function OutputEditor({
         return (
           <div
             key={row.id}
-            className={`relative flex flex-col gap-3 overflow-hidden rounded-box bg-base-200 p-3 ${shielded ? 'pl-4' : ''}`}
+            className={`relative flex flex-col gap-3 rounded-box bg-base-200 p-3 ${shielded ? 'pl-4' : ''}`}
           >
-            {shielded && <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] ${VEIL_STRIP}`} />}
+            {shielded && <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-[3px] rounded-l-box ${VEIL_STRIP}`} />}
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-semibold">Output {n}</span>
               {allowData && (
@@ -227,6 +229,9 @@ export function OutputEditor({
         <span className="text-caption text-ink-muted">
           {summary.count} of {maxOutputs} outputs
           {privacy !== false && `, ${summary.shielded} shielded`}
+          {privacy !== false &&
+            fee.minFee > 0n &&
+            `. Shielded fee at least ${formatAmount(fee.minFee, DECIMAL_PLACES, { grouping: true })} HTR`}
           {summary.totals.length > 0 &&
             `. Totals: ${summary.totals
               .map((t) => {
@@ -237,10 +242,12 @@ export function OutputEditor({
         </span>
       </div>
 
-      {privacy !== false && summary.belowShieldedMinimum && (
+      {privacy !== false && fee.padding !== 'none' && (
         <Callout tone="shielded" title="One shielded output">
-          The protocol needs at least two shielded outputs per transaction, so the wallet adds a shielded change output
-          to make up the second one. The change goes back to the sending wallet.
+          A transaction needs at least two shielded outputs.{' '}
+          {fee.padding === 'split'
+            ? 'wallet-lib splits this one into two halves to the same address, so the recipient gets two outputs and the fee is paid twice.'
+            : 'A 1-unit output cannot be split, so wallet-lib shields the HTR change as the second output.'}
         </Callout>
       )}
     </div>

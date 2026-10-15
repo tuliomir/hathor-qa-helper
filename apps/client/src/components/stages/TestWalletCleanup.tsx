@@ -9,7 +9,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { refreshWalletBalance, refreshWalletTokens } from '../../store/slices/walletStoreSlice';
 import { formatBalance } from '../../utils/balanceUtils';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { isFeeToken } from '../../utils/feeTokenUtils';
+import { isFeeToken } from '../../fees';
 import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import { NETWORK_CONFIG, WALLET_CONFIG } from '../../constants/network';
 import { applyNetworkServices } from '../../services/networkServices';

@@ -97,12 +97,16 @@ describe('outputSummary', () => {
       { token: TOKEN, value: 4000n },
     ]);
   });
+});
 
-  test('flags a single shielded output: the lib pads the tx with shielded change', () => {
-    expect(outputSummary([row({ privacy: 'AMOUNT_SHIELDED' })]).belowShieldedMinimum).toBe(true);
-    expect(
-      outputSummary([row({ privacy: 'AMOUNT_SHIELDED' }), row({ privacy: 'FULLY_SHIELDED' })]).belowShieldedMinimum
-    ).toBe(false);
-    expect(outputSummary([row({})]).belowShieldedMinimum).toBe(false);
+describe('shielded row rules', () => {
+  test('rejects a shielded mode on a legacy address', () => {
+    const row = newOutputRow({ address: T, value: '5', privacy: 'AMOUNT_SHIELDED' });
+    expect(outputRowErrors([row])[0]).toBe('a shielded output needs a shielded (K3…) address');
+  });
+
+  test('rejects shielded amounts of 2^40 base units or more', () => {
+    const row = newOutputRow({ address: S, value: String(1n << 40n), privacy: 'FULLY_SHIELDED' });
+    expect(outputRowErrors([row])[0]).toBe('shielded amounts must be below 2^40 base units');
   });
 });

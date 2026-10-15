@@ -35,6 +35,7 @@ import AllConfigStringsModal from '../common/AllConfigStringsModal';
 import { applyNetworkServices } from '../../services/networkServices';
 import { useConfirm } from '../../hooks/useConfirm';
 import { buildTransferTemplate } from '../../services/tokenTransfer';
+import { toAddressUri } from '../../utils/addressUri';
 
 type TabType = 'fund' | 'test';
 
@@ -439,7 +440,7 @@ function WalletTokensDisplay({
   const getPaymentRequest = () => {
     if (!derivedAddress || !selectedToken) return '';
     return JSON.stringify({
-      address: `hathor:${derivedAddress}`,
+      address: toAddressUri(derivedAddress),
       amount: amount.toString(),
       token: {
         uid: selectedToken.uid,
@@ -452,7 +453,7 @@ function WalletTokensDisplay({
   const getOtherWalletPaymentRequest = () => {
     if (!otherWalletAddress || !selectedToken) return '';
     return JSON.stringify({
-      address: `hathor:${otherWalletAddress}`,
+      address: toAddressUri(otherWalletAddress),
       amount: amount.toString(),
       token: {
         uid: selectedToken.uid,

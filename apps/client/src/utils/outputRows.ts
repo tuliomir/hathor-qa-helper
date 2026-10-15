@@ -5,6 +5,8 @@
  */
 
 import type { SendOutput, ShieldedOutputModeName } from '@qa-helper/shared/serverApi';
+import { MAX_SHIELDED_OUTPUT_VALUE } from '../fees';
+import { detectAddressKind } from './addressKind';
 
 export type OutputPrivacy = 'TRANSPARENT' | ShieldedOutputModeName;
 
@@ -67,6 +69,12 @@ function rowError(row: OutputRow, rules: OutputRowRules): string | null {
   if (!INTEGER_RE.test(row.value)) return 'amount must be a whole number of base units';
   if (!rules.allowZero && BigInt(row.value) === 0n) return 'amount must be greater than zero';
   if (row.timelock && !rules.allowTimelock) return 'timelocks are not supported here';
+  if (row.privacy !== 'TRANSPARENT') {
+    // A legacy address has no scan key to encrypt to; wallet-lib throws.
+    if (detectAddressKind(row.address.trim()).kind === 'transparent')
+      return 'a shielded output needs a shielded (K3…) address';
+    if (BigInt(row.value) >= MAX_SHIELDED_OUTPUT_VALUE) return 'shielded amounts must be below 2^40 base units';
+  }
   return null;
 }
 
@@ -95,11 +103,6 @@ export interface OutputSummary {
   shielded: number;
   /** Per-token totals of the rows with a valid amount, in row order. */
   totals: { token: string; value: bigint }[];
-  /**
-   * Exactly one shielded output: the protocol needs at least two, so the
-   * wallet adds a shielded change output. Explained, not blocked.
-   */
-  belowShieldedMinimum: boolean;
 }
 
 export function outputSummary(rows: readonly OutputRow[]): OutputSummary {
@@ -114,6 +117,5 @@ export function outputSummary(rows: readonly OutputRow[]): OutputSummary {
     count: rows.length,
     shielded,
     totals: [...totals].map(([token, value]) => ({ token, value })),
-    belowShieldedMinimum: shielded === 1,
   };
 }

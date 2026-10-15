@@ -1,5 +1,5 @@
 /**
- * Fee Token Utilities
+ * Fee-based tokens (TokenVersion.FEE)
  *
  * Centralized logic for identifying fee-based tokens.
  * Fee tokens are created with version "fee" (TokenVersion.FEE) and require HTR to transfer.
