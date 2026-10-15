@@ -8,31 +8,13 @@
 
 import { useCallback, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { JSONBigInt } from '@hathor/wallet-lib/lib/utils/bigint';
 import type { RootState } from '../store';
 import { selectIsWalletConnectConnected } from '../store/slices/walletConnectSlice';
 import { createRpcHandlers } from '../services/rpcHandlers';
+import { runRpc, type RpcHandlers, type RpcRunResult } from '../services/rpcRun';
 import { useDeepLinkCallback } from './useDeepLinkCallback';
 
-export type RpcHandlers = ReturnType<typeof createRpcHandlers>;
-
-export interface RpcRunResult {
-  request: { method: string; params: unknown };
-  response: unknown;
-  duration: number;
-}
-
-/** Thrown by `run()`: the handler's error plus how long the call took. */
-export class RpcRunError extends Error {
-  readonly original: unknown;
-  readonly duration: number;
-
-  constructor(original: unknown, duration: number) {
-    super(original instanceof Error ? original.message : String(original));
-    this.original = original;
-    this.duration = duration;
-  }
-}
+export { RpcRunError, type RpcHandlers, type RpcRunResult } from '../services/rpcRun';
 
 export interface RpcMethodOptions {
   /** Token UIDs htr_getBalance asks for (the handlers default to HTR only). */
@@ -68,20 +50,12 @@ export function useRpcMethod({ balanceTokens }: RpcMethodOptions = {}) {
       /** Request to report in dry run when no session exists (dry run works without one). */
       dryRunRequest?: { method: string; params: unknown }
     ): Promise<RpcRunResult> => {
-      const start = Date.now();
       if (!handlers) {
         if (isDryRun && dryRunRequest) return { request: dryRunRequest, response: null, duration: 0 };
         throw new Error('Connect an RPC session first');
       }
       try {
-        const { request, response } = await call(handlers);
-        return {
-          request,
-          response: response ? JSON.parse(JSONBigInt.stringify(response)) : null,
-          duration: Date.now() - start,
-        };
-      } catch (err) {
-        throw new RpcRunError(err, Date.now() - start);
+        return await runRpc(handlers, call);
       } finally {
         clearDeepLinkNotification();
       }

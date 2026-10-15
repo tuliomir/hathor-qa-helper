@@ -7,19 +7,12 @@
 
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import type { UnknownAction } from '@reduxjs/toolkit';
 import type { AppDispatch } from '../store';
 import type { MethodData } from '../components/common/MethodCard';
 import { RpcRunError, useRpcMethod, type RpcHandlers, type RpcMethodOptions } from './useRpcMethod';
-import { extractErrorMessage } from '../utils/errorUtils';
+import { recordRpcFailure, recordRpcResult, type MethodSliceActions, type RpcRequest } from '../services/rpcRun';
 
-type RpcRequest = { method: string; params: unknown };
-
-export interface MethodSliceActions {
-  setRequest: (payload: RpcRequest & { isDryRun: boolean }) => UnknownAction;
-  setResponse: (payload: { response: unknown; duration: number }) => UnknownAction;
-  setError: (payload: { error: string; duration: number }) => UnknownAction;
-}
+export type { MethodSliceActions } from '../services/rpcRun';
 
 /** The persisted shape shared by the RPC method slices. */
 export interface MethodSliceState {
@@ -57,21 +50,12 @@ export function useRpcStageCall(actions: MethodSliceActions, options?: RpcMethod
       dryRunRequest?: RpcRequest
     ) => {
       try {
-        const { request, response, duration } = await run(call, dryRunRequest);
-        dispatch(actions.setRequest({ method: request.method, params: request.params, isDryRun }));
-        dispatch(actions.setResponse({ response, duration }));
-        return response;
+        const result = await run(call, dryRunRequest);
+        recordRpcResult(dispatch, actions, isDryRun, result);
+        return result.response;
       } catch (error) {
-        const original = error instanceof RpcRunError ? error.original : error;
-        const sent = (original as { requestParams?: RpcRequest } | null)?.requestParams;
-        if (sent) dispatch(actions.setRequest({ method: sent.method, params: sent.params, isDryRun }));
-        dispatch(
-          actions.setError({
-            error: extractErrorMessage(original),
-            duration: error instanceof RpcRunError ? error.duration : 0,
-          })
-        );
-        throw original;
+        recordRpcFailure(dispatch, actions, isDryRun, error);
+        throw error instanceof RpcRunError ? error.original : error;
       }
     },
     [actions, dispatch, isDryRun, run]

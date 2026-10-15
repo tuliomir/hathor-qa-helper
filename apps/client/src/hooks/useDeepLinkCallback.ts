@@ -7,14 +7,8 @@
 
 import { useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import {
-  clearDeepLink,
-  selectDeepLinksEnabled,
-  selectDeepLinkToastId,
-  setDeepLink,
-  showDeepLinkModal,
-} from '../store/slices/deepLinkSlice';
-import { removeToast } from '../store/slices/toastSlice';
+import { selectDeepLinksEnabled, selectDeepLinkToastId } from '../store/slices/deepLinkSlice';
+import { clearDeepLinkNotification as clearNotification, showDeepLinkNotification } from '../services/rpcRun';
 
 export function useDeepLinkCallback() {
   const dispatch = useAppDispatch();
@@ -27,14 +21,7 @@ export function useDeepLinkCallback() {
    * Only shows if deeplinks are enabled in settings
    */
   const onDeepLinkAvailable = useCallback(
-    (url: string, title: string) => {
-      if (!deepLinksEnabled) {
-        return;
-      }
-
-      dispatch(setDeepLink({ url, title }));
-      dispatch(showDeepLinkModal());
-    },
+    (url: string, title: string) => showDeepLinkNotification(dispatch, deepLinksEnabled, url, title),
     [dispatch, deepLinksEnabled]
   );
 
@@ -42,12 +29,10 @@ export function useDeepLinkCallback() {
    * Cleanup function to dismiss the deep link modal
    * Call this after RPC response is received (success or error)
    */
-  const clearDeepLinkNotification = useCallback(() => {
-    if (currentToastId) {
-      dispatch(removeToast(currentToastId));
-    }
-    dispatch(clearDeepLink());
-  }, [dispatch, currentToastId]);
+  const clearDeepLinkNotification = useCallback(
+    () => clearNotification(dispatch, currentToastId),
+    [dispatch, currentToastId]
+  );
 
   return {
     onDeepLinkAvailable,
