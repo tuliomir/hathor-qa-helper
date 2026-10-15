@@ -30,6 +30,7 @@
 - Toast feedback: `const { showToast } = useToast(); showToast('Message', 'success');`
 - Styling: Tailwind CSS + DaisyUI (see `design-system.md`, `daisyui-components.md`)
 - Icons: react-icons (`import { MdDelete } from 'react-icons/md'`)
+- Address QR codes: `AddressQr` (`common/AddressQr.tsx`). It encodes `hathor:<address>`, and adds the eye / shield toggle when the wallet can derive a shielded address. Don't draw payment requests (JSON with an amount): mobile wallets reject them and scan only addresses and configuration strings.
 
 ## Preventing Infinite Render Loops
 

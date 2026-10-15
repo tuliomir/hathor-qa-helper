@@ -19,11 +19,14 @@ export function WalletAddressPicker({
   onChange,
   walletLabel = 'Wallet',
   size = 'sm',
+  showKind = true,
 }: {
   value: WalletAddressChoice;
   onChange: (value: WalletAddressChoice) => void;
   walletLabel?: string;
   size?: 'sm' | 'md';
+  /** Hide the kind toggle when the caller shows its own (e.g. AddressQr). */
+  showKind?: boolean;
 }) {
   const indexId = useId();
   const input = size === 'sm' ? 'input-sm' : '';
@@ -52,7 +55,9 @@ export function WalletAddressPicker({
           onChange={(e) => onChange({ ...value, index: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
         />
       </div>
-      <AddressKindToggle value={value.kind} onChange={(kind) => onChange({ ...value, kind })} size={size} />
+      {showKind && (
+        <AddressKindToggle value={value.kind} onChange={(kind) => onChange({ ...value, kind })} size={size} />
+      )}
     </div>
   );
 }

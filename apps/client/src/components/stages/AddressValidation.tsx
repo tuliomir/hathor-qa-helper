@@ -5,12 +5,10 @@
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import QRCode from 'react-qr-code';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { setAddressIndex, setAmount } from '../../store/slices/addressValidationSlice';
 import { MdClose, MdQrCodeScanner } from 'react-icons/md';
-import CopyButton from '../common/CopyButton';
 import NetworkChip from '../common/NetworkChip';
 import { Identifier } from '../common/Identifier';
 import { StageHeader } from '../common/StageHeader';
@@ -33,7 +31,8 @@ import { getAddressRecord } from '../../services/addressDatabase';
 import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
 import { applyNetworkServices } from '../../services/networkServices';
 import { buildTransferTemplate } from '../../services/tokenTransfer';
-import { parseScannedAddress, toAddressUri } from '../../utils/addressUri';
+import { parseScannedAddress } from '../../utils/addressUri';
+import { AddressQr } from '../common/AddressQr';
 
 type TabType = 'funding' | 'test';
 
@@ -254,21 +253,6 @@ function WalletAddressDisplay({
     }
   };
 
-  const getAddressUri = () => (derivedAddress ? toAddressUri(derivedAddress) : '');
-
-  const getPaymentRequest = () => {
-    if (!derivedAddress) return '';
-    return JSON.stringify({
-      address: toAddressUri(derivedAddress),
-      amount: amount.toString(),
-      token: {
-        uid: '00',
-        name: 'Hathor',
-        symbol: 'HTR',
-      },
-    });
-  };
-
   const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
 
   return (
@@ -360,29 +344,18 @@ function WalletAddressDisplay({
         {derivedAddress && !isLoading && (
           <section className="flex flex-col gap-3 border-t border-base-300 pt-3">
             <h3 className="m-0 text-body font-semibold">Address at index {addressIndex}</h3>
-            <Identifier value={derivedAddress} kind="address" head={derivedAddress.length} tail={0} />
-            <div className="flex flex-col items-start gap-3 sm:flex-row">
-              <div className="flex-none rounded-field border border-base-300 bg-base-100 p-3">
-                <QRCode value={getAddressUri()} size={176} />
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-caption text-ink-muted">Address URI</span>
-                <span className="flex min-w-0 items-start gap-1">
-                  <code className="min-w-0 rounded-field bg-base-200 px-2 py-1 font-mono text-data-sm [overflow-wrap:anywhere]">
-                    {getAddressUri()}
-                  </code>
-                  <CopyButton text={getAddressUri()} label="Copy address URI" />
-                </span>
-              </div>
-            </div>
+            <AddressQr walletId={wallet.metadata.id} index={addressIndex} showAddress />
           </section>
         )}
       </Panel>
 
       {derivedAddress && !isLoading && (
         <>
-          <Panel title="Payment request" description="A QR code asking for HTR at the address above.">
-            <Field label="Payment amount" htmlFor="amount-input" hint="A positive integer amount of HTR">
+          <Panel
+            title="Send from funding wallet"
+            description={`Send HTR from the funding wallet to the transparent address at index ${addressIndex}.`}
+          >
+            <Field label="Amount" htmlFor="amount-input" hint="A positive integer amount of HTR">
               <input
                 type="number"
                 min="1"
@@ -393,20 +366,6 @@ function WalletAddressDisplay({
                 placeholder="Amount"
               />
             </Field>
-            <div className="flex flex-col items-start gap-3 sm:flex-row">
-              <div className="flex-none rounded-field border border-base-300 bg-base-100 p-3">
-                <QRCode value={getPaymentRequest()} size={176} />
-              </div>
-              <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-caption text-ink-muted">Payment request</span>
-                <span className="flex min-w-0 items-start gap-1">
-                  <code className="min-w-0 rounded-field bg-base-200 px-2 py-1 font-mono text-data-sm [overflow-wrap:anywhere]">
-                    {getPaymentRequest()}
-                  </code>
-                  <CopyButton text={getPaymentRequest()} label="Copy payment request" />
-                </span>
-              </div>
-            </div>
             <div className="flex flex-wrap items-center justify-end gap-3">
               {!fundingWalletId && <span className="text-caption text-ink-muted">Select a funding wallet to send</span>}
               <button

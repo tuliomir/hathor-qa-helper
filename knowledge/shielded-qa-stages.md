@@ -51,6 +51,7 @@ The browser can't create shielded outputs (`shielded-outputs.md`), so every send
 | `src/hooks/useSigner.ts` | `useSigner(walletId)`, `useShieldedWallets()` (seed wallets on shielded networks, funding then test first), `useCheckServerNow` |
 | `src/hooks/useWalletAddress.ts` | A wallet's address at an index, transparent or shielded (`deriveWalletAddress`) |
 | `src/components/shielded/` | `ShieldedWalletSelect` (preselects, offers Start), `WalletAddressPicker`, `AddressKindToggle`, `WalletBalance`, QA server callouts |
+| `src/components/common/AddressQr.tsx` | Address QR code on every stage; eye / shield toggle for shielded-network wallets |
 | `src/utils/addressUri.ts` | `hathor:<address>` for QR codes; `parseScannedAddress` for scans (bare, `hathor:`, JSON) |
 | `src/fees/` | FEE-token checks and shielded output fees |
 | `src/utils/shieldedBalances.ts` | Balance breakdown and shielded share |
