@@ -1,7 +1,9 @@
 /**
  * Sign Oracle Data Stage
  *
- * Tests htr_signOracleData RPC call with Redux state persistence
+ * Tests htr_signOracleData RPC call with Redux state persistence. The oracle
+ * is the test wallet's address at the chosen index (address 0 only for an
+ * address-only wallet), from useNanoStageWallet like the bet stages.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -18,13 +20,12 @@ import { RpcSignOracleDataCard } from '../rpc/RpcSignOracleDataCard';
 import { RpcAddressMismatchCallout } from '../rpc/RpcAddressMismatchCallout';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
-import { useRequireRpcSession } from '../../hooks/useRequirements';
 import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { ADDRESS_MISMATCH_REASON, useRpcAddressMismatch } from '../../hooks/useRpcAddressMismatch';
 import { firstUnmetReason, type Requirement } from '../../utils/requirements';
 import { buildSignOracleDataRequest } from '../../utils/rpcCoreRequests';
 import { getStageUrl } from '../../config/stageRoutes';
-import { useWalletStore } from '../../hooks/useWalletStore';
+import { useNanoStageWallet } from '../../hooks/useNanoRpcStage';
 import { useStage } from '../../hooks/useStage';
 
 const SIGN_ORACLE_DATA_ACTIONS = {
@@ -35,28 +36,23 @@ const SIGN_ORACLE_DATA_ACTIONS = {
 
 export const SignOracleDataStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { getWallet } = useWalletStore();
   const { setCurrentStage } = useStage();
 
   // Check if we're coming from Set Bet Result with data
   const navigationData = useSelector((state: RootState) => state.navigation.signOracleData);
 
-  const rpcSession = useRequireRpcSession();
   const mismatch = useRpcAddressMismatch();
   const { isDryRun, execute } = useRpcStageCall(SIGN_ORACLE_DATA_ACTIONS);
-  const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const signOracleDataData = useSelector((state: RootState) => state.signOracleData);
   const betNanoContract = useSelector((state: RootState) => state.betNanoContract);
   const latestNcId = betNanoContract.ncId;
 
-  // Get the actual wallet instance
-  const testWallet = testWalletId ? getWallet(testWalletId) : null;
-
   // Form state, restored from Redux.
   const [ncId, setNcId] = useState<string>(() => signOracleDataData.ncId || latestNcId || '');
-  const [oracleAddress, setOracleAddress] = useState<string>('');
   const [data, setData] = useState<string>(signOracleDataData.data);
   const [addressIndex, setAddressIndex] = useState<number>(signOracleDataData.addressIndex);
+  // Oracle address and preconditions (RPC session, test wallet address, address index).
+  const { derivedAddress: oracleAddress, requirements: walletRequirements } = useNanoStageWallet(addressIndex);
 
   // Load data from navigation if available (coming from Set Bet Result)
   useEffect(() => {
@@ -80,26 +76,6 @@ export const SignOracleDataStage: React.FC = () => {
   useEffect(() => {
     dispatch(setSignOracleDataFormData({ ncId, addressIndex, data }));
   }, [ncId, addressIndex, data, dispatch]);
-
-  // Derive oracle address from selected index
-  useEffect(() => {
-    const deriveAddress = async () => {
-      if (testWallet?.instance) {
-        try {
-          const address = await testWallet.instance.getAddressAtIndex(addressIndex);
-          setOracleAddress(address);
-        } catch (error) {
-          console.error(`[SignOracleData] Failed to derive address at index ${addressIndex}:`, error);
-          setOracleAddress('');
-        }
-      } else {
-        console.log('[SignOracleData] Wallet not loaded yet');
-        setOracleAddress('');
-      }
-    };
-
-    deriveAddress();
-  }, [testWallet, addressIndex]);
 
   const handleExecute = () =>
     execute(
@@ -125,7 +101,19 @@ export const SignOracleDataStage: React.FC = () => {
         action: 'Enter a nano contract ID',
         fix: { label: 'Initialize a bet', to: getStageUrl('rpc-bet-initialize') },
       };
-  const requirements = [rpcSession, ncRequirement];
+  // Never send an empty oracle: the wallet rejects it ("String must contain at least 1 character(s)").
+  // Only when the wallet preconditions don't already explain an empty oracle.
+  const oracleRequirement: Requirement | null =
+    oracleAddress || walletRequirements.some((r) => r.met !== true)
+      ? null
+      : {
+          id: 'oracle-address',
+          short: 'Oracle address',
+          met: 'pending',
+          label: 'Oracle address not derived yet',
+          action: 'Wait for the oracle address',
+        };
+  const requirements = [...walletRequirements, ncRequirement, ...(oracleRequirement ? [oracleRequirement] : [])];
 
   return (
     <div className="flex max-w-stage flex-col gap-4">

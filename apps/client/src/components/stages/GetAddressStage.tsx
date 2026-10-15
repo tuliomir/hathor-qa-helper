@@ -27,6 +27,7 @@ import { useRequireRpcSession } from '../../hooks/useRequirements';
 import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { firstUnmetReason } from '../../utils/requirements';
+import { isAddressOnly } from '../../utils/addressOnlyWallet';
 
 const GET_ADDRESS_ACTIONS = {
   setRequest: setGetAddressRequest,
@@ -51,11 +52,22 @@ export const GetAddressStage: React.FC = () => {
     return execute((h) => h.getRpcGetAddress(requestType, index), buildGetAddressRequest(requestType, indexValue));
   };
 
+  // An address-only test wallet can only be checked at index 0, against its saved address.
+  const addressOnly = testWallet ? isAddressOnly(testWallet.metadata) : false;
+  const savedAddress0 = addressOnly ? (testWallet?.metadata.address0 ?? null) : null;
+
   // Check the RPC address against the test wallet's derivation at the same index.
   useEffect(() => {
     const validateAddress = async () => {
-      if (!response || !testWallet?.instance || getAddressData.isDryRun) return;
+      if (!response || getAddressData.isDryRun) return;
       if (validationStatus === 'validating' || validationStatus === 'match' || validationStatus === 'mismatch') return;
+      if (addressOnly) {
+        if (response.index !== 0 || !savedAddress0) return;
+        const status = savedAddress0 === response.address ? 'match' : 'mismatch';
+        dispatch(setValidationStatus({ status, localAddress: savedAddress0 }));
+        return;
+      }
+      if (!testWallet?.instance) return;
       try {
         dispatch(setValidationStatus({ status: 'validating' }));
         const derived = await testWallet.instance.getAddressAtIndex(response.index);
@@ -68,7 +80,7 @@ export const GetAddressStage: React.FC = () => {
       }
     };
     validateAddress();
-  }, [response, validationStatus, getAddressData.isDryRun, testWallet?.instance, dispatch]);
+  }, [response, validationStatus, getAddressData.isDryRun, testWallet?.instance, addressOnly, savedAddress0, dispatch]);
 
   const validation = response && !getAddressData.isDryRun && (
     <div className="flex flex-col gap-2 border-t border-base-300 pt-4">
@@ -76,6 +88,11 @@ export const GetAddressStage: React.FC = () => {
       {!testWallet && (
         <Callout tone="warning" title="No test wallet to check against">
           Start a test wallet to compare the address with the one it derives locally.
+        </Callout>
+      )}
+      {addressOnly && response.index !== 0 && (
+        <Callout tone="info" title="Can't check this index">
+          The test wallet is address-only, so only address 0 can be compared.
         </Callout>
       )}
       {validationStatus === 'validating' && (
