@@ -1,83 +1,61 @@
 /**
- * Receive: one wallet address as a QR code for the phone to scan. The shield
- * toggle switches between the transparent and the shielded (`K3…`) address
- * at the same index; only one QR is ever on screen, so the camera can't
- * pick the wrong one. The QR holds `hathor:<address>`, the mobile wallet's
- * own receive format (`knowledge/shielded-semantics.md` §5).
+ * Receive: one wallet address as a QR code for the phone to scan
+ * (`AddressQr`). Its eye / shield toggle switches between the transparent
+ * and the shielded (`K3…`) address at the same index; only one QR is ever
+ * on screen, so the camera can't pick the wrong one. Shielded comes first,
+ * as on the mobile wallet's own Receive screen.
  */
 
 import { useState } from 'react';
-import QRCode from 'react-qr-code';
 import { StageHeader } from '../common/StageHeader';
-import CopyButton from '../common/CopyButton';
+import { AddressQr } from '../common/AddressQr';
 import { Panel } from '../ui/Panel';
-import { Callout } from '../ui/Callout';
 import { EmptyState } from '../ui/EmptyState';
 import { WalletAddressPicker, type WalletAddressChoice } from '../shielded/WalletAddressPicker';
 import { WalletBalance } from '../shielded/WalletBalance';
-import { useWalletAddress } from '../../hooks/useWalletAddress';
-import { toAddressUri } from '../../utils/addressUri';
-import { groupChars } from '../../utils/truncate';
+import { useAppSelector } from '../../store/hooks';
 
 const QR_SIZE = 256;
 
 export function ShieldedReceiveStage() {
   const [choice, setChoice] = useState<WalletAddressChoice>({ walletId: null, index: 0, kind: 'shielded' });
-  const { address, error, loading } = useWalletAddress(choice.walletId, choice.index, choice.kind);
-  const shielded = choice.kind === 'shielded';
+  const ready = useAppSelector((s) =>
+    choice.walletId ? s.walletStore.wallets[choice.walletId]?.status === 'ready' : false
+  );
 
   return (
     <div className="flex max-w-stage flex-col gap-4">
       <StageHeader stageId="shielded-receive" />
 
       <Panel title="Address" description="Scan it from the phone: Send → QR code icon.">
-        <WalletAddressPicker value={choice} onChange={setChoice} size="md" />
+        <WalletAddressPicker value={choice} onChange={setChoice} size="md" showKind={false} />
 
-        {loading && <span className="skeleton block h-64 w-64" />}
-        {error && (
-          <Callout tone="error" title="No address">
-            {error}
-          </Callout>
-        )}
-        {!address && !loading && !error && <EmptyState>Choose a started wallet to show its address.</EmptyState>}
-
-        {address && (
-          <div className="flex flex-col items-start gap-4 sm:flex-row">
-            <div className="flex-none rounded-field border border-base-300 bg-white p-4" data-testid="receive-qr">
-              <QRCode value={toAddressUri(address)} size={QR_SIZE} />
+        {choice.walletId && ready ? (
+          <>
+            <AddressQr
+              walletId={choice.walletId}
+              index={choice.index}
+              size={QR_SIZE}
+              defaultKind="shielded"
+              showAddress
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setChoice({ ...choice, index: choice.index + 1 })}
+              >
+                Next index
+              </button>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <span className="text-caption text-ink-muted">
-                {shielded ? 'Shielded address' : 'Transparent address'} at index {choice.index}
-              </span>
-              <span className="flex min-w-0 items-start gap-1">
-                <code
-                  className="min-w-0 rounded-field bg-base-200 px-2 py-1 font-mono text-data-sm [overflow-wrap:anywhere] [word-spacing:2px]"
-                  data-testid="receive-address"
-                >
-                  {shielded ? groupChars(address, 4) : address}
-                </code>
-                <CopyButton text={address} label="Copy address" />
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setChoice({ ...choice, index: choice.index + 1 })}
-                >
-                  Next index
-                </button>
-              </div>
-              {shielded ? (
-                <p className="m-0 text-caption text-ink-muted">
-                  The sender picks the mode. A shielded send arrives as a shielded UTXO; a public (transparent) send to
-                  this address arrives as a transparent one, on its spend key&apos;s address.
-                </p>
-              ) : (
-                <p className="m-0 text-caption text-ink-muted">A transparent address only takes transparent outputs.</p>
-              )}
-            </div>
-          </div>
+            <p className="m-0 text-caption text-ink-muted">
+              The sender picks the mode. A shielded send to the shielded address arrives as a shielded UTXO; a public
+              (transparent) send to it arrives as a transparent one. A transparent address only takes transparent
+              outputs.
+            </p>
+          </>
+        ) : (
+          <EmptyState>Choose a started wallet to show its address.</EmptyState>
         )}
       </Panel>
 

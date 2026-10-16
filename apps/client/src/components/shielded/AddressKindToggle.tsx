@@ -1,6 +1,6 @@
-/** Transparent or shielded address, with the same shield glyph as the output modes. */
+/** Transparent (eye: visible on chain) or shielded address, with the same shield glyph as the output modes. */
 
-import { MdShield } from 'react-icons/md';
+import { MdShield, MdVisibility } from 'react-icons/md';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import type { AddressKind } from '../../hooks/useWalletAddress';
 
@@ -20,7 +20,7 @@ export function AddressKindToggle({
       value={value}
       onChange={onChange}
       options={[
-        { value: 'transparent', label: 'Transparent' },
+        { value: 'transparent', label: 'Transparent', icon: <MdVisibility aria-hidden="true" /> },
         { value: 'shielded', label: 'Shielded', icon: <MdShield aria-hidden="true" />, tone: 'shielded' },
       ]}
     />

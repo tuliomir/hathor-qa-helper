@@ -65,7 +65,7 @@ test.describe('Shielded stages, QA server stopped, no wallets', () => {
   test('Receive: asks for a wallet', async ({ page }) => {
     await page.goto('/tools/shielded/receive');
     await expect(page.getByText('Choose a started wallet to show its address.')).toBeVisible();
-    await expect(page.getByRole('radiogroup', { name: 'Address kind' })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Wallet' })).toBeVisible();
   });
 
   test('Shielded balances: asks for a wallet', async ({ page }) => {

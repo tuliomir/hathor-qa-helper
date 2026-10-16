@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { MdPlayArrow, MdQrCode, MdRefresh, MdSend, MdStop, MdSwapVert } from 'react-icons/md';
-import QRCode from 'react-qr-code';
+import { AddressQr } from '../common/AddressQr';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   assembleAndSendTransaction,
@@ -631,10 +631,7 @@ export default function MultisigWalletManagement() {
             <h3 id="multisig-qr-title" className="m-0 text-title">
               Wallet address
             </h3>
-            <div className="rounded-field border border-base-300 bg-base-100 p-3">
-              <QRCode value={qrAddress} size={180} />
-            </div>
-            <Identifier value={qrAddress} kind="address" truncate="none" walletTag={false} />
+            <AddressQr address={qrAddress} size={180} />
             <div className="flex w-full justify-end">
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => setQrAddress(null)}>
                 Close

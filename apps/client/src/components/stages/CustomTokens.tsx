@@ -35,7 +35,7 @@ import AllConfigStringsModal from '../common/AllConfigStringsModal';
 import { applyNetworkServices } from '../../services/networkServices';
 import { useConfirm } from '../../hooks/useConfirm';
 import { buildTransferTemplate } from '../../services/tokenTransfer';
-import { toAddressUri } from '../../utils/addressUri';
+import { AddressQr } from '../common/AddressQr';
 import { useShieldedTransfer } from '../../hooks/useShieldedTransfer';
 import { estimateShieldedFee } from '../../fees';
 import type { ShieldedOutputModeName } from '@qa-helper/shared/serverApi';
@@ -121,7 +121,8 @@ function WalletTokensDisplay({
   const dispatch = useAppDispatch();
   const { getAllWallets } = useWalletStore();
   const { sendTransaction, sendShielded, isSending, error: transactionError } = useSendTransaction();
-  const shieldedTransfer = useShieldedTransfer(wallet.metadata.id, isTestWallet ? fundingWalletId : testWalletId);
+  const otherWalletId = isTestWallet ? fundingWalletId : testWalletId;
+  const shieldedTransfer = useShieldedTransfer(wallet.metadata.id, otherWalletId);
   const allTokens = useAppSelector((s) => s.tokens.tokens);
   const [selectedTokenUid, setSelectedTokenUid] = useState<string | null>(null);
   const [configString, setConfigString] = useState<string | null>(null);
@@ -442,32 +443,6 @@ function WalletTokensDisplay({
   };
 
   const selectedToken = filteredTokens.find((t) => t.uid === selectedTokenUid);
-
-  const getPaymentRequest = () => {
-    if (!derivedAddress || !selectedToken) return '';
-    return JSON.stringify({
-      address: toAddressUri(derivedAddress),
-      amount: amount.toString(),
-      token: {
-        uid: selectedToken.uid,
-        name: selectedToken.name,
-        symbol: selectedToken.symbol,
-      },
-    });
-  };
-
-  const getOtherWalletPaymentRequest = () => {
-    if (!otherWalletAddress || !selectedToken) return '';
-    return JSON.stringify({
-      address: toAddressUri(otherWalletAddress),
-      amount: amount.toString(),
-      token: {
-        uid: selectedToken.uid,
-        name: selectedToken.name,
-        symbol: selectedToken.symbol,
-      },
-    });
-  };
 
   // Send handler for sending to the other wallet
   const handleSendToOtherWallet = async () => {
@@ -795,7 +770,7 @@ function WalletTokensDisplay({
 
       {selectedToken && (
         <>
-          <Panel title="Payment request" description={`Ask for ${selectedToken.symbol} at an address of this wallet.`}>
+          <Panel title="Address" description={`An address of this wallet to receive ${selectedToken.symbol} at.`}>
             <div className="flex flex-wrap gap-4">
               <Field
                 label="Address index"
@@ -871,7 +846,7 @@ function WalletTokensDisplay({
 
             {derivedAddress && (
               <>
-                {qrBlock(getPaymentRequest(), 'Payment request', 'Copy payment request')}
+                <AddressQr walletId={wallet.metadata.id} index={addressIndex} />
                 {isTestWallet && (
                   <div className="flex flex-wrap items-center justify-end gap-3">
                     {!fundingWalletId && (
@@ -893,11 +868,8 @@ function WalletTokensDisplay({
           </Panel>
 
           {otherWalletAddress && (
-            <Panel
-              title={`Send to ${otherLabel} wallet`}
-              description={`Payment request for the ${otherLabel} wallet (address at index 0)`}
-            >
-              {qrBlock(getOtherWalletPaymentRequest(), 'Payment request', 'Copy payment request')}
+            <Panel title={`Send to ${otherLabel} wallet`} description={`The ${otherLabel} wallet's address at index 0`}>
+              {otherWalletId && <AddressQr walletId={otherWalletId} index={0} />}
               <div className="flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
