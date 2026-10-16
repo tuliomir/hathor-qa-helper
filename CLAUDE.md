@@ -99,7 +99,7 @@ In-depth guides live in `knowledge/`:
 | `../docs/design/` | UI redesign: audit, direction, tokens, shell, components, rollout, Claude Design brief |
 | `redesign-changes.md` | Behaviour that changed in the redesign (decimal amounts, enforced checks, previews, confirmations) |
 | `architecture.md` | System structure, Redux patterns, two integration paths (RPC vs Snap) |
-| `flow-runner.md` | Automatic RPC flows (bet and fee flows): runner, run panel, rejection/confirmation rules, adding a flow |
+| `flow-runner.md` | Automatic RPC flows (RPC requests, bet and fee flows): runner, run panel, rejection/confirmation rules, adding a flow |
 | `creating-stages.md` | Step-by-step guide for adding new stages (RPC and Snap paths) |
 | `wallet-state-management.md` | Redux + external map pattern, wallet lifecycle, thunks |
 | `wallet-event-monitoring.md` | Event capture, tx status tracking, settlement/confirmation utilities |

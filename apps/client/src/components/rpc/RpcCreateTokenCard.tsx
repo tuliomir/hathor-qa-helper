@@ -18,6 +18,7 @@ import { SegmentedControl } from '../ui/SegmentedControl';
 import { ResponseFields } from './ResponseFields';
 import { BASE_NAME, BASE_SYMBOL, VERSION_DEFAULTS, swapVersionSuffix } from '../../utils/createTokenDefaults';
 import { buildCreateTokenRequest, unwrapResponse } from '../../utils/rpcCoreRequests';
+import { useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 const VERSION_OPTIONS = [
   { value: 'deposit', label: 'Deposit' },
@@ -66,6 +67,11 @@ export const RpcCreateTokenCard: React.FC<RpcCreateTokenCardProps> = ({
 }) => {
   const [params, setParams] = useState<CreateTokenParams>(initialParams);
   const set = (patch: Partial<CreateTokenParams>) => setParams((p) => ({ ...p, ...patch }));
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-create-token', (v) => {
+    if (v.params && typeof v.params === 'object') setParams(v.params as CreateTokenParams);
+  });
 
   // Pre-fill the change address with the test wallet's address 0.
   useEffect(() => {

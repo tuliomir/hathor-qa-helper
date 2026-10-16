@@ -12,6 +12,12 @@
  * also check its confirmed tx on chain (e.g. who paid the fee); a failed
  * check pauses too, and resuming checks the same tx again.
  *
+ * Not every step is an approval: a request the wallet must refuse passes on
+ * its first refusal, a request with no prompt (e.g. `htr_getBalance`) is
+ * never rejected, and a local step is work the app does itself (e.g.
+ * scattering funds). A step with a review question ends by asking the user
+ * whether the wallet's screen looked right; "no" pauses after the step.
+ *
  * The run state lives in `flowRunSlice`; this module only holds the promise
  * of the run in progress.
  */
@@ -27,10 +33,14 @@ import {
   flowStarted,
   flowStatusChanged,
   flowStepChecked,
+  flowStepReviewed,
   flowStepStatusChanged,
   flowStepTxHash,
   type FlowAttempt,
   type FlowCheck,
+  type FlowReview,
+  type FlowStepExpectation,
+  type FlowStepState,
   type FlowStepStatus,
   type FlowVerdict,
 } from '../store/slices/flowRunSlice';
@@ -43,7 +53,7 @@ import {
   type RpcRequest,
   type RpcRunResult,
 } from '../services/rpcRun';
-import { classifyRpcError, RPC_USER_REJECTED_MESSAGE } from '../utils/rpcOutcome';
+import { classifyRpcError, RPC_USER_REJECTED_MESSAGE, type RpcErrorOutcome } from '../utils/rpcOutcome';
 import type { NanoTxWait } from '../utils/nanoTxConfirmation';
 import { extractErrorMessage } from '../utils/errorUtils';
 
@@ -56,10 +66,20 @@ export interface StepPlan {
   call: (h: RpcHandlers) => Promise<{ request: RpcRequest; response: unknown }>;
 }
 
-export interface FlowStep {
+interface FlowStepBase {
   id: string;
   title: string;
   stageId: StageId;
+  /** Checks on the confirmed tx; throws when it can't check. */
+  checkOnChain?: (txHash: string, env: FlowEnv) => Promise<FlowCheck[]>;
+  /** Asked once the step is done (e.g. "Did the confirmation screen show …?"). */
+  review?: string;
+}
+
+export interface RpcFlowStep extends FlowStepBase {
+  kind?: 'rpc';
+  /** What the wallet should do with the request; an approval by default. */
+  expects?: Exclude<FlowStepExpectation, 'local'>;
   /** The slice the stage stores this method's request and response in. */
   actions: MethodSliceActions;
   /** Builds the attempt from the store; throws when a prerequisite is missing. */
@@ -70,8 +90,34 @@ export interface FlowStep {
   txHash?: (response: unknown) => string | null;
   /** Extra state the stage keeps after an approval (e.g. the new contract ID). */
   onApproved?: (dispatch: Dispatch, response: unknown, state: RootState) => void;
-  /** Checks on the confirmed tx; throws when it can't check. */
-  checkOnChain?: (txHash: string, env: FlowEnv) => Promise<FlowCheck[]>;
+  /**
+   * Checks an approved answer against the test wallet (e.g. the address is
+   * the wallet's); shown with the step's checks, a failed one pauses. A step
+   * with a tx shows its on-chain checks instead.
+   */
+  checkAnswer?: (response: unknown, env: FlowEnv) => Promise<FlowCheck[]>;
+  /** For a step the wallet must refuse: what its refusal breaks. Any refusal passes without it. */
+  validateRefusal?: (outcome: RpcErrorOutcome) => string[];
+}
+
+/** Work the app does itself, with the test wallet it runs (no RPC request). */
+export interface LocalFlowStep extends FlowStepBase {
+  kind: 'local';
+  /** Does the work; returns the tx to wait for, if any. Throws to pause the run. */
+  perform: (env: FlowEnv) => Promise<{ txHash?: string | null }>;
+}
+
+export type FlowStep = RpcFlowStep | LocalFlowStep;
+
+export function expectationOf(step: FlowStep): FlowStepExpectation {
+  return step.kind === 'local' ? 'local' : (step.expects ?? 'approval');
+}
+
+/** Approval steps done without a rejection: the run tested only half of them. */
+export function untestedRejections(steps: FlowStepState[]): string[] {
+  return steps
+    .filter((s) => s.status === 'done' && s.expects === 'approval' && !s.attempts.some((a) => a.outcome === 'rejected'))
+    .map((s) => s.title);
 }
 
 export interface FlowDefinition {
@@ -101,6 +147,8 @@ export interface FlowEnv {
   waitForTx: (hash: string, shouldAbort: () => boolean) => Promise<NanoTxWait>;
   /** The test wallet when it runs from its seed; null for address-only or stopped wallets. */
   testWallet: () => FlowWallet | null;
+  /** Asks the user `question` in the run panel; null once `shouldAbort` (the run ended). */
+  askReview: (question: string, shouldAbort: () => boolean) => Promise<FlowReview | null>;
   sleep: (ms: number) => Promise<void>;
   now: () => number;
 }
@@ -111,6 +159,13 @@ export interface FlowWallet {
   /** Unlocked balance in base units. */
   balance: (tokenUid: string) => Promise<bigint>;
   isFeeToken: (tokenUid: string) => Promise<boolean>;
+  addressAt: (index: number) => Promise<string>;
+  /** The address's index in the wallet, or null when it isn't the wallet's. */
+  addressIndex: (address: string) => Promise<number | null>;
+  /** How many txs the wallet has seen on `address`. */
+  addressTxCount: (address: string) => Promise<number>;
+  /** Splits the transparent HTR into UTXOs of 1, 2, 3 … base units (`computeScatterOutputs`). */
+  scatterHtr: () => Promise<{ txHash: string; amounts: bigint[] }>;
 }
 
 /** Pauses that let the user follow along. */
@@ -139,7 +194,13 @@ export function startFlow(flow: FlowDefinition, env: FlowEnv): string | null {
     flowStarted({
       flowId: flow.id,
       title: flow.title,
-      steps: flow.steps.map(({ id, title, stageId }) => ({ id, title, stageId })),
+      steps: flow.steps.map((step) => ({
+        id: step.id,
+        title: step.title,
+        stageId: step.stageId,
+        expects: expectationOf(step),
+        reviewQuestion: step.review ?? null,
+      })),
       at: env.now(),
     })
   );
@@ -169,7 +230,8 @@ function launch(flow: FlowDefinition, env: FlowEnv) {
   });
 }
 
-type StepEnd = 'done' | 'stop';
+/** `flagged`: done, but the user said the wallet's screen was off. */
+type StepEnd = 'done' | 'stop' | 'flagged';
 
 async function runSteps(flow: FlowDefinition, env: FlowEnv, startedAt: number | null): Promise<void> {
   const run = () => env.getState().flowRun;
@@ -193,6 +255,12 @@ async function runSteps(flow: FlowDefinition, env: FlowEnv, startedAt: number | 
       const end = await runStep(flow.steps[index], index, env, gone, pause);
       if (end === 'stop') return;
       env.dispatch(flowCurrentStepChanged(index + 1));
+      if (end === 'flagged') {
+        const step = run().steps[index];
+        const note = step?.review?.note ? `: ${step.review.note}` : '';
+        pause(`You flagged "${step?.title}"${note}. Resume to go on.`);
+        return;
+      }
     }
     if (gone()) return;
     let verdict: FlowVerdict;
@@ -232,13 +300,33 @@ async function runStep(
     return confirm(resumed.txHash);
   }
 
-  for (;;) {
-    if (gone()) return 'stop';
-    if (env.getState().flowRun.status === 'stopping') {
-      setStatus('pending');
-      pause('Stopped by you');
-      return 'stop';
+  const stopRequested = () => {
+    if (env.getState().flowRun.status !== 'stopping') return false;
+    setStatus('pending');
+    pause('Stopped by you');
+    return true;
+  };
+
+  if (step.kind === 'local') {
+    if (gone() || stopRequested()) return 'stop';
+    setStatus('working');
+    env.navigate(step.stageId);
+    let result: { txHash?: string | null };
+    try {
+      result = await step.perform(env);
+    } catch (err) {
+      if (gone()) return 'stop';
+      return fail(extractErrorMessage(err));
     }
+    if (gone()) return 'stop';
+    if (!result.txHash) return finish();
+    dispatch(flowStepTxHash({ index, txHash: result.txHash }));
+    return confirm(result.txHash);
+  }
+
+  const expects = expectationOf(step);
+  for (;;) {
+    if (gone() || stopRequested()) return 'stop';
 
     let plan: StepPlan;
     try {
@@ -261,7 +349,20 @@ async function runStep(
       if (gone()) return 'stop';
       recordRpcFailure(dispatch, step.actions, false, err);
       const outcome = classifyRpcError(err);
-      if (outcome.kind === 'rejected') {
+      if (expects === 'refusal') {
+        const problems = step.validateRefusal?.(outcome) ?? [];
+        recordAttempt({
+          outcome: outcome.kind === 'rejected' ? 'rejected' : 'error',
+          asExpected: problems.length === 0,
+          code: outcome.code,
+          message: outcome.message,
+          problems,
+          duration: durationOf(err),
+        });
+        if (problems.length > 0) return fail('The wallet refused, but not the way the step expects');
+        return finish();
+      }
+      if (expects === 'approval' && outcome.kind === 'rejected') {
         const problems = outcome.valid
           ? []
           : [`Expected the message "${RPC_USER_REJECTED_MESSAGE}", got "${outcome.message}"`];
@@ -279,7 +380,7 @@ async function runStep(
         continue;
       }
       recordAttempt({
-        outcome: 'error',
+        outcome: outcome.kind === 'rejected' ? 'rejected' : 'error',
         asExpected: false,
         code: outcome.code,
         message: outcome.message,
@@ -291,6 +392,17 @@ async function runStep(
     if (gone()) return 'stop';
 
     recordRpcResult(dispatch, step.actions, false, result);
+    if (expects === 'refusal') {
+      recordAttempt({
+        outcome: 'approved',
+        asExpected: false,
+        code: null,
+        message: 'Approved a request the wallet should refuse',
+        problems: ['The wallet carried out an invalid request'],
+        duration: result.duration,
+      });
+      return fail('The wallet accepted a request it should have refused');
+    }
     const state = env.getState();
     const problems = step.validate(result.response, state);
     recordAttempt({
@@ -303,9 +415,13 @@ async function runStep(
     });
     if (problems.length > 0) return fail('The response is not what the step expects');
     step.onApproved?.(dispatch, result.response, state);
+    if (step.checkAnswer) {
+      const end = await runChecks(() => step.checkAnswer!(result.response, env), 'Resume to ask again.');
+      if (end) return end;
+    }
 
     const hash = step.txHash?.(result.response) ?? null;
-    if (!hash) return succeed();
+    if (!hash) return finish();
     dispatch(flowStepTxHash({ index, txHash: hash }));
     return confirm(hash);
   }
@@ -321,17 +437,38 @@ async function runStep(
       return 'stop';
     }
     if (step.checkOnChain) {
-      setStatus('checking');
-      let checks: FlowCheck[];
-      try {
-        checks = await step.checkOnChain(hash, env);
-      } catch (err) {
-        checks = [{ ok: false, text: `Could not run the checks: ${extractErrorMessage(err)}` }];
+      const end = await runChecks(() => step.checkOnChain!(hash, env), 'Resume to check again.');
+      if (end) return end;
+    }
+    return finish();
+  }
+
+  /** Runs and records a step's checks; returns how the step ends if one failed. */
+  async function runChecks(check: () => Promise<FlowCheck[]>, retry: string): Promise<StepEnd | null> {
+    setStatus('checking');
+    let checks: FlowCheck[];
+    try {
+      checks = await check();
+    } catch (err) {
+      checks = [{ ok: false, text: `Could not run the checks: ${extractErrorMessage(err)}` }];
+    }
+    if (gone()) return 'stop';
+    dispatch(flowStepChecked({ index, checks }));
+    const failed = checks.find((c) => !c.ok);
+    return failed ? fail(`${failed.text}. ${retry}`) : null;
+  }
+
+  /** Asks the step's review question, if any, then marks the step done. */
+  async function finish(): Promise<StepEnd> {
+    if (step.review) {
+      setStatus('reviewing');
+      const review = await env.askReview(step.review, gone);
+      if (!review || gone()) return 'stop';
+      dispatch(flowStepReviewed({ index, review }));
+      if (!review.ok) {
+        setStatus('done');
+        return 'flagged';
       }
-      if (gone()) return 'stop';
-      dispatch(flowStepChecked({ index, checks }));
-      const failed = checks.find((c) => !c.ok);
-      if (failed) return fail(`${failed.text}. Resume to check again.`);
     }
     return succeed();
   }

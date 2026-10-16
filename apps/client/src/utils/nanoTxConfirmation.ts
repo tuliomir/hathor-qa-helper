@@ -134,3 +134,17 @@ export async function fetchFullnodeTx(
   if (!body?.success || !body.tx) throw new Error(body?.message || `The fullnode has no tx ${hash}`);
   return body.tx;
 }
+
+/** What the fullnode's `thin_wallet/token` reports about a token. */
+export async function fetchTokenInfo(fullNodeUrl: string, uid: string, get: FetchJson = fetchJson) {
+  const body = (await get(`${fullNodeUrl}thin_wallet/token?id=${uid}`)) as {
+    success?: boolean;
+    message?: string;
+    version?: number | null;
+    total?: number | string;
+    mint?: unknown[];
+    melt?: unknown[];
+  } | null;
+  if (!body?.success) throw new Error(body?.message || `The fullnode has no token ${uid}`);
+  return body;
+}

@@ -49,7 +49,7 @@ import { nanoTxHash } from '../utils/nanoRpcRequests';
 import { oracleSignatureOf } from '../utils/rpcCoreRequests';
 import { fetchContractBalance } from '../utils/nanoTxConfirmation';
 import { nanoTxProblems, signOracleDataProblems } from './nanoExpectations';
-import type { FlowDefinition, FlowEnv, FlowStep } from './flowRunner';
+import { untestedRejections, type FlowDefinition, type FlowEnv, type FlowStep } from './flowRunner';
 import { address0Of, rpcFlowPreflight } from './rpcFlowPreflight';
 
 export const BET_FLOW_ID = 'bet-nano-contract';
@@ -243,7 +243,7 @@ const withdrawStep: FlowStep = {
 
 /** Why the bet flow can't run now, or null. Address 0 is oracle, bettor and withdrawer. */
 export function betFlowPreflight(state: RootState): string | null {
-  return rpcFlowPreflight(state, 'bet', 'bet flow');
+  return rpcFlowPreflight(state, 'bet flow', { blueprint: 'bet' });
 }
 
 /** Passes when the contract holds nothing: the whole deposit came back. */
@@ -253,9 +253,7 @@ async function verifyBetFlow(env: FlowEnv) {
   const token = tokenOf(state);
   const network = selectRpcNetwork(state);
   const balance = await fetchContractBalance(NETWORK_CONFIG[network].fullNodeUrl, ncId, token);
-  const uncovered = state.flowRun.steps
-    .filter((s) => s.status === 'done' && !s.attempts.some((a) => a.outcome === 'rejected'))
-    .map((s) => s.title);
+  const uncovered = untestedRejections(state.flowRun.steps);
   const coverage = uncovered.length > 0 ? ` Rejection not tested on: ${uncovered.join(', ')}.` : '';
   return balance === 0n
     ? { passed: true, detail: `The contract balance is back to 0: the prize came back to your wallet.${coverage}` }

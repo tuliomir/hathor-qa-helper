@@ -39,14 +39,13 @@ import { setFeeNanoContractId } from '../store/slices/feeNanoContractSlice';
 import type { MethodSliceActions } from '../services/rpcRun';
 import { NETWORK_CONFIG } from '../constants/network';
 import { blueprintIdFor } from '../utils/blueprints';
-import { isAddressOnly } from '../utils/addressOnlyWallet';
 import { formatAmount } from '../utils/amount';
 import { nanoTxHash } from '../utils/nanoRpcRequests';
 import { fetchContractBalance, fetchFullnodeTx } from '../utils/nanoTxConfirmation';
 import { nanoTxProblems } from './nanoExpectations';
 import { contractBalanceCheck, FEE_PER_OUTPUT, feePaymentChecks, htr, type FeePayer } from './feeChecks';
-import type { FlowDefinition, FlowEnv, FlowStep } from './flowRunner';
-import { address0Of, rpcFlowPreflight } from './rpcFlowPreflight';
+import { untestedRejections, type FlowDefinition, type FlowEnv, type FlowStep } from './flowRunner';
+import { address0Of, rpcFlowPreflight, SEED_WALLET_NEEDED } from './rpcFlowPreflight';
 
 export const FEE_FLOW_ID = 'fee-nano-contract';
 
@@ -288,14 +287,7 @@ const STEPS: FlowStep[] = [
 
 /** Why the fee flow can't run now, or null. */
 export function feeFlowPreflight(state: RootState): string | null {
-  const reason = rpcFlowPreflight(state, 'fee', 'fee flow');
-  if (reason) return reason;
-  const id = state.walletSelection.testWalletId;
-  const wallet = id ? state.walletStore.wallets[id] : undefined;
-  if (!wallet || isAddressOnly(wallet.metadata) || wallet.status !== 'ready') {
-    return 'Start the test wallet from its seed: the flow reads its fee-token balances';
-  }
-  return null;
+  return rpcFlowPreflight(state, 'fee flow', { blueprint: 'fee', seedWallet: true });
 }
 
 /**
@@ -305,7 +297,7 @@ export function feeFlowPreflight(state: RootState): string | null {
 export async function prepareFeeFlow(env: FlowEnv): Promise<void> {
   if (env.getState().flowRun.context.token) return;
   const wallet = env.testWallet();
-  if (!wallet) throw new Error('Start the test wallet from its seed: the flow reads its fee-token balances');
+  if (!wallet) throw new Error(SEED_WALLET_NEEDED);
 
   const htrBalance = await wallet.balance(NATIVE_TOKEN_UID);
   if (htrBalance < WALLET_HTR_NEEDED) {
@@ -354,9 +346,7 @@ async function verifyFeeFlow(env: FlowEnv) {
   }
   const contractHtr = await fetchContractBalance(url, ncId, NATIVE_TOKEN_UID);
 
-  const uncovered = state.flowRun.steps
-    .filter((s) => s.status === 'done' && !s.attempts.some((a) => a.outcome === 'rejected'))
-    .map((s) => s.title);
+  const uncovered = untestedRejections(state.flowRun.steps);
   const coverage = uncovered.length > 0 ? ` Rejection not tested on: ${uncovered.join(', ')}.` : '';
 
   const problems: string[] = [];

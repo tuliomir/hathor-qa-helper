@@ -16,6 +16,8 @@ import { NETWORK_CONFIG } from '../constants/network';
 import { waitForNanoTx } from '../utils/nanoTxConfirmation';
 import { walletInstancesMap } from '../store/slices/walletStoreSlice';
 import { isFeeToken } from '../fees';
+import { scatterHtr } from '../services/scatterHtr';
+import type { FlowReview } from '../store/slices/flowRunSlice';
 import type { FlowEnv, FlowWallet } from './flowRunner';
 
 let navigateTo: ((path: string) => void) | null = null;
@@ -25,10 +27,33 @@ export function setFlowNavigator(navigate: ((path: string) => void) | null): voi
   navigateTo = navigate;
 }
 
+let answerReview: ((review: FlowReview | null) => void) | null = null;
+
+/** The run panel's answer to the question the run is asking. */
+export function answerFlowReview(review: FlowReview): void {
+  answerReview?.(review);
+}
+
+/** Waits for `answerFlowReview`, or null once the run ends. */
+function askReview(_question: string, shouldAbort: () => boolean): Promise<FlowReview | null> {
+  return new Promise((resolve) => {
+    const timer = setInterval(() => {
+      if (shouldAbort()) settle(null);
+    }, 500);
+    function settle(review: FlowReview | null) {
+      clearInterval(timer);
+      answerReview = null;
+      resolve(review);
+    }
+    answerReview = settle;
+  });
+}
+
 function testWallet(): FlowWallet | null {
   const id = store.getState().walletSelection.testWalletId;
   const instance = id ? walletInstancesMap.get(id) : null;
-  if (!instance) return null;
+  const network = id ? store.getState().walletStore.wallets[id]?.metadata.network : undefined;
+  if (!instance || !network) return null;
   return {
     tokenUids: () => instance.getTokens(),
     balance: async (uid) => {
@@ -36,6 +61,11 @@ function testWallet(): FlowWallet | null {
       return balance?.[0]?.balance?.unlocked ?? 0n;
     },
     isFeeToken: (uid) => isFeeToken(instance, uid),
+    addressAt: (index) => instance.getAddressAtIndex(index),
+    addressIndex: async (address) =>
+      (await instance.isAddressMine(address)) ? instance.getAddressIndex(address) : null,
+    addressTxCount: async (address) => (await instance.storage.getAddressInfo(address))?.numTransactions ?? 0,
+    scatterHtr: () => scatterHtr(instance, network),
   };
 }
 
@@ -63,6 +93,7 @@ export function createFlowEnv(): FlowEnv {
     waitForTx: (hash, shouldAbort) =>
       waitForNanoTx(NETWORK_CONFIG[selectRpcNetwork(store.getState())].fullNodeUrl, hash, { shouldAbort }),
     testWallet,
+    askReview,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     now: Date.now,
   };

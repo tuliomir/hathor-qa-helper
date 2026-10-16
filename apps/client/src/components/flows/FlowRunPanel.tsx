@@ -14,6 +14,8 @@ import {
   MdCheckCircle,
   MdExpandLess,
   MdExpandMore,
+  MdFlag,
+  MdHelpOutline,
   MdHighlightOff,
   MdRadioButtonUnchecked,
   MdRedo,
@@ -21,7 +23,7 @@ import {
 import { selectFlowRun, type FlowAttempt, type FlowStepState } from '../../store/slices/flowRunSlice';
 import { selectRpcNetwork } from '../../store/slices/walletConnectSlice';
 import { getStageUrl } from '../../config/stageRoutes';
-import { setFlowNavigator } from '../../flows/flowEnv';
+import { answerFlowReview, setFlowNavigator } from '../../flows/flowEnv';
 import { flowById } from '../../flows';
 import { StatusChip } from '../ui/StatusChip';
 import { TxIdDisplay } from '../common/TxIdDisplay';
@@ -58,7 +60,10 @@ function StepIcon({ step }: { step: FlowStepState }) {
     case 'awaiting-wallet':
     case 'confirming':
     case 'checking':
+    case 'working':
       return <span className="loading loading-spinner loading-sm shrink-0 text-primary" aria-hidden="true" />;
+    case 'reviewing':
+      return <MdHelpOutline className="size-5 shrink-0 text-primary" aria-hidden="true" />;
     default:
       return <MdRadioButtonUnchecked className="size-5 shrink-0 text-ink-muted" aria-hidden="true" />;
   }
@@ -68,28 +73,35 @@ const STEP_LINE: Partial<Record<FlowStepState['status'], string>> = {
   filling: 'Filling the form…',
   'awaiting-wallet': 'Approve or reject on your phone',
   confirming: 'Waiting for a block to confirm the tx…',
-  checking: 'Checking the tx on chain…',
+  checking: 'Checking the answer…',
+  working: 'Working on it…',
   succeeded: 'Success!',
   skipped: 'Skipped',
 };
 
-function attemptLabel(a: FlowAttempt): string {
+function attemptLabel(a: FlowAttempt, step: FlowStepState): string {
+  if (step.expects === 'refusal') {
+    if (a.outcome === 'approved') return 'Approved, should be refused';
+    return `Refused${a.code !== null ? ` (${a.code})` : ''}${a.asExpected ? '' : ', unexpected'}`;
+  }
   if (a.outcome === 'approved') return a.asExpected ? 'Approved' : 'Approved, unexpected response';
   if (a.outcome === 'rejected') return a.asExpected ? 'Rejected (5002)' : `Rejected, unexpected message`;
   return `Error${a.code !== null ? ` ${a.code}` : ''}`;
 }
 
-function AttemptRow({ attempt }: { attempt: FlowAttempt }) {
-  const tone = !attempt.asExpected ? 'error' : attempt.outcome === 'approved' ? 'success' : 'info';
+function AttemptRow({ attempt, step }: { attempt: FlowAttempt; step: FlowStepState }) {
+  const succeeded = attempt.outcome === 'approved' || step.expects === 'refusal';
+  const tone = !attempt.asExpected ? 'error' : succeeded ? 'success' : 'info';
   return (
     <li className="flex flex-col gap-0.5">
       <div className="flex flex-wrap items-center gap-2">
-        <StatusChip status={attempt.outcome} label={attemptLabel(attempt)} tone={tone} />
+        <StatusChip status={attempt.outcome} label={attemptLabel(attempt, step)} tone={tone} />
         <span className="text-caption text-ink-muted">
           {new Date(attempt.at).toLocaleTimeString()} · {(attempt.duration / 1000).toFixed(1)}s
         </span>
       </div>
-      {(attempt.outcome === 'error' || !attempt.asExpected) && (
+      {/* A refusal's message is what the first runs record for the invalid requests. */}
+      {(attempt.outcome === 'error' || !attempt.asExpected || step.expects === 'refusal') && (
         <p className="m-0 break-words font-mono text-data-sm text-ink-muted">{attempt.message}</p>
       )}
       {attempt.problems.length > 0 && (
@@ -103,9 +115,62 @@ function AttemptRow({ attempt }: { attempt: FlowAttempt }) {
   );
 }
 
+/** "Did the wallet's screen look right?": the run waits for the answer. */
+function ReviewPrompt({ question }: { question: string }) {
+  const [flagging, setFlagging] = useState(false);
+  const [note, setNote] = useState('');
+
+  return (
+    <div className="ml-7 flex flex-col gap-2 rounded-field bg-tint-info px-3 py-2" role="group" aria-label="Review">
+      <p className="m-0 text-body font-semibold">{question}</p>
+      {flagging ? (
+        <>
+          <label className="flex flex-col gap-1 text-caption text-ink-muted">
+            What was off?
+            <textarea
+              className="textarea textarea-bordered textarea-sm text-body"
+              rows={2}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              autoFocus
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn btn-error btn-sm"
+              onClick={() => answerFlowReview({ ok: false, note: note.trim() })}
+            >
+              <MdFlag aria-hidden="true" />
+              Flag and pause
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFlagging(false)}>
+              Back
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => answerFlowReview({ ok: true, note: '' })}
+          >
+            Yes, looked right
+          </button>
+          <button type="button" className="btn btn-sm" onClick={() => setFlagging(true)}>
+            Something was off
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StepRow({ step, active, network }: { step: FlowStepState; active: boolean; network: string }) {
   const [open, setOpen] = useState(false);
-  const rejections = step.attempts.filter((a) => a.outcome === 'rejected' && a.asExpected).length;
+  const rejections =
+    step.expects === 'approval' ? step.attempts.filter((a) => a.outcome === 'rejected' && a.asExpected).length : 0;
   const finished = step.status === 'done' || step.status === 'succeeded';
   const line = STEP_LINE[step.status];
 
@@ -120,7 +185,11 @@ function StepRow({ step, active, network }: { step: FlowStepState; active: boole
           {step.title}
         </Link>
         {rejections > 0 && <StatusChip status="info" label={`Rejected ×${rejections}`} tone="info" />}
-        {finished && rejections === 0 && <StatusChip status="warning" label="Rejection not tested" tone="warning" />}
+        {finished && rejections === 0 && step.expects === 'approval' && (
+          <StatusChip status="warning" label="Rejection not tested" tone="warning" />
+        )}
+        {step.expects === 'no-prompt' && <StatusChip status="idle" label="No prompt" tone="idle" />}
+        {step.review && !step.review.ok && <StatusChip status="error" label="Flagged" tone="error" />}
         {step.attempts.length > 0 && (
           <button
             type="button"
@@ -142,6 +211,13 @@ function StepRow({ step, active, network }: { step: FlowStepState; active: boole
         </p>
       )}
       {step.txHash && <TxIdDisplay hash={step.txHash} network={network} className="pl-7" />}
+      {step.status === 'reviewing' && step.reviewQuestion && <ReviewPrompt question={step.reviewQuestion} />}
+      {step.review && !step.review.ok && (
+        <p className="m-0 flex items-start gap-1 pl-7 text-caption text-error">
+          <MdFlag className="mt-0.5 shrink-0" aria-hidden="true" />
+          {step.review.note || 'You flagged the wallet screen'}
+        </p>
+      )}
       {step.checks.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-0.5 pl-7 text-caption">
           {step.checks.map((c) => (
@@ -159,7 +235,7 @@ function StepRow({ step, active, network }: { step: FlowStepState; active: boole
       {open && (
         <ol className="m-0 flex list-none flex-col gap-2 pl-7">
           {step.attempts.map((a) => (
-            <AttemptRow key={a.at} attempt={a} />
+            <AttemptRow key={a.at} attempt={a} step={step} />
           ))}
         </ol>
       )}

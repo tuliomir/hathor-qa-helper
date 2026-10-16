@@ -102,6 +102,7 @@ function setup() {
     send: (call) => runRpc(handlers, call),
     waitForTx: async () => ({ state: 'confirmed', firstBlock: 'block' }),
     testWallet: () => null,
+    askReview: async () => ({ ok: true, note: '' }),
     sleep: async () => {},
     now: () => 1000,
   };

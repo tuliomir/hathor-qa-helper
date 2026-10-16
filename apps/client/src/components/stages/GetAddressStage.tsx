@@ -28,6 +28,9 @@ import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { firstUnmetReason } from '../../utils/requirements';
 import { isAddressOnly } from '../../utils/addressOnlyWallet';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { RPC_FLOW } from '../../flows';
+import { num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 const GET_ADDRESS_ACTIONS = {
   setRequest: setGetAddressRequest,
@@ -45,6 +48,14 @@ export const GetAddressStage: React.FC = () => {
   const testWalletId = useSelector((state: RootState) => state.walletSelection.testWalletId);
   const testWallet = testWalletId ? getWallet(testWalletId) : null;
   const { requestType, indexValue, response, validationStatus, localAddress } = getAddressData;
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-get-address', (v) => {
+    const type = str(v, 'requestType');
+    if (type === 'first_empty' || type === 'index' || type === 'client') dispatch(setRequestType(type));
+    const index = num(v, 'index');
+    if (index !== undefined) dispatch(setIndexValue(index));
+  });
 
   const handleExecute = () => {
     dispatch(clearGetAddressData());
@@ -133,6 +144,7 @@ export const GetAddressStage: React.FC = () => {
         stageId="rpc-get-address"
         description="Ask the wallet for an address by type: first empty, by index, or the wallet's choice."
         method="htr_getAddress"
+        actions={<StartFlowButton flow={RPC_FLOW} label="Run the RPC flow" />}
       />
       <PreconditionStrip requirements={[rpcSession]} />
       <RpcGetAddressCard

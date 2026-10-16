@@ -26,11 +26,12 @@ import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { firstUnmetReason } from '../../utils/requirements';
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
-import { WALLET_CONFIG } from '../../constants/network';
-import { computeScatterOutputs, scatterResultMessage, scatterShortfallMessage } from '../../utils/scatterFunds';
-import { applyNetworkServices } from '../../services/networkServices';
-import { shieldedSweepNotice, splitAvailableUtxos } from '../../services/shieldedUtxos';
+import { scatterResultMessage } from '../../utils/scatterFunds';
+import { scatterHtr } from '../../services/scatterHtr';
 import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { RPC_FLOW } from '../../flows';
+import { num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 const GET_UTXOS_ACTIONS = {
   setRequest: setGetUtxosRequest,
@@ -58,6 +59,15 @@ export const GetUtxosStage: React.FC = () => {
     amountSmallerThan: getUtxosData.amountSmallerThan !== null ? String(getUtxosData.amountSmallerThan) : '',
     amountBiggerThan: getUtxosData.amountBiggerThan !== null ? String(getUtxosData.amountBiggerThan) : '',
   }));
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-get-utxos', (v) => {
+    setFilters((f) => ({
+      tokenUid: str(v, 'tokenUid') ?? f.tokenUid,
+      maxUtxos: num(v, 'maxUtxos') ?? f.maxUtxos,
+      amountBiggerThan: str(v, 'amountBiggerThan') ?? f.amountBiggerThan,
+      amountSmallerThan: str(v, 'amountSmallerThan') ?? f.amountSmallerThan,
+    }));
+  });
   const [availableTokens, setAvailableTokens] = useState<UtxoToken[]>([HTR]);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const { tokenUid } = filters;
@@ -142,24 +152,7 @@ export const GetUtxosStage: React.FC = () => {
     setScatterError(null);
     setScatterResult(null);
     try {
-      const addr0 = await testWallet.instance.getAddressAtIndex(0);
-      // Only transparent HTR: getBalance() also counts shielded UTXOs, which the browser cannot spend.
-      const htrSplit = await splitAvailableUtxos(testWallet.instance, NATIVE_TOKEN_UID);
-      const unlocked = htrSplit.transparent.amount;
-      const shieldedNote = shieldedSweepNotice([htrSplit]);
-      // Transfers are feeless and the outputs sum exactly to the input, so no reserve is needed.
-      const amounts = computeScatterOutputs(unlocked);
-      if (amounts.length === 0) {
-        setScatterError(scatterShortfallMessage(unlocked) + (shieldedNote ? ` (${shieldedNote}.)` : ''));
-        return;
-      }
-      const outputs = amounts.map((amount) => ({ address: addr0, value: amount, token: NATIVE_TOKEN_UID }));
-      applyNetworkServices(testWallet.metadata.network);
-      const sendTx = await testWallet.instance.sendManyOutputsSendTransaction(outputs, {
-        changeAddress: addr0,
-        pinCode: WALLET_CONFIG.DEFAULT_PIN_CODE,
-      });
-      await sendTx.run();
+      const { amounts } = await scatterHtr(testWallet.instance, testWallet.metadata.network);
       setScatterResult(scatterResultMessage(amounts));
     } catch (err) {
       setScatterError(err instanceof Error ? err.message : 'Failed to scatter funds');
@@ -177,6 +170,7 @@ export const GetUtxosStage: React.FC = () => {
         stageId="rpc-get-utxos"
         description="List the wallet's unspent outputs for one token, with count and amount filters."
         method="htr_getUtxos"
+        actions={<StartFlowButton flow={RPC_FLOW} label="Run the RPC flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       <RpcGetUtxosCard

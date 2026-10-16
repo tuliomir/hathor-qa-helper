@@ -15,6 +15,7 @@ import { OutputEditor, type OutputTokenOption } from '../common/OutputEditor';
 import TransactionResponseDisplay from '../common/TransactionResponseDisplay';
 import { newOutputRow, outputRowErrors, type OutputRow } from '../../utils/outputRows';
 import { buildSendTransactionRequest } from '../../utils/rpcSendTransaction';
+import { bool, useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 export interface RpcSendTransactionCardProps {
   onExecute: (outputs: SendTransactionOutput[], pushTx: boolean) => Promise<unknown>;
@@ -73,6 +74,12 @@ export const RpcSendTransactionCard: React.FC<RpcSendTransactionCardProps> = ({
 }) => {
   const [pushTx, setPushTx] = useState(initialFormData?.pushTx ?? false);
   const [rows, setRows] = useState<OutputRow[]>(() => toRows(initialFormData?.outputs));
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-send-transaction', (v) => {
+    setPushTx(bool(v, 'pushTx') ?? pushTx);
+    if (Array.isArray(v.outputs)) setRows(toRows(v.outputs as SendTransactionOutput[]));
+  });
 
   const liveRequest = useMemo(() => buildSendTransactionRequest(toRpcOutputs(rows), pushTx), [rows, pushTx]);
 

@@ -26,6 +26,8 @@ import { useToast } from '../../hooks/useToast';
 import { ADDRESS_MISMATCH_REASON, useRpcAddressMismatch } from '../../hooks/useRpcAddressMismatch';
 import { firstUnmetReason } from '../../utils/requirements';
 import { DEFAULT_NATIVE_TOKEN_CONFIG, NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { RPC_FLOW } from '../../flows';
 
 const GET_BALANCE_ACTIONS = {
   setRequest: setGetBalanceRequest,
@@ -113,6 +115,7 @@ export const GetBalanceStage: React.FC = () => {
     <div className="flex max-w-stage flex-col gap-4">
       <StageHeader
         stageId="rpc-get-balance"
+        actions={<StartFlowButton flow={RPC_FLOW} label="Run the RPC flow" />}
         description="Query the connected wallet's balance for HTR and the test wallet's tokens."
         method="htr_getBalance"
       />

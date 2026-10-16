@@ -26,6 +26,8 @@ import { ADDRESS_MISMATCH_REASON, useRpcAddressMismatch } from '../../hooks/useR
 import { useWalletStore } from '../../hooks/useWalletStore';
 import { firstUnmetReason } from '../../utils/requirements';
 import { buildCreateTokenRequest } from '../../utils/rpcCoreRequests';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { RPC_FLOW } from '../../flows';
 
 const CREATE_TOKEN_ACTIONS = {
   setRequest: setCreateTokenRequest,
@@ -71,6 +73,7 @@ export const CreateTokenStage: React.FC = () => {
         stageId="rpc-create-token"
         description="Create a custom token through the connected wallet, with optional mint and melt authorities."
         method="htr_createToken"
+        actions={<StartFlowButton flow={RPC_FLOW} label="Run the RPC flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       {mismatch && <RpcAddressMismatchCallout mismatch={mismatch} />}

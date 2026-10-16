@@ -8,7 +8,9 @@ import {
   type FlowDefinition,
   type FlowEnv,
   type FlowStep,
+  type RpcFlowStep,
 } from '../src/flows/flowRunner';
+import type { FlowReview } from '../src/store/slices/flowRunSlice';
 import type { RpcHandlers } from '../src/services/rpcRun';
 import { runRpc } from '../src/services/rpcRun';
 import type { NanoTxWait } from '../src/utils/nanoTxConfirmation';
@@ -37,13 +39,18 @@ const methodSlice = createSlice({
 type Answer = { error: unknown } | { response: unknown };
 
 /** Fake wallet: answers each step's calls from a script, in order. */
-function harness(script: Record<string, Answer[]>, waits: Record<string, NanoTxWait[]> = {}) {
+function harness(
+  script: Record<string, Answer[]>,
+  waits: Record<string, NanoTxWait[]> = {},
+  reviews: FlowReview[] = []
+) {
   const store = configureStore({ reducer: { flowRun: flowRunReducer, method: methodSlice.reducer } });
   const calls: string[] = [];
   const navigations: string[] = [];
   const waited: string[] = [];
+  const asked: string[] = [];
 
-  const step = (id: string, opts: Partial<FlowStep> = {}): FlowStep => ({
+  const step = (id: string, opts: Partial<RpcFlowStep> = {}): RpcFlowStep => ({
     id,
     title: id,
     stageId: 'rpc-bet-initialize',
@@ -74,6 +81,10 @@ function harness(script: Record<string, Answer[]>, waits: Record<string, NanoTxW
       return waits[hash]?.shift() ?? { state: 'confirmed', firstBlock: 'block' };
     },
     testWallet: () => null,
+    askReview: async (question) => {
+      asked.push(question);
+      return reviews.shift() ?? { ok: true, note: '' };
+    },
     sleep: async () => {},
     now: () => 1000,
   };
@@ -87,7 +98,7 @@ function harness(script: Record<string, Answer[]>, waits: Record<string, NanoTxW
   });
 
   const run = () => store.getState().flowRun;
-  return { store, env, step, flow, run, calls, navigations, waited };
+  return { store, env, step, flow, run, calls, navigations, waited, asked };
 }
 
 beforeEach(async () => {
@@ -249,6 +260,98 @@ describe('flow runner', () => {
     expect(h.run().status).toBe('paused');
     expect(h.run().reason).toBe('No fee token');
     expect(h.calls).toEqual([]);
+  });
+
+  test('a step the wallet must refuse passes on its first refusal, error or 5002', async () => {
+    const h = harness({
+      a: [{ error: { code: 8000, message: 'Invalid mint address' } }],
+      b: [{ error: REJECTED }],
+    });
+    startFlow(h.flow([h.step('a', { expects: 'refusal' }), h.step('b', { expects: 'refusal' })]), h.env);
+    await flowRunSettled();
+
+    expect(h.run().status).toBe('passed');
+    expect(h.calls).toEqual(['a', 'b']);
+    expect(h.run().steps.map((s) => s.attempts.map((x) => [x.outcome, x.asExpected, x.code]))).toEqual([
+      [['error', true, 8000]],
+      [['rejected', true, 5002]],
+    ]);
+  });
+
+  test('a step the wallet must refuse fails when the wallet approves it', async () => {
+    const h = harness({ a: [{ response: { ok: true } }] });
+    startFlow(h.flow([h.step('a', { expects: 'refusal' })]), h.env);
+    await flowRunSettled();
+
+    expect(h.run().status).toBe('paused');
+    expect(h.run().reason).toContain('should have refused');
+    expect(h.run().steps[0].attempts[0].asExpected).toBe(false);
+  });
+
+  test('a step without a prompt is not sent again after an error', async () => {
+    const h = harness({ a: [{ error: REJECTED }] });
+    startFlow(h.flow([h.step('a', { expects: 'no-prompt' })]), h.env);
+    await flowRunSettled();
+
+    expect(h.calls).toEqual(['a']);
+    expect(h.run().status).toBe('paused');
+    expect(h.run().steps[0].expects).toBe('no-prompt');
+  });
+
+  test('a local step does its work, waits for its tx and checks it', async () => {
+    const h = harness({});
+    const local: FlowStep = {
+      kind: 'local',
+      id: 'scatter',
+      title: 'Scatter',
+      stageId: 'rpc-get-utxos',
+      perform: async () => ({ txHash: 'tx-s' }),
+      checkOnChain: async () => [{ ok: true, text: 'Scattered' }],
+    };
+    startFlow(h.flow([local]), h.env);
+    await flowRunSettled();
+
+    expect(h.waited).toEqual(['tx-s']);
+    expect(h.run().steps[0]).toMatchObject({
+      expects: 'local',
+      txHash: 'tx-s',
+      checks: [{ ok: true, text: 'Scattered' }],
+    });
+    expect(h.run().status).toBe('passed');
+  });
+
+  test('a failed answer check pauses, and resume asks the wallet again', async () => {
+    const h = harness({ a: [{ response: { ok: true } }, { response: { ok: true } }] });
+    const results = [[{ ok: false, text: 'Not your address' }], [{ ok: true, text: 'Your address' }]];
+    const flow = h.flow([h.step('a', { checkAnswer: async () => results.shift() ?? [] })]);
+    startFlow(flow, h.env);
+    await flowRunSettled();
+    expect(h.run().reason).toContain('Not your address');
+
+    resumeFlow(flow, h.env);
+    await flowRunSettled();
+    expect(h.calls).toEqual(['a', 'a']);
+    expect(h.run().status).toBe('passed');
+  });
+
+  test('a flagged review pauses after the step, and resume goes on to the next one', async () => {
+    const h = harness({ a: [{ response: { ok: true } }], b: [{ response: { ok: true } }] }, {}, [
+      { ok: false, note: 'The amount was missing' },
+    ]);
+    const flow = h.flow([h.step('a', { review: 'Did it look right?' }), h.step('b')]);
+    startFlow(flow, h.env);
+    await flowRunSettled();
+
+    expect(h.asked).toEqual(['Did it look right?']);
+    expect(h.run().status).toBe('paused');
+    expect(h.run().reason).toBe('You flagged "a": The amount was missing. Resume to go on.');
+    expect(h.run().currentStep).toBe(1);
+    expect(h.run().steps[0]).toMatchObject({ status: 'done', review: { ok: false } });
+
+    resumeFlow(flow, h.env);
+    await flowRunSettled();
+    expect(h.calls).toEqual(['a', 'b']);
+    expect(h.run().status).toBe('passed');
   });
 
   test('skip moves past a step the user did by hand', async () => {

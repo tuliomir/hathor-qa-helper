@@ -10,6 +10,7 @@ import CopyButton from '../common/CopyButton';
 import { Field } from '../ui/Field';
 import { ResponseFields } from './ResponseFields';
 import { buildSignWithAddressRequest, unwrapResponse } from '../../utils/rpcCoreRequests';
+import { str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 
 interface SignatureResponse {
   message?: string;
@@ -32,6 +33,12 @@ export const RpcSignWithAddressCard: React.FC<RpcSignWithAddressCardProps> = ({
 }) => {
   const [message, setMessage] = useState('Hello, Hathor!');
   const [addressIndex, setAddressIndex] = useState('0');
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-sign-with-address', (v) => {
+    setMessage(str(v, 'message') ?? message);
+    setAddressIndex(str(v, 'addressIndex') ?? addressIndex);
+  });
   const index = parseInt(addressIndex, 10);
   const indexError = isNaN(index) || index < 0 ? 'Enter a non-negative whole number.' : undefined;
 

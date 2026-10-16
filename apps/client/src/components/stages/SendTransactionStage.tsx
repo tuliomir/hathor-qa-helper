@@ -28,6 +28,8 @@ import { firstUnmetReason } from '../../utils/requirements';
 import { DEFAULT_NETWORK } from '../../constants/network';
 import { HTR_OPTION, walletTokenOptions } from '../../utils/walletTokenOptions';
 import { useAddressOnlyTokens } from '../../hooks/useAddressOnlyTokens';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { RPC_FLOW } from '../../flows';
 
 export const SendTransactionStage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -93,6 +95,7 @@ export const SendTransactionStage: React.FC = () => {
         title="Send transaction"
         description="Send a transaction with one or more outputs through the connected wallet."
         method="htr_sendTransaction"
+        actions={<StartFlowButton flow={RPC_FLOW} label="Run the RPC flow" />}
       />
       <PreconditionStrip requirements={[rpcSession]} />
       <RpcSendTransactionCard

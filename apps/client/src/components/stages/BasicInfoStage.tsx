@@ -25,6 +25,8 @@ import { PreconditionStrip } from '../common/PreconditionStrip';
 import { useRequireRpcSession } from '../../hooks/useRequirements';
 import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { firstUnmetReason } from '../../utils/requirements';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { RPC_FLOW } from '../../flows';
 
 const WALLET_INFORMATION_ACTIONS = {
   setRequest: setWalletInformationRequest,
@@ -48,7 +50,11 @@ export const BasicInfoStage: React.FC = () => {
 
   return (
     <div className="flex max-w-stage flex-col gap-4">
-      <StageHeader stageId="rpc-basic-info" description="Read the wallet's network, first address and genesis hash." />
+      <StageHeader
+        stageId="rpc-basic-info"
+        description="Read the wallet's network, first address and genesis hash."
+        actions={<StartFlowButton flow={RPC_FLOW} label="Run the RPC flow" />}
+      />
       <PreconditionStrip requirements={[rpcSession]} />
       <RpcWalletInformationCard
         onExecute={() => walletInformation.execute((h) => h.getRpcWalletInformation(), WALLET_INFORMATION_REQUEST)}

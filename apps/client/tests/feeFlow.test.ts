@@ -291,6 +291,12 @@ function setup(opts: { bigBalance?: bigint; htr?: bigint; contractFeeTaker?: 'wa
     tokenUids: async () => Object.keys(wallet),
     balance: async (uid) => wallet[uid] ?? 0n,
     isFeeToken: async (uid) => uid === SMALL || uid === BIG,
+    addressAt: async () => ADDR,
+    addressIndex: async () => 0,
+    addressTxCount: async () => 0,
+    scatterHtr: async () => {
+      throw new Error('The fee flow does not scatter');
+    },
   };
 
   const env: FlowEnv = {
@@ -300,6 +306,7 @@ function setup(opts: { bigBalance?: bigint; htr?: bigint; contractFeeTaker?: 'wa
     send: (call) => runRpc(handlers, call),
     waitForTx: async () => ({ state: 'confirmed', firstBlock: 'block' }),
     testWallet: () => testWallet,
+    askReview: async () => ({ ok: true, note: '' }),
     sleep: async () => {},
     now: () => 1000,
   };

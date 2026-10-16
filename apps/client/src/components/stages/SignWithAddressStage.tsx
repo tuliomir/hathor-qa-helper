@@ -21,6 +21,8 @@ import { toMethodData, useRpcStageCall } from '../../hooks/useRpcStageCall';
 import { ADDRESS_MISMATCH_REASON, useRpcAddressMismatch } from '../../hooks/useRpcAddressMismatch';
 import { firstUnmetReason } from '../../utils/requirements';
 import { buildSignWithAddressRequest } from '../../utils/rpcCoreRequests';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { RPC_FLOW } from '../../flows';
 
 const SIGN_WITH_ADDRESS_ACTIONS = {
   setRequest: setSignWithAddressRequest,
@@ -40,6 +42,7 @@ export const SignWithAddressStage: React.FC = () => {
         stageId="rpc-sign-with-address"
         description="Ask the wallet to sign a message with one of its addresses."
         method="htr_signWithAddress"
+        actions={<StartFlowButton flow={RPC_FLOW} label="Run the RPC flow" />}
       />
       <PreconditionStrip requirements={[rpcSession]} />
       {mismatch && <RpcAddressMismatchCallout mismatch={mismatch} />}

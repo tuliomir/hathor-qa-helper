@@ -21,6 +21,8 @@ export type FlowRunStatus =
 
 export type FlowStepStatus =
   | 'pending'
+  /** A step the app does itself (e.g. scatter funds), no wallet prompt. */
+  | 'working'
   /** Form filled, about to send. */
   | 'filling'
   /** Request sent, waiting for the user on the wallet. */
@@ -29,6 +31,8 @@ export type FlowStepStatus =
   | 'confirming'
   /** Confirmed; checking the tx on chain. */
   | 'checking'
+  /** Waiting for the user to say whether the wallet's screen looked right. */
+  | 'reviewing'
   /** Briefly, before the run moves on. */
   | 'succeeded'
   | 'done'
@@ -55,15 +59,32 @@ export interface FlowCheck {
   text: string;
 }
 
+/**
+ * What a step expects from the wallet: an approval (rejected once first),
+ * a refusal (an invalid request the wallet must not carry out), an answer
+ * without a prompt, or nothing at all (a step the app does itself).
+ */
+export type FlowStepExpectation = 'approval' | 'refusal' | 'no-prompt' | 'local';
+
+/** The user's answer to "did the wallet's screen look right?". */
+export interface FlowReview {
+  ok: boolean;
+  note: string;
+}
+
 export interface FlowStepState {
   id: string;
   title: string;
   stageId: StageId;
+  expects: FlowStepExpectation;
+  /** The question the run asks once the step is done, if any. */
+  reviewQuestion: string | null;
   status: FlowStepStatus;
   txHash: string | null;
   attempts: FlowAttempt[];
   /** The checks run on the confirmed tx; a failed one pauses the run. */
   checks: FlowCheck[];
+  review: FlowReview | null;
 }
 
 export interface FlowVerdict {
@@ -112,7 +133,13 @@ const flowRunSlice = createSlice({
       action: PayloadAction<{
         flowId: string;
         title: string;
-        steps: { id: string; title: string; stageId: StageId }[];
+        steps: {
+          id: string;
+          title: string;
+          stageId: StageId;
+          expects: FlowStepExpectation;
+          reviewQuestion: string | null;
+        }[];
         at: number;
       }>
     ) => {
@@ -123,7 +150,14 @@ const flowRunSlice = createSlice({
         title,
         status: 'running',
         startedAt: at,
-        steps: steps.map((s) => ({ ...s, status: 'pending' as const, txHash: null, attempts: [], checks: [] })),
+        steps: steps.map((s) => ({
+          ...s,
+          status: 'pending' as const,
+          txHash: null,
+          attempts: [],
+          checks: [],
+          review: null,
+        })),
       };
     },
     flowStatusChanged: (state, action: PayloadAction<{ status: FlowRunStatus; reason?: string | null }>) => {
@@ -145,6 +179,10 @@ const flowRunSlice = createSlice({
     flowStepChecked: (state, action: PayloadAction<{ index: number; checks: FlowCheck[] }>) => {
       const step = state.steps[action.payload.index];
       if (step) step.checks = action.payload.checks;
+    },
+    flowStepReviewed: (state, action: PayloadAction<{ index: number; review: FlowReview }>) => {
+      const step = state.steps[action.payload.index];
+      if (step) step.review = action.payload.review;
     },
     flowContextSet: (state, action: PayloadAction<Record<string, string>>) => {
       Object.assign(state.context, action.payload);
@@ -183,6 +221,7 @@ export const {
   flowStepStatusChanged,
   flowStepTxHash,
   flowStepChecked,
+  flowStepReviewed,
   flowContextSet,
   flowAttemptRecorded,
   flowCurrentStepChanged,
