@@ -14,7 +14,7 @@
 
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import type { FlowCheck } from '../store/slices/flowRunSlice';
-import type { FullnodeTx } from '../utils/nanoTxConfirmation';
+import type { FullnodeTx, FullnodeTxOutput } from '../utils/nanoTxConfirmation';
 import { formatAmount } from '../utils/amount';
 
 /** Who the tx should take its fee from; `none` for a tx with no fee-based token. */
@@ -29,6 +29,21 @@ export const htr = (value: bigint) => `${formatAmount(value, DECIMALS)} HTR`;
 
 function sumOf<T>(items: T[] | null | undefined, keep: (item: T) => boolean, value: (item: T) => number | string) {
   return (items ?? []).filter(keep).reduce((total, item) => total + BigInt(String(value(item))), 0n);
+}
+
+const TOKEN_AUTHORITY_MASK = 0x80;
+const TOKEN_INDEX_MASK = 0x7f;
+
+/** The token an input or output moves, or null for an authority (its value is a permission mask). */
+function tokenOf(element: FullnodeTxOutput, tx: FullnodeTx): string | null {
+  const tokenData = element.token_data;
+  if (tokenData !== undefined && tokenData & TOKEN_AUTHORITY_MASK) return null;
+  if (element.token) return element.token;
+  const index = (tokenData ?? 0) & TOKEN_INDEX_MASK;
+  if (index === 0) return NATIVE_TOKEN_UID;
+  const token = tx.tokens?.[index - 1];
+  if (token === undefined) throw new Error(`The tx has no token at index ${index}`);
+  return typeof token === 'string' ? token : token.uid;
 }
 
 /** Checks the fee the tx paid and who paid it. */
@@ -55,12 +70,12 @@ export function feePaymentChecks(tx: FullnodeTx, payer: FeePayer): FlowCheck[] {
   const walletSpent =
     sumOf(
       tx.inputs,
-      (i) => isHtr(i.token),
+      (i) => tokenOf(i, tx) === NATIVE_TOKEN_UID,
       (i) => i.value
     ) -
     sumOf(
       tx.outputs,
-      (o) => isHtr(o.token),
+      (o) => tokenOf(o, tx) === NATIVE_TOKEN_UID,
       (o) => o.value
     ) -
     deposited;

@@ -99,12 +99,25 @@ export async function fetchContractBalance(
   return BigInt(String(entry.value));
 }
 
+export interface FullnodeTxOutput {
+  value: number | string;
+  token?: string;
+  token_data?: number;
+}
+
 /** A tx as the fullnode's `transaction?id=` reports it: the parts the flow checks read. */
 export interface FullnodeTx {
   /** Fee header entries; empty or null when the tx pays no fee. */
   fees?: { token_uid: string; amount: number | string }[] | null;
-  inputs?: { token: string; value: number | string }[];
-  outputs?: { token: string; value: number | string }[];
+  /**
+   * `transaction?id=` gives each input and output a `token_data` (0 for HTR,
+   * n for `tokens[n - 1]`, high bit for authorities) and no `token`; other
+   * endpoints, like `nano_contract/history`, give `token` too.
+   */
+  inputs?: FullnodeTxOutput[];
+  outputs?: FullnodeTxOutput[];
+  /** The tx's custom tokens, in `token_data` order. */
+  tokens?: ({ uid: string } | string)[];
   nc_context?: { actions?: { type: string; token_uid: string; amount: number | string }[] } | null;
 }
 

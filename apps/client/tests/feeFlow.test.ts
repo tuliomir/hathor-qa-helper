@@ -54,7 +54,63 @@ const CONTRACT_PAID_DEPOSIT: FullnodeTx = {
   },
 };
 
+/**
+ * `transaction?id=` names each input's and output's token only by
+ * `token_data`: 0 for HTR, n for `tokens[n - 1]`.
+ */
+function asTransactionEndpoint(tx: FullnodeTx): FullnodeTx {
+  const tokens = [...new Set([...(tx.inputs ?? []), ...(tx.outputs ?? [])].map((e) => e.token!))].filter(
+    (t) => t !== '00'
+  );
+  const strip = ({ token, value }: { token?: string; value: number | string }) => ({
+    value,
+    token_data: token === '00' ? 0 : tokens.indexOf(token!) + 1,
+  });
+  return {
+    ...tx,
+    inputs: tx.inputs?.map(strip),
+    outputs: tx.outputs?.map(strip),
+    tokens: tokens.map((uid) => ({ uid, name: 'Fee token', symbol: 'FEE' })),
+  };
+}
+
+/** A wallet-paid deposit on testnet, as `transaction?id=` returned it (trimmed). */
+const REAL_WALLET_PAID_DEPOSIT: FullnodeTx = {
+  fees: [{ token_uid: '00', amount: 1 }],
+  inputs: [
+    { value: 987054, token_data: 1 },
+    { value: 1, token_data: 0 },
+  ],
+  outputs: [],
+  tokens: [{ uid: '0060a6c49a755f4b0514f9fde0caf2688ab92dadd7e8c3a266d81145593d9e79' }],
+  nc_context: {
+    actions: [
+      {
+        type: 'deposit',
+        token_uid: '0060a6c49a755f4b0514f9fde0caf2688ab92dadd7e8c3a266d81145593d9e79',
+        amount: 987054,
+      },
+    ],
+  },
+};
+
 describe('feePaymentChecks', () => {
+  test('reads tokens from token_data, as transaction?id= gives them', () => {
+    expect(feePaymentChecks(REAL_WALLET_PAID_DEPOSIT, 'wallet')).toEqual([
+      { ok: true, text: 'Fee: 0.01 HTR' },
+      { ok: true, text: 'Paid by the wallet: its HTR went down by 0.01 HTR' },
+    ]);
+    expect(feePaymentChecks(asTransactionEndpoint(CONTRACT_PAID_DEPOSIT), 'contract').every((c) => c.ok)).toBe(true);
+  });
+
+  test('skips authority outputs: their value is a permission mask', () => {
+    const tx: FullnodeTx = {
+      ...REAL_WALLET_PAID_DEPOSIT,
+      outputs: [{ value: 3, token_data: 0x81 }],
+    };
+    expect(feePaymentChecks(tx, 'wallet').every((c) => c.ok)).toBe(true);
+  });
+
   test('a fee the wallet paid from its HTR', () => {
     expect(feePaymentChecks(WALLET_PAID_DEPOSIT, 'wallet').every((c) => c.ok)).toBe(true);
     expect(feePaymentChecks(WALLET_PAID_DEPOSIT, 'contract').filter((c) => !c.ok)).toHaveLength(1);
@@ -223,7 +279,7 @@ function setup(opts: { bigBalance?: bigint; htr?: bigint; contractFeeTaker?: 'wa
     const u = new URL(url);
     if (u.pathname.endsWith('/transaction')) {
       const tx = txs[u.searchParams.get('id')!];
-      return { json: async () => (tx ? { success: true, tx } : { success: false, message: 'unknown tx' }) };
+      return { json: async () => (tx ? { success: true, tx: asTransactionEndpoint(tx) } : { success: false }) };
     }
     const token = u.searchParams.get('balances[]')!;
     return {
