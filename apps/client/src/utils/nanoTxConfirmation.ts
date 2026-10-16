@@ -98,3 +98,26 @@ export async function fetchContractBalance(
   if (!entry || entry.errmsg) throw new Error(entry?.errmsg || `No ${token} balance in the contract state`);
   return BigInt(String(entry.value));
 }
+
+/** A tx as the fullnode's `transaction?id=` reports it: the parts the flow checks read. */
+export interface FullnodeTx {
+  /** Fee header entries; empty or null when the tx pays no fee. */
+  fees?: { token_uid: string; amount: number | string }[] | null;
+  inputs?: { token: string; value: number | string }[];
+  outputs?: { token: string; value: number | string }[];
+  nc_context?: { actions?: { type: string; token_uid: string; amount: number | string }[] } | null;
+}
+
+export async function fetchFullnodeTx(
+  fullNodeUrl: string,
+  hash: string,
+  get: FetchJson = fetchJson
+): Promise<FullnodeTx> {
+  const body = (await get(`${fullNodeUrl}transaction?id=${hash}`)) as {
+    success?: boolean;
+    message?: string;
+    tx?: FullnodeTx;
+  } | null;
+  if (!body?.success || !body.tx) throw new Error(body?.message || `The fullnode has no tx ${hash}`);
+  return body.tx;
+}

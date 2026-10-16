@@ -27,6 +27,8 @@ export type FlowStepStatus =
   | 'awaiting-wallet'
   /** Approved, waiting for the tx to be confirmed and executed. */
   | 'confirming'
+  /** Confirmed; checking the tx on chain. */
+  | 'checking'
   /** Briefly, before the run moves on. */
   | 'succeeded'
   | 'done'
@@ -47,6 +49,12 @@ export interface FlowAttempt {
   at: number;
 }
 
+/** One on-chain check of a confirmed step (e.g. who paid the fee). */
+export interface FlowCheck {
+  ok: boolean;
+  text: string;
+}
+
 export interface FlowStepState {
   id: string;
   title: string;
@@ -54,6 +62,8 @@ export interface FlowStepState {
   status: FlowStepStatus;
   txHash: string | null;
   attempts: FlowAttempt[];
+  /** The checks run on the confirmed tx; a failed one pauses the run. */
+  checks: FlowCheck[];
 }
 
 export interface FlowVerdict {
@@ -72,6 +82,8 @@ export interface FlowRunState {
   verdict: FlowVerdict | null;
   startedAt: number | null;
   finishedAt: number | null;
+  /** Values the flow picked when it started (e.g. the token it moves), kept for its steps. */
+  context: Record<string, string>;
   prefill: Partial<Record<StageId, { nonce: number; values: Record<string, unknown> }>>;
 }
 
@@ -85,6 +97,7 @@ const initialState: FlowRunState = {
   verdict: null,
   startedAt: null,
   finishedAt: null,
+  context: {},
   prefill: {},
 };
 
@@ -110,7 +123,7 @@ const flowRunSlice = createSlice({
         title,
         status: 'running',
         startedAt: at,
-        steps: steps.map((s) => ({ ...s, status: 'pending' as const, txHash: null, attempts: [] })),
+        steps: steps.map((s) => ({ ...s, status: 'pending' as const, txHash: null, attempts: [], checks: [] })),
       };
     },
     flowStatusChanged: (state, action: PayloadAction<{ status: FlowRunStatus; reason?: string | null }>) => {
@@ -128,6 +141,13 @@ const flowRunSlice = createSlice({
     flowStepTxHash: (state, action: PayloadAction<{ index: number; txHash: string | null }>) => {
       const step = state.steps[action.payload.index];
       if (step) step.txHash = action.payload.txHash;
+    },
+    flowStepChecked: (state, action: PayloadAction<{ index: number; checks: FlowCheck[] }>) => {
+      const step = state.steps[action.payload.index];
+      if (step) step.checks = action.payload.checks;
+    },
+    flowContextSet: (state, action: PayloadAction<Record<string, string>>) => {
+      Object.assign(state.context, action.payload);
     },
     flowAttemptRecorded: (state, action: PayloadAction<{ index: number; attempt: FlowAttempt }>) => {
       state.steps[action.payload.index]?.attempts.push(action.payload.attempt);
@@ -162,6 +182,8 @@ export const {
   flowStopRequested,
   flowStepStatusChanged,
   flowStepTxHash,
+  flowStepChecked,
+  flowContextSet,
   flowAttemptRecorded,
   flowCurrentStepChanged,
   flowStepSkipped,

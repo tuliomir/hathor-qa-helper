@@ -73,6 +73,7 @@ function harness(script: Record<string, Answer[]>, waits: Record<string, NanoTxW
       waited.push(hash);
       return waits[hash]?.shift() ?? { state: 'confirmed', firstBlock: 'block' };
     },
+    testWallet: () => null,
     sleep: async () => {},
     now: () => 1000,
   };
@@ -207,6 +208,47 @@ describe('flow runner', () => {
     expect(h.calls).toEqual(['a']);
     expect(h.waited).toEqual(['tx-a', 'tx-a']);
     expect(h.run().status).toBe('passed');
+  });
+
+  test('a failed on-chain check pauses, and resume checks the same tx again without sending', async () => {
+    const h = harness({ a: [{ response: { ok: true, hash: 'tx-a' } }] });
+    const results = [[{ ok: false, text: 'Fee too high' }], [{ ok: true, text: 'Fee: 0.01 HTR' }]];
+    const checked: string[] = [];
+    const flow = h.flow([
+      h.step('a', {
+        checkOnChain: async (hash) => {
+          checked.push(hash);
+          return results.shift() ?? [];
+        },
+      }),
+    ]);
+    startFlow(flow, h.env);
+    await flowRunSettled();
+    expect(h.run().status).toBe('paused');
+    expect(h.run().reason).toContain('Fee too high');
+    expect(h.run().steps[0].checks).toEqual([{ ok: false, text: 'Fee too high' }]);
+
+    resumeFlow(flow, h.env);
+    await flowRunSettled();
+    expect(h.calls).toEqual(['a']);
+    expect(checked).toEqual(['tx-a', 'tx-a']);
+    expect(h.run().steps[0].checks).toEqual([{ ok: true, text: 'Fee: 0.01 HTR' }]);
+    expect(h.run().status).toBe('passed');
+  });
+
+  test('a failing prepare pauses before the first step', async () => {
+    const h = harness({ a: [{ response: { ok: true } }] });
+    const flow = {
+      ...h.flow([h.step('a')]),
+      prepare: async () => {
+        throw new Error('No fee token');
+      },
+    };
+    startFlow(flow, h.env);
+    await flowRunSettled();
+    expect(h.run().status).toBe('paused');
+    expect(h.run().reason).toBe('No fee token');
+    expect(h.calls).toEqual([]);
   });
 
   test('skip moves past a step the user did by hand', async () => {

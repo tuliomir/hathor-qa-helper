@@ -25,7 +25,7 @@ export interface NanoTxExpectation {
   headerId: string;
   /** Address 0 signs every bet step. */
   caller?: string;
-  /** Amount of each action, in base units. */
+  /** Amount of each action, in base units, in any order. */
   actionAmounts?: string[];
 }
 
@@ -65,7 +65,8 @@ export function nanoTxProblems(response: unknown, expected: NanoTxExpectation): 
   }
   if (expected.actionAmounts) {
     const amounts = (header.actions ?? []).map((a) => String(a.amount));
-    if (amounts.join(',') !== expected.actionAmounts.join(',')) {
+    const sorted = (list: string[]) => [...list].sort().join(',');
+    if (sorted(amounts) !== sorted(expected.actionAmounts)) {
       problems.push(`Expected action amounts [${expected.actionAmounts.join(', ')}], got [${amounts.join(', ')}]`);
     }
   }

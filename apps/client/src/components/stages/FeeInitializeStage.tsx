@@ -17,6 +17,9 @@ import { RpcFeeInitializeCard } from '../rpc/RpcFeeInitializeCard';
 import { BlueprintUnavailable } from '../common/BlueprintUnavailable';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { FEE_FLOW } from '../../flows';
+import { bool, num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 import { NETWORK_CONFIG } from '../../constants/network';
 import { blueprintIdFor } from '../../utils/blueprints';
 import { buildFeeInitializeRequest, nanoTxHash } from '../../utils/nanoRpcRequests';
@@ -38,6 +41,14 @@ export const FeeInitializeStage: React.FC = () => {
   }, [defaultBlueprintId]);
   const [amount, setAmount] = useState<string>('2');
   const [pushTx, setPushTx] = useState<boolean>(false);
+
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-fee-initialize', (v) => {
+    setBlueprintId(str(v, 'blueprintId') ?? blueprintId);
+    setAmount(str(v, 'amount') ?? amount);
+    setAddressIndex(num(v, 'addressIndex') ?? addressIndex);
+    setPushTx(bool(v, 'pushTx') ?? pushTx);
+  });
 
   const liveRequest = useMemo(
     () =>
@@ -74,6 +85,7 @@ export const FeeInitializeStage: React.FC = () => {
         title="Initialize fee"
         description="Create a fee nano contract funded with an HTR deposit."
         method="htr_sendNanoContractTx"
+        actions={<StartFlowButton flow={FEE_FLOW} label="Run the fee flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       {defaultBlueprintId === null ? (

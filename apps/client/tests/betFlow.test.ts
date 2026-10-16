@@ -101,6 +101,7 @@ function setup() {
     navigate: (stageId) => navigations.push(stageId),
     send: (call) => runRpc(handlers, call),
     waitForTx: async () => ({ state: 'confirmed', firstBlock: 'block' }),
+    testWallet: () => null,
     sleep: async () => {},
     now: () => 1000,
   };

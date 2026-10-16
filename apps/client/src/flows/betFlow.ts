@@ -11,11 +11,7 @@
 
 import { NATIVE_TOKEN_UID } from '@hathor/wallet-lib/lib/constants';
 import type { RootState } from '../store';
-import {
-  selectRpcNetwork,
-  selectRpcSessionIsMainnet,
-  selectWalletConnectFirstAddress,
-} from '../store/slices/walletConnectSlice';
+import { selectRpcNetwork } from '../store/slices/walletConnectSlice';
 import {
   setBetInitializeError,
   setBetInitializeRequest,
@@ -49,22 +45,14 @@ import { setBetNanoContractId } from '../store/slices/betNanoContractSlice';
 import { NETWORK_CONFIG } from '../constants/network';
 import { blueprintIdFor } from '../utils/blueprints';
 import { BET_DEFAULTS, defaultBetDeadline } from '../utils/betHelpers';
-import { walletAddress0 } from '../utils/addressOnlyWallet';
 import { nanoTxHash } from '../utils/nanoRpcRequests';
 import { oracleSignatureOf } from '../utils/rpcCoreRequests';
 import { fetchContractBalance } from '../utils/nanoTxConfirmation';
 import { nanoTxProblems, signOracleDataProblems } from './nanoExpectations';
 import type { FlowDefinition, FlowEnv, FlowStep } from './flowRunner';
+import { address0Of, rpcFlowPreflight } from './rpcFlowPreflight';
 
 export const BET_FLOW_ID = 'bet-nano-contract';
-
-/** The test wallet's address 0: oracle, bettor and withdrawer. */
-function address0Of(state: RootState): string {
-  const id = state.walletSelection.testWalletId;
-  const address = walletAddress0(id ? state.walletStore.wallets[id] : undefined);
-  if (!address) throw new Error('The test wallet has no address 0 yet');
-  return address;
-}
 
 function ncIdOf(state: RootState): string {
   const ncId = state.betNanoContract.ncId;
@@ -253,24 +241,9 @@ const withdrawStep: FlowStep = {
   },
 };
 
-/** Why the bet flow can't run now, or null. */
+/** Why the bet flow can't run now, or null. Address 0 is oracle, bettor and withdrawer. */
 export function betFlowPreflight(state: RootState): string | null {
-  if (state.rpc.isDryRun) return 'Turn dry run off: the flow sends real requests';
-  if (!state.walletConnect.session) return 'Connect the wallet over RPC first';
-  if (selectRpcSessionIsMainnet(state)) return 'The bet flow runs on testnets only';
-  const network = selectRpcNetwork(state);
-  if (!blueprintIdFor(network, 'bet')) return `No bet blueprint on ${NETWORK_CONFIG[network].label}`;
-  let address0: string;
-  try {
-    address0 = address0Of(state);
-  } catch (err) {
-    return (err as Error).message;
-  }
-  const connected = selectWalletConnectFirstAddress(state);
-  if (connected.toLowerCase() !== address0.toLowerCase()) {
-    return 'The connected wallet is not the test wallet (address 0 differs)';
-  }
-  return null;
+  return rpcFlowPreflight(state, 'bet', 'bet flow');
 }
 
 /** Passes when the contract holds nothing: the whole deposit came back. */

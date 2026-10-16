@@ -16,6 +16,9 @@ import {
 import { RpcFeeDepositCard } from '../rpc/RpcFeeDepositCard';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
+import { StartFlowButton } from '../flows/StartFlowButton';
+import { FEE_FLOW } from '../../flows';
+import { bool, num, str, useFlowPrefill } from '../../hooks/useFlowPrefill';
 import { useFeeTokens } from '../../hooks/useFeeTokens';
 import { buildFeeDepositRequest } from '../../utils/nanoRpcRequests';
 import { firstUnmetReason } from '../../utils/requirements';
@@ -70,6 +73,17 @@ export const FeeDepositStage: React.FC = () => {
     dispatch(setFeeDepositFormData({ ncId, amount, token: feeToken, addressIndex }));
   }, [ncId, amount, feeToken, addressIndex, dispatch]);
 
+  // Values an automatic flow run filled in.
+  useFlowPrefill('rpc-fee-deposit', (v) => {
+    setNcId(str(v, 'ncId') ?? ncId);
+    setFeeToken(str(v, 'feeToken') ?? feeToken);
+    setAmount(str(v, 'amount') ?? amount);
+    setAddressIndex(num(v, 'addressIndex') ?? addressIndex);
+    setContractPaysFees(bool(v, 'contractPaysFees') ?? contractPaysFees);
+    setHtrWithdrawAmount(str(v, 'htrWithdrawAmount') ?? htrWithdrawAmount);
+    setPushTx(bool(v, 'pushTx') ?? pushTx);
+  });
+
   const liveRequest = useMemo(
     () =>
       buildFeeDepositRequest({
@@ -105,6 +119,7 @@ export const FeeDepositStage: React.FC = () => {
         title="Deposit fee token"
         description="Deposit a fee-based token into the fee nano contract."
         method="htr_sendNanoContractTx"
+        actions={<StartFlowButton flow={FEE_FLOW} label="Run the fee flow" />}
       />
       <PreconditionStrip requirements={requirements} />
       <RpcFeeDepositCard

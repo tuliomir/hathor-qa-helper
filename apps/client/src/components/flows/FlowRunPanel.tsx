@@ -57,6 +57,7 @@ function StepIcon({ step }: { step: FlowStepState }) {
     case 'filling':
     case 'awaiting-wallet':
     case 'confirming':
+    case 'checking':
       return <span className="loading loading-spinner loading-sm shrink-0 text-primary" aria-hidden="true" />;
     default:
       return <MdRadioButtonUnchecked className="size-5 shrink-0 text-ink-muted" aria-hidden="true" />;
@@ -67,6 +68,7 @@ const STEP_LINE: Partial<Record<FlowStepState['status'], string>> = {
   filling: 'Filling the form…',
   'awaiting-wallet': 'Approve or reject on your phone',
   confirming: 'Waiting for a block to confirm the tx…',
+  checking: 'Checking the tx on chain…',
   succeeded: 'Success!',
   skipped: 'Skipped',
 };
@@ -140,6 +142,20 @@ function StepRow({ step, active, network }: { step: FlowStepState; active: boole
         </p>
       )}
       {step.txHash && <TxIdDisplay hash={step.txHash} network={network} className="pl-7" />}
+      {step.checks.length > 0 && (
+        <ul className="m-0 flex list-none flex-col gap-0.5 pl-7 text-caption">
+          {step.checks.map((c) => (
+            <li key={c.text} className={`flex items-start gap-1 ${c.ok ? 'text-ink-muted' : 'text-error'}`}>
+              {c.ok ? (
+                <MdCheckCircle className="mt-0.5 shrink-0 text-success" aria-label="Passed" />
+              ) : (
+                <MdHighlightOff className="mt-0.5 shrink-0" aria-label="Failed" />
+              )}
+              {c.text}
+            </li>
+          ))}
+        </ul>
+      )}
       {open && (
         <ol className="m-0 flex list-none flex-col gap-2 pl-7">
           {step.attempts.map((a) => (
@@ -189,6 +205,7 @@ export function FlowRunPanel() {
   }
 
   const finished = run.status === 'passed' || run.status === 'failed';
+  const summary = flow?.summary?.(run.context) ?? null;
 
   return (
     <section
@@ -212,6 +229,7 @@ export function FlowRunPanel() {
       </header>
 
       <div className="relative flex min-h-0 flex-col gap-3 overflow-y-auto px-2 py-3">
+        {summary && <p className="m-0 mx-2 text-body text-ink-muted">{summary}</p>}
         {run.reason && run.status === 'paused' && (
           <p role="alert" className="m-0 mx-2 rounded-field bg-tint-warning px-3 py-2 text-body text-warning-ink">
             {run.reason}

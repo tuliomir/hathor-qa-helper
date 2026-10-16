@@ -8,7 +8,9 @@
  * an approval is checked against the step's expectations and, for a tx,
  * waited on until a block confirms it and the contract executed it. Anything
  * else pauses the run for the user, who can resume, skip the step or take
- * over by hand: results land in the same slices the stages read.
+ * over by hand: results land in the same slices the stages read. A step can
+ * also check its confirmed tx on chain (e.g. who paid the fee); a failed
+ * check pauses too, and resuming checks the same tx again.
  *
  * The run state lives in `flowRunSlice`; this module only holds the promise
  * of the run in progress.
@@ -24,9 +26,11 @@ import {
   flowPrefillSet,
   flowStarted,
   flowStatusChanged,
+  flowStepChecked,
   flowStepStatusChanged,
   flowStepTxHash,
   type FlowAttempt,
+  type FlowCheck,
   type FlowStepStatus,
   type FlowVerdict,
 } from '../store/slices/flowRunSlice';
@@ -66,6 +70,8 @@ export interface FlowStep {
   txHash?: (response: unknown) => string | null;
   /** Extra state the stage keeps after an approval (e.g. the new contract ID). */
   onApproved?: (dispatch: Dispatch, response: unknown, state: RootState) => void;
+  /** Checks on the confirmed tx; throws when it can't check. */
+  checkOnChain?: (txHash: string, env: FlowEnv) => Promise<FlowCheck[]>;
 }
 
 export interface FlowDefinition {
@@ -74,6 +80,14 @@ export interface FlowDefinition {
   steps: FlowStep[];
   /** Why the flow can't start now, or null. */
   preflight: (state: RootState) => string | null;
+  /**
+   * Picks what the steps need beyond the store (e.g. a token by its balance)
+   * and keeps it in `flowRun.context`. Runs on start and on every resume, so
+   * it must keep what an earlier run picked; throws to pause the run.
+   */
+  prepare?: (env: FlowEnv) => Promise<void>;
+  /** A line about what `prepare` picked, for the run panel. */
+  summary?: (context: Record<string, string>) => string | null;
   /** The end-of-run check (e.g. all funds came back). */
   verify: (env: FlowEnv) => Promise<FlowVerdict>;
 }
@@ -85,8 +99,18 @@ export interface FlowEnv {
   /** Sends through the session's RPC handlers; throws like `runRpc`. */
   send: (call: StepPlan['call']) => Promise<RpcRunResult>;
   waitForTx: (hash: string, shouldAbort: () => boolean) => Promise<NanoTxWait>;
+  /** The test wallet when it runs from its seed; null for address-only or stopped wallets. */
+  testWallet: () => FlowWallet | null;
   sleep: (ms: number) => Promise<void>;
   now: () => number;
+}
+
+/** What a flow can read from the running test wallet. */
+export interface FlowWallet {
+  tokenUids: () => Promise<string[]>;
+  /** Unlocked balance in base units. */
+  balance: (tokenUid: string) => Promise<bigint>;
+  isFeeToken: (tokenUid: string) => Promise<boolean>;
 }
 
 /** Pauses that let the user follow along. */
@@ -154,6 +178,14 @@ async function runSteps(flow: FlowDefinition, env: FlowEnv, startedAt: number | 
   const pause = (reason: string) => env.dispatch(flowStatusChanged({ status: 'paused', reason }));
 
   try {
+    if (flow.prepare) {
+      try {
+        await flow.prepare(env);
+      } catch (err) {
+        if (!gone()) pause(extractErrorMessage(err));
+        return;
+      }
+    }
     for (;;) {
       if (gone()) return;
       const index = run().currentStep;
@@ -192,9 +224,11 @@ async function runStep(
     return 'stop';
   };
 
-  // Resuming a step whose tx was already approved: only the wait is left.
+  // Resuming a step whose tx was already approved: only the wait (and the
+  // checks) are left. Sending it again would move the funds twice.
   const resumed = env.getState().flowRun.steps[index];
-  if (resumed?.status === 'confirming' && resumed.txHash) {
+  const checkFailed = resumed?.checks.some((c) => !c.ok);
+  if (resumed?.txHash && (resumed.status === 'confirming' || checkFailed)) {
     return confirm(resumed.txHash);
   }
 
@@ -285,6 +319,19 @@ async function runStep(
       // Stays `confirming`: resuming waits for the same tx instead of sending another.
       pause(`Tx ${hash.slice(0, 8)}… is not confirmed yet. Resume to keep waiting.`);
       return 'stop';
+    }
+    if (step.checkOnChain) {
+      setStatus('checking');
+      let checks: FlowCheck[];
+      try {
+        checks = await step.checkOnChain(hash, env);
+      } catch (err) {
+        checks = [{ ok: false, text: `Could not run the checks: ${extractErrorMessage(err)}` }];
+      }
+      if (gone()) return 'stop';
+      dispatch(flowStepChecked({ index, checks }));
+      const failed = checks.find((c) => !c.ok);
+      if (failed) return fail(`${failed.text}. Resume to check again.`);
     }
     return succeed();
   }
