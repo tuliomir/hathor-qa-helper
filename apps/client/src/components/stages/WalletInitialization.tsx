@@ -51,7 +51,8 @@ import { Panel } from '../ui/Panel';
 import { Callout } from '../ui/Callout';
 import { Field } from '../ui/Field';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
-import { StatusChip } from '../ui/StatusChip';
+import { WalletStatusCell } from '../common/WalletStatusCell';
+import { walletRuntimeView } from '../../utils/walletRuntimeView';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { addressOnlyError, isAddressOnly } from '../../utils/addressOnlyWallet';
 import SeedPhraseModal from '../common/SeedPhraseModal';
@@ -554,21 +555,7 @@ export default function WalletInitialization() {
     {
       key: 'status',
       header: 'Status',
-      render: (wallet) => (
-        <span className="flex flex-col items-start gap-0.5">
-          {wallet.status === 'address-only' ? (
-            <StatusChip status={wallet.status} label="Address only" tone="info" />
-          ) : (
-            <StatusChip status={wallet.status} />
-          )}
-          {wallet.status === 'ready' && (
-            <span className="whitespace-nowrap font-mono text-data-sm">
-              {formatBalance(wallet.balance ?? 0n)} <span className="font-sans text-ink-muted">HTR</span>
-            </span>
-          )}
-          {wallet.error && <span className="text-caption text-error">{wallet.error}</span>}
-        </span>
-      ),
+      render: (wallet) => <WalletStatusCell wallet={wallet} />,
     },
     {
       key: 'address',
@@ -594,92 +581,95 @@ export default function WalletInitialization() {
       header: <span className="sr-only">Actions</span>,
       type: 'actions',
       hideLabelWhenStacked: true,
-      render: (wallet) => (
-        <span className="inline-flex flex-wrap items-center justify-end gap-1">
-          {editingId === wallet.metadata.id ? (
-            <>
-              <button type="button" onClick={handleSaveEdit} className="btn btn-primary btn-xs">
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingId(null);
-                  setEditingName('');
-                }}
-                className="btn btn-ghost btn-xs"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              {wallet.status === 'address-only' ? null : wallet.status === 'idle' || wallet.status === 'error' ? (
-                <button
-                  type="button"
-                  onClick={() => handleStartWallet(wallet.metadata.id)}
-                  title="Start"
-                  aria-label={`Start ${wallet.metadata.friendlyName}`}
-                  className="btn btn-primary btn-xs btn-square"
-                >
-                  <MdPlayArrow aria-hidden="true" />
+      render: (wallet) => {
+        const { action } = walletRuntimeView(wallet);
+        return (
+          <span className="inline-flex flex-wrap items-center justify-end gap-1">
+            {editingId === wallet.metadata.id ? (
+              <>
+                <button type="button" onClick={handleSaveEdit} className="btn btn-primary btn-xs">
+                  Save
                 </button>
-              ) : wallet.status === 'ready' ? (
                 <button
                   type="button"
-                  onClick={() => handleStopWallet(wallet.metadata.id)}
-                  title="Stop"
-                  aria-label={`Stop ${wallet.metadata.friendlyName}`}
-                  className="btn btn-secondary btn-xs btn-square"
-                >
-                  <MdStop aria-hidden="true" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (
-                      await confirm({
-                        title: `Force stop ${wallet.metadata.friendlyName}?`,
-                        body: `It appears stuck in the ${wallet.status} state.`,
-                        confirmLabel: 'Force stop',
-                        tone: 'danger',
-                      })
-                    ) {
-                      handleStopWallet(wallet.metadata.id);
-                    }
+                  onClick={() => {
+                    setEditingId(null);
+                    setEditingName('');
                   }}
-                  title="Force stop (wallet appears stuck)"
-                  aria-label={`Force stop ${wallet.metadata.friendlyName}`}
-                  className="btn btn-outline btn-warning btn-xs btn-square"
+                  className="btn btn-ghost btn-xs"
                 >
-                  <MdHourglassEmpty aria-hidden="true" />
+                  Cancel
                 </button>
-              )}
+              </>
+            ) : (
+              <>
+                {action === 'none' ? null : action === 'start' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleStartWallet(wallet.metadata.id)}
+                    title="Start"
+                    aria-label={`Start ${wallet.metadata.friendlyName}`}
+                    className="btn btn-primary btn-xs btn-square"
+                  >
+                    <MdPlayArrow aria-hidden="true" />
+                  </button>
+                ) : action === 'stop' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleStopWallet(wallet.metadata.id)}
+                    title="Stop"
+                    aria-label={`Stop ${wallet.metadata.friendlyName}`}
+                    className="btn btn-secondary btn-xs btn-square"
+                  >
+                    <MdStop aria-hidden="true" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (
+                        await confirm({
+                          title: `Force stop ${wallet.metadata.friendlyName}?`,
+                          body: `It appears stuck in the ${wallet.status} state.`,
+                          confirmLabel: 'Force stop',
+                          tone: 'danger',
+                        })
+                      ) {
+                        handleStopWallet(wallet.metadata.id);
+                      }
+                    }}
+                    title="Force stop (wallet appears stuck)"
+                    aria-label={`Force stop ${wallet.metadata.friendlyName}`}
+                    className="btn btn-outline btn-warning btn-xs btn-square"
+                  >
+                    <MdHourglassEmpty aria-hidden="true" />
+                  </button>
+                )}
 
-              <button
-                type="button"
-                onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)}
-                title="Rename"
-                aria-label={`Rename ${wallet.metadata.friendlyName}`}
-                className="btn btn-ghost btn-xs btn-square"
-              >
-                <MdEdit aria-hidden="true" />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(wallet.metadata.id, wallet.metadata.friendlyName)}
+                  title="Rename"
+                  aria-label={`Rename ${wallet.metadata.friendlyName}`}
+                  className="btn btn-ghost btn-xs btn-square"
+                >
+                  <MdEdit aria-hidden="true" />
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleRemoveWallet(wallet.metadata.id)}
-                title="Remove"
-                aria-label={`Remove ${wallet.metadata.friendlyName}`}
-                className="btn btn-ghost btn-xs btn-square text-error"
-              >
-                <MdDelete aria-hidden="true" />
-              </button>
-            </>
-          )}
-        </span>
-      ),
+                <button
+                  type="button"
+                  onClick={() => handleRemoveWallet(wallet.metadata.id)}
+                  title="Remove"
+                  aria-label={`Remove ${wallet.metadata.friendlyName}`}
+                  className="btn btn-ghost btn-xs btn-square text-error"
+                >
+                  <MdDelete aria-hidden="true" />
+                </button>
+              </>
+            )}
+          </span>
+        );
+      },
     },
   ];
 

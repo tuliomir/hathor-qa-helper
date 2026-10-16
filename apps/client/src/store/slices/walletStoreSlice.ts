@@ -728,8 +728,12 @@ const walletStoreSlice = createSlice({
         if (firstAddress) {
           walletInfo.firstAddress = firstAddress;
         }
-        if (error !== undefined) {
-          walletInfo.error = error;
+        // An error belongs to the failed start only; any other status clears it.
+        walletInfo.error = status === 'error' ? error : undefined;
+        // The capability event can fire before a start fails; a wallet with
+        // no instance has no capability.
+        if (status === 'idle' || status === 'error') {
+          walletInfo.shieldedCapability = undefined;
         }
       }
     },

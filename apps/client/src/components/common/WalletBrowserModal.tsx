@@ -30,7 +30,7 @@ import NetworkSwapButton from './NetworkSwapButton';
 import NetworkChip from './NetworkChip';
 import { Identifier } from './Identifier';
 import { Callout } from '../ui/Callout';
-import { StatusChip } from '../ui/StatusChip';
+import { WalletStatusCell } from './WalletStatusCell';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
 import { isAddressOnly } from '../../utils/addressOnlyWallet';
 
@@ -305,15 +305,7 @@ export default function WalletBrowserModal({
       header: 'Status / balance',
       render: (wallet) => (
         <span className="flex flex-col items-start gap-1">
-          {wallet.status === 'address-only' ? (
-            <StatusChip status={wallet.status} label="Address only" tone="info" />
-          ) : (
-            <StatusChip status={wallet.status} />
-          )}
-          {wallet.status === 'ready' && (
-            <span className="font-mono text-data tabular-nums">{formatBalance(wallet.balance ?? 0n)} HTR</span>
-          )}
-          {wallet.error && <span className="text-caption text-error">{wallet.error}</span>}
+          <WalletStatusCell wallet={wallet} />
           {wallet.status !== 'ready' && renderScanInfo(wallet.metadata.id)}
         </span>
       ),
