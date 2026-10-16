@@ -11,7 +11,7 @@ import type { SendRequest, SendResponse } from '@qa-helper/shared/serverApi';
 import { StageHeader } from '../common/StageHeader';
 import { PreconditionStrip } from '../common/PreconditionStrip';
 import { MethodCard, type MethodData } from '../common/MethodCard';
-import { OutputEditor, type OutputTokenOption } from '../common/OutputEditor';
+import { OutputEditor } from '../common/OutputEditor';
 import { Panel } from '../ui/Panel';
 import { Field } from '../ui/Field';
 import { SegmentedControl } from '../ui/SegmentedControl';
@@ -20,8 +20,8 @@ import { ShieldedWalletSelect } from '../shielded/ShieldedWalletSelect';
 import { useSigner } from '../../hooks/useSigner';
 import { deriveWalletAddress } from '../../hooks/useWalletAddress';
 import { useRequireHelperServer, useRequireSigner } from '../../hooks/useRequirements';
-import { useAppSelector } from '../../store/hooks';
-import { walletInstancesMap } from '../../store/slices/walletStoreSlice';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { refreshWalletTokens, walletInstancesMap } from '../../store/slices/walletStoreSlice';
 import { qaServerClient, toErrorInfo } from '../../services/qaServerClient';
 import { newOutputRow, type OutputRow } from '../../utils/outputRows';
 import {
@@ -33,8 +33,8 @@ import {
   type ShieldedPresetId,
 } from '../../utils/shieldedSend';
 import { firstUnmetReason } from '../../utils/requirements';
+import { walletTokenOptions } from '../../utils/walletTokenOptions';
 
-const HTR: OutputTokenOption = { uid: '00', symbol: 'HTR', name: 'Hathor' };
 const EMPTY_METHOD: MethodData = {
   request: null,
   response: null,
@@ -45,28 +45,34 @@ const EMPTY_METHOD: MethodData = {
 };
 const DEFAULT_PRESET_VALUE = '100';
 
-/** Unlocked HTR of the browser wallet; the signer runs the same seed, so it sees the same funds. */
-function useUnlockedHtr(walletId: string | null): string | undefined {
+/** Unlocked balance per token of the browser wallet; the signer runs the same seed, so it sees the same funds. */
+function useUnlockedBalances(walletId: string | null, tokenUids: string[]): Record<string, string> | undefined {
   const status = useAppSelector((s) => (walletId ? s.walletStore.wallets[walletId]?.status : undefined));
   const lastEvent = useAppSelector((s) => {
     const events = walletId ? s.walletStore.wallets[walletId]?.events : undefined;
     return events && events.length > 0 ? events[events.length - 1].id : null;
   });
-  const [balance, setBalance] = useState<string | undefined>(undefined);
+  const uidsKey = tokenUids.join(',');
+  const [balances, setBalances] = useState<Record<string, string> | undefined>(undefined);
   useEffect(() => {
-    setBalance(undefined);
+    setBalances(undefined);
     const instance = walletId && status === 'ready' ? walletInstancesMap.get(walletId) : null;
     if (!instance) return;
     let cancelled = false;
-    instance
-      .getBalance('00')
-      .then((b) => !cancelled && setBalance((b[0]?.balance.unlocked ?? 0n).toString()))
+    const uids = uidsKey.split(',');
+    Promise.all(
+      uids.map(async (uid) => {
+        const b = await instance.getBalance(uid);
+        return [uid, (b[0]?.balance.unlocked ?? 0n).toString()] as const;
+      })
+    )
+      .then((entries) => !cancelled && setBalances(Object.fromEntries(entries)))
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [walletId, status, lastEvent]);
-  return balance;
+  }, [walletId, status, lastEvent, uidsKey]);
+  return balances;
 }
 
 export function ShieldedSendStage() {
@@ -81,7 +87,18 @@ export function ShieldedSendStage() {
   const wallet = walletId ? wallets[walletId] : undefined;
   const signer = useSigner(walletId);
   const session = signer?.state === 'ready' ? signer.session : null;
-  const balance = useUnlockedHtr(walletId);
+  const dispatch = useAppDispatch();
+  const registry = useAppSelector((s) => s.tokens.tokens);
+  // tokenUids is read once at start; tokens received since then appear only after a refresh.
+  const walletReady = wallet?.status === 'ready';
+  useEffect(() => {
+    if (walletId && walletReady) void dispatch(refreshWalletTokens(walletId));
+  }, [dispatch, walletId, walletReady]);
+  const tokens = useMemo(() => walletTokenOptions(wallet?.tokenUids, registry), [wallet?.tokenUids, registry]);
+  const balances = useUnlockedBalances(
+    walletId,
+    tokens.map((t) => t.uid)
+  );
 
   const server = useRequireHelperServer();
   const signerReq = useRequireSigner(wallet?.metadata.friendlyName ?? null, signer);
@@ -204,14 +221,14 @@ export function ShieldedSendStage() {
         <OutputEditor
           value={rows}
           onChange={setRows}
-          tokens={[HTR]}
+          tokens={tokens}
           walletAddressPicker
           network={wallet?.metadata.network}
           allowData={false}
           allowTimelock={false}
           privacy
-          balances={balance !== undefined ? { '00': balance } : undefined}
-          getMax={balance !== undefined ? async () => balance : undefined}
+          balances={balances}
+          getMax={balances ? async (token) => balances[token] ?? '0' : undefined}
         />
         <Field
           label="Change"
