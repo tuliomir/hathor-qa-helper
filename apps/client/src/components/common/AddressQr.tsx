@@ -52,14 +52,15 @@ export function AddressQr(props: AddressQrProps) {
   const uri = toAddressUri(address);
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    <div className="flex w-full flex-col items-start gap-3">
       {toggle && <AddressKindToggle value={kind} onChange={setKind} />}
       {showAddress && <Identifier value={address} kind="address" head={address.length} tail={0} />}
-      <div className="flex flex-col items-start gap-3 sm:flex-row">
+      {/* The URI sits beside the QR code when there's room for it, below it otherwise (e.g. in a modal). */}
+      <div className="flex w-full flex-wrap items-start gap-3">
         <div className="flex-none rounded-field border border-base-300 bg-base-100 p-3" data-testid="address-qr">
           <QRCode value={uri} size={size} />
         </div>
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className="flex min-w-0 grow basis-48 flex-col gap-1">
           <span className="text-caption text-ink-muted">
             {active === 'shielded' ? 'Shielded address URI' : 'Address URI'}
           </span>
