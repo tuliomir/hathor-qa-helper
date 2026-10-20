@@ -36,3 +36,6 @@ qa-helper-standalone
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Playwright MCP console logs
+.playwright-mcp/
