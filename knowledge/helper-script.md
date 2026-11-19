@@ -19,7 +19,7 @@ From the root, `bun run helper:up`, `helper:down` and `helper:status` do the sam
   - This mirrors how Ruffus runs Ollama. Its laptop agent is sandboxed (`ProtectHome=read-only`), and a child process would die on every agent restart.
 - **Status comes from probing:** `GET :5173/` for the client and `GET :5180/health` for the server. Bookkeeping isn't trusted. `ours` says whether the running process is this script's unit.
 - **No duplicates.** `up` is idempotent. If a port is held by something this script didn't start, `up` refuses with exit code 1 rather than starting a second copy.
-- **Tailnet URL.** It's published with `tailscale serve` on HTTPS port **8443** (`https://<machine>.<tailnet>.ts.net:8443/`). It stays off 443 so `down` can never remove another service's serve config. The script also passes that origin to:
+- **Tailnet URL.** It's published with `tailscale serve` on HTTPS port **8443** (`https://<machine>.<tailnet>.ts.net:8443/`). It stays off 443 so `down` can never remove another service's serve config. The port counts as QA Helper's only when it proxies to the client (`127.0.0.1:5173`). On `up`, an entry for another target is replaced when nothing answers there (a leftover from a closed app), and refused with an error when something does. `down` removes only QA Helper's own entry. The script also passes that origin to:
   - the QA server, as `QA_SERVER_EXTRA_ORIGINS`
   - Vite, as `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS`
 

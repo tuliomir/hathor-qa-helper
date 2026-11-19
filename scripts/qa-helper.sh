@@ -73,13 +73,24 @@ ts_dns_name() {
     "$(bun_bin)" -e 'const s = JSON.parse(await Bun.stdin.text()); console.log((s.Self?.DNSName ?? "").replace(/\.$/, ""))' 2>/dev/null || true
 }
 
+# Any HTTP reply at all, error codes included.
+http_answers() { [ "$(curl -s -o /dev/null -m 2 -w '%{http_code}' "$1" 2>/dev/null)" != 000 ]; }
 http_ok() { curl -s -o /dev/null -m 2 -w '%{http_code}' "$1" 2>/dev/null | grep -q '^[23]'; }
 unit_active() { systemctl --user --quiet is-active "$1"; }
 
-ts_serving() {
-  command -v tailscale >/dev/null || return 1
-  tailscale serve status --json 2>/dev/null | grep -q "\"[^\"]*:$TS_PORT\""
+# What `tailscale serve` proxies $TS_PORT to, e.g. `http://127.0.0.1:5173`;
+# empty when the port isn't served.
+ts_target() {
+  command -v tailscale >/dev/null || return 0
+  tailscale serve status --json 2>/dev/null |
+    TS_PORT="$TS_PORT" "$(bun_bin)" -e '
+      const s = JSON.parse((await Bun.stdin.text()) || "{}");
+      const web = Object.entries(s.Web ?? {}).find(([host]) => host.endsWith(`:${process.env.TS_PORT}`));
+      console.log(web?.[1]?.Handlers?.["/"]?.Proxy ?? "");' 2>/dev/null || true
 }
+
+# Ours only when it points at our client; another app may hold the port.
+ts_serving() { [ "$(ts_target)" = "http://127.0.0.1:$CLIENT_PORT" ]; }
 
 status_json() {
   local dns client server tailnet url tsurl=""
@@ -173,6 +184,17 @@ up() {
   wait_for "Client" "http://127.0.0.1:$CLIENT_PORT/" $CLIENT_UNIT
 
   if [ -n "$dns" ] && ! ts_serving; then
+    local target
+    target="$(ts_target)"
+    if [ -n "$target" ]; then
+      # A live app keeps its URL; a leftover entry pointing at nothing is replaced.
+      if http_answers "$target"; then
+        echo "tailnet port $TS_PORT already serves $target; stop it or set QA_HELPER_TS_PORT" >&2
+        exit 1
+      fi
+      log "Replacing the stale tailnet entry for $target…"
+      tailscale serve --https="$TS_PORT" off >/dev/null
+    fi
     log "Publishing on the tailnet…"
     tailscale serve --bg --https="$TS_PORT" "http://127.0.0.1:$CLIENT_PORT" >/dev/null
   fi
