@@ -38,10 +38,12 @@ export const ExplorerLink: React.FC<ExplorerLinkProps> = ({
   const activeNetwork = useAppSelector(selectActiveNetwork);
   const networkKey = resolveNetworkKey(network) ?? activeNetwork;
   const { kind, label } = NETWORK_CONFIG[networkKey];
+  const href = buildExplorerUrl(networkKey, hash, specificPage);
+  if (!href) return null;
 
   return (
     <a
-      href={buildExplorerUrl(networkKey, hash, specificPage)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className={`inline-flex items-center gap-1 h-[22px] px-2 rounded-full border bg-base-100 text-caption font-semibold no-underline hover:bg-base-200 transition-colors ${NETWORK_BORDER_CLASS[kind]} ${NETWORK_TEXT_CLASS[kind]} ${className}`}

@@ -90,6 +90,18 @@ export default defineConfig({
         ws: true,
         rewrite: (path) => path.replace(/^\/hathor-node\/shielded/, ''),
       },
+      '/hathor-node/next': {
+        target: 'https://legacy-node.devnet-alpha.samba.hathor.network',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/hathor-node\/next/, ''),
+      },
+      // Hathor Next's tx-mining only allows localhost:3000 (CORS).
+      '/tx-mining/next': {
+        target: 'https://tx-mining.devnet-alpha.samba.hathor.network',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tx-mining\/next/, ''),
+      },
       // Local QA server (apps/server). It strips the /qa-server prefix itself.
       '/qa-server': {
         target: QA_SERVER_TARGET,

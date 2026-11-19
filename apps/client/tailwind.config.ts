@@ -26,6 +26,7 @@ export default {
         net: {
           testnet: 'var(--qa-net-testnet)',
           shielded: 'var(--qa-net-shielded)',
+          next: 'var(--qa-net-next)',
           mainnet: 'var(--qa-net-mainnet)',
         },
         tint: {

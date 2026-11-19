@@ -133,7 +133,7 @@ export function BlueprintIdField({
       hint={hint}
       required
       trailing={
-        value ? (
+        value && resolveExplorerUrl(network) ? (
           <a
             href={`${resolveExplorerUrl(network)}blueprint/detail/${value}`}
             target="_blank"

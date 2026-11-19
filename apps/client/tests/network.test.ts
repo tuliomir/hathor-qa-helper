@@ -17,8 +17,20 @@ import { SCANNING_POLICY } from '@hathor/wallet-lib/lib/types';
 
 describe('network constants', () => {
   describe('NETWORK_CONFIG', () => {
-    test('has exactly the three shared networks', () => {
-      expect(Object.keys(NETWORK_CONFIG).sort()).toEqual(['MAINNET', 'SHIELDED_TESTNET', 'TESTNET']);
+    test('has exactly the four shared networks', () => {
+      expect(Object.keys(NETWORK_CONFIG).sort()).toEqual(['MAINNET', 'NEXT_TESTNET', 'SHIELDED_TESTNET', 'TESTNET']);
+    });
+
+    test('Next testnet is the Hathor Next devnet privatenet, with no explorer', () => {
+      const next = NETWORK_CONFIG.NEXT_TESTNET;
+      expect(next.label).toBe('Next testnet');
+      expect(next.name).toBe('privatenet');
+      expect(next.kind).toBe('next-test');
+      expect(next.fullNodeUrl).toBe('https://legacy-node.devnet-alpha.samba.hathor.network/v1a/');
+      expect(next.txMiningUrl).toBe('https://tx-mining.devnet-alpha.samba.hathor.network/');
+      expect(next.explorerUrl).toBeUndefined();
+      expect(next.supportsShielded).toBe(false);
+      expect(next.blueprints).toBeUndefined();
     });
 
     test('maps each network to its wallet-lib name', () => {
@@ -66,6 +78,12 @@ describe('network constants', () => {
       expect(config.TESTNET.fullNodeUrl).toBe('http://localhost:5176/hathor-node/testnet/v1a/');
       expect(config.MAINNET.fullNodeUrl).toBe('http://localhost:5176/hathor-node/mainnet/v1a/');
       expect(config.SHIELDED_TESTNET.fullNodeUrl).toBe('http://localhost:5176/hathor-node/shielded/v1a/');
+      expect(config.NEXT_TESTNET.fullNodeUrl).toBe('http://localhost:5176/hathor-node/next/v1a/');
+    });
+
+    test('Next testnet mines through the dev proxy, since its service only allows localhost:3000', () => {
+      const config = buildNetworkConfig({ dev: true, origin: 'http://localhost:5176' });
+      expect(config.NEXT_TESTNET.txMiningUrl).toBe('http://localhost:5176/tx-mining/next/');
     });
 
     test('dev proxy does not touch tx-mining or explorer URLs', () => {
@@ -79,7 +97,8 @@ describe('network constants', () => {
     test('cycles through every network and wraps around', () => {
       expect(nextNetwork('TESTNET')).toBe('MAINNET');
       expect(nextNetwork('MAINNET')).toBe('SHIELDED_TESTNET');
-      expect(nextNetwork('SHIELDED_TESTNET')).toBe('TESTNET');
+      expect(nextNetwork('SHIELDED_TESTNET')).toBe('NEXT_TESTNET');
+      expect(nextNetwork('NEXT_TESTNET')).toBe('TESTNET');
     });
 
     test('visits all NETWORK_KEYS once per cycle', () => {

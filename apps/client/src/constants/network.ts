@@ -19,11 +19,12 @@ export type { NetworkKey };
  * Visual category of a network. UI decisions (rail, chips, mainnet warnings)
  * key off the kind, so a new network only has to declare which one it is.
  */
-export type NetworkKind = 'test' | 'shielded-test' | 'main';
+export type NetworkKind = 'test' | 'shielded-test' | 'next-test' | 'main';
 
 const NETWORK_KINDS: Record<NetworkKey, NetworkKind> = {
   TESTNET: 'test',
   SHIELDED_TESTNET: 'shielded-test',
+  NEXT_TESTNET: 'next-test',
   MAINNET: 'main',
 };
 
@@ -31,6 +32,7 @@ const NETWORK_KINDS: Record<NetworkKey, NetworkKind> = {
 const SHORT_LABELS: Record<NetworkKey, string> = {
   TESTNET: 'Test',
   SHIELDED_TESTNET: 'Shielded',
+  NEXT_TESTNET: 'Next',
   MAINNET: 'Main',
 };
 
@@ -50,6 +52,15 @@ const DEV_PROXY_SLUG: Record<NetworkKey, string> = {
   TESTNET: 'testnet',
   MAINNET: 'mainnet',
   SHIELDED_TESTNET: 'shielded',
+  NEXT_TESTNET: 'next',
+};
+
+/**
+ * Networks whose tx-mining service doesn't allow this origin (CORS), so mining
+ * goes through a Vite dev proxy too. Path segment under /tx-mining/.
+ */
+const DEV_TX_MINING_PROXY_SLUG: Partial<Record<NetworkKey, string>> = {
+  NEXT_TESTNET: 'next',
 };
 
 /**
@@ -66,6 +77,10 @@ export function buildNetworkConfig({ dev, origin }: { dev: boolean; origin?: str
       kind: NETWORK_KINDS[key],
       shortLabel: SHORT_LABELS[key],
       fullNodeUrl: dev ? `${origin}/hathor-node/${DEV_PROXY_SLUG[key]}/v1a/` : network.fullNodeUrl,
+      txMiningUrl:
+        dev && DEV_TX_MINING_PROXY_SLUG[key]
+          ? `${origin}/tx-mining/${DEV_TX_MINING_PROXY_SLUG[key]}/`
+          : network.txMiningUrl,
     };
   }
   return config;
@@ -81,7 +96,7 @@ export const DEFAULT_NETWORK: NetworkKey = 'TESTNET';
 
 /** Order of network pickers: test networks first, mainnet last. */
 export const NETWORK_MENU_ORDER: NetworkKey[] = (() => {
-  const preferred: NetworkKey[] = ['TESTNET', 'SHIELDED_TESTNET', 'MAINNET'];
+  const preferred: NetworkKey[] = ['TESTNET', 'SHIELDED_TESTNET', 'NEXT_TESTNET', 'MAINNET'];
   // Keep every network listed even if the registry grows.
   return [...preferred, ...NETWORK_KEYS.filter((k) => !preferred.includes(k))];
 })();

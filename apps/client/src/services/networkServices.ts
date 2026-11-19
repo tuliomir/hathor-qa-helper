@@ -12,11 +12,13 @@
  */
 
 import { config } from '@hathor/wallet-lib';
-import { NETWORKS, isNetworkKey, type NetworkKey } from '@qa-helper/shared/networks';
+import { isNetworkKey, type NetworkKey } from '@qa-helper/shared/networks';
+import { NETWORK_CONFIG } from '../constants/network';
 
 export function applyNetworkServices(network: NetworkKey): void {
   if (!isNetworkKey(network)) {
     throw new Error(`Unknown network: ${String(network)}`);
   }
-  config.setTxMiningUrl(NETWORKS[network].txMiningUrl);
+  // The client config, not the raw registry: in dev some services go through the Vite proxy.
+  config.setTxMiningUrl(NETWORK_CONFIG[network].txMiningUrl);
 }

@@ -48,12 +48,16 @@ export function useSendTransaction() {
         status: 'confirmed',
       })
     );
-    const txUrl = `${NETWORK_CONFIG[network].explorerUrl}transaction/${hash}`;
-    // Show toast with a link and longer duration (20s)
-    success('Transaction sent successfully! View on explorer:', {
-      duration: 20000,
-      link: { url: txUrl, label: 'link' },
-    });
+    const explorerUrl = NETWORK_CONFIG[network].explorerUrl;
+    // Show toast with a link and longer duration (20s); no link without an explorer.
+    if (explorerUrl) {
+      success('Transaction sent successfully! View on explorer:', {
+        duration: 20000,
+        link: { url: `${explorerUrl}transaction/${hash}`, label: 'link' },
+      });
+    } else {
+      success(`Transaction sent successfully: ${hash}`, { duration: 20000 });
+    }
   };
 
   /**

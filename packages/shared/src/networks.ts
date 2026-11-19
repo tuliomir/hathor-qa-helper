@@ -4,10 +4,10 @@
  * Holds raw service URLs only; the client layers its dev-proxy URLs on top.
  */
 
-export type NetworkKey = 'TESTNET' | 'MAINNET' | 'SHIELDED_TESTNET';
+export type NetworkKey = 'TESTNET' | 'MAINNET' | 'SHIELDED_TESTNET' | 'NEXT_TESTNET';
 
 /** Network name wallet-lib's `Network` class accepts. */
-export type LibNetworkName = 'testnet' | 'mainnet';
+export type LibNetworkName = 'testnet' | 'mainnet' | 'privatenet';
 
 export interface BlueprintIds {
   bet: string;
@@ -22,8 +22,9 @@ export interface NetworkDefinition {
   libName: LibNetworkName;
   fullNodeUrl: string;
   txMiningUrl: string;
-  explorerUrl: string;
-  explorerServiceUrl: string;
+  /** Absent on networks without an explorer; links to it are hidden there. */
+  explorerUrl?: string;
+  explorerServiceUrl?: string;
   walletServiceUrl?: string;
   walletServiceWsUrl?: string;
   supportsShielded: boolean;
@@ -68,6 +69,20 @@ export const NETWORKS: Record<NetworkKey, NetworkDefinition> = {
     walletServiceUrl: 'https://wallet-service.shielded-outputs.testnet.hathor.network/',
     walletServiceWsUrl: 'wss://ws.wallet-service.shielded-outputs.testnet.hathor.network/',
     supportsShielded: true,
+  },
+  /**
+   * Hathor Next Devnet: the hathor-core privatenet beside hathor-next's
+   * devnet-alpha (hathor-wallet-mobile's PRE_SETTINGS_NEXT_DEVNET). Its node
+   * reports `privatenet`, whose addresses share testnet's version bytes. No
+   * wallet-service and no explorer.
+   */
+  NEXT_TESTNET: {
+    key: 'NEXT_TESTNET',
+    label: 'Next testnet',
+    libName: 'privatenet',
+    fullNodeUrl: 'https://legacy-node.devnet-alpha.samba.hathor.network/v1a/',
+    txMiningUrl: 'https://tx-mining.devnet-alpha.samba.hathor.network/',
+    supportsShielded: false,
   },
 };
 

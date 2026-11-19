@@ -51,7 +51,7 @@ src/
 ├── hooks/                 # useSnapMethod, useStage, useWalletStore, useToast, etc.
 ├── services/              # RPC/snap handlers, wallet connect client, cleanup logic
 ├── types/                 # TypeScript types (stage.ts is the stage/group registry)
-├── constants/             # Client network config, built on @qa-helper/shared NETWORKS (TESTNET, MAINNET, SHIELDED_TESTNET)
+├── constants/             # Client network config, built on @qa-helper/shared NETWORKS (TESTNET, MAINNET, SHIELDED_TESTNET, NEXT_TESTNET)
 └── utils/                 # Utilities
 ```
 

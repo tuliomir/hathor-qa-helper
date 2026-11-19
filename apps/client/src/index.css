@@ -73,6 +73,7 @@
   --qa-warning-ink: #8a5300;
   --qa-net-testnet: #0b7a73;
   --qa-net-shielded: #6a3bd1;
+  --qa-net-next: #b45309;
   --qa-net-mainnet: #c0262d;
   --qa-tint-success: #e6f4ec;
   --qa-tint-warning: #fdf3dc;
@@ -124,6 +125,7 @@
   --qa-warning-ink: #f2b33d;
   --qa-net-testnet: #3cc4b9;
   --qa-net-shielded: #b39bff;
+  --qa-net-next: #f5a524;
   --qa-net-mainnet: #ff6b6b;
   --qa-tint-success: #12301f;
   --qa-tint-warning: #33270d;

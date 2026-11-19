@@ -68,7 +68,7 @@ describe('health', () => {
     expect(await res.json()).toEqual({
       ok: true,
       version: '9.9.9',
-      networks: ['TESTNET', 'MAINNET', 'SHIELDED_TESTNET'],
+      networks: ['TESTNET', 'MAINNET', 'SHIELDED_TESTNET', 'NEXT_TESTNET'],
       sessions: 0,
     });
   });

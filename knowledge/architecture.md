@@ -21,7 +21,7 @@ src/
 ├── hooks/                # useSnapMethod, useWalletStore, useStage, useToast, useSendTransaction
 ├── services/             # snapHandlers, rpcHandlers, walletConnectClient, tokenFlowTracker, cleanupTemplateBuilder
 ├── types/                # TypeScript types (stage.ts is the stage/group registry)
-├── constants/            # Network configs (TESTNET, MAINNET, SHIELDED_TESTNET)
+├── constants/            # Network configs (TESTNET, MAINNET, SHIELDED_TESTNET, NEXT_TESTNET)
 ├── utils/                # Utilities (balanceUtils, transactionStatus, waitForTxSettlement)
 └── polyfills/            # Buffer polyfill for browser
 ```

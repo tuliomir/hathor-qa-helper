@@ -16,6 +16,7 @@ import { documentTitle } from '../../utils/documentTitle';
 const HEIGHT_CLASS = {
   test: 'h-[3px]',
   'shielded-test': 'h-1',
+  'next-test': 'h-1',
   main: 'h-[22px] flex items-center justify-center text-caption font-bold text-error-content',
 } as const;
 
