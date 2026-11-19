@@ -26,7 +26,8 @@
     "upload": "bun --filter @qa-helper/client upload",
     "helper:up": "scripts/qa-helper.sh up",
     "helper:down": "scripts/qa-helper.sh down",
-    "helper:status": "scripts/qa-helper.sh status"
+    "helper:status": "scripts/qa-helper.sh status",
+    "blueprints:publish": "bun apps/server/src/blueprints/cli.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

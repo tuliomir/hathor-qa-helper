@@ -20,6 +20,7 @@ Only use `bun` — `npx` and `yarn` are forbidden. Run these from the repo root;
 | `bun run dev:server` | QA server on 127.0.0.1:5180 |
 | `bun run dev:all` | Client and server together, in the foreground |
 | `bun run helper:up` / `helper:down` / `helper:status` | Client + server as background systemd user units, published on the tailnet (`scripts/qa-helper.sh`, see `knowledge/helper-script.md`) |
+| `bun run blueprints:publish -- --network <KEY> --dry-run` | Plan publishing the bet/fee/authority blueprints to a network; publish with `--confirm <KEY>` (see `knowledge/blueprint-publisher.md`) |
 | `bun run build` | Client production build (`tsc -b && vite build`) |
 | `bun run typecheck` | TypeScript check in every workspace |
 | `bun lint` / `bun lint:fix` | ESLint (client) |
@@ -91,6 +92,7 @@ In-depth guides live in `knowledge/`:
 |---|---|
 | `monorepo.md` | Workspace layout, shared package rules, deployment (incl. planned server hosting) |
 | `helper-script.md` | `scripts/qa-helper.sh` up/down/status: systemd user units, tailnet URL, `--json` contract for Ruffus |
+| `blueprint-publisher.md` | Publishing the QA blueprints to a new network: dry run, `--confirm`, duplicate detection, cost, restricted networks |
 | `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
 | `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
 | `shielded-semantics.md` | How shielded outputs work in wallet-lib and the mobile wallet: address types, the three modes, fees, the two-output rule, change, mobile QR formats |
