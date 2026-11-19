@@ -52,11 +52,18 @@ bun_bin() {
 # Vite must run on Node: without `node` on PATH, `bun x` shims it with Bun,
 # whose proxy never answers the fullnode websocket upgrade, so wallets
 # sync forever.
+#
+# Callers like Ruffus run this with a bare PATH that lacks nvm's shims, so
+# fall back to nvm's default version, then to its newest installed one.
 node_bin() {
-  command -v node || {
-    echo "node not found on PATH; the client dev server needs Node" >&2
-    exit 1
-  }
+  command -v node && return
+  local versions="${NVM_DIR:-$HOME/.nvm}/versions/node" alias="" dir=""
+  [ -r "${NVM_DIR:-$HOME/.nvm}/alias/default" ] && alias="$(cat "${NVM_DIR:-$HOME/.nvm}/alias/default")"
+  [ -n "$alias" ] && dir="$(ls -d "$versions/v${alias#v}"* 2>/dev/null | sort -V | tail -1)"
+  [ -x "$dir/bin/node" ] || dir="$(ls -d "$versions"/v* 2>/dev/null | sort -V | tail -1)"
+  [ -x "$dir/bin/node" ] && { echo "$dir/bin/node"; return; }
+  echo "node not found on PATH or under nvm; the client dev server needs Node" >&2
+  exit 1
 }
 
 # `<machine>.<tailnet>.ts.net`, or empty when Tailscale is unavailable.
