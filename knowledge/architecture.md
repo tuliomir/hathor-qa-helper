@@ -64,6 +64,8 @@ idle → connecting → syncing → ready
 - Handlers in `services/rpcHandlers.ts` — each returns `{ request, response }`
 - Each method has its own Redux slice and RPC card component
 - State in `rpcSlice` (connection, session) + individual method slices
+- **Network follows the wallet.** The session proposal offers `hathor:testnet`, `hathor:privatenet` (the Hathor Next devnet) and `hathor:mainnet`, all optional: WalletConnect makes a wallet approve every *required* chain, and a wallet approves only its own. `constants/hathorChains.ts` maps the approved chain to the request `chainId`, the `params.network` the wallet's RPC handler checks (`DifferentNetworkError` otherwise) and the QA Helper network (blueprints, fullnode, explorer). Mainnet wins if approved at all; every RPC screen then shows a red "real funds" banner (`RpcMainnetWarning`).
+- Request preview builders (`utils/rpcCoreRequests.ts`, `nanoRpcRequests.ts`, `rpcSendTransaction.ts`) stamp `testnet`; `RpcMethodCard` rewrites the preview's `network` to the session's, so the preview, the sent-vs-preview check and "Edit raw" match what `rpcHandlers` sends.
 
 ### MetaMask Snap (stages prefixed with `Snap*`)
 - Connection via EIP-6963 provider discovery + `wallet_invokeSnap`

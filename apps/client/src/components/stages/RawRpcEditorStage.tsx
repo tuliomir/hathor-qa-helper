@@ -10,7 +10,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../store';
 import { setCurrentRequest, addHistoryEntry, clearHistory, removeHistoryEntry } from '../../store/slices/rawRpcSlice';
 import { clearRawRpcEditorNavigation } from '../../store/slices/navigationSlice';
-import { HATHOR_TESTNET_CHAIN } from '../../constants/walletConnect';
+import { selectRpcChain } from '../../store/slices/walletConnectSlice';
 import { MdChevronRight, MdExpandMore } from 'react-icons/md';
 import { useToast } from '../../hooks/useToast';
 import { useRequireRpcSession } from '../../hooks/useRequirements';
@@ -51,6 +51,7 @@ export const RawRpcEditorStage: React.FC = () => {
 
   // Redux state
   const walletConnect = useSelector((state: RootState) => state.walletConnect);
+  const chainId = useSelector(selectRpcChain);
   const rpcSession = useRequireRpcSession();
   const currentRequest = useSelector((state: RootState) => state.rawRpc.currentRequest);
   const history = useSelector((state: RootState) => state.rawRpc.history);
@@ -140,7 +141,7 @@ export const RawRpcEditorStage: React.FC = () => {
 
       const result = await walletConnect.client.request({
         topic: walletConnect.session.topic,
-        chainId: HATHOR_TESTNET_CHAIN,
+        chainId,
         request: requestParams,
       });
 

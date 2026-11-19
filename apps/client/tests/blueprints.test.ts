@@ -50,7 +50,15 @@ describe('rpcNetworkKey', () => {
     expect(rpcNetworkKey(['hathor:testnet', 'hathor:mainnet'])).toBe('MAINNET');
   });
 
+  test('a privatenet session targets the Hathor Next devnet', () => {
+    expect(rpcNetworkKey(['hathor:privatenet'])).toBe('NEXT_TESTNET');
+  });
+
+  test('mainnet wins over any other approved chain', () => {
+    expect(rpcNetworkKey(['hathor:privatenet', 'hathor:mainnet'])).toBe('MAINNET');
+  });
+
   test('ignores chains QA Helper does not know', () => {
-    expect(rpcNetworkKey(['hathor:privatenet'])).toBe('TESTNET');
+    expect(rpcNetworkKey(['hathor:somenet'])).toBe('TESTNET');
   });
 });

@@ -16,7 +16,7 @@ interface SessionStruct {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
-import { HATHOR_TESTNET_CHAIN } from '../constants/walletConnect';
+import { rpcChain, rpcChainNetworkName } from '../constants/hathorChains';
 import { getOracleBuffer } from '../utils/betHelpers';
 import type { NetworkKey } from '../constants/network';
 import { timelockToUnix } from '../utils/timelockUtils';
@@ -47,13 +47,14 @@ export interface RpcHandlerDependencies {
   onDeepLinkAvailable?: (url: string, title: string) => void; // Callback when a deep link needs to be shown
 }
 
-const DEFAULT_NETWORK = 'testnet';
-
 /**
  * Create RPC handler functions
  */
 export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
   const { client, session, balanceTokens = ['00'], dryRun = false, onDeepLinkAvailable } = deps;
+  // The chain the wallet approved, and the network name its RPC handler expects in `params.network`.
+  const chainId = rpcChain(session?.namespaces?.hathor?.chains ?? []);
+  const network = rpcChainNetworkName(chainId);
 
   return {
     /**
@@ -69,7 +70,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       const requestParams = {
         method: 'htr_getWalletInformation',
         params: {
-          network: DEFAULT_NETWORK,
+          network,
         },
       };
 
@@ -83,7 +84,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -114,7 +115,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       const requestParams = {
         method: 'htr_getConnectedNetwork',
         params: {
-          network: DEFAULT_NETWORK,
+          network,
         },
       };
 
@@ -128,7 +129,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -157,7 +158,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
 
       // Build request params based on type
       const params: { network: string; type: string; index?: number } = {
-        network: DEFAULT_NETWORK,
+        network,
         type,
       };
 
@@ -190,7 +191,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -224,7 +225,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       const requestParams = {
         method: 'htr_getBalance',
         params: {
-          network: DEFAULT_NETWORK,
+          network,
           tokens: filteredTokens,
         },
       };
@@ -245,7 +246,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -285,7 +286,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         amountSmallerThan?: number;
         amountBiggerThan?: number;
       } = {
-        network: DEFAULT_NETWORK,
+        network,
         token: tokenUid,
         maxUtxos,
       };
@@ -319,7 +320,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -350,7 +351,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       const requestParams = {
         method: 'htr_signWithAddress',
         params: {
-          network: DEFAULT_NETWORK,
+          network,
           message,
           addressIndex,
         },
@@ -372,7 +373,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           result = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -414,7 +415,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         allow_external_melt_authority_address?: boolean;
         data?: string[];
       } = {
-        network: DEFAULT_NETWORK,
+        network,
         name: params.name,
         symbol: params.symbol,
         amount: params.amount,
@@ -469,7 +470,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -509,7 +510,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       const requestParams = {
         method: 'htr_sendTransaction',
         params: {
-          network: DEFAULT_NETWORK,
+          network,
           push_tx: pushTx,
           outputs: outputs.map((output) => {
             if (output.type === 'data') {
@@ -544,7 +545,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -594,7 +595,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
         push_tx: boolean;
         nc_id: string | null;
       } = {
-        network: DEFAULT_NETWORK,
+        network,
         method: 'initialize',
         blueprint_id: blueprintId,
         actions: [],
@@ -624,7 +625,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -659,7 +660,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       }
 
       const invokeParams = {
-        network: DEFAULT_NETWORK,
+        network,
         method: 'bet',
         nc_id: ncId,
         actions: [
@@ -695,7 +696,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -726,7 +727,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       const requestParams = {
         method: 'htr_signOracleData',
         params: {
-          network: DEFAULT_NETWORK,
+          network,
           nc_id: ncId,
           data: data,
           oracle: oracle,
@@ -749,7 +750,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -787,7 +788,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
 
       // Send the set_result transaction with the oracle signature
       const invokeParams = {
-        network: DEFAULT_NETWORK,
+        network,
         method: 'set_result',
         nc_id: ncId,
         actions: [],
@@ -816,7 +817,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -844,7 +845,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       }
 
       const invokeParams = {
-        network: DEFAULT_NETWORK,
+        network,
         method: 'initialize',
         blueprint_id: blueprintId,
         actions: [
@@ -878,7 +879,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
 
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -930,7 +931,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       });
 
       const invokeParams: Record<string, unknown> = {
-        network: DEFAULT_NETWORK,
+        network,
         method: 'noop',
         nc_id: ncId,
         actions,
@@ -960,7 +961,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
 
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -1012,7 +1013,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       });
 
       const invokeParams: Record<string, unknown> = {
-        network: DEFAULT_NETWORK,
+        network,
         method: 'noop',
         nc_id: ncId,
         actions,
@@ -1042,7 +1043,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
 
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }
@@ -1068,7 +1069,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
       }
 
       const invokeParams = {
-        network: DEFAULT_NETWORK,
+        network,
         method: 'withdraw',
         nc_id: ncId,
         actions: [
@@ -1105,7 +1106,7 @@ export const createRpcHandlers = (deps: RpcHandlerDependencies) => {
           // Make the RPC request via WalletConnect
           response = await client.request({
             topic: session.topic,
-            chainId: HATHOR_TESTNET_CHAIN,
+            chainId,
             request: requestParams,
           });
         }

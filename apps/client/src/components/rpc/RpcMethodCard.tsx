@@ -1,30 +1,38 @@
 /**
  * RPC adapter for MethodCard.
  *
- * - Mainnet arming follows the WalletConnect session's chain, not the
- *   active network: every RPC request targets the chain the session
- *   approved (`hathor:testnet` today), whatever wallet QA Helper has
- *   selected.
+ * - Everything follows the WalletConnect session's chain, not the active
+ *   network: requests go to the chain the wallet approved (`hathor:testnet`,
+ *   `hathor:privatenet` on the Hathor Next devnet, or `hathor:mainnet`),
+ *   whatever wallet QA Helper has selected. Mainnet arms before sending.
+ * - The request builders behind the live preview stamp `network: 'testnet'`;
+ *   the preview shown, compared with what was sent and opened in the raw
+ *   editor carries the session's network instead, as rpcHandlers sends it.
  * - Adds "Edit raw", which opens the live request in the Raw RPC editor.
  */
 
+import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { MethodCard, type MethodCardProps } from '../common/MethodCard';
 import SendToRawEditorButton from '../common/SendToRawEditorButton';
-import { selectRpcSessionIsMainnet } from '../../store/slices/walletConnectSlice';
+import { withSessionNetwork } from '../../utils/rpcCoreRequests';
+import { selectRpcNetworkName, selectRpcSessionIsMainnet } from '../../store/slices/walletConnectSlice';
 
 export type RpcMethodCardProps = Omit<MethodCardProps, 'isMainnet'>;
 
-export function RpcMethodCard({ secondaryActions, ...props }: RpcMethodCardProps) {
+export function RpcMethodCard({ secondaryActions, liveRequest, ...props }: RpcMethodCardProps) {
   const isMainnet = useSelector(selectRpcSessionIsMainnet);
+  const network = useSelector(selectRpcNetworkName);
+  const request = useMemo(() => withSessionNetwork(liveRequest, network), [liveRequest, network]);
   return (
     <MethodCard
       {...props}
+      liveRequest={request}
       isMainnet={isMainnet}
       secondaryActions={
         <>
           {secondaryActions}
-          {props.liveRequest && <SendToRawEditorButton request={props.liveRequest} />}
+          {request && <SendToRawEditorButton request={request} />}
         </>
       }
     />

@@ -33,9 +33,19 @@ const HASH = 'ab'.repeat(32);
 describe('response checks', () => {
   test('wallet information', () => {
     const ok = { type: 12, response: { network: 'testnet', address0: ADDR } };
-    expect(walletInformationProblems(ok, { address0: ADDR })).toEqual([]);
-    expect(walletInformationProblems(ok, { address0: OTHER })).toHaveLength(1);
-    expect(walletInformationProblems({ type: 4, response: {} }, { address0: ADDR })).toHaveLength(3);
+    expect(walletInformationProblems(ok, { address0: ADDR, network: 'testnet' })).toEqual([]);
+    expect(walletInformationProblems(ok, { address0: OTHER, network: 'testnet' })).toHaveLength(1);
+    expect(walletInformationProblems({ type: 4, response: {} }, { address0: ADDR, network: 'testnet' })).toHaveLength(
+      3
+    );
+  });
+
+  test('wallet information on the Hathor Next devnet names privatenet', () => {
+    const next = { type: 12, response: { network: 'privatenet', address0: ADDR } };
+    expect(walletInformationProblems(next, { address0: ADDR, network: 'privatenet' })).toEqual([]);
+    expect(walletInformationProblems(next, { address0: ADDR, network: 'testnet' })).toEqual([
+      'Expected network "testnet", got "privatenet"',
+    ]);
   });
 
   test('address answers carry a path that ends in their index', () => {
@@ -70,11 +80,10 @@ describe('response checks', () => {
     const script = new P2PKH(new Address(ADDR, { network })).createScript();
     const tx = new Transaction([new Input(HASH, 0)], [new Output(1n, script)]);
     const hex = tx.toHex();
-    expect(unpushedTxProblems({ type: 8, response: hex }, { address: ADDR, value: 1n })).toEqual([]);
-    expect(unpushedTxProblems({ type: 8, response: hex }, { address: OTHER, value: 1n })).toHaveLength(1);
-    expect(unpushedTxProblems({ type: 8, response: { hash: HASH } }, { address: ADDR, value: 1n })[0]).toContain(
-      'pushed the tx anyway'
-    );
+    const expected = { address: ADDR, value: 1n, network: 'testnet' };
+    expect(unpushedTxProblems({ type: 8, response: hex }, expected)).toEqual([]);
+    expect(unpushedTxProblems({ type: 8, response: hex }, { ...expected, address: OTHER })).toHaveLength(1);
+    expect(unpushedTxProblems({ type: 8, response: { hash: HASH } }, expected)[0]).toContain('pushed the tx anyway');
   });
 
   test('a created token has its amount and only the authorities asked for', () => {

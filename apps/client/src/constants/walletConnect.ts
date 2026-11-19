@@ -2,7 +2,7 @@
  * WalletConnect configuration constants
  */
 
-export { HATHOR_MAINNET_CHAIN, HATHOR_TESTNET_CHAIN } from './hathorChains';
+export { HATHOR_MAINNET_CHAIN, HATHOR_PRIVATENET_CHAIN, HATHOR_TESTNET_CHAIN, RPC_CHAINS } from './hathorChains';
 
 // WalletConnect Project ID - use environment variable or default
 export const DEFAULT_PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '8264fff563181da658ce64ee80e80458';

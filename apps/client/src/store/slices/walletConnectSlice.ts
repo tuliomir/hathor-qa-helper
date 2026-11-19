@@ -28,6 +28,7 @@ import { clearDeepLink, setDeepLink, showDeepLinkModal } from './deepLinkSlice';
 import { addToast } from './toastSlice';
 import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
 import { rpcNetworkKey } from '../../utils/blueprints';
+import { RPC_CHAINS, rpcChain, rpcChainNetworkName } from '../../constants/hathorChains';
 import type { RootState } from '../index';
 
 interface WalletConnectState {
@@ -147,17 +148,17 @@ export const connectWalletConnect = createAsyncThunk<
     return session;
   }
 
-  const requiredNamespaces = {
-    hathor: {
-      methods: ['htr_signWithAddress', 'htr_sendNanoContractTx', 'htr_signOracleData'],
-      chains: ['hathor:testnet'],
-      events: [],
-    },
-  };
+  // Everything is optional: WalletConnect makes the wallet approve every
+  // required chain, and a wallet approves only its own network's chain. We
+  // offer each chain QA Helper can act on and follow the one approved.
+  const requiredNamespaces = {};
 
   const optionalNamespaces = {
     hathor: {
       methods: [
+        'htr_signWithAddress',
+        'htr_sendNanoContractTx',
+        'htr_signOracleData',
         'htr_getBalance',
         'htr_getWalletInformation',
         'htr_createToken',
@@ -168,7 +169,7 @@ export const connectWalletConnect = createAsyncThunk<
         'htr_getUtxos',
         'htr_sendTransaction',
       ],
-      chains: ['hathor:testnet'],
+      chains: [...RPC_CHAINS],
       events: [],
     },
   };
@@ -183,9 +184,7 @@ export const connectWalletConnect = createAsyncThunk<
 
   if (uri) {
     const modal = await getWeb3Modal();
-    const standaloneChains = Object.values(requiredNamespaces)
-      .map((namespace) => namespace.chains)
-      .flat() as string[];
+    const standaloneChains: string[] = [...RPC_CHAINS];
 
     modal.openModal({
       uri,
@@ -353,12 +352,19 @@ export const selectIsWalletConnectConnected = (state: { walletConnect: WalletCon
   !!state.walletConnect.session;
 
 /**
- * Whether the RPC session can act on mainnet: the wallet approved the
- * mainnet chain. QA Helper requests `hathor:testnet` only, so RPC actions
- * never arm for mainnet whatever the active network is.
+ * Whether the RPC session acts on mainnet: the wallet approved the mainnet
+ * chain. Real funds; RPC stages show a red warning and arm before sending.
  */
 export const selectRpcSessionIsMainnet = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
   selectRpcNetwork(state) === 'MAINNET';
+
+/** The WalletConnect chain every RPC request is sent to. */
+export const selectRpcChain = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
+  rpcChain(state.walletConnect.chains);
+
+/** The network name requests carry in `params.network` (`testnet`, `privatenet`, `mainnet`). */
+export const selectRpcNetworkName = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
+  rpcChainNetworkName(rpcChain(state.walletConnect.chains));
 
 /** The network RPC requests act on (see rpcNetworkKey); decides QA blueprints and explorer links. */
 export const selectRpcNetwork = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>

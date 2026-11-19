@@ -28,9 +28,6 @@ export const RPC_TYPE = {
   getWalletInformation: 12,
 } as const;
 
-/** The network every request of the flow names. */
-export const RPC_FLOW_NETWORK = 'testnet';
-
 const TX_HASH = /^[0-9a-f]{64}$/i;
 const AUTHORITY_BIT = 0x80;
 const MINT_MASK = 1n;
@@ -49,23 +46,27 @@ function bodyOf<T>(response: unknown, type: number, problems: string[]): T | nul
   return wrapped.response as T;
 }
 
-export function walletInformationProblems(response: unknown, expected: { address0: string }): string[] {
+/** `expected.network` is the session's network name (`testnet`, `privatenet`). */
+export function walletInformationProblems(
+  response: unknown,
+  expected: { address0: string; network: string }
+): string[] {
   const problems: string[] = [];
   const body = bodyOf<{ network?: unknown; address0?: unknown }>(response, RPC_TYPE.getWalletInformation, problems);
   if (!body) return problems;
-  if (body.network !== RPC_FLOW_NETWORK)
-    problems.push(`Expected network "${RPC_FLOW_NETWORK}", got "${String(body.network)}"`);
+  if (body.network !== expected.network)
+    problems.push(`Expected network "${expected.network}", got "${String(body.network)}"`);
   if (body.address0 !== expected.address0) {
     problems.push(`Expected address 0 ${expected.address0}, got ${String(body.address0)}`);
   }
   return problems;
 }
 
-export function connectedNetworkProblems(response: unknown): string[] {
+export function connectedNetworkProblems(response: unknown, expected: { network: string }): string[] {
   const problems: string[] = [];
   const body = bodyOf<{ network?: unknown }>(response, RPC_TYPE.getConnectedNetwork, problems);
-  if (body && body.network !== RPC_FLOW_NETWORK) {
-    problems.push(`Expected network "${RPC_FLOW_NETWORK}", got "${String(body.network)}"`);
+  if (body && body.network !== expected.network) {
+    problems.push(`Expected network "${expected.network}", got "${String(body.network)}"`);
   }
   return problems;
 }
@@ -219,12 +220,15 @@ export function signProblems(response: unknown, expected: { message: string; add
 }
 
 /** The answer to `push_tx: false`: the tx hex, which must pay `value` to `address`. */
-export function unpushedTxProblems(response: unknown, expected: { address: string; value: bigint }): string[] {
+export function unpushedTxProblems(
+  response: unknown,
+  expected: { address: string; value: bigint; network: string }
+): string[] {
   const problems: string[] = [];
   const body = bodyOf<unknown>(response, RPC_TYPE.sendTransaction, problems);
   if (body === null) return problems;
   if (typeof body !== 'string') return [...problems, 'Expected the tx hex: the wallet pushed the tx anyway'];
-  const network = new Network(RPC_FLOW_NETWORK);
+  const network = new Network(expected.network);
   let pays = false;
   try {
     const tx = helpers.createTxFromHex(body, network);

@@ -17,7 +17,7 @@ import helpers from '@hathor/wallet-lib/lib/utils/helpers';
 import Network from '@hathor/wallet-lib/lib/models/network';
 import { Buffer } from 'buffer';
 import type { RootState } from '../store';
-import { selectRpcNetwork } from '../store/slices/walletConnectSlice';
+import { selectRpcNetwork, selectRpcNetworkName } from '../store/slices/walletConnectSlice';
 import { flowContextSet, type FlowCheck } from '../store/slices/flowRunSlice';
 import {
   setWalletInformationError,
@@ -59,7 +59,6 @@ import {
   htrUtxoFilterCases,
   paysCheck,
   pushedTxHash,
-  RPC_FLOW_NETWORK,
   sentTxProblems,
   signProblems,
   tokenOnChainChecks,
@@ -176,7 +175,8 @@ const walletInformationStep: RpcFlowStep = {
   expects: 'no-prompt',
   actions: ACTIONS.walletInformation,
   plan: () => ({ prefill: {}, call: (h) => h.getRpcWalletInformation() }),
-  validate: (response, state) => walletInformationProblems(response, { address0: address0Of(state) }),
+  validate: (response, state) =>
+    walletInformationProblems(response, { address0: address0Of(state), network: selectRpcNetworkName(state) }),
 };
 
 const connectedNetworkStep: RpcFlowStep = {
@@ -186,7 +186,7 @@ const connectedNetworkStep: RpcFlowStep = {
   expects: 'no-prompt',
   actions: ACTIONS.connectedNetwork,
   plan: () => ({ prefill: {}, call: (h) => h.getRpcConnectedNetwork() }),
-  validate: (response) => connectedNetworkProblems(response),
+  validate: (response, state) => connectedNetworkProblems(response, { network: selectRpcNetworkName(state) }),
 };
 
 /** An `htr_getAddress` request; `check` compares the answer with the test wallet. */
@@ -331,7 +331,11 @@ const paymentOutputs = (ctx: RpcFlowContext): SendTransactionOutput[] => [
 const unpushedSendStep = sendStep('send-unpushed', 'Send tx, not pushed', false, paymentOutputs, {
   review: 'Did the phone show the 0.01 HTR output and its address?',
   validate: (response, state) =>
-    unpushedTxProblems(response, { address: contextOf(state).indexAddress, value: SEND_VALUE }),
+    unpushedTxProblems(response, {
+      address: contextOf(state).indexAddress,
+      value: SEND_VALUE,
+      network: selectRpcNetworkName(state),
+    }),
 });
 
 const pushedSendStep = sendStep('send-pushed', 'Send tx, pushed', true, paymentOutputs, {
@@ -636,9 +640,9 @@ export function rpcRequestsFlowPreflight(state: RootState): string | null {
 const randomIndex = (random: () => number) => Math.floor(random() * ADDRESS_INDEXES);
 
 /** A valid address no wallet owns: 20 random bytes as a P2PKH hash. */
-function externalAddress(random: () => number): string {
+function externalAddress(random: () => number, networkName: string): string {
   const hash = Buffer.from(Array.from({ length: 20 }, () => Math.floor(random() * 256)));
-  return helpers.encodeAddress(hash, new Network(RPC_FLOW_NETWORK)).base58;
+  return helpers.encodeAddress(hash, new Network(networkName)).base58;
 }
 
 /**
@@ -662,7 +666,7 @@ export async function prepareRpcFlow(env: FlowEnv, random: () => number = Math.r
       indexAddress: await wallet.addressAt(index),
       signIndex: String(signIndex),
       signAddress: await wallet.addressAt(signIndex),
-      externalAddress: externalAddress(random),
+      externalAddress: externalAddress(random, selectRpcNetworkName(env.getState())),
       suffix,
       depositToken: '',
       scattered: '',

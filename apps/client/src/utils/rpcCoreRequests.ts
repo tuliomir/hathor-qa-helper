@@ -98,3 +98,17 @@ export function buildCreateTokenRequest(p: CreateTokenParams) {
   if (data.length > 0) params.data = data;
   return { method: 'htr_createToken', params };
 }
+
+/**
+ * A preview request with `params.network` set to the RPC session's, when it
+ * names one. The builders here stamp `testnet`; rpcHandlers sends the
+ * session's network (`privatenet` on the Hathor Next devnet).
+ */
+export function withSessionNetwork<T extends { method: string; params?: unknown } | null>(
+  request: T,
+  network: string
+): T {
+  const params = request?.params;
+  if (!request || !params || typeof params !== 'object' || !('network' in params)) return request;
+  return { ...request, params: { ...(params as Record<string, unknown>), network } };
+}

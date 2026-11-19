@@ -6,7 +6,7 @@
 import type { ComponentType } from 'react';
 import { useStage } from '../hooks/useStage';
 import { useScrollPreservation } from '../hooks/useScrollPreservation';
-import type { StageId } from '../types/stage';
+import { STAGE_GROUPS, getGroupForStage, type StageId } from '../types/stage';
 import WalletInitialization from './stages/WalletInitialization';
 import AddressValidation from './stages/AddressValidation';
 import CustomTokens from './stages/CustomTokens';
@@ -58,6 +58,7 @@ import { ShieldedReceiveStage } from './stages/ShieldedReceiveStage';
 import { ShieldedSendStage } from './stages/ShieldedSendStage';
 import { ShieldedBalancesStage } from './stages/ShieldedBalancesStage';
 import { ShieldedInspectorStage } from './stages/ShieldedInspectorStage';
+import { RpcMainnetWarning } from './rpc/RpcMainnetWarning';
 import { FundFromMinerStage } from './stages/FundFromMinerStage';
 
 const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
@@ -123,11 +124,13 @@ export default function StageContent() {
   const scrollContainerRef = useScrollPreservation();
 
   const StageComponent = STAGE_COMPONENT_MAP[currentStage];
+  const isRpcStage = STAGE_GROUPS.find((g) => g.id === getGroupForStage(currentStage))?.family === 'rpc';
 
   return (
     // Independently scrollable content area with scroll position preservation
     <div ref={scrollContainerRef} data-testid="stage-content" className="flex-1 min-h-0 overflow-y-auto bg-base-100">
       <div className="max-w-stage p-4 md:p-6">
+        {isRpcStage && <RpcMainnetWarning />}
         {StageComponent ? <StageComponent /> : <p className="text-ink-muted">Stage not found</p>}
       </div>
     </div>
