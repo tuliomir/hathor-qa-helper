@@ -31,8 +31,8 @@ describe('stageRoutes', () => {
 
     test('all stages are covered', () => {
       const totalStages = STAGE_GROUPS.reduce((sum, group) => sum + group.stages.length, 0);
-      expect(totalStages).toBe(51);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(51);
+      expect(totalStages).toBe(52);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(52);
     });
   });
 
@@ -40,6 +40,7 @@ describe('stageRoutes', () => {
     test('builds correct URL for main-qa stages', () => {
       expect(getStageUrl('wallet-initialization')).toBe('/tools/main/wallet-initialization');
       expect(getStageUrl('address-validation')).toBe('/tools/main/address-validation');
+      expect(getStageUrl('fund-from-miner')).toBe('/tools/main/fund-from-miner');
       expect(getStageUrl('custom-tokens')).toBe('/tools/main/custom-tokens');
     });
 

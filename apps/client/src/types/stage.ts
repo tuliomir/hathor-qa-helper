@@ -7,6 +7,7 @@
  */
 export type StageId =
   | 'wallet-initialization'
+  | 'fund-from-miner'
   | 'address-validation'
   | 'custom-tokens'
   | 'transaction-history'
@@ -130,6 +131,11 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'wallet-initialization',
         title: 'Wallet initialization',
         description: 'Initialize wallets by entering seed words',
+      },
+      {
+        id: 'fund-from-miner',
+        title: 'Fund from miner',
+        description: "Send the miner's oldest spendable rewards to an address without loading its wallet",
       },
       {
         id: 'address-validation',

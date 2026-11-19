@@ -29,6 +29,7 @@ export const GROUP_SLUG_MAP: Record<GroupId, string> = {
 export const STAGE_SLUG_MAP: Record<StageId, string> = {
   // Main QA
   'wallet-initialization': 'wallet-initialization',
+  'fund-from-miner': 'fund-from-miner',
   'address-validation': 'address-validation',
   'custom-tokens': 'custom-tokens',
   // RPC

@@ -23,6 +23,13 @@ export const MAIN_QA_STAGES: StageEntry[] = [
     url: '/tools/main/wallet-initialization',
   },
   {
+    id: 'fund-from-miner',
+    title: 'Fund from miner',
+    groupTitle: 'Main QA',
+    familyTitle: 'Wallets',
+    url: '/tools/main/fund-from-miner',
+  },
+  {
     id: 'address-validation',
     title: 'Address validation',
     groupTitle: 'Main QA',

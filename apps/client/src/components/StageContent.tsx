@@ -58,9 +58,11 @@ import { ShieldedReceiveStage } from './stages/ShieldedReceiveStage';
 import { ShieldedSendStage } from './stages/ShieldedSendStage';
 import { ShieldedBalancesStage } from './stages/ShieldedBalancesStage';
 import { ShieldedInspectorStage } from './stages/ShieldedInspectorStage';
+import { FundFromMinerStage } from './stages/FundFromMinerStage';
 
 const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'wallet-initialization': WalletInitialization,
+  'fund-from-miner': FundFromMinerStage,
   'address-validation': AddressValidation,
   'custom-tokens': CustomTokens,
   'rpc-connection': ConnectionStage,
