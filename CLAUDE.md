@@ -90,6 +90,7 @@ In-depth guides live in `knowledge/`:
 
 | Doc | Topic |
 |---|---|
+| `helper-boundaries.md` | QA Helper vs the Integration Test Helper: public networks here, private ones there; the planned Node packages |
 | `monorepo.md` | Workspace layout, shared package rules, deployment (incl. planned server hosting) |
 | `helper-script.md` | `scripts/qa-helper.sh` up/down/status: systemd user units, tailnet URL, `--json` contract for Ruffus |
 | `blueprint-publisher.md` | Publishing the QA blueprints to a new network: dry run, `--confirm`, duplicate detection, cost, restricted networks |
