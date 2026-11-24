@@ -5,7 +5,7 @@
 
 import type { BlueprintIds, NetworkDefinition } from '@qa-helper/shared/networks';
 import type { FullnodeApi, FullnodeVersion, OnChainBlueprintItem } from './fullnode.ts';
-import { PublisherError, sha256, type BlueprintKey, type BlueprintSource } from './sources.ts';
+import { PublisherError, RefusedError, sha256, type BlueprintKey, type BlueprintSource } from './sources.ts';
 
 /** Expected `/version` network names for each wallet-lib network name. */
 export function networkNameMatches(libName: NetworkDefinition['libName'], reported: string): boolean {
@@ -23,7 +23,7 @@ export function networkNameMatches(libName: NetworkDefinition['libName'], report
 /** Throws unless the node is a non-mainnet nano-enabled node of the registry's network. */
 export function checkNetwork(def: NetworkDefinition, version: FullnodeVersion): void {
   if (def.key === 'MAINNET' || version.network === 'mainnet') {
-    throw new PublisherError('Refusing to publish on mainnet.');
+    throw new RefusedError('Refusing to publish on mainnet.');
   }
   if (!networkNameMatches(def.libName, version.network)) {
     throw new PublisherError(

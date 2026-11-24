@@ -19,7 +19,7 @@ import {
   toPublish,
 } from './plan.ts';
 import { openPublisher, waitAccepted, type Publisher } from './publisher.ts';
-import { loadBlueprintSources, PublisherError, resolveWalletLibDir } from './sources.ts';
+import { loadBlueprintSources, PublisherError, RefusedError, resolveWalletLibDir } from './sources.ts';
 
 const REPO_ROOT = resolve(import.meta.dir, '../../../..');
 const log = (msg: string) => console.error(msg);
@@ -41,7 +41,7 @@ async function main(): Promise<number> {
     console.log(HELP);
     return 0;
   }
-  if (opts.network === 'MAINNET') throw new PublisherError('Refusing to publish on mainnet.');
+  if (opts.network === 'MAINNET') throw new RefusedError('Refusing to publish on mainnet.');
   const network = NETWORKS[opts.network];
 
   const sources = loadBlueprintSources(resolveWalletLibDir(process.env, REPO_ROOT));
@@ -130,6 +130,10 @@ async function main(): Promise<number> {
 main()
   .then((code) => process.exit(code))
   .catch((e: unknown) => {
+    if (e instanceof RefusedError) {
+      console.error(`Refused: ${e.message}`);
+      process.exit(2);
+    }
     console.error(e instanceof PublisherError ? `Error: ${e.message}` : e);
     process.exit(1);
   });

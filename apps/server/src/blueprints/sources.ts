@@ -29,6 +29,11 @@ export class PublisherError extends Error {
   override name = 'PublisherError';
 }
 
+/** A safety gate said no, as opposed to something breaking: the CLI exits 2, not 1. */
+export class RefusedError extends PublisherError {
+  override name = 'RefusedError';
+}
+
 export function sha256(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }

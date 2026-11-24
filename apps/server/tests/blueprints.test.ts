@@ -17,6 +17,7 @@ import {
   exportedClassName,
   loadBlueprintSources,
   PublisherError,
+  RefusedError,
   resolveWalletLibDir,
   sha256,
   type BlueprintSource,
@@ -128,6 +129,18 @@ describe('checkNetwork', () => {
   test('refuses mainnet by key or by what the node reports', () => {
     expect(() => checkNetwork(NETWORKS.MAINNET, { ...VERSION, network: 'mainnet' })).toThrow(/mainnet/);
     expect(() => checkNetwork(net(), { ...VERSION, network: 'mainnet' })).toThrow(/mainnet/);
+  });
+
+  test('a mainnet refusal is a refusal, not an error', () => {
+    expect(() => checkNetwork(net(), { ...VERSION, network: 'mainnet' })).toThrow(RefusedError);
+    expect(() => checkNetwork(net(), { ...VERSION, network: 'testnet-india' })).not.toThrow(RefusedError);
+  });
+
+  test('the CLI exits 2 when it refuses mainnet', () => {
+    const cli = new URL('../src/blueprints/cli.ts', import.meta.url).pathname;
+    const run = Bun.spawnSync(['bun', cli, '--network', 'MAINNET', '--dry-run'], { stderr: 'pipe' });
+    expect(run.stderr.toString()).toContain('Refused: Refusing to publish on mainnet.');
+    expect(run.exitCode).toBe(2);
   });
 
   test('stops when nano contracts are disabled', () => {

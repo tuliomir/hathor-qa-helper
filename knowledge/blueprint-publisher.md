@@ -38,7 +38,7 @@ Without `WALLET_LIB_DIR` it uses `../wallet-lib` beside this checkout (`~/code/w
 |---|---|
 | 0 | Published, dry run, or nothing to publish |
 | 1 | Error: wallet-lib missing, network mismatch, fullnode error, failed publish |
-| 2 | Refused by a gate: no `--confirm`, wrong `--confirm`, no seed, unverified duplicate check |
+| 2 | Refused by a gate: mainnet, no `--confirm`, wrong `--confirm`, no seed, unverified duplicate check |
 
 ## Safety gates
 
