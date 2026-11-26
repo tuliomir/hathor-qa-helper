@@ -13,6 +13,8 @@ import { ApiError, badRequest, errorResponse, notFound, toApiError } from './err
 import { jsonResponse } from './json.ts';
 import { HTR_UID, toLibSend } from './sendMapping.ts';
 import { WalletRegistry } from './walletRegistry.ts';
+import { DebugLog } from './debugLog.ts';
+import { DEBUG_LOG_LIMITS, type DebugLogResponse } from '@qa-helper/shared/debugLog';
 import type { WalletFactory } from './walletPort.ts';
 
 // Any port on loopback: the Vite dev proxy forwards the browser's Origin, and
@@ -40,11 +42,14 @@ export interface AppDeps {
   readyTimeoutMs?: number;
   /** Origins allowed besides loopback, e.g. a tailnet URL fronting the dev client. */
   extraOrigins?: readonly string[];
+  /** Where the client's debug log goes; in memory only when omitted. */
+  debugLog?: DebugLog;
 }
 
 export interface App {
   (req: Request): Promise<Response>;
   registry: WalletRegistry;
+  debugLog: DebugLog;
 }
 
 const networkKey = z.enum(NETWORK_KEYS as [NetworkKey, ...NetworkKey[]]);
@@ -68,6 +73,26 @@ const sendSchema = z.object({
 const addressQuery = z.object({
   index: z.coerce.number().int().min(0).default(0),
   kind: z.enum(['legacy', 'shielded']).default('legacy'),
+});
+const debugEvent = z.object({
+  at: z.number(),
+  tab: z.string().min(1).max(64),
+  page: z.string().max(500),
+  kind: z.enum(['action', 'route', 'error']),
+  type: z.string().min(1).max(200),
+  data: z.unknown().optional(),
+});
+const debugLogPost = z.object({ events: z.array(debugEvent).max(DEBUG_LOG_LIMITS.eventsPerPost) });
+const debugStatePost = z.object({
+  tab: z.string().min(1).max(64),
+  page: z.string().max(500),
+  at: z.number(),
+  state: z.unknown(),
+});
+const debugLogQuery = z.object({
+  since: z.coerce.number().int().min(0).default(0),
+  limit: z.coerce.number().int().min(1).max(5000).default(500),
+  tab: z.string().optional(),
 });
 const tokenQuery = z.object({ token: tokenUid.default(HTR_UID) });
 const utxoQuery = tokenQuery.extend({
@@ -121,7 +146,34 @@ export function createApp(deps: AppDeps): App {
     readyTimeoutMs: deps.readyTimeoutMs,
   });
 
+  const debugLog = deps.debugLog ?? new DebugLog({ file: null });
+
   const routes: [method: string, pattern: RegExp, handler: Handler][] = [
+    [
+      'POST',
+      compile('/debug-log'),
+      async (req) => {
+        const { events } = parse(debugLogPost, await readJson(req));
+        return jsonResponse({ last: debugLog.append(events) });
+      },
+    ],
+    [
+      'GET',
+      compile('/debug-log'),
+      async (_req, url) => {
+        const body: DebugLogResponse = debugLog.read(parse(debugLogQuery, query(url)));
+        return jsonResponse({ ...body, file: debugLog.file, writeError: debugLog.writeError });
+      },
+    ],
+    [
+      'POST',
+      compile('/debug-state'),
+      async (req) => {
+        debugLog.setState(parse(debugStatePost, await readJson(req)));
+        return jsonResponse({ ok: true });
+      },
+    ],
+    ['GET', compile('/debug-state'), async () => jsonResponse(debugLog.getStates())],
     [
       'GET',
       compile('/health'),
@@ -268,5 +320,5 @@ export function createApp(deps: AppDeps): App {
       return errorResponse(toApiError(err), cors);
     }
   };
-  return Object.assign(app, { registry });
+  return Object.assign(app, { registry, debugLog });
 }

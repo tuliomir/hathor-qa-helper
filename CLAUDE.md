@@ -94,6 +94,7 @@ In-depth guides live in `knowledge/`:
 | `monorepo.md` | Workspace layout, shared package rules, deployment (incl. planned server hosting) |
 | `helper-script.md` | `scripts/qa-helper.sh` up/down/status: systemd user units, tailnet URL, `--json` contract for Ruffus |
 | `blueprint-publisher.md` | Publishing the QA blueprints to a new network: dry run, `--confirm`, duplicate detection, cost, restricted networks |
+| `debug-log.md` | Debug log: what each tab records, reading it from the QA server (`/debug-log`, `/debug-state`, the JSONL file), secret redaction |
 | `server.md` | Local QA server: why it exists, endpoints, security model, tx-mining caveat, future hosting |
 | `shielded-outputs.md` | Client-side shielded support: WASM verifier-only provider, the `canSpend` trap, tx-mining helper |
 | `shielded-semantics.md` | How shielded outputs work in wallet-lib and the mobile wallet: address types, the three modes, fees, the two-output rule, change, mobile QR formats |

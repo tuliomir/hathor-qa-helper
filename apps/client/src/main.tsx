@@ -11,6 +11,7 @@ import '@fontsource/atkinson-hyperlegible-next/700.css';
 import './index.css';
 import App from './App.tsx';
 import { store } from './store';
+import { installDebugLogHooks } from './services/debugLog';
 import { walletInstancesMap, importWalletsFromCloud } from './store/slices/walletStoreSlice';
 import { CLOUD_SYNC_ENABLED } from './constants/network';
 
@@ -143,6 +144,7 @@ console.log(
 // Render the first frame synchronously. createRoot().render() alone defers
 // it to a task that runs after `load`, so keys pressed right after load hit
 // an empty page and the shell's shortcuts (`/`, Ctrl K) never see them.
+installDebugLogHooks();
 const root = createRoot(document.getElementById('root')!);
 flushSync(() =>
   root.render(

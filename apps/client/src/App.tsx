@@ -1,4 +1,6 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { recordDebugRoute } from './services/debugLog';
 import QALayout from './components/QALayout';
 import MobileQALayout from './components/mobile/MobileQALayout';
 import DesktopQALayout from './components/desktop/DesktopQALayout';
@@ -7,6 +9,8 @@ import SignerSync from './components/common/SignerSync';
 import { DEFAULT_STAGE_URL } from './config/stageRoutes';
 
 function App() {
+  const { pathname, search } = useLocation();
+  useEffect(() => recordDebugRoute(pathname + search), [pathname, search]);
   return (
     <>
       {/* Auto-start selected wallets on any route */}

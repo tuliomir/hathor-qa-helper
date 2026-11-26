@@ -4,10 +4,13 @@ import { QA_SERVER_DEFAULT_PORT } from '@qa-helper/shared/serverApi';
 import pkg from '../package.json' with { type: 'json' };
 import { createApp, parseExtraOrigins } from './app.ts';
 import { createWalletFactory } from './walletFactory.ts';
+import { DebugLog, defaultDebugLogFile } from './debugLog.ts';
 
 const port = Number(process.env.QA_SERVER_PORT ?? QA_SERVER_DEFAULT_PORT);
 const extraOrigins = parseExtraOrigins(process.env.QA_SERVER_EXTRA_ORIGINS);
-const app = createApp({ factory: createWalletFactory(), version: pkg.version, extraOrigins });
+const debugLog = new DebugLog({ file: defaultDebugLogFile() });
+const app = createApp({ factory: createWalletFactory(), version: pkg.version, extraOrigins, debugLog });
+console.log(`Debug log: ${debugLog.file}`);
 if (extraOrigins.length) console.log(`Extra allowed origins: ${extraOrigins.join(', ')}`);
 
 const server = Bun.serve({

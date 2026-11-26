@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./networks": "./src/networks.ts",
-    "./serverApi": "./src/serverApi.ts"
+    "./serverApi": "./src/serverApi.ts",
+    "./debugLog": "./src/debugLog.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -3,6 +3,8 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
+import { debugLogMiddleware } from '../services/debugLog';
+import { debugSnapshot } from './debugSnapshot';
 import walletStoreReducer from './slices/walletStoreSlice';
 import stageReducer from './slices/stageSlice';
 import addressValidationReducer from './slices/addressValidationSlice';
@@ -108,7 +110,7 @@ export const store = configureStore({
         ],
         ignoredPaths: ['walletStore.wallets', 'walletConnect.client', 'walletConnect.session'],
       },
-    }),
+    }).concat(debugLogMiddleware((state): unknown => debugSnapshot(state as RootState))),
 });
 
 // Infer the `RootState` and `AppDispatch` types from the store itself

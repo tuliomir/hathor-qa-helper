@@ -54,6 +54,10 @@ The contract lives in `packages/shared/src/serverApi.ts`. Amounts are decimal st
 | `GET /wallets/:id/utxos` | `?token=00&shielded=true` | `UtxosResponse` |
 | `POST /wallets/:id/send` | `SendRequest` | `SendResponse` |
 | `GET /wallets/:id/tx/:txId/unblinding` | — | `getShieldedUnblindingForTx` result, stringified |
+| `POST /debug-log` | `{ events }` (at most 200) | `{ last }`: the debug log (see `debug-log.md`) |
+| `GET /debug-log` | `?since=0&limit=500&tab=` | `{ events, last, file, writeError }` |
+| `POST /debug-state` | `{ tab, page, at, state }` | `{ ok: true }` |
+| `GET /debug-state` | — | `{ tabs }`, each tab's latest state, newest first |
 
 Wallet routes other than `GET`/`DELETE` answer 409 `WALLET_NOT_READY` until the session is `ready`. Unknown ids are 404 `NOT_FOUND`.
 
