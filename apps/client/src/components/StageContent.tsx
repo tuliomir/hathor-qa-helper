@@ -61,11 +61,13 @@ import { ShieldedInspectorStage } from './stages/ShieldedInspectorStage';
 import { RpcMainnetWarning } from './rpc/RpcMainnetWarning';
 import { FundFromMinerStage } from './stages/FundFromMinerStage';
 import { HathorNextAddressesStage } from './stages/HathorNextAddressesStage';
+import { HathorNextTransferStage } from './stages/HathorNextTransferStage';
 
 const STAGE_COMPONENT_MAP: Record<StageId, ComponentType> = {
   'wallet-initialization': WalletInitialization,
   'fund-from-miner': FundFromMinerStage,
   'hathor-next-addresses': HathorNextAddressesStage,
+  'hathor-next-transfer': HathorNextTransferStage,
   'address-validation': AddressValidation,
   'custom-tokens': CustomTokens,
   'rpc-connection': ConnectionStage,

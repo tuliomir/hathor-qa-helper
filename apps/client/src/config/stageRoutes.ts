@@ -31,6 +31,7 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   'wallet-initialization': 'wallet-initialization',
   'fund-from-miner': 'fund-from-miner',
   'hathor-next-addresses': 'hathor-next-addresses',
+  'hathor-next-transfer': 'hathor-next-transfer',
   'address-validation': 'address-validation',
   'custom-tokens': 'custom-tokens',
   // RPC

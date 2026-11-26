@@ -9,6 +9,7 @@ export type StageId =
   | 'wallet-initialization'
   | 'fund-from-miner'
   | 'hathor-next-addresses'
+  | 'hathor-next-transfer'
   | 'address-validation'
   | 'custom-tokens'
   | 'transaction-history'
@@ -142,6 +143,11 @@ export const STAGE_GROUPS: StageGroup[] = [
         id: 'hathor-next-addresses',
         title: 'Hathor Next addresses',
         description: "Each Next testnet wallet's samba address, and fresh seeds with theirs",
+      },
+      {
+        id: 'hathor-next-transfer',
+        title: 'Send to Hathor Next',
+        description: 'Move HTR from the funding wallet on Next testnet to its Hathor Next side chain',
       },
       {
         id: 'address-validation',
