@@ -28,10 +28,9 @@ export function snapNetworkKey(snapNetwork: string | null): NetworkKey | null {
 
 /**
  * The network RPC requests act on, from the WalletConnect session's
- * approved chain (see rpcChain): `hathor:mainnet` → MAINNET,
- * `hathor:privatenet` → NEXT_TESTNET, testnet otherwise. Independent of the
- * test wallet's network.
+ * approved chain (see rpcChain): `hathor:mainnet` → MAINNET; `hathor:testnet`
+ * → NEXT_TESTNET while that is the active network, TESTNET otherwise.
  */
-export function rpcNetworkKey(sessionChains: readonly string[]): NetworkKey {
-  return networkKeyOfChain(rpcChain(sessionChains));
+export function rpcNetworkKey(sessionChains: readonly string[], activeNetwork?: NetworkKey): NetworkKey {
+  return networkKeyOfChain(rpcChain(sessionChains), activeNetwork);
 }

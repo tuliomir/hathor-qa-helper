@@ -24,9 +24,9 @@ describe('applyNetworkServices', () => {
     expect(config.getTxMiningUrl()).toBe('https://txmining.mainnet.hathor.network/');
   });
 
-  test('Next testnet uses its own devnet service', () => {
+  test('Next testnet uses its own service', () => {
     applyNetworkServices('NEXT_TESTNET');
-    expect(config.getTxMiningUrl()).toBe('https://tx-mining.devnet-alpha.samba.hathor.network/');
+    expect(config.getTxMiningUrl()).toBe('https://tx-mining.testnet-alpha.samba.hathor.network/');
   });
 
   test('rejects an unknown network instead of keeping a stale URL', () => {

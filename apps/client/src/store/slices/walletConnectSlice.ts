@@ -29,6 +29,7 @@ import { addToast } from './toastSlice';
 import { DEFAULT_PROJECT_ID } from '../../constants/walletConnect';
 import { rpcNetworkKey } from '../../utils/blueprints';
 import { RPC_CHAINS, rpcChain, rpcChainNetworkName } from '../../constants/hathorChains';
+import type { NetworkKey } from '@qa-helper/shared/networks';
 import type { RootState } from '../index';
 
 interface WalletConnectState {
@@ -362,13 +363,15 @@ export const selectRpcSessionIsMainnet = (state: { walletConnect: Pick<WalletCon
 export const selectRpcChain = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
   rpcChain(state.walletConnect.chains);
 
-/** The network name requests carry in `params.network` (`testnet`, `privatenet`, `mainnet`). */
+/** The network name requests carry in `params.network` (`testnet`, `mainnet`). */
 export const selectRpcNetworkName = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
   rpcChainNetworkName(rpcChain(state.walletConnect.chains));
 
 /** The network RPC requests act on (see rpcNetworkKey); decides QA blueprints and explorer links. */
-export const selectRpcNetwork = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
-  rpcNetworkKey(state.walletConnect.chains);
+export const selectRpcNetwork = (state: {
+  walletConnect: Pick<WalletConnectState, 'chains'>;
+  network?: { preferredNetwork?: NetworkKey };
+}) => rpcNetworkKey(state.walletConnect.chains, state.network?.preferredNetwork);
 
 export const selectWalletConnectFirstAddress = (state: { walletConnect: WalletConnectState }) => {
   const session = state.walletConnect.session;

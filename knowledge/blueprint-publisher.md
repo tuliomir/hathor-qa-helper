@@ -43,7 +43,7 @@ Without `WALLET_LIB_DIR` it uses `../wallet-lib` beside this checkout (`~/code/w
 ## Safety gates
 
 - **Mainnet is refused** by key, and also when any node reports `mainnet`.
-- **Network check.** `/version`'s `network` must match the registry's `libName`: `privatenet` ↔ `privatenet`, `testnet` ↔ `testnet*` (e.g. `testnet-india`), and `nano_contracts_enabled` must not be false. A mismatch means the URL or the registry entry is wrong; fix that first.
+- **Network check.** `/version`'s `network` must match the registry's `libName`: `testnet` ↔ `testnet*` (e.g. `testnet-india`, `testnet-juliet`), and `nano_contracts_enabled` must not be false. A mismatch means the URL or the registry entry is wrong; fix that first.
 - **Confirmation** as above. `--dry-run` wins over `--confirm`.
 - **Seeds** come from `--seed-file <path>` or `BLUEPRINT_PUBLISHER_SEED`, never from an argument (`--seed` is rejected), and are never printed.
 

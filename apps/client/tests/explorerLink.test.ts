@@ -86,15 +86,17 @@ describe('resolveNetworkKey', () => {
   });
 });
 
-describe('networks without an explorer', () => {
-  test('Next testnet has no explorer URL, so no link is built', () => {
-    expect(resolveExplorerUrl('NEXT_TESTNET')).toBeNull();
-    expect(buildExplorerUrl('NEXT_TESTNET', 'abc123')).toBeNull();
+describe('Next testnet', () => {
+  test('links to the testnet-juliet explorer', () => {
+    expect(buildExplorerUrl('NEXT_TESTNET', 'abc123')).toBe(
+      'https://legacy-explorer.testnet-alpha.samba.hathor.network/transaction/abc123'
+    );
   });
 
-  test("wallet-lib's privatenet name resolves to Next testnet", () => {
-    expect(resolveNetworkKey('privatenet')).toBe('NEXT_TESTNET');
-    // testnet is shared by two networks' lib name; the key match wins.
+  test("the node's network name resolves to Next testnet", () => {
+    expect(resolveNetworkKey('testnet-juliet')).toBe('NEXT_TESTNET');
+    // testnet is shared by three networks' lib name; the key match wins.
     expect(resolveNetworkKey('testnet')).toBe('TESTNET');
+    expect(resolveNetworkKey('privatenet')).toBeNull();
   });
 });

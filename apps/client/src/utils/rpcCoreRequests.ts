@@ -102,7 +102,7 @@ export function buildCreateTokenRequest(p: CreateTokenParams) {
 /**
  * A preview request with `params.network` set to the RPC session's, when it
  * names one. The builders here stamp `testnet`; rpcHandlers sends the
- * session's network (`privatenet` on the Hathor Next devnet).
+ * session's network (`mainnet` on a mainnet session).
  */
 export function withSessionNetwork<T extends { method: string; params?: unknown } | null>(
   request: T,

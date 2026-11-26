@@ -22,7 +22,7 @@ import { POPOVER_PANEL_CLASS, usePopover } from '../ui/usePopover';
 const NOTES: Record<NetworkKey, { text: string; className: string }> = {
   TESTNET: { text: '', className: '' },
   SHIELDED_TESTNET: { text: 'Shielded outputs', className: 'text-accent' },
-  NEXT_TESTNET: { text: 'Hathor Next devnet', className: 'text-net-next' },
+  NEXT_TESTNET: { text: 'testnet-juliet + Hathor Next', className: 'text-net-next' },
   MAINNET: { text: 'Real funds', className: 'text-error font-semibold' },
 };
 

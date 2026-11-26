@@ -33,7 +33,7 @@ const SOURCES: BlueprintSource[] = (
   ] as const
 ).map(([key, cls]) => ({ key, path: `/wl/${key}.py`, code: code(cls), sha256: sha256(code(cls)), className: cls }));
 
-const VERSION: FullnodeVersion = { version: '0.72.0', network: 'privatenet', nano_contracts_enabled: true };
+const VERSION: FullnodeVersion = { version: '0.72.0', network: 'testnet-juliet', nano_contracts_enabled: true };
 
 function net(overrides: Partial<NetworkDefinition> = {}): NetworkDefinition {
   return { ...NETWORKS.NEXT_TESTNET, ...overrides };
@@ -116,14 +116,14 @@ describe('loadBlueprintSources', () => {
 });
 
 describe('checkNetwork', () => {
-  test('accepts a matching privatenet and testnet node', () => {
+  test('accepts a node of any testnet for a testnet entry', () => {
     expect(() => checkNetwork(net(), VERSION)).not.toThrow();
     expect(() => checkNetwork(NETWORKS.TESTNET, { ...VERSION, network: 'testnet-india' })).not.toThrow();
   });
 
   test('stops on a libName mismatch', () => {
-    expect(() => checkNetwork(net(), { ...VERSION, network: 'testnet-india' })).toThrow(/Network mismatch/);
-    expect(() => checkNetwork(NETWORKS.TESTNET, VERSION)).toThrow(/Network mismatch/);
+    expect(() => checkNetwork(net(), { ...VERSION, network: 'privatenet' })).toThrow(/Network mismatch/);
+    expect(() => checkNetwork(NETWORKS.TESTNET, { ...VERSION, network: 'privatenet' })).toThrow(/Network mismatch/);
   });
 
   test('refuses mainnet by key or by what the node reports', () => {
@@ -241,7 +241,7 @@ describe('computePlan', () => {
     p.blueprints[0]!.weight = 17.5;
     const text = formatPlan(p);
     expect(text).toContain('NEXT_TESTNET');
-    expect(text).toContain("network 'privatenet', node 0.72.0");
+    expect(text).toContain("network 'testnet-juliet', node 0.72.0");
     expect(text).toContain(SOURCES[0]!.sha256);
     expect(text).toContain('0 HTR');
     expect(text).toContain('PoW weight 17.50');

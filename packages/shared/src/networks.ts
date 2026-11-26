@@ -7,7 +7,7 @@
 export type NetworkKey = 'TESTNET' | 'MAINNET' | 'SHIELDED_TESTNET' | 'NEXT_TESTNET';
 
 /** Network name wallet-lib's `Network` class accepts. */
-export type LibNetworkName = 'testnet' | 'mainnet' | 'privatenet';
+export type LibNetworkName = 'testnet' | 'mainnet';
 
 export interface BlueprintIds {
   bet: string;
@@ -15,11 +15,36 @@ export interface BlueprintIds {
   authority: string;
 }
 
+/**
+ * A Hathor Next side chain, as hathor-wallet-mobile pins it
+ * (src/multichain/chains.js). HTR moves to it by a burn on the Hathor Network
+ * that its backend builds; the backend refuses wallets whose pins differ.
+ */
+export interface HathorNextChain {
+  label: string;
+  backendUrl: string;
+  explorerUrl: string;
+  /** What GET /v1/config must answer, field by field. */
+  networkId: number;
+  nativeToken: string;
+  nativeTokenSymbol: string;
+  serviceViewPub: string;
+  /** Where a burn pays, and the Hathor Next network its data output names. */
+  transferAddress: string;
+  destinationNetwork: string;
+  /** The Hathor Next token a burn of HTR mints. */
+  mintToken: string;
+  /** Hathor Network confirmations before the mint. */
+  confirmations: number;
+}
+
 export interface NetworkDefinition {
   key: NetworkKey;
   label: string;
   /** Passed to wallet-lib. The shielded node reports `testnet-shielded-outputs`, which the lib accepts as `testnet`. */
   libName: LibNetworkName;
+  /** The name the fullnode's /version reports, when only this network uses it. */
+  nodeNetwork?: string;
   fullNodeUrl: string;
   txMiningUrl: string;
   /** Absent on networks without an explorer; links to it are hidden there. */
@@ -30,6 +55,8 @@ export interface NetworkDefinition {
   supportsShielded: boolean;
   /** Only networks where the QA blueprints are deployed. */
   blueprints?: BlueprintIds;
+  /** The Hathor Next side chain beside this network, if any. */
+  hathorNext?: HathorNextChain;
 }
 
 export const NETWORKS: Record<NetworkKey, NetworkDefinition> = {
@@ -71,18 +98,35 @@ export const NETWORKS: Record<NetworkKey, NetworkDefinition> = {
     supportsShielded: true,
   },
   /**
-   * Hathor Next Devnet: the hathor-core privatenet beside hathor-next's
-   * devnet-alpha (hathor-wallet-mobile's PRE_SETTINGS_NEXT_DEVNET). Its node
-   * reports `privatenet`, whose addresses share testnet's version bytes. No
-   * wallet-service and no explorer.
+   * Hathor Next testnet: hathor-core's testnet-juliet, paired with
+   * hathor-next's testnet-alpha (hathor-wallet-mobile's
+   * PRE_SETTINGS_NEXT_TESTNET). wallet-lib runs it as `testnet`. No
+   * explorer-service.
    */
   NEXT_TESTNET: {
     key: 'NEXT_TESTNET',
     label: 'Next testnet',
-    libName: 'privatenet',
-    fullNodeUrl: 'https://legacy-node.devnet-alpha.samba.hathor.network/v1a/',
-    txMiningUrl: 'https://tx-mining.devnet-alpha.samba.hathor.network/',
+    libName: 'testnet',
+    nodeNetwork: 'testnet-juliet',
+    fullNodeUrl: 'https://legacy-node.testnet-alpha.samba.hathor.network/v1a/',
+    txMiningUrl: 'https://tx-mining.testnet-alpha.samba.hathor.network/',
+    explorerUrl: 'https://legacy-explorer.testnet-alpha.samba.hathor.network/',
+    walletServiceUrl: 'https://legacy-wallet-service.testnet-alpha.samba.hathor.network/',
+    walletServiceWsUrl: 'wss://legacy-wallet-service-ws.testnet-alpha.samba.hathor.network/',
     supportsShielded: false,
+    hathorNext: {
+      label: 'Hathor Next (testnet-alpha)',
+      backendUrl: 'https://wallet-backend.testnet-alpha.samba.hathor.network',
+      explorerUrl: 'https://samba.explorer.hathor.dev/',
+      networkId: 1004,
+      nativeToken: 'd957d448377de9c9d313d545398677cd6df99ac051dcf2afcd1b38dcb22f92d8',
+      nativeTokenSymbol: 'USDT',
+      serviceViewPub: 'ee29df21a6c64fe43fc8ec6cd7b8c1ecfc4c89eec9370086129e367693bbf400',
+      transferAddress: 'WScTqhLsBQnz3HMdQqh66JBgWqb255XffL',
+      destinationNetwork: 'fb3694106fd98e1dc5aa959ef2dc8b1792d593846de685af69c39590a7642b23',
+      mintToken: '664cf15052b6f66f1f06ac32189381a27f1bfe1eda2f77cea4fde760b5884d33',
+      confirmations: 21,
+    },
   },
 };
 

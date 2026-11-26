@@ -15,8 +15,6 @@ export function networkNameMatches(libName: NetworkDefinition['libName'], report
     case 'testnet':
       // testnet-india, testnet-shielded-outputs, ...
       return reported.startsWith('testnet');
-    case 'privatenet':
-      return reported === 'privatenet';
   }
 }
 

@@ -21,14 +21,16 @@ describe('network constants', () => {
       expect(Object.keys(NETWORK_CONFIG).sort()).toEqual(['MAINNET', 'NEXT_TESTNET', 'SHIELDED_TESTNET', 'TESTNET']);
     });
 
-    test('Next testnet is the Hathor Next devnet privatenet, with no explorer', () => {
+    test('Next testnet is testnet-juliet, beside Hathor Next testnet-alpha', () => {
       const next = NETWORK_CONFIG.NEXT_TESTNET;
       expect(next.label).toBe('Next testnet');
-      expect(next.name).toBe('privatenet');
+      expect(next.name).toBe('testnet');
+      expect(next.nodeNetwork).toBe('testnet-juliet');
       expect(next.kind).toBe('next-test');
-      expect(next.fullNodeUrl).toBe('https://legacy-node.devnet-alpha.samba.hathor.network/v1a/');
-      expect(next.txMiningUrl).toBe('https://tx-mining.devnet-alpha.samba.hathor.network/');
-      expect(next.explorerUrl).toBeUndefined();
+      expect(next.fullNodeUrl).toBe('https://legacy-node.testnet-alpha.samba.hathor.network/v1a/');
+      expect(next.txMiningUrl).toBe('https://tx-mining.testnet-alpha.samba.hathor.network/');
+      expect(next.explorerUrl).toBe('https://legacy-explorer.testnet-alpha.samba.hathor.network/');
+      expect(next.hathorNext?.backendUrl).toBe('https://wallet-backend.testnet-alpha.samba.hathor.network');
       expect(next.supportsShielded).toBe(false);
       expect(next.blueprints).toBeUndefined();
     });

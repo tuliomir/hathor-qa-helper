@@ -46,7 +46,7 @@ function bodyOf<T>(response: unknown, type: number, problems: string[]): T | nul
   return wrapped.response as T;
 }
 
-/** `expected.network` is the session's network name (`testnet`, `privatenet`). */
+/** `expected.network` is the session's network name (`testnet`, `mainnet`). */
 export function walletInformationProblems(
   response: unknown,
   expected: { address0: string; network: string }

@@ -40,7 +40,7 @@ describe('response checks', () => {
     );
   });
 
-  test('wallet information on the Hathor Next devnet names privatenet', () => {
+  test('wallet information must name the session network', () => {
     const next = { type: 12, response: { network: 'privatenet', address0: ADDR } };
     expect(walletInformationProblems(next, { address0: ADDR, network: 'privatenet' })).toEqual([]);
     expect(walletInformationProblems(next, { address0: ADDR, network: 'testnet' })).toEqual([

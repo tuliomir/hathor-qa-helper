@@ -14,15 +14,19 @@ export function resolveNetworkKey(network: string | null | undefined): NetworkKe
   if (!network) return null;
   const upper = network.toUpperCase();
   if (upper in NETWORK_CONFIG) return upper as NetworkKey;
-  // A wallet-lib name only one network uses (`privatenet` → NEXT_TESTNET).
-  const byLibName = NETWORK_KEYS.filter((key) => NETWORK_CONFIG[key].name === network.toLowerCase());
+  const lower = network.toLowerCase();
+  // The name a fullnode reports (`testnet-juliet` → NEXT_TESTNET).
+  const byNode = NETWORK_KEYS.find((key) => NETWORK_CONFIG[key].nodeNetwork === lower);
+  if (byNode) return byNode;
+  // A wallet-lib name only one network uses.
+  const byLibName = NETWORK_KEYS.filter((key) => NETWORK_CONFIG[key].name === lower);
   return byLibName.length === 1 ? byLibName[0] : null;
 }
 
 /**
  * Resolve an explorer URL from a network name, case-insensitively.
  * Unknown networks get the default (testnet) explorer; a network without an
- * explorer (Next testnet) gets null.
+ * explorer gets null.
  */
 export function resolveExplorerUrl(network: string): string | null {
   return NETWORK_CONFIG[resolveNetworkKey(network) ?? DEFAULT_NETWORK].explorerUrl ?? null;

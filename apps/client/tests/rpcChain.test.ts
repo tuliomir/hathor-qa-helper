@@ -13,15 +13,22 @@ const { createRpcHandlers } = await import('../src/services/rpcHandlers');
 const { withSessionNetwork } = await import('../src/utils/rpcCoreRequests');
 
 describe('rpcChain', () => {
-  test('offers testnet, the Hathor Next devnet and mainnet', () => {
-    expect([...RPC_CHAINS]).toEqual(['hathor:testnet', 'hathor:privatenet', 'hathor:mainnet']);
+  test('offers testnet and mainnet', () => {
+    expect([...RPC_CHAINS]).toEqual(['hathor:testnet', 'hathor:mainnet']);
   });
 
   test('follows the approved chain', () => {
-    expect(rpcChain(['hathor:privatenet'])).toBe('hathor:privatenet');
-    expect(rpcChainNetworkName('hathor:privatenet')).toBe('privatenet');
-    expect(networkKeyOfChain('hathor:privatenet')).toBe('NEXT_TESTNET');
+    expect(rpcChain(['hathor:testnet'])).toBe('hathor:testnet');
+    expect(rpcChainNetworkName('hathor:testnet')).toBe('testnet');
+    expect(networkKeyOfChain('hathor:testnet')).toBe('TESTNET');
     expect(rpcChain([])).toBe('hathor:testnet');
+  });
+
+  test('a testnet chain acts on Next testnet while that is the active network', () => {
+    // A wallet on testnet-juliet approves hathor:testnet too.
+    expect(networkKeyOfChain('hathor:testnet', 'NEXT_TESTNET')).toBe('NEXT_TESTNET');
+    expect(networkKeyOfChain('hathor:testnet', 'SHIELDED_TESTNET')).toBe('TESTNET');
+    expect(networkKeyOfChain('hathor:mainnet', 'NEXT_TESTNET')).toBe('MAINNET');
   });
 
   test('mainnet wins whenever it was approved', () => {
@@ -45,13 +52,13 @@ describe('rpcHandlers send to the session chain', () => {
 
   const sessionOn = (chain: string) => ({ topic: 't', namespaces: { hathor: { chains: [chain] } } });
 
-  test('a Hathor Next session sends hathor:privatenet with network privatenet', async () => {
+  test('a mainnet session sends hathor:mainnet with network mainnet', async () => {
     const { client, calls } = recordingClient();
-    const handlers = createRpcHandlers({ client: client as never, session: sessionOn('hathor:privatenet') as never });
+    const handlers = createRpcHandlers({ client: client as never, session: sessionOn('hathor:mainnet') as never });
     await handlers.getRpcWalletInformation();
     await handlers.getRpcBalance();
-    expect(calls.map((c) => c.chainId)).toEqual(['hathor:privatenet', 'hathor:privatenet']);
-    expect(calls.map((c) => c.request.params.network)).toEqual(['privatenet', 'privatenet']);
+    expect(calls.map((c) => c.chainId)).toEqual(['hathor:mainnet', 'hathor:mainnet']);
+    expect(calls.map((c) => c.request.params.network)).toEqual(['mainnet', 'mainnet']);
   });
 
   test('a testnet session keeps sending testnet', async () => {
@@ -66,15 +73,15 @@ describe('rpcHandlers send to the session chain', () => {
 describe('withSessionNetwork', () => {
   test('stamps the session network on a preview that names one', () => {
     const preview = { method: 'htr_getBalance', params: { network: 'testnet', tokens: ['00'] } };
-    expect(withSessionNetwork(preview, 'privatenet')).toEqual({
+    expect(withSessionNetwork(preview, 'mainnet')).toEqual({
       method: 'htr_getBalance',
-      params: { network: 'privatenet', tokens: ['00'] },
+      params: { network: 'mainnet', tokens: ['00'] },
     });
   });
 
   test('leaves requests without a network alone', () => {
     const preview = { method: 'htr_custom', params: { foo: 1 } };
-    expect(withSessionNetwork(preview, 'privatenet')).toBe(preview);
-    expect(withSessionNetwork(null, 'privatenet')).toBeNull();
+    expect(withSessionNetwork(preview, 'mainnet')).toBe(preview);
+    expect(withSessionNetwork(null, 'mainnet')).toBeNull();
   });
 });

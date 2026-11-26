@@ -3,8 +3,8 @@
  *
  * - Everything follows the WalletConnect session's chain, not the active
  *   network: requests go to the chain the wallet approved (`hathor:testnet`,
- *   `hathor:privatenet` on the Hathor Next devnet, or `hathor:mainnet`),
- *   whatever wallet QA Helper has selected. Mainnet arms before sending.
+ *   also on Next testnet, or `hathor:mainnet`), whatever wallet QA Helper
+ *   has selected. Mainnet arms before sending.
  * - The request builders behind the live preview stamp `network: 'testnet'`;
  *   the preview shown, compared with what was sent and opened in the raw
  *   editor carries the session's network instead, as rpcHandlers sends it.

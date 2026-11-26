@@ -8,12 +8,12 @@ Status on 2026-11-24: the line is decided. The headless packages are an agreed d
 
 | | QA Helper (this repo) | ITH |
 |---|---|---|
-| Networks | Public and shared ones: testnet, mainnet, the shielded testnet, the Hathor Next devnet | Private ones, where we control the genesis **and** the miner |
+| Networks | Public and shared ones: testnet, mainnet, the shielded testnet, Next testnet (testnet-juliet) and its Hathor Next side chain | Private ones, where we control the genesis **and** the miner |
 | Who starts it | A person doing QA, today only Tulio | CI and developers' local stacks |
 | Funds | Scarce. They come from wallets a person holds | Unlimited. They come from the genesis |
 | Blocks | Arrive when the network mines them | Arrive when our miner mines them |
 
-The test is control, not the network's name. The Hathor Next devnet reports `privatenet`, but someone else runs its genesis and miner, so it is on the QA Helper's side.
+The test is control, not the network's name. Next testnet is a hathor-core testnet whose genesis and miner someone else runs, so it is on the QA Helper's side.
 
 ## What the QA Helper owns
 
