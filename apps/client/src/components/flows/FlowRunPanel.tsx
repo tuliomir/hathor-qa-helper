@@ -115,8 +115,12 @@ function AttemptRow({ attempt, step }: { attempt: FlowAttempt; step: FlowStepSta
   );
 }
 
-/** "Did the wallet's screen look right?": the run waits for the answer. */
-function ReviewPrompt({ question }: { question: string }) {
+/**
+ * "Does the wallet's screen look right?": shown while the wallet shows the
+ * request, so the answer comes from the screen; the run waits for it only
+ * if the request was answered first.
+ */
+function ReviewPrompt({ question, index }: { question: string; index: number }) {
   const [flagging, setFlagging] = useState(false);
   const [note, setNote] = useState('');
 
@@ -126,7 +130,7 @@ function ReviewPrompt({ question }: { question: string }) {
       {flagging ? (
         <>
           <label className="flex flex-col gap-1 text-caption text-ink-muted">
-            What was off?
+            What is off?
             <textarea
               className="textarea textarea-bordered textarea-sm text-body"
               rows={2}
@@ -139,7 +143,7 @@ function ReviewPrompt({ question }: { question: string }) {
             <button
               type="button"
               className="btn btn-error btn-sm"
-              onClick={() => answerFlowReview({ ok: false, note: note.trim() })}
+              onClick={() => answerFlowReview(index, { ok: false, note: note.trim() })}
             >
               <MdFlag aria-hidden="true" />
               Flag and pause
@@ -154,12 +158,12 @@ function ReviewPrompt({ question }: { question: string }) {
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            onClick={() => answerFlowReview({ ok: true, note: '' })}
+            onClick={() => answerFlowReview(index, { ok: true, note: '' })}
           >
-            Yes, looked right
+            Yes, looks right
           </button>
           <button type="button" className="btn btn-sm" onClick={() => setFlagging(true)}>
-            Something was off
+            Something is off
           </button>
         </div>
       )}
@@ -167,7 +171,40 @@ function ReviewPrompt({ question }: { question: string }) {
   );
 }
 
-function StepRow({ step, active, network }: { step: FlowStepState; active: boolean; network: string }) {
+/** While the wallet still shows the request, the answer can be taken back. */
+function ReviewAnswer({ step, index }: { step: FlowStepState; index: number }) {
+  if (!step.review) return null;
+  const open = step.status === 'awaiting-wallet' || step.status === 'filling' || step.status === 'pending';
+  return (
+    <p className={`m-0 flex items-start gap-1 pl-7 text-caption ${step.review.ok ? 'text-ink-muted' : 'text-error'}`}>
+      {step.review.ok ? (
+        <MdCheckCircle className="mt-0.5 shrink-0 text-success" aria-hidden="true" />
+      ) : (
+        <MdFlag className="mt-0.5 shrink-0" aria-hidden="true" />
+      )}
+      <span className="flex-1">
+        {step.review.ok ? 'You said the screen looks right' : step.review.note || 'You flagged the wallet screen'}
+      </span>
+      {open && (
+        <button type="button" className="btn btn-ghost btn-xs" onClick={() => answerFlowReview(index, null)}>
+          Change
+        </button>
+      )}
+    </p>
+  );
+}
+
+function StepRow({
+  step,
+  index,
+  active,
+  network,
+}: {
+  step: FlowStepState;
+  index: number;
+  active: boolean;
+  network: string;
+}) {
   const [open, setOpen] = useState(false);
   const rejections =
     step.expects === 'approval' ? step.attempts.filter((a) => a.outcome === 'rejected' && a.asExpected).length : 0;
@@ -211,13 +248,10 @@ function StepRow({ step, active, network }: { step: FlowStepState; active: boole
         </p>
       )}
       {step.txHash && <TxIdDisplay hash={step.txHash} network={network} className="pl-7" />}
-      {step.status === 'reviewing' && step.reviewQuestion && <ReviewPrompt question={step.reviewQuestion} />}
-      {step.review && !step.review.ok && (
-        <p className="m-0 flex items-start gap-1 pl-7 text-caption text-error">
-          <MdFlag className="mt-0.5 shrink-0" aria-hidden="true" />
-          {step.review.note || 'You flagged the wallet screen'}
-        </p>
+      {(step.status === 'awaiting-wallet' || step.status === 'reviewing') && step.reviewQuestion && !step.review && (
+        <ReviewPrompt question={step.reviewQuestion} index={index} />
       )}
+      <ReviewAnswer step={step} index={index} />
       {step.checks.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-0.5 pl-7 text-caption">
           {step.checks.map((c) => (
@@ -322,7 +356,13 @@ export function FlowRunPanel() {
         )}
         <ol className="m-0 flex list-none flex-col gap-1 p-0">
           {run.steps.map((step, i) => (
-            <StepRow key={step.id} step={step} active={i === run.currentStep && !finished} network={network} />
+            <StepRow
+              key={step.id}
+              step={step}
+              index={i}
+              active={i === run.currentStep && !finished}
+              network={network}
+            />
           ))}
         </ol>
       </div>

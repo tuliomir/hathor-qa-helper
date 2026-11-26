@@ -31,7 +31,7 @@ export type FlowStepStatus =
   | 'confirming'
   /** Confirmed; checking the tx on chain. */
   | 'checking'
-  /** Waiting for the user to say whether the wallet's screen looked right. */
+  /** The request is answered; waiting for the user to say whether the wallet's screen looked right. */
   | 'reviewing'
   /** Briefly, before the run moves on. */
   | 'succeeded'
@@ -180,7 +180,8 @@ const flowRunSlice = createSlice({
       const step = state.steps[action.payload.index];
       if (step) step.checks = action.payload.checks;
     },
-    flowStepReviewed: (state, action: PayloadAction<{ index: number; review: FlowReview }>) => {
+    /** A null review takes the answer back (asked again). */
+    flowStepReviewed: (state, action: PayloadAction<{ index: number; review: FlowReview | null }>) => {
       const step = state.steps[action.payload.index];
       if (step) step.review = action.payload.review;
     },

@@ -17,7 +17,7 @@ import { waitForNanoTx } from '../utils/nanoTxConfirmation';
 import { walletInstancesMap } from '../store/slices/walletStoreSlice';
 import { isFeeToken } from '../fees';
 import { scatterHtr } from '../services/scatterHtr';
-import type { FlowReview } from '../store/slices/flowRunSlice';
+import { flowStepReviewed, type FlowReview } from '../store/slices/flowRunSlice';
 import type { FlowEnv, FlowWallet } from './flowRunner';
 
 let navigateTo: ((path: string) => void) | null = null;
@@ -29,9 +29,14 @@ export function setFlowNavigator(navigate: ((path: string) => void) | null): voi
 
 let answerReview: ((review: FlowReview | null) => void) | null = null;
 
-/** The run panel's answer to the question the run is asking. */
-export function answerFlowReview(review: FlowReview): void {
-  answerReview?.(review);
+/**
+ * The run panel's answer to step `index`'s review question: recorded on the
+ * step (answered while the wallet shows the request), and handed to the run
+ * if it is waiting for it.
+ */
+export function answerFlowReview(index: number, review: FlowReview | null): void {
+  store.dispatch(flowStepReviewed({ index, review }));
+  if (review) answerReview?.(review);
 }
 
 /** Waits for `answerFlowReview`, or null once the run ends. */

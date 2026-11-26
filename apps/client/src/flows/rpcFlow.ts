@@ -232,7 +232,7 @@ const firstEmptyAddressStep = addressStep(
   'address-first-empty',
   'Get address: first empty',
   'first_empty',
-  'Did the phone show the request for its first empty address?',
+  'Does the phone show the request for its first empty address?',
   async (answer, wallet) => {
     const checks = await ownAddressChecks(answer, wallet);
     if (checks.some((c) => !c.ok)) return checks;
@@ -250,7 +250,7 @@ const indexAddressStep = addressStep(
   'address-index',
   'Get address: by index',
   'index',
-  'Did the phone show the requested address index?',
+  'Does the phone show the requested address index?',
   async (answer, _wallet, ctx) => [
     answer.index === ctx.index && answer.address === ctx.indexAddress
       ? { ok: true, text: `Address ${ctx.index} is ${ctx.indexAddress.slice(0, 8)}…, as the test wallet derives it` }
@@ -265,7 +265,7 @@ const clientAddressStep = addressStep(
   'address-client',
   'Get address: you choose',
   'client',
-  'Did the phone let you pick the address from a list?',
+  'Does the phone let you pick the address from a list?',
   (answer, wallet) => ownAddressChecks(answer, wallet)
 );
 
@@ -288,7 +288,7 @@ const signStep: RpcFlowStep = {
   title: 'Sign with address',
   stageId: 'rpc-sign-with-address',
   actions: ACTIONS.signWithAddress,
-  review: `Did the phone show the message "${MESSAGE}" and the address it signs with?`,
+  review: `Does the phone show the message "${MESSAGE}" and the address it signs with?`,
   plan: (state) => {
     const { signIndex } = contextOf(state);
     return {
@@ -329,7 +329,7 @@ const paymentOutputs = (ctx: RpcFlowContext): SendTransactionOutput[] => [
 ];
 
 const unpushedSendStep = sendStep('send-unpushed', 'Send tx, not pushed', false, paymentOutputs, {
-  review: 'Did the phone show the 0.01 HTR output and its address?',
+  review: 'Does the phone show the 0.01 HTR output and its address?',
   validate: (response, state) =>
     unpushedTxProblems(response, {
       address: contextOf(state).indexAddress,
@@ -339,7 +339,7 @@ const unpushedSendStep = sendStep('send-unpushed', 'Send tx, not pushed', false,
 });
 
 const pushedSendStep = sendStep('send-pushed', 'Send tx, pushed', true, paymentOutputs, {
-  review: 'Did the phone show the 0.01 HTR output and its address?',
+  review: 'Does the phone show the 0.01 HTR output and its address?',
   validate: (response, state) =>
     sentTxProblems(response, { address: contextOf(state).indexAddress, value: SEND_VALUE }),
   checkOnChain: async (txHash, env) => {
@@ -349,7 +349,7 @@ const pushedSendStep = sendStep('send-pushed', 'Send tx, pushed', true, paymentO
 });
 
 const dataSendStep = sendStep('send-data', 'Send tx, data output', true, () => [{ type: 'data', data: SEND_DATA }], {
-  review: `Did the phone show the data output "${SEND_DATA}"?`,
+  review: `Does the phone show the data output "${SEND_DATA}"?`,
   validate: (response) => sentTxProblems(response),
   checkOnChain: async (txHash, env) => {
     const tx = await fetchFullnodeTx(fullNodeUrlOf(env.getState()), txHash);
@@ -437,7 +437,7 @@ const createDepositTokenStep = createTokenStep(
   'create-deposit-token',
   'Create deposit token (melt only)',
   DEPOSIT_TOKEN,
-  'Did the phone show the token name, symbol, amount and only a melt authority?'
+  'Does the phone show the token name, symbol, amount and only a melt authority?'
 );
 
 /**
@@ -478,7 +478,7 @@ const invalidMintAddressStep = invalidTokenStep(
   'Create token: mint address without mint',
   (_ctx, address0) => address0,
   false,
-  'Did the phone explain why it cannot create this token (a mint address without a mint authority)?'
+  'Does the phone explain why it cannot create this token (a mint address without a mint authority)?'
 );
 
 const invalidExternalMintStep = invalidTokenStep(
@@ -486,14 +486,14 @@ const invalidExternalMintStep = invalidTokenStep(
   'Create token: external mint address',
   (ctx) => ctx.externalAddress,
   true,
-  'Did the phone explain why it cannot create this token (a mint authority to an external address)?'
+  'Does the phone explain why it cannot create this token (a mint authority to an external address)?'
 );
 
 const createFeeTokenStep = createTokenStep(
   'create-fee-token',
   'Create fee token (no authorities)',
   { version: 'fee', name: 'QA Flow Fee', symbol: (s) => `QF${s}`, mint: false, melt: false, fee: 1n },
-  'Did the phone show a fee token with no mint or melt authority, and its 0.01 HTR fee?'
+  'Does the phone show a fee token with no mint or melt authority, and its 0.01 HTR fee?'
 );
 
 const createFeeTokenDataStep = createTokenStep(
@@ -508,7 +508,7 @@ const createFeeTokenDataStep = createTokenStep(
     data: FEE_TOKEN_DATA,
     fee: null,
   },
-  `Did the phone show a fee token with mint and melt authorities, its fee and the data output "${FEE_TOKEN_DATA}"?`
+  `Does the phone show a fee token with mint and melt authorities, its fee and the data output "${FEE_TOKEN_DATA}"?`
 );
 
 const scatterStep: FlowStep = {
@@ -593,21 +593,21 @@ const tokenUtxosStep = utxosStep(
       case: { maxUtxos: 255, amountBiggerThan: null, amountSmallerThan: null, matching: [TOKEN_AMOUNT], count: 1 },
     };
   },
-  'Did the phone show the custom token and the filters it lists UTXOs with?'
+  'Does the phone show the custom token and the filters it lists UTXOs with?'
 );
 
 const htrAboveUtxosStep = utxosStep(
   'utxos-htr-above',
   'Get UTXOs: HTR greater than',
   (ctx) => ({ token: NATIVE_TOKEN_UID, case: scatteredOf(ctx).above }),
-  'Did the phone show the "greater than" filter?'
+  'Does the phone show the "greater than" filter?'
 );
 
 const htrBetweenUtxosStep = utxosStep(
   'utxos-htr-between',
   'Get UTXOs: HTR between two amounts',
   (ctx) => ({ token: NATIVE_TOKEN_UID, case: scatteredOf(ctx).between }),
-  'Did the phone show both the "greater than" and "smaller than" filters, and the 2-UTXO limit?'
+  'Does the phone show both the "greater than" and "smaller than" filters, and the 2-UTXO limit?'
 );
 
 const STEPS: FlowStep[] = [

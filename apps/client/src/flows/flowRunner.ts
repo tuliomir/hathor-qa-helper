@@ -15,8 +15,10 @@
  * Not every step is an approval: a request the wallet must refuse passes on
  * its first refusal, a request with no prompt (e.g. `htr_getBalance`) is
  * never rejected, and a local step is work the app does itself (e.g.
- * scattering funds). A step with a review question ends by asking the user
- * whether the wallet's screen looked right; "no" pauses after the step.
+ * scattering funds). A step with a review question asks the user whether the
+ * wallet's screen looks right while the wallet shows the request, so the
+ * answer comes from the screen, not from memory; if it is still unanswered
+ * when the step ends, the run waits for it. "No" pauses after the step.
  *
  * The run state lives in `flowRunSlice`; this module only holds the promise
  * of the run in progress.
@@ -72,7 +74,7 @@ interface FlowStepBase {
   stageId: StageId;
   /** Checks on the confirmed tx; throws when it can't check. */
   checkOnChain?: (txHash: string, env: FlowEnv) => Promise<FlowCheck[]>;
-  /** Asked once the step is done (e.g. "Did the confirmation screen show …?"). */
+  /** Asked while the wallet shows the request (e.g. "Does the phone show …?"). */
   review?: string;
 }
 
@@ -458,13 +460,16 @@ async function runStep(
     return failed ? fail(`${failed.text}. ${retry}`) : null;
   }
 
-  /** Asks the step's review question, if any, then marks the step done. */
+  /** Takes the step's review answer, asking if it is still open, then marks the step done. */
   async function finish(): Promise<StepEnd> {
     if (step.review) {
-      setStatus('reviewing');
-      const review = await env.askReview(step.review, gone);
-      if (!review || gone()) return 'stop';
-      dispatch(flowStepReviewed({ index, review }));
+      let review = env.getState().flowRun.steps[index]?.review ?? null;
+      if (!review) {
+        setStatus('reviewing');
+        review = await env.askReview(step.review, gone);
+        if (!review || gone()) return 'stop';
+        dispatch(flowStepReviewed({ index, review }));
+      }
       if (!review.ok) {
         setStatus('done');
         return 'flagged';

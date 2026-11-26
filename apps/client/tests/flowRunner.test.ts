@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { configureStore, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import flowRunReducer, { flowDismissed, flowStepSkipped, flowStopRequested } from '../src/store/slices/flowRunSlice';
+import flowRunReducer, {
+  flowDismissed,
+  flowStepReviewed,
+  flowStepSkipped,
+  flowStopRequested,
+} from '../src/store/slices/flowRunSlice';
 import {
   flowRunSettled,
   resumeFlow,
@@ -352,6 +357,32 @@ describe('flow runner', () => {
     await flowRunSettled();
     expect(h.calls).toEqual(['a', 'b']);
     expect(h.run().status).toBe('passed');
+  });
+
+  test('an answer given while the wallet shows the request is not asked again', async () => {
+    const h = harness({ b: [{ response: { ok: true } }] });
+    const answeredOnScreen = (review: FlowReview) =>
+      h.step('a', {
+        review: 'Does it look right?',
+        plan: () => ({
+          prefill: {},
+          call: async () => {
+            h.store.dispatch(flowStepReviewed({ index: 0, review }));
+            return { request: { method: 'a', params: {} }, response: { ok: true } };
+          },
+        }),
+      });
+
+    startFlow(h.flow([answeredOnScreen({ ok: true, note: '' }), h.step('b')]), h.env);
+    await flowRunSettled();
+    expect(h.asked).toEqual([]);
+    expect(h.run().status).toBe('passed');
+
+    startFlow(h.flow([answeredOnScreen({ ok: false, note: 'No amount' }), h.step('b')]), h.env);
+    await flowRunSettled();
+    expect(h.asked).toEqual([]);
+    expect(h.run().status).toBe('paused');
+    expect(h.run().reason).toBe('You flagged "a": No amount. Resume to go on.');
   });
 
   test('skip moves past a step the user did by hand', async () => {
