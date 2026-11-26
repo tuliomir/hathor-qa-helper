@@ -330,14 +330,14 @@ describe('RPC flow', () => {
     expect(rpcRequestsFlowPreflight(fixed as unknown as RootState)).toBeNull();
     expect(rpcRequestsFlowPreflight(addressOnly as unknown as RootState)).toContain('Start the test wallet');
 
-    const nextWallet = {
+    const shieldedWallet = {
       ...fixed,
       walletStore: {
-        wallets: { w1: { ...fixed.walletStore.wallets.w1, metadata: { kind: 'seed', network: 'NEXT_TESTNET' } } },
+        wallets: { w1: { ...fixed.walletStore.wallets.w1, metadata: { kind: 'seed', network: 'SHIELDED_TESTNET' } } },
       },
     };
-    expect(rpcRequestsFlowPreflight(nextWallet as unknown as RootState)).toContain(
-      'The test wallet is on Next testnet, but RPC requests act on Testnet'
+    expect(rpcRequestsFlowPreflight(shieldedWallet as unknown as RootState)).toContain(
+      'The test wallet is on Shielded testnet, but RPC requests act on Testnet'
     );
 
     const h = setup();

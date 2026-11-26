@@ -367,11 +367,24 @@ export const selectRpcChain = (state: { walletConnect: Pick<WalletConnectState, 
 export const selectRpcNetworkName = (state: { walletConnect: Pick<WalletConnectState, 'chains'> }) =>
   rpcChainNetworkName(rpcChain(state.walletConnect.chains));
 
-/** The network RPC requests act on (see rpcNetworkKey); decides QA blueprints and explorer links. */
+/**
+ * The network RPC requests act on. `hathor:testnet` is shared by Testnet and
+ * Next testnet, so it follows the active network the header shows (the test
+ * wallet's, else the funding wallet's, else the saved choice).
+ */
 export const selectRpcNetwork = (state: {
   walletConnect: Pick<WalletConnectState, 'chains'>;
   network?: { preferredNetwork?: NetworkKey };
-}) => rpcNetworkKey(state.walletConnect.chains, state.network?.preferredNetwork);
+  walletSelection?: { testWalletId?: string | null; fundingWalletId?: string | null };
+  walletStore?: { wallets: Record<string, { metadata?: { network?: NetworkKey } } | undefined> };
+}) => {
+  const networkOf = (id?: string | null) => (id && state.walletStore?.wallets[id]?.metadata?.network) || null;
+  const active =
+    networkOf(state.walletSelection?.testWalletId) ??
+    networkOf(state.walletSelection?.fundingWalletId) ??
+    state.network?.preferredNetwork;
+  return rpcNetworkKey(state.walletConnect.chains, active);
+};
 
 export const selectWalletConnectFirstAddress = (state: { walletConnect: WalletConnectState }) => {
   const session = state.walletConnect.session;
