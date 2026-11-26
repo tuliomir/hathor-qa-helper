@@ -30,6 +30,7 @@ export const STAGE_SLUG_MAP: Record<StageId, string> = {
   // Main QA
   'wallet-initialization': 'wallet-initialization',
   'fund-from-miner': 'fund-from-miner',
+  'hathor-next-addresses': 'hathor-next-addresses',
   'address-validation': 'address-validation',
   'custom-tokens': 'custom-tokens',
   // RPC

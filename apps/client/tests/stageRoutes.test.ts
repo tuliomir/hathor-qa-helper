@@ -31,8 +31,8 @@ describe('stageRoutes', () => {
 
     test('all stages are covered', () => {
       const totalStages = STAGE_GROUPS.reduce((sum, group) => sum + group.stages.length, 0);
-      expect(totalStages).toBe(52);
-      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(52);
+      expect(totalStages).toBe(53);
+      expect(Object.keys(STAGE_SLUG_MAP)).toHaveLength(53);
     });
   });
 
@@ -41,6 +41,7 @@ describe('stageRoutes', () => {
       expect(getStageUrl('wallet-initialization')).toBe('/tools/main/wallet-initialization');
       expect(getStageUrl('address-validation')).toBe('/tools/main/address-validation');
       expect(getStageUrl('fund-from-miner')).toBe('/tools/main/fund-from-miner');
+      expect(getStageUrl('hathor-next-addresses')).toBe('/tools/main/hathor-next-addresses');
       expect(getStageUrl('custom-tokens')).toBe('/tools/main/custom-tokens');
     });
 

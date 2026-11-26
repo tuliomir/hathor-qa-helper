@@ -30,6 +30,13 @@ export const MAIN_QA_STAGES: StageEntry[] = [
     url: '/tools/main/fund-from-miner',
   },
   {
+    id: 'hathor-next-addresses',
+    title: 'Hathor Next addresses',
+    groupTitle: 'Main QA',
+    familyTitle: 'Wallets',
+    url: '/tools/main/hathor-next-addresses',
+  },
+  {
     id: 'address-validation',
     title: 'Address validation',
     groupTitle: 'Main QA',

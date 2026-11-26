@@ -17,6 +17,8 @@
         "@hathor/ct-crypto-wasm": "0.5.0",
         "@hathor/snap-utils": "^0.1.0",
         "@hathor/wallet-lib": "4.2.0",
+        "@noble/curves": "1.9.7",
+        "@noble/hashes": "1.8.0",
         "@qa-helper/shared": "workspace:*",
         "@reduxjs/toolkit": "^2.12.0",
         "@walletconnect/core": "^2.23.9",

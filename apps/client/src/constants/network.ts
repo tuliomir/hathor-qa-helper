@@ -45,6 +45,8 @@ export interface ClientNetworkConfig extends NetworkDefinition {
   name: LibNetworkName;
   kind: NetworkKind;
   shortLabel: string;
+  /** The Hathor Next backend's URL from this page (a dev proxy in dev), when there is a side chain. */
+  hathorNextBackendUrl?: string;
 }
 
 /** Path segment of each network's Vite dev proxy (see vite.config.ts). */
@@ -81,6 +83,11 @@ export function buildNetworkConfig({ dev, origin }: { dev: boolean; origin?: str
         dev && DEV_TX_MINING_PROXY_SLUG[key]
           ? `${origin}/tx-mining/${DEV_TX_MINING_PROXY_SLUG[key]}/`
           : network.txMiningUrl,
+      hathorNextBackendUrl: network.hathorNext
+        ? dev
+          ? `${origin}/hathor-next/${DEV_PROXY_SLUG[key]}`
+          : network.hathorNext.backendUrl
+        : undefined,
     };
   }
   return config;
