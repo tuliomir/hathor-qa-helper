@@ -9,10 +9,7 @@ import {
   WALLET_CONFIG,
   WALLET_SCAN_POLICY,
   buildNetworkConfig,
-  nextNetwork,
-  type NetworkKey,
 } from '../src/constants/network';
-import { NETWORK_KEYS } from '@qa-helper/shared/networks';
 import { SCANNING_POLICY } from '@hathor/wallet-lib/lib/types';
 
 describe('network constants', () => {
@@ -92,26 +89,6 @@ describe('network constants', () => {
       const config = buildNetworkConfig({ dev: true, origin: 'http://localhost:5176' });
       expect(config.SHIELDED_TESTNET.txMiningUrl).toBe('https://txmining.shielded-outputs.testnet.hathor.network/');
       expect(config.TESTNET.explorerUrl).toBe('https://explorer.testnet.hathor.network/');
-    });
-  });
-
-  describe('nextNetwork', () => {
-    test('cycles through every network and wraps around', () => {
-      expect(nextNetwork('TESTNET')).toBe('MAINNET');
-      expect(nextNetwork('MAINNET')).toBe('SHIELDED_TESTNET');
-      expect(nextNetwork('SHIELDED_TESTNET')).toBe('NEXT_TESTNET');
-      expect(nextNetwork('NEXT_TESTNET')).toBe('TESTNET');
-    });
-
-    test('visits all NETWORK_KEYS once per cycle', () => {
-      const seen: NetworkKey[] = [];
-      let current: NetworkKey = 'TESTNET';
-      for (let i = 0; i < NETWORK_KEYS.length; i++) {
-        seen.push(current);
-        current = nextNetwork(current);
-      }
-      expect(seen.sort()).toEqual([...NETWORK_KEYS].sort());
-      expect(current).toBe('TESTNET');
     });
   });
 

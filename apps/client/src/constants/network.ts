@@ -108,12 +108,6 @@ export const NETWORK_MENU_ORDER: NetworkKey[] = (() => {
   return [...preferred, ...NETWORK_KEYS.filter((k) => !preferred.includes(k))];
 })();
 
-/** The network after `current` in NETWORK_KEYS order, wrapping around. */
-export function nextNetwork(current: NetworkKey): NetworkKey {
-  const index = NETWORK_KEYS.indexOf(current);
-  return NETWORK_KEYS[(index + 1) % NETWORK_KEYS.length];
-}
-
 // Wallet configuration constants
 export const WALLET_CONFIG = {
   CONNECTION_TIMEOUT: 30000,

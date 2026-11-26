@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { MdPlayArrow, MdQrCode, MdRefresh, MdSend, MdStop, MdSwapVert } from 'react-icons/md';
+import { MdPlayArrow, MdQrCode, MdRefresh, MdSend, MdStop } from 'react-icons/md';
 import { AddressQr } from '../common/AddressQr';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
@@ -29,7 +29,7 @@ import {
 import { MULTISIG_CONFIG, MULTISIG_MIN_SIGNATURES } from '../../constants/multisig';
 import { formatBalance } from '../../utils/balanceUtils';
 import CopyButton from '../common/CopyButton';
-import NetworkChip from '../common/NetworkChip';
+import { SegmentedControl } from '../ui/SegmentedControl';
 import { Identifier } from '../common/Identifier';
 import { TxIdDisplay } from '../common/TxIdDisplay';
 import { StageHeader } from '../common/StageHeader';
@@ -39,7 +39,7 @@ import { Field } from '../ui/Field';
 import { AmountInput } from '../common/AmountInput';
 import { StatusChip } from '../ui/StatusChip';
 import { DataTable, type DataTableColumn } from '../ui/DataTable';
-import { NETWORK_CONFIG, nextNetwork } from '../../constants/network';
+import { NETWORK_CONFIG, NETWORK_KEYS, type NetworkKey } from '../../constants/network';
 import { useWalletStore } from '../../hooks/useWalletStore';
 
 export default function MultisigWalletManagement() {
@@ -202,8 +202,8 @@ export default function MultisigWalletManagement() {
     setAmount('');
   };
 
-  const handleNetworkSwitch = async () => {
-    const newNetwork = nextNetwork(network);
+  const handleNetworkSwitch = async (newNetwork: NetworkKey) => {
+    if (newNetwork === network) return;
 
     // Stop all running wallets first
     const runningParticipants = participants.filter(
@@ -247,7 +247,6 @@ export default function MultisigWalletManagement() {
 
   type Participant = (typeof participants)[number];
   const spinner = <span className="loading loading-spinner loading-sm" aria-hidden="true" />;
-  const nextLabel = NETWORK_CONFIG[nextNetwork(network)].label;
 
   const participantColumns: DataTableColumn<Participant>[] = [
     {
@@ -376,13 +375,12 @@ export default function MultisigWalletManagement() {
         tone="info"
         title="Multisig configuration"
         action={
-          <span className="flex flex-wrap items-center gap-2">
-            <NetworkChip network={network} size="sm" />
-            <button type="button" onClick={handleNetworkSwitch} className="btn btn-secondary btn-xs">
-              <MdSwapVert aria-hidden="true" />
-              Switch to {nextLabel}
-            </button>
-          </span>
+          <SegmentedControl
+            aria-label="Network"
+            value={network}
+            onChange={handleNetworkSwitch}
+            options={NETWORK_KEYS.map((key) => ({ value: key, label: NETWORK_CONFIG[key].label }))}
+          />
         }
       >
         This is a{' '}
