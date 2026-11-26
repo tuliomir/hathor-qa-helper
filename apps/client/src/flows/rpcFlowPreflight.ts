@@ -40,6 +40,12 @@ export function rpcFlowPreflight(
   if (needs.blueprint && !blueprintIdFor(network, needs.blueprint)) {
     return `No ${needs.blueprint} blueprint on ${NETWORK_CONFIG[network].label}`;
   }
+  const id = state.walletSelection.testWalletId;
+  const walletNetwork = id ? state.walletStore.wallets[id]?.metadata.network : undefined;
+  // Testnet and Next testnet share the RPC chain and address 0, so only this tells them apart.
+  if (walletNetwork && walletNetwork !== network) {
+    return `The test wallet is on ${NETWORK_CONFIG[walletNetwork].label}, but RPC requests act on ${NETWORK_CONFIG[network].label}: switch the network to match`;
+  }
   let address0: string;
   try {
     address0 = address0Of(state);

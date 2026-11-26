@@ -72,7 +72,7 @@ function StepIcon({ step }: { step: FlowStepState }) {
 const STEP_LINE: Partial<Record<FlowStepState['status'], string>> = {
   filling: 'Filling the form…',
   'awaiting-wallet': 'Approve or reject on your phone',
-  confirming: 'Waiting for a block to confirm the tx…',
+  confirming: 'Waiting for the fullnode (and, for a contract tx, a block)…',
   checking: 'Checking the answer…',
   working: 'Working on it…',
   succeeded: 'Success!',

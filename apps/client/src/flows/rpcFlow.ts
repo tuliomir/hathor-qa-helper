@@ -237,12 +237,11 @@ const firstEmptyAddressStep = addressStep(
     const checks = await ownAddressChecks(answer, wallet);
     if (checks.some((c) => !c.ok)) return checks;
     const txs = await wallet.addressTxCount(answer.address);
-    return [
-      ...checks,
-      txs === 0
-        ? { ok: true, text: 'The address has never been used' }
-        : { ok: false, text: `The address is not empty: it has ${txs} txs` },
-    ];
+    if (txs === 0) return [...checks, { ok: true, text: 'The address has never been used' }];
+    // A single-address wallet shares only address 0, used or not.
+    if (answer.index === 0)
+      return [...checks, { ok: true, text: `Address 0, used (${txs} txs): right only for a single-address wallet` }];
+    return [...checks, { ok: false, text: `The address is not empty: it has ${txs} txs` }];
   }
 );
 
@@ -341,7 +340,11 @@ const unpushedSendStep = sendStep('send-unpushed', 'Send tx, not pushed', false,
 const pushedSendStep = sendStep('send-pushed', 'Send tx, pushed', true, paymentOutputs, {
   review: 'Does the phone show the 0.01 HTR output and its address?',
   validate: (response, state) =>
-    sentTxProblems(response, { address: contextOf(state).indexAddress, value: SEND_VALUE }),
+    sentTxProblems(response, {
+      address: contextOf(state).indexAddress,
+      value: SEND_VALUE,
+      network: selectRpcNetworkName(state),
+    }),
   checkOnChain: async (txHash, env) => {
     const tx = await fetchFullnodeTx(fullNodeUrlOf(env.getState()), txHash);
     return [paysCheck(tx, { address: contextOf(env.getState()).indexAddress, value: SEND_VALUE })];

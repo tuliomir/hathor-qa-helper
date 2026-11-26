@@ -24,6 +24,12 @@ import type { CreateTokenParams } from '../src/services/rpcHandlers';
 import type { SendTransactionOutput } from '../src/store/slices/sendTransactionSlice';
 import type { RootState } from '../src/store';
 
+/** A value as WalletConnect carries it (@walletconnect/safe-json: bigint as "Nn"). */
+function overWalletConnect(value: unknown): unknown {
+  const json = JSON.stringify(value, (_, v) => (typeof v === 'bigint' ? `${v}n` : v));
+  return JSON.parse(json, (_, v) => (typeof v === 'string' && /^\d+n$/.test(v) ? BigInt(v.slice(0, -1)) : v));
+}
+
 type RpcFlowModule = typeof import('../src/flows/rpcFlow');
 let RPC_FLOW: RpcFlowModule['RPC_FLOW'];
 let rpcRequestsFlowPreflight: RpcFlowModule['rpcRequestsFlowPreflight'];
@@ -65,7 +71,7 @@ interface FullnodeTxRecord {
  * mobile wallet; the two invalid tokens come back as errors. Txs it pushes
  * land on a fake fullnode.
  */
-function setup(opts: { usedFirstEmpty?: boolean } = {}) {
+function setup(opts: { usedFirstEmpty?: boolean; singleAddress?: boolean } = {}) {
   const store = configureStore({
     reducer: {
       flowRun: flowRunReducer,
@@ -112,7 +118,7 @@ function setup(opts: { usedFirstEmpty?: boolean } = {}) {
       phone('connected-network', false, () => ({ type: 4, response: { network: 'testnet', genesisHash: '' } })),
     getRpcGetAddress: (type: string, index?: number) =>
       phone(`address:${type}`, true, () => {
-        const i = type === 'index' ? index! : type === 'client' ? CHOSEN : FIRST_EMPTY;
+        const i = type === 'index' ? index! : type === 'client' ? CHOSEN : opts.singleAddress ? 0 : FIRST_EMPTY;
         return { type: 2, response: { address: ADDRS[i], index: i, addressPath: `m/44'/280'/0'/0/${i}` } };
       }),
     getRpcBalance: () =>
@@ -143,17 +149,11 @@ function setup(opts: { usedFirstEmpty?: boolean } = {}) {
             decoded: o.type === 'data' ? {} : { address: o.address },
           })),
         };
-        return {
-          type: 8,
-          response: {
-            hash: txHash,
-            outputs: outputs.map((o) => ({
-              value: o.value ?? '1',
-              tokenData: 0,
-              decodedScript: o.type === 'data' ? {} : { address: { base58: o.address } },
-            })),
-          },
-        };
+        // As the phone answers: wallet-lib's Transaction (outputs not parsed,
+        // so no decodedScript) through WalletConnect's JSON.
+        const tx = new Transaction([new Input(hash(1), 0)], scripts);
+        tx.hash = txHash;
+        return { type: 8, response: overWalletConnect(tx) };
       }),
     getRpcCreateToken: (params: CreateTokenParams) => {
       const invalid =
@@ -309,6 +309,19 @@ describe('RPC flow', () => {
     expect(run.reason).toContain('The address is not empty');
   });
 
+  test('a single-address wallet answers first empty with its used address 0', async () => {
+    const h = setup({ singleAddress: true });
+    startFlow(RPC_FLOW, h.env);
+    await flowRunSettled();
+
+    const step = h.store.getState().flowRun.steps.find((s) => s.id === 'address-first-empty')!;
+    expect(step.status).toBe('done');
+    expect(step.checks.map((c) => [c.ok, c.text])).toContainEqual([
+      true,
+      'Address 0, used (1 txs): right only for a single-address wallet',
+    ]);
+  });
+
   test('needs a seed wallet and 0.20 HTR', async () => {
     const addressOnly = {
       ...fixed,
@@ -316,6 +329,16 @@ describe('RPC flow', () => {
     };
     expect(rpcRequestsFlowPreflight(fixed as unknown as RootState)).toBeNull();
     expect(rpcRequestsFlowPreflight(addressOnly as unknown as RootState)).toContain('Start the test wallet');
+
+    const nextWallet = {
+      ...fixed,
+      walletStore: {
+        wallets: { w1: { ...fixed.walletStore.wallets.w1, metadata: { kind: 'seed', network: 'NEXT_TESTNET' } } },
+      },
+    };
+    expect(rpcRequestsFlowPreflight(nextWallet as unknown as RootState)).toContain(
+      'The test wallet is on Next testnet, but RPC requests act on Testnet'
+    );
 
     const h = setup();
     const poor = { ...h.env.testWallet()!, balance: async () => 19n };

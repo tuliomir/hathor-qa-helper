@@ -94,13 +94,24 @@ describe('checkNanoTx', () => {
   });
 
   test('is pending without a block, while the block runs it, or when the node lacks it', async () => {
-    expect(await checkNanoTx(node, 'h', meta({ first_block: null, nc_execution: null }))).toEqual({ state: 'pending' });
+    expect(await checkNanoTx(node, 'h', meta({ first_block: null, nc_execution: 'pending' }))).toEqual({
+      state: 'pending',
+    });
     expect(await checkNanoTx(node, 'h', meta({ first_block: 'blk', nc_execution: 'pending' }))).toEqual({
       state: 'pending',
     });
     expect(await checkNanoTx(node, 'h', async () => ({ success: false, message: 'Transaction not found' }))).toEqual({
       state: 'pending',
     });
+  });
+
+  test('a tx that is no nano tx is done once the node accepts it, without a block', async () => {
+    expect(await checkNanoTx(node, 'h', meta({ first_block: null, voided_by: [], nc_execution: null }))).toEqual({
+      state: 'accepted',
+    });
+    const nanoWithoutState = async () => ({ success: true, tx: { nc_id: 'c' }, meta: { first_block: null } });
+    expect(await checkNanoTx(node, 'h', nanoWithoutState)).toEqual({ state: 'pending' });
+    expect((await checkNanoTx(node, 'h', meta({ voided_by: ['v'], nc_execution: null }))).state).toBe('failed');
   });
 
   test('fails when voided or when the contract failed to run it', async () => {
@@ -115,7 +126,7 @@ describe('waitForNanoTx', () => {
       async () => {
         throw new Error('network');
       },
-      meta({ first_block: null }),
+      meta({ first_block: null, nc_execution: 'pending' }),
       meta({ first_block: 'blk', nc_execution: 'success' }),
     ];
     const result = await waitForNanoTx(node, 'h', { get: () => answers.shift()!(), sleep: async () => {} });
@@ -124,7 +135,7 @@ describe('waitForNanoTx', () => {
 
   test('times out, and stops when aborted', async () => {
     let t = 0;
-    const pending = meta({ first_block: null });
+    const pending = meta({ first_block: null, nc_execution: 'pending' });
     expect(
       await waitForNanoTx(node, 'h', {
         get: pending,

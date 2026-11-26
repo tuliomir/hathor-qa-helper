@@ -4,17 +4,21 @@
  *
  * A nano tx is done once a block confirms it (`meta.first_block`) and the
  * contract executed it (`meta.nc_execution === 'success'`): a tx can be
- * accepted by the network and still fail inside the contract.
+ * accepted by the network and still fail inside the contract. Any other tx
+ * is done once the fullnode accepts it: nothing waits on its block.
  */
 
 export type NanoTxCheck =
   | { state: 'pending' }
   | { state: 'confirmed'; firstBlock: string }
+  /** Not a nano tx: the fullnode has it and nothing voids it. */
+  | { state: 'accepted' }
   | { state: 'failed'; reason: string };
 
 interface FullnodeTxBody {
   success?: boolean;
   message?: string;
+  tx?: { nc_id?: string | null };
   meta?: {
     first_block?: string | null;
     voided_by?: string[];
@@ -36,6 +40,8 @@ export async function checkNanoTx(fullNodeUrl: string, hash: string, get: FetchJ
   const { first_block: firstBlock, voided_by: voidedBy, nc_execution: execution } = body.meta;
   if (voidedBy && voidedBy.length > 0) return { state: 'failed', reason: `Voided by ${voidedBy[0]}` };
   if (execution === 'failure') return { state: 'failed', reason: 'The contract failed to execute the tx' };
+  // The node gives nano txs an execution state (pending until a block runs them).
+  if (!execution && !body.tx?.nc_id) return { state: 'accepted' };
   if (!firstBlock) return { state: 'pending' };
   // A block's tx stays `pending` until the block's nano txs run.
   if (execution && execution !== 'success') return { state: 'pending' };
@@ -54,7 +60,7 @@ export interface WaitForNanoTxOptions {
 
 export type NanoTxWait = Exclude<NanoTxCheck, { state: 'pending' }> | { state: 'timeout' } | { state: 'aborted' };
 
-/** Polls the fullnode until the tx is confirmed and executed, fails, or the wait ends. */
+/** Polls the fullnode until the tx is done (see checkNanoTx), fails, or the wait ends. */
 export async function waitForNanoTx(
   fullNodeUrl: string,
   hash: string,

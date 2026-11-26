@@ -10,6 +10,7 @@ import helpers from '@hathor/wallet-lib/lib/utils/helpers';
 import { verifyMessage } from '@hathor/wallet-lib/lib/utils/crypto';
 import Network from '@hathor/wallet-lib/lib/models/network';
 import P2PKH from '@hathor/wallet-lib/lib/models/p2pkh';
+import Output from '@hathor/wallet-lib/lib/models/output';
 import { parseScriptData } from '@hathor/wallet-lib/lib/utils/scripts';
 import { Buffer } from 'buffer';
 import type { FlowCheck } from '../store/slices/flowRunSlice';
@@ -243,11 +244,46 @@ export function unpushedTxProblems(
   return problems;
 }
 
+/**
+ * An output of a pushed tx as the wallet answers it: wallet-lib's Output
+ * over WalletConnect, so its script is a serialized Buffer and its
+ * decodedScript is null unless the wallet parsed it.
+ */
+interface PushedOutput {
+  value?: unknown;
+  tokenData?: unknown;
+  script?: unknown;
+  decodedScript?: { address?: { base58?: unknown } } | null;
+}
+
+function scriptBytes(script: unknown): Buffer | null {
+  if (typeof script === 'string') return /^[0-9a-f]*$/i.test(script) ? Buffer.from(script, 'hex') : null;
+  if (script instanceof Uint8Array) return Buffer.from(script);
+  if (Array.isArray(script)) return Buffer.from(script as number[]);
+  const data = (script as { data?: unknown } | null)?.data;
+  return Array.isArray(data) ? Buffer.from(data as number[]) : null;
+}
+
+/** The P2PKH address an output pays, from its decoded script or its script bytes. */
+function outputAddress(o: PushedOutput, network: Network): string | null {
+  const decoded = o.decodedScript?.address?.base58;
+  if (typeof decoded === 'string') return decoded;
+  const bytes = scriptBytes(o.script);
+  if (!bytes) return null;
+  try {
+    // Output refuses a zero value; only the script is parsed.
+    const parsed = new Output(1n, bytes).parseScript(network);
+    return parsed instanceof P2PKH ? parsed.address.base58 : null;
+  } catch {
+    return null;
+  }
+}
+
 interface PushedTx {
   hash?: unknown;
   name?: unknown;
   symbol?: unknown;
-  outputs?: { value?: unknown; tokenData?: unknown; decodedScript?: { address?: { base58?: unknown } } }[];
+  outputs?: PushedOutput[];
 }
 
 function pushedTxOf(response: unknown, type: number, problems: string[]): PushedTx | null {
@@ -269,12 +305,16 @@ export function pushedTxHash(response: unknown): string | null {
   return typeof hash === 'string' ? hash : null;
 }
 
-export function sentTxProblems(response: unknown, expected?: { address: string; value: bigint }): string[] {
+export function sentTxProblems(
+  response: unknown,
+  expected?: { address: string; value: bigint; network: string }
+): string[] {
   const problems: string[] = [];
   const tx = pushedTxOf(response, RPC_TYPE.sendTransaction, problems);
   if (!tx || !expected) return problems;
+  const network = new Network(expected.network);
   const pays = (tx.outputs ?? []).some(
-    (o) => String(o.value) === String(expected.value) && o.decodedScript?.address?.base58 === expected.address
+    (o) => String(o.value) === String(expected.value) && outputAddress(o, network) === expected.address
   );
   if (!pays) problems.push(`The tx does not pay ${units(expected.value)} HTR to ${expected.address}`);
   return problems;
