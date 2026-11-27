@@ -19,6 +19,7 @@ import {
   MdHighlightOff,
   MdRadioButtonUnchecked,
   MdRedo,
+  MdWarningAmber,
 } from 'react-icons/md';
 import { selectFlowRun, type FlowAttempt, type FlowStepState } from '../../store/slices/flowRunSlice';
 import { selectRpcNetwork } from '../../store/slices/walletConnectSlice';
@@ -227,6 +228,7 @@ function StepRow({
         )}
         {step.expects === 'no-prompt' && <StatusChip status="idle" label="No prompt" tone="idle" />}
         {step.review && !step.review.ok && <StatusChip status="error" label="Flagged" tone="error" />}
+        {step.checks.some((c) => c.warning) && <StatusChip status="warning" label="Known wallet bug" tone="warning" />}
         {step.attempts.length > 0 && (
           <button
             type="button"
@@ -255,8 +257,13 @@ function StepRow({
       {step.checks.length > 0 && (
         <ul className="m-0 flex list-none flex-col gap-0.5 pl-7 text-caption">
           {step.checks.map((c) => (
-            <li key={c.text} className={`flex items-start gap-1 ${c.ok ? 'text-ink-muted' : 'text-error'}`}>
-              {c.ok ? (
+            <li
+              key={c.text}
+              className={`flex items-start gap-1 ${c.warning ? 'text-warning-ink' : c.ok ? 'text-ink-muted' : 'text-error'}`}
+            >
+              {c.warning ? (
+                <MdWarningAmber className="mt-0.5 shrink-0" aria-label="Warning" />
+              ) : c.ok ? (
                 <MdCheckCircle className="mt-0.5 shrink-0 text-success" aria-label="Passed" />
               ) : (
                 <MdHighlightOff className="mt-0.5 shrink-0" aria-label="Failed" />

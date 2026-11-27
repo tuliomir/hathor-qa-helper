@@ -453,13 +453,16 @@ function invalidTokenStep(
   title: string,
   mintAddress: (ctx: RpcFlowContext, address0: string) => string,
   createMint: boolean,
-  review: string
+  review: string,
+  knownApproval?: string
 ): RpcFlowStep {
   return {
     id,
     title,
     stageId: 'rpc-create-token',
     expects: 'refusal',
+    knownApproval,
+    txHash: pushedTxHash,
     actions: ACTIONS.createToken,
     review,
     plan: (state) => {
@@ -481,7 +484,10 @@ const invalidMintAddressStep = invalidTokenStep(
   'Create token: mint address without mint',
   (_ctx, address0) => address0,
   false,
-  'Does the phone explain why it cannot create this token (a mint address without a mint authority)?'
+  'Does the phone explain why it cannot create this token (a mint address without a mint authority)?',
+  // hathor-wallet-mobile v0.38.0: the request screen has no check, and
+  // wallet-lib ignores a mint address when no mint authority is created.
+  'Known wallet bug: the phone created the token, dropping the mint address, instead of refusing it (QA_REOWN.md request 2). Reject it on the phone to test the expected path.'
 );
 
 const invalidExternalMintStep = invalidTokenStep(
@@ -689,7 +695,9 @@ async function verifyRpcFlow(env: FlowEnv) {
   const flagged = steps.filter((s) => s.review && !s.review.ok).map((s) => s.title);
   const skipped = steps.filter((s) => s.status === 'skipped').map((s) => s.title);
   const uncovered = untestedRejections(steps);
+  const warned = steps.filter((s) => s.checks.some((c) => c.warning)).map((s) => s.title);
   const notes = [
+    warned.length > 0 ? ` Known wallet bugs accepted on: ${warned.join(', ')}.` : '',
     skipped.length > 0 ? ` Skipped: ${skipped.join(', ')}.` : '',
     uncovered.length > 0 ? ` Rejection not tested on: ${uncovered.join(', ')}.` : '',
   ].join('');

@@ -100,6 +100,12 @@ export interface RpcFlowStep extends FlowStepBase {
   checkAnswer?: (response: unknown, env: FlowEnv) => Promise<FlowCheck[]>;
   /** For a step the wallet must refuse: what its refusal breaks. Any refusal passes without it. */
   validateRefusal?: (outcome: RpcErrorOutcome) => string[];
+  /**
+   * For a step the wallet must refuse: the wallet is known to carry it out
+   * instead (a wallet bug accepted for now). An approval then passes with
+   * this warning, and its tx is waited on like any other.
+   */
+  knownApproval?: string;
 }
 
 /** Work the app does itself, with the test wallet it runs (no RPC request). */
@@ -394,6 +400,21 @@ async function runStep(
     if (gone()) return 'stop';
 
     recordRpcResult(dispatch, step.actions, false, result);
+    if (expects === 'refusal' && step.knownApproval) {
+      recordAttempt({
+        outcome: 'approved',
+        asExpected: true,
+        code: null,
+        message: 'Approved: a known wallet deviation',
+        problems: [],
+        duration: result.duration,
+      });
+      dispatch(flowStepChecked({ index, checks: [{ ok: true, warning: true, text: step.knownApproval }] }));
+      const hash = step.txHash?.(result.response) ?? null;
+      if (!hash) return finish();
+      dispatch(flowStepTxHash({ index, txHash: hash }));
+      return confirm(hash);
+    }
     if (expects === 'refusal') {
       recordAttempt({
         outcome: 'approved',

@@ -71,7 +71,9 @@ interface FullnodeTxRecord {
  * mobile wallet; the two invalid tokens come back as errors. Txs it pushes
  * land on a fake fullnode.
  */
-function setup(opts: { usedFirstEmpty?: boolean; singleAddress?: boolean } = {}) {
+function setup(
+  opts: { usedFirstEmpty?: boolean; singleAddress?: boolean; approvesMintAddressWithoutMint?: boolean } = {}
+) {
   const store = configureStore({
     reducer: {
       flowRun: flowRunReducer,
@@ -159,6 +161,13 @@ function setup(opts: { usedFirstEmpty?: boolean; singleAddress?: boolean } = {})
       const invalid =
         (!params.create_mint && params.mint_authority_address) ||
         (params.mint_authority_address && !ADDRS.includes(params.mint_authority_address));
+      // hathor-wallet-mobile v0.38.0 creates this token, dropping the mint address.
+      if (opts.approvesMintAddressWithoutMint && !params.create_mint && params.mint_authority_address) {
+        return phone(`token:${params.symbol}:mint-address-dropped`, false, () => ({
+          type: 6,
+          response: { hash: hash(nextTx++), name: params.name, symbol: params.symbol, outputs: [] },
+        }));
+      }
       if (invalid) {
         sent.push(`token:${params.symbol}:invalid`);
         return Promise.reject(Object.assign({ ...INVALID }, { requestParams: { method: 'htr_createToken', params } }));
@@ -307,6 +316,19 @@ describe('RPC flow', () => {
     expect(run.status).toBe('paused');
     expect(run.steps[run.currentStep].id).toBe('address-first-empty');
     expect(run.reason).toContain('The address is not empty');
+  });
+
+  test('accepts the known bug of a phone creating a token with a mint address but no mint', async () => {
+    const h = setup({ approvesMintAddressWithoutMint: true });
+    startFlow(RPC_FLOW, h.env);
+    await flowRunSettled();
+
+    const run = h.store.getState().flowRun;
+    expect(run.status).toBe('passed');
+    const step = run.steps.find((s) => s.id === 'create-token-invalid-mint')!;
+    expect(step.checks).toEqual([expect.objectContaining({ ok: true, warning: true })]);
+    expect(step.txHash).not.toBeNull();
+    expect(run.verdict?.detail).toContain('Known wallet bugs accepted on: Create token: mint address without mint.');
   });
 
   test('a single-address wallet answers first empty with its used address 0', async () => {

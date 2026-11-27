@@ -34,7 +34,7 @@ An automatic run drives a chain of RPC stages the way a QA would by hand: open t
 - **`push_tx` is true** in the nano flows: with `false` the wallet returns the tx hex, no contract ID gets stored, and nothing reaches the network. The RPC flow sends one `push_tx: false` on purpose and checks the hex instead.
 - **What a step expects** (`expects`, shown per step in the panel):
   - `approval` (default): rejected once, then approved, as below.
-  - `refusal`: an invalid request the wallet must not carry out. Its first refusal (any error, `5002` included) passes the step; an approval pauses. `validateRefusal` can pin the exact code and message once a real run has shown them; until then the attempt log records them.
+  - `refusal`: an invalid request the wallet must not carry out. Its first refusal (any error, `5002` included) passes the step; an approval pauses. `validateRefusal` can pin the exact code and message once a real run has shown them; until then the attempt log records them. A step with `knownApproval` accepts an approval as a known wallet bug: the step passes with a warning check (amber, "Known wallet bug" chip), its tx is waited on, and the verdict lists it.
   - `no-prompt`: the wallet answers without asking (`htr_getWalletInformation`, `htr_getConnectedNetwork`, and `htr_getBalance`, whose handler in hathor-rpc-lib never prompts). Any error pauses; nothing is sent twice.
   - `local` (`kind: 'local'`): work the app does itself with the test wallet it runs, such as scattering funds. A tx it returns is waited on like any other.
 - **Rejection:** JSON-RPC `5002` with `Rejected by the user` is recorded and the step is sent again (QA_REOWN.md asks to reject every step once). A `5002` with another message, or any other error, pauses the run. The mobile also answers `5002` when its "tx failed, retry?" modal is dismissed; the run log can't tell the two apart.
@@ -63,7 +63,7 @@ Follows hathor-wallet-mobile's `QA/QA_REOWN.md`. The test wallet must run from i
 | 9 | Send tx, pushed | approval | confirmed; pays 0.01 HTR to step 4's address |
 | 10 | Send tx, data output | approval | confirmed; the data output is on chain |
 | 11 | Create deposit token (melt only) | approval | 1.00 supply, deposit version, melt but no mint authority |
-| 12 | Create token: mint address without mint | refusal | |
+| 12 | Create token: mint address without mint | refusal | known bug: hathor-wallet-mobile v0.38.0 creates the token, dropping the mint address; an approval passes with a warning (reject it to test the expected path) |
 | 13 | Create token: external mint address | refusal | a random address outside the wallet |
 | 14 | Create fee token (no authorities) | approval | fee version, no authorities, 0.01 HTR fee |
 | 15 | Create fee token data output | approval | fee version, mint and melt, an HTR fee, the data output |

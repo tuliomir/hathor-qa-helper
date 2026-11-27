@@ -293,6 +293,19 @@ describe('flow runner', () => {
     expect(h.run().steps[0].attempts[0].asExpected).toBe(false);
   });
 
+  test('a known wallet deviation passes an approved refusal step with a warning, and waits for its tx', async () => {
+    const h = harness({ a: [{ response: { ok: true, hash: 'tx-a' } }], b: [{ response: { ok: true } }] });
+    const known = 'The wallet carries this out instead of refusing it';
+    startFlow(h.flow([h.step('a', { expects: 'refusal', knownApproval: known }), h.step('b')]), h.env);
+    await flowRunSettled();
+
+    expect(h.run().status).toBe('passed');
+    expect(h.run().steps[0].attempts[0]).toMatchObject({ outcome: 'approved', asExpected: true });
+    expect(h.run().steps[0].checks).toEqual([{ ok: true, warning: true, text: known }]);
+    expect(h.run().steps[0].txHash).toBe('tx-a');
+    expect(h.waited).toEqual(['tx-a']);
+  });
+
   test('a step without a prompt is not sent again after an error', async () => {
     const h = harness({ a: [{ error: REJECTED }] });
     startFlow(h.flow([h.step('a', { expects: 'no-prompt' })]), h.env);

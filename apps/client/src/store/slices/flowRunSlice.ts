@@ -57,6 +57,8 @@ export interface FlowAttempt {
 export interface FlowCheck {
   ok: boolean;
   text: string;
+  /** Passed, but worth a look (e.g. a known wallet bug the run accepts). */
+  warning?: boolean;
 }
 
 /**
