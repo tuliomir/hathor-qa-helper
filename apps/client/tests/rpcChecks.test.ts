@@ -16,6 +16,7 @@ import {
   feeHeaderCheck,
   htrUtxoFilterCases,
   paysCheck,
+  paysTokenCheck,
   signProblems,
   tokenOnChainChecks,
   unpushedTxProblems,
@@ -189,5 +190,26 @@ describe('on-chain checks', () => {
     expect(paysCheck(tx, { address: OTHER, value: 1n }).ok).toBe(false);
     expect(dataOutputCheck(tx, data).ok).toBe(true);
     expect(dataOutputCheck(tx, 'other').ok).toBe(false);
+  });
+
+  test('an output of a custom token is found by its token_data', () => {
+    const A = 'aa'.repeat(32);
+    const B = 'bb'.repeat(32);
+    const tx = {
+      tokens: [A, { uid: B }],
+      outputs: [
+        { value: 5, token_data: 2, decoded: { address: ADDR } },
+        { value: 1, token_data: 129, decoded: { address: ADDR } },
+      ],
+    };
+    const pays = (token: string, value: bigint) => paysTokenCheck(tx, { address: ADDR, value, token, label: 'X' }).ok;
+    expect(pays(B, 5n)).toBe(true);
+    expect(pays(A, 5n)).toBe(false);
+    // The mint authority of A is no output of 0.01 A.
+    expect(pays(A, 1n)).toBe(false);
+    expect(pays('cc'.repeat(32), 5n)).toBe(false);
+    expect(paysTokenCheck(tx, { address: ADDR, value: 5n, token: B, label: 'QFX' }).text).toBe(
+      `Pays 0.05 QFX to ${ADDR.slice(0, 8)}…`
+    );
   });
 });

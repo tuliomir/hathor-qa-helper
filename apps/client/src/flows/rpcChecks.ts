@@ -430,6 +430,30 @@ export function paysCheck(tx: FullnodeTx, expected: { address: string; value: bi
     : { ok: false, text: `Expected an output of ${units(expected.value)} HTR to ${expected.address}` };
 }
 
+/**
+ * Whether the tx pays `value` of `token` to `address`. `transaction?id=`
+ * names an output's token by `token_data`: 0 for HTR, n for `tokens[n - 1]`
+ * (authority outputs carry the high bit, so they never match).
+ */
+export function paysTokenCheck(
+  tx: FullnodeTx,
+  expected: { address: string; value: bigint; token: string; label: string }
+): FlowCheck {
+  const uids = (tx.tokens ?? []).map((t) => (typeof t === 'string' ? t : t.uid));
+  const tokenData = expected.token === NATIVE_TOKEN_UID ? 0 : uids.indexOf(expected.token) + 1;
+  const pays =
+    (expected.token === NATIVE_TOKEN_UID || tokenData > 0) &&
+    ((tx.outputs ?? []) as FullnodeOutput[]).some(
+      (o) =>
+        (o.token_data ?? 0) === tokenData &&
+        BigInt(String(o.value)) === expected.value &&
+        o.decoded?.address === expected.address
+    );
+  return pays
+    ? { ok: true, text: `Pays ${units(expected.value)} ${expected.label} to ${expected.address.slice(0, 8)}…` }
+    : { ok: false, text: `Expected an output of ${units(expected.value)} ${expected.label} to ${expected.address}` };
+}
+
 /** Whether a confirmed tx has a data output with `data` (the script is base64). */
 export function dataOutputCheck(tx: FullnodeTx, data: string): FlowCheck {
   const found = ((tx.outputs ?? []) as FullnodeOutput[]).some((o) => {

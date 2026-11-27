@@ -63,6 +63,7 @@ const fixed = {
 
 interface FullnodeTxRecord {
   fees: { token_uid: string; amount: number }[];
+  tokens?: string[];
   outputs: { value: number; token_data: number; script: string; decoded: { address?: string } }[];
 }
 
@@ -138,15 +139,19 @@ function setup(
         },
       })),
     getRpcSendTransaction: (outputs: SendTransactionOutput[], pushTx: boolean) =>
-      phone(`send:${pushTx}:${outputs[0].type}`, true, () => {
+      phone(`send:${pushTx}:${outputs[0].type}:${outputs.length}`, true, () => {
         const scripts = outputs.map((o) => new Output(BigInt(o.value ?? 1), scriptOf(o)));
         if (!pushTx) return { type: 8, response: new Transaction([new Input(hash(1), 0)], scripts).toHex() };
         const txHash = hash(nextTx++);
+        // As the fullnode reports it: custom tokens by index, a fee for moving fee tokens.
+        const custom = [...new Set(outputs.map((o) => o.token).filter((t): t is string => !!t && t !== '00'))];
+        const feeTokens = custom.filter((t) => tokens[t]?.version === 2).length;
         txs[txHash] = {
-          fees: [],
+          fees: feeTokens > 0 ? [{ token_uid: '00', amount: feeTokens }] : [],
+          tokens: custom,
           outputs: outputs.map((o, i) => ({
             value: Number(o.value ?? 1),
-            token_data: 0,
+            token_data: o.token && o.token !== '00' ? custom.indexOf(o.token) + 1 : 0,
             script: scripts[i].script.toString('base64'),
             decoded: o.type === 'data' ? {} : { address: o.address },
           })),
@@ -305,6 +310,10 @@ describe('RPC flow', () => {
     expect(checkTexts('create-fee-token-data')).toContain('Has the data output "QA flow fee token data"');
     expect(checkTexts('utxos-htr-above')).toEqual(['UTXOs of 0.03, 0.04, 0.05, as the filter expects']);
     expect(checkTexts('utxos-htr-between')).toEqual(['UTXOs of 0.02, 0.03, as the filter expects']);
+    const multi = checkTexts('send-multi-token');
+    expect(multi.filter((t) => t.startsWith('Pays 0.01 '))).toHaveLength(4);
+    expect(multi).toContain('Has the data output "QA flow multi-token"');
+    expect(multi.some((t) => t.startsWith('Fee: '))).toBe(true);
   });
 
   test('pauses when the first empty address was used before', async () => {

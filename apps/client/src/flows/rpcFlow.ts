@@ -58,6 +58,7 @@ import {
   feeHeaderCheck,
   htrUtxoFilterCases,
   paysCheck,
+  paysTokenCheck,
   pushedTxHash,
   sentTxProblems,
   signProblems,
@@ -106,6 +107,8 @@ interface RpcFlowContext {
   suffix: string;
   /** The deposit token created by the run, once it is. */
   depositToken?: string;
+  /** Every token the run created, in order: deposit and fee ones. */
+  createdTokens: { uid: string; symbol: string; version: 'deposit' | 'fee' }[];
   /** The scattered HTR UTXOs, once scattered (base units). */
   scattered?: bigint[];
 }
@@ -122,6 +125,17 @@ function contextOf(state: RootState): RpcFlowContext {
     externalAddress: c.externalAddress,
     suffix: c.suffix ?? '',
     depositToken: c.depositToken || undefined,
+    createdTokens: (c.createdTokens ?? '')
+      .split(',')
+      .filter(Boolean)
+      .map((pair) => {
+        const [uid, symbol, version] = pair.split(':');
+        return {
+          uid: uid!,
+          symbol: symbol ?? '',
+          version: version === 'fee' ? ('fee' as const) : ('deposit' as const),
+        };
+      }),
     scattered: c.scattered ? c.scattered.split(',').map(BigInt) : undefined,
   };
 }
@@ -410,9 +424,15 @@ function createTokenStep(id: string, title: string, spec: TokenSpec, review: str
     },
     validate: (response, state) => createdTokenProblems(response, tokenExpectation(spec, contextOf(state))),
     txHash: pushedTxHash,
-    onApproved: (dispatch, response) => {
+    onApproved: (dispatch, response, state) => {
       const hash = pushedTxHash(response);
-      if (spec.version === 'deposit' && hash) dispatch(flowContextSet({ depositToken: hash }));
+      if (!hash) return;
+      if (spec.version === 'deposit') dispatch(flowContextSet({ depositToken: hash }));
+      const created = state.flowRun.context.createdTokens ?? '';
+      if (!created.includes(hash)) {
+        const entry = `${hash}:${spec.symbol(contextOf(state).suffix)}:${spec.version}`;
+        dispatch(flowContextSet({ createdTokens: created ? `${created},${entry}` : entry }));
+      }
     },
     checkOnChain: async (txHash, env) => {
       const state = env.getState();
@@ -619,6 +639,39 @@ const htrBetweenUtxosStep = utxosStep(
   'Does the phone show both the "greater than" and "smaller than" filters, and the 2-UTXO limit?'
 );
 
+const MULTI_TOKEN_DATA = 'QA flow multi-token';
+
+/** 0.01 HTR, 0.01 of each token the run created and a data output, in one tx. */
+function multiTokenOutputs(ctx: RpcFlowContext): SendTransactionOutput[] {
+  if (ctx.createdTokens.length === 0) throw new Error('No token created yet: create them first');
+  const pay = (token: string): SendTransactionOutput => ({
+    type: 'token',
+    address: ctx.indexAddress,
+    value: SEND_VALUE.toString(),
+    token,
+  });
+  return [pay(NATIVE_TOKEN_UID), ...ctx.createdTokens.map((t) => pay(t.uid)), { type: 'data', data: MULTI_TOKEN_DATA }];
+}
+
+const multiTokenSendStep = sendStep('send-multi-token', 'Send tx, every token and data', true, multiTokenOutputs, {
+  review: `Does the phone show 0.01 HTR and 0.01 of each token the run created, their address, the data output "${MULTI_TOKEN_DATA}" and the fee?`,
+  validate: (response) => sentTxProblems(response),
+  checkOnChain: async (txHash, env) => {
+    const state = env.getState();
+    const ctx = contextOf(state);
+    const tx = await fetchFullnodeTx(fullNodeUrlOf(state), txHash);
+    const pays = (token: string, label: string) =>
+      paysTokenCheck(tx, { address: ctx.indexAddress, value: SEND_VALUE, token, label });
+    return [
+      pays(NATIVE_TOKEN_UID, 'HTR'),
+      ...ctx.createdTokens.map((t) => pays(t.uid, t.symbol)),
+      dataOutputCheck(tx, MULTI_TOKEN_DATA),
+      // Moving a fee token costs an HTR fee; how much depends on its change outputs.
+      ...(ctx.createdTokens.some((t) => t.version === 'fee') ? [feeHeaderCheck(tx, null)] : []),
+    ];
+  },
+});
+
 const STEPS: FlowStep[] = [
   walletInformationStep,
   connectedNetworkStep,
@@ -639,6 +692,8 @@ const STEPS: FlowStep[] = [
   tokenUtxosStep,
   htrAboveUtxosStep,
   htrBetweenUtxosStep,
+  // Last: it spends the tokens and HTR the UTXO steps above count on.
+  multiTokenSendStep,
 ];
 
 /** Why the RPC flow can't run now, or null. */
@@ -678,6 +733,7 @@ export async function prepareRpcFlow(env: FlowEnv, random: () => number = Math.r
       externalAddress: externalAddress(random, selectRpcNetworkName(env.getState())),
       suffix,
       depositToken: '',
+      createdTokens: '',
       scattered: '',
     })
   );

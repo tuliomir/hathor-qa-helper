@@ -71,8 +71,9 @@ Follows hathor-wallet-mobile's `QA/QA_REOWN.md`. The test wallet must run from i
 | 17 | Get UTXOs: custom token | approval | step 11's token: one UTXO of 1.00 |
 | 18 | Get UTXOs: HTR greater than | approval | everything above the 2nd smallest scattered UTXO |
 | 19 | Get UTXOs: HTR between two amounts | approval | strictly between the smallest and largest, at most 2 |
+| 20 | Send tx, every token and data | approval | one tx with 0.01 HTR, 0.01 of each token the run created (steps 11, 14, 15) and a data output, all to step 4's address; each output is on chain, and an HTR fee when a fee token moves |
 
-- **Order:** the UTXO steps run last because the custom-token filter needs step 11's token and later sends would spend the scattered UTXOs. Both wallet facades filter strictly (`> amountBiggerThan`, `< amountSmallerThan`), so each filter's exact answer is known from the scattered amounts (`htrUtxoFilterCases`).
+- **Order:** the UTXO steps run after the token steps because the custom-token filter needs step 11's token, and before any send that would spend it or the scattered UTXOs. So the multi-token send (step 20) runs last. It exercises the wallet's tx builder with several tokens, fee tokens and a data output at once. Both wallet facades filter strictly (`> amountBiggerThan`, `< amountSmallerThan`), so each filter's exact answer is known from the scattered amounts (`htrUtxoFilterCases`).
 - **Random picks** (address indexes, the 3-letter suffix of the token symbols, the external address) are made once per run in `prepare` and kept in `flowRun.context`.
 - **Verdict:** passes when every step was done and no wallet screen was flagged; skipped steps and approvals without a tested rejection are listed.
 - **Facade:** whether the phone uses the Wallet Service or the full node is the tester's call; the run doesn't record it.
