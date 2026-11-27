@@ -310,6 +310,12 @@ describe('RPC flow', () => {
     expect(checkTexts('create-fee-token-data')).toContain('Has the data output "QA flow fee token data"');
     expect(checkTexts('utxos-htr-above')).toEqual(['UTXOs of 0.03, 0.04, 0.05, as the filter expects']);
     expect(checkTexts('utxos-htr-between')).toEqual(['UTXOs of 0.02, 0.03, as the filter expects']);
+    // One symbol per kind of token; the run's suffix goes in the names.
+    expect(run.context.createdTokens.split(',').map((t) => t.split(':')[1])).toEqual(['QAFD', 'QAFF', 'QAFFD']);
+    expect(h.sent.filter((r) => r.startsWith('token:') && r.endsWith(':invalid'))).toEqual([
+      'token:QAFIM:invalid',
+      'token:QAFEM:invalid',
+    ]);
     const multi = checkTexts('send-multi-token');
     expect(multi.filter((t) => t.startsWith('Pays 0.01 '))).toHaveLength(4);
     expect(multi).toContain('Has the data output "QA flow multi-token"');

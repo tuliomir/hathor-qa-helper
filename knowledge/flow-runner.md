@@ -44,6 +44,7 @@ An automatic run drives a chain of RPC stages the way a QA would by hand: open t
 - **On-chain checks:** a step with `checkOnChain` reads its confirmed tx (status `checking`) and lists each check under the step in the run panel. A failed check pauses with the step `failed` but its tx kept; Resume checks the same tx again instead of sending another (that would move the funds twice). Skip the step if the check is right to fail.
 - **Review:** a step with a `review` question shows it in the run panel while the phone shows the request ("Does the phone show …?"), next to "Approve or reject on your phone", so the tester checks the screen in front of them instead of recalling it afterwards. Answer before approving; **Change** takes an answer back while the request is still open, and the answer carries over when the step is sent again after a rejection. If the request is answered first, the step ends by asking the question and the run waits. **Yes, looks right** goes on; **Something is off** takes a note, and the step ends done and flagged and pauses; Resume goes on to the next step. A flagged step fails the RPC flow's verdict.
 - **Pacing:** 0.7s between filling the form and sending, 1s of "Success!" before the next step, 1.5s before resending a rejected step (`FLOW_TIMING`).
+- **Token names and symbols:** each kind of token has its own symbol: QAFD (deposit), QAFF (fee), QAFFD (fee with data), QAFIM and QAFEM (the two invalid requests). Symbols hold 5 characters at most, so the run's suffix goes in the name instead ("QA Flow Fee Data XYZ").
 - **Verdict:** the bet flow passes when the contract's balance is 0 (`nano_contract/state?id=…&balances[]=00`), i.e. the whole deposit came back. Steps approved without a rejection are listed as "Rejection not tested" (a warning, not a failure).
 
 ## The RPC flow
@@ -74,7 +75,7 @@ Follows hathor-wallet-mobile's `QA/QA_REOWN.md`. The test wallet must run from i
 | 20 | Send tx, every token and data | approval | one tx with 0.01 HTR, 0.01 of each token the run created (steps 11, 14, 15) and a data output, all to step 4's address; each output is on chain, and an HTR fee when a fee token moves |
 
 - **Order:** the UTXO steps run after the token steps because the custom-token filter needs step 11's token, and before any send that would spend it or the scattered UTXOs. So the multi-token send (step 20) runs last. It exercises the wallet's tx builder with several tokens, fee tokens and a data output at once. Both wallet facades filter strictly (`> amountBiggerThan`, `< amountSmallerThan`), so each filter's exact answer is known from the scattered amounts (`htrUtxoFilterCases`).
-- **Random picks** (address indexes, the 3-letter suffix of the token symbols, the external address) are made once per run in `prepare` and kept in `flowRun.context`.
+- **Random picks** (address indexes, the 3-letter suffix of the token names, the external address) are made once per run in `prepare` and kept in `flowRun.context`.
 - **Verdict:** passes when every step was done and no wallet screen was flagged; skipped steps and approvals without a tested rejection are listed.
 - **Facade:** whether the phone uses the Wallet Service or the full node is the tester's call; the run doesn't record it.
 

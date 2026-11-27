@@ -103,7 +103,7 @@ interface RpcFlowContext {
   signAddress: string;
   /** An address outside the test wallet, for the invalid external mint authority. */
   externalAddress: string;
-  /** Appended to the token symbols, so each run creates new ones. */
+  /** Appended to the token names, so each run's tokens stay apart. */
   suffix: string;
   /** The deposit token created by the run, once it is. */
   depositToken?: string;
@@ -376,8 +376,10 @@ const dataSendStep = sendStep('send-data', 'Send tx, data output', true, () => [
 
 interface TokenSpec {
   version: 'deposit' | 'fee';
+  /** The run's suffix is appended, so each run's tokens stay apart by name. */
   name: string;
-  symbol: (suffix: string) => string;
+  /** Fixed per kind of token (symbols hold 5 characters at most). */
+  symbol: string;
   mint: boolean;
   melt: boolean;
   data?: string;
@@ -385,10 +387,12 @@ interface TokenSpec {
   fee: bigint | null;
 }
 
+const tokenName = (spec: Pick<TokenSpec, 'name'>, ctx: RpcFlowContext) => `${spec.name} ${ctx.suffix}`;
+
 function tokenParams(spec: TokenSpec, ctx: RpcFlowContext, address0: string): CreateTokenParams {
   return {
-    name: spec.name,
-    symbol: spec.symbol(ctx.suffix),
+    name: tokenName(spec, ctx),
+    symbol: spec.symbol,
     amount: TOKEN_AMOUNT.toString(),
     version: spec.version,
     change_address: address0,
@@ -403,8 +407,8 @@ function tokenParams(spec: TokenSpec, ctx: RpcFlowContext, address0: string): Cr
 }
 
 const tokenExpectation = (spec: TokenSpec, ctx: RpcFlowContext): TokenExpectation => ({
-  name: spec.name,
-  symbol: spec.symbol(ctx.suffix),
+  name: tokenName(spec, ctx),
+  symbol: spec.symbol,
   amount: TOKEN_AMOUNT,
   mint: spec.mint,
   melt: spec.melt,
@@ -430,7 +434,7 @@ function createTokenStep(id: string, title: string, spec: TokenSpec, review: str
       if (spec.version === 'deposit') dispatch(flowContextSet({ depositToken: hash }));
       const created = state.flowRun.context.createdTokens ?? '';
       if (!created.includes(hash)) {
-        const entry = `${hash}:${spec.symbol(contextOf(state).suffix)}:${spec.version}`;
+        const entry = `${hash}:${spec.symbol}:${spec.version}`;
         dispatch(flowContextSet({ createdTokens: created ? `${created},${entry}` : entry }));
       }
     },
@@ -450,7 +454,7 @@ function createTokenStep(id: string, title: string, spec: TokenSpec, review: str
 const DEPOSIT_TOKEN: TokenSpec = {
   version: 'deposit',
   name: 'QA Flow Deposit',
-  symbol: (s) => `QD${s}`,
+  symbol: 'QAFD',
   mint: false,
   melt: true,
   fee: 0n,
@@ -473,6 +477,7 @@ function invalidTokenStep(
   title: string,
   mintAddress: (ctx: RpcFlowContext, address0: string) => string,
   createMint: boolean,
+  token: Pick<TokenSpec, 'name' | 'symbol'>,
   review: string,
   knownApproval?: string
 ): RpcFlowStep {
@@ -489,7 +494,7 @@ function invalidTokenStep(
       const ctx = contextOf(state);
       const address0 = address0Of(state);
       const params: CreateTokenParams = {
-        ...tokenParams(DEPOSIT_TOKEN, ctx, address0),
+        ...tokenParams({ ...DEPOSIT_TOKEN, ...token }, ctx, address0),
         create_mint: createMint,
         mint_authority_address: mintAddress(ctx, address0),
       };
@@ -504,6 +509,7 @@ const invalidMintAddressStep = invalidTokenStep(
   'Create token: mint address without mint',
   (_ctx, address0) => address0,
   false,
+  { name: 'QA Flow Invalid Mint', symbol: 'QAFIM' },
   'Does the phone explain why it cannot create this token (a mint address without a mint authority)?',
   // hathor-wallet-mobile v0.38.0: the request screen has no check, and
   // wallet-lib ignores a mint address when no mint authority is created.
@@ -515,13 +521,14 @@ const invalidExternalMintStep = invalidTokenStep(
   'Create token: external mint address',
   (ctx) => ctx.externalAddress,
   true,
+  { name: 'QA Flow External Mint', symbol: 'QAFEM' },
   'Does the phone explain why it cannot create this token (a mint authority to an external address)?'
 );
 
 const createFeeTokenStep = createTokenStep(
   'create-fee-token',
   'Create fee token (no authorities)',
-  { version: 'fee', name: 'QA Flow Fee', symbol: (s) => `QF${s}`, mint: false, melt: false, fee: 1n },
+  { version: 'fee', name: 'QA Flow Fee', symbol: 'QAFF', mint: false, melt: false, fee: 1n },
   'Does the phone show a fee token with no mint or melt authority, and its 0.01 HTR fee?'
 );
 
@@ -531,7 +538,7 @@ const createFeeTokenDataStep = createTokenStep(
   {
     version: 'fee',
     name: 'QA Flow Fee Data',
-    symbol: (s) => `QX${s}`,
+    symbol: 'QAFFD',
     mint: true,
     melt: true,
     data: FEE_TOKEN_DATA,
@@ -742,7 +749,7 @@ export async function prepareRpcFlow(env: FlowEnv, random: () => number = Math.r
 function summarizeRpcFlow(context: Record<string, string>): string | null {
   if (!context.indexAddress) return null;
   const token = context.depositToken ? ` · deposit token ${context.depositToken.slice(0, 8)}…` : '';
-  return `Address index ${context.index}, signing with index ${context.signIndex}, tokens ending in ${context.suffix}${token}`;
+  return `Address index ${context.index}, signing with index ${context.signIndex}, token names ending in ${context.suffix}${token}`;
 }
 
 /** Passes when every step was done and no wallet screen was flagged. */
